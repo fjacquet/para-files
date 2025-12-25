@@ -12,6 +12,7 @@ from para_files.types import FileMetadata
 
 
 if TYPE_CHECKING:
+    from para_files.utils.ocr import OCRResult
     from para_files.utils.pandoc import PandocResult
 
 
@@ -164,6 +165,13 @@ def read_content_preview(
     if extension in PANDOC_EXTENSIONS:
         return _read_document_file(file_path, max_chars, extract_text)
 
+    # For image files, try OCR extraction
+    from para_files.utils.ocr import OCR_EXTENSIONS
+    from para_files.utils.ocr import extract_text as extract_ocr_text
+
+    if extension in OCR_EXTENSIONS:
+        return _read_image_file(file_path, max_chars, extract_ocr_text)
+
     # For other files, use filename as content
     return f"Filename: {file_path.name}"
 
@@ -243,4 +251,27 @@ def _read_document_file(
         return result.text
 
     logger.debug("pandoc extraction failed, using filename: %s", file_path)
+    return f"Filename: {file_path.name}"
+
+
+def _read_image_file(
+    file_path: Path,
+    max_chars: int,
+    extract_fn: Callable[[Path, int], OCRResult | None],
+) -> str:
+    """Extract text from image file using OCR.
+
+    Args:
+        file_path: Path to image file.
+        max_chars: Maximum characters to extract.
+        extract_fn: Function to extract text (injected to avoid circular import).
+
+    Returns:
+        Extracted text or filename fallback.
+    """
+    result = extract_fn(file_path, max_chars)
+    if result and result.text:
+        return result.text
+
+    logger.debug("OCR extraction failed, using filename: %s", file_path)
     return f"Filename: {file_path.name}"

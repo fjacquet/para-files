@@ -19,15 +19,40 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 # Supported extensions for EXIF extraction
-EXIF_EXTENSIONS = frozenset({
-    # Images
-    ".jpg", ".jpeg", ".png", ".heic", ".heif", ".tiff", ".tif",
-    ".gif", ".bmp", ".webp", ".raw", ".cr2", ".nef", ".arw", ".dng",
-    # Videos
-    ".mp4", ".mov", ".avi", ".mkv", ".m4v", ".3gp", ".wmv",
-    # Audio
-    ".mp3", ".m4a", ".wav", ".flac", ".aac",
-})
+EXIF_EXTENSIONS = frozenset(
+    {
+        # Images
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".heic",
+        ".heif",
+        ".tiff",
+        ".tif",
+        ".gif",
+        ".bmp",
+        ".webp",
+        ".raw",
+        ".cr2",
+        ".nef",
+        ".arw",
+        ".dng",
+        # Videos
+        ".mp4",
+        ".mov",
+        ".avi",
+        ".mkv",
+        ".m4v",
+        ".3gp",
+        ".wmv",
+        # Audio
+        ".mp3",
+        ".m4a",
+        ".wav",
+        ".flac",
+        ".aac",
+    }
+)
 
 # Duration format constants
 _DURATION_PARTS_HMS = 3  # H:MM:SS format

@@ -28,6 +28,9 @@ dependencies = [
     "pyyaml>=6.0",
     "semantic-router>=0.1.0",
     "litellm>=1.50.0",
+    "pyobjc-framework-vision>=12.1",
+    "pyobjc-framework-quartz>=12.1",
+    "pyobjc-framework-cocoa>=12.1",
 ]
 
 [project.optional-dependencies]
@@ -150,6 +153,9 @@ ignore = [
 "src/para_files/classifiers/rules_engine.py" = [
     "C901",    # classify() intentionally handles multiple rule types
 ]
+"src/para_files/utils/ocr.py" = [
+    "ANN401",  # PyObjC objects require Any type annotations
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["para_files"]
@@ -194,7 +200,7 @@ show_column_numbers = true
 pretty = true
 
 [[tool.mypy.overrides]]
-module = ["mlx.*", "mlx_lm.*", "pypdf", "pypdf.*", "semantic_router.*", "litellm.*", "transformers.*"]
+module = ["mlx.*", "mlx_lm.*", "pypdf", "pypdf.*", "semantic_router.*", "litellm.*", "transformers.*", "Vision", "Cocoa", "Quartz"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

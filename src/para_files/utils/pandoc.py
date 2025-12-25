@@ -95,7 +95,13 @@ def _run_pandoc_to_plain(file_path: Path, fmt: str) -> str | None:
     """Run pandoc and return plain text output."""
     pandoc_args = [
         "pandoc",
-        "--from", fmt, "--to", "plain", "--wrap", "none", str(file_path),
+        "--from",
+        fmt,
+        "--to",
+        "plain",
+        "--wrap",
+        "none",
+        str(file_path),
     ]
     try:
         result = subprocess.run(  # noqa: S603
@@ -188,7 +194,13 @@ def extract_metadata(file_path: Path) -> dict[str, str] | None:
 
     pandoc_args = [
         "pandoc",
-        "--from", fmt, "--to", "plain", "--template", "-", str(file_path),
+        "--from",
+        fmt,
+        "--to",
+        "plain",
+        "--template",
+        "-",
+        str(file_path),
     ]
     try:
         result = subprocess.run(  # noqa: S603
