@@ -53,16 +53,56 @@ The project maintains distinct taxonomies that should never be mixed:
 ### MLX Stack
 
 - **Embeddings**: `nomic-embed-text-v1.5` via `mlx-community` (~100MB, 10-15ms latency)
-- **Semantic Router**: `aurelio-labs/semantic-router` with custom MLX encoder
-- **SLM Fallback**: Optional Qwen 2.5-1.5B-Instruct (MLX 4-bit, ~1GB)
+- **Semantic Router**: Custom implementation with cosine similarity
+- **SLM Fallback**: Optional Qwen 2.5-1.5B-Instruct via litellm/Ollama
 - **OCR**: Vision Framework (Apple Neural Engine)
+
+### Model Loading
+
+The MLX embedding model uses **lazy loading** - it downloads automatically from Hugging Face on first use:
+
+```python
+from para_files.encoders import MLXEncoder
+
+# Model not loaded yet (fast instantiation)
+encoder = MLXEncoder(model_name="mlx-community/nomic-embed-text-v1.5")
+
+# Model loads on first call (~100MB download, cached in ~/.cache/huggingface)
+embeddings = encoder(["text to embed"])
+```
+
+The `ClassificationPipeline` handles this automatically - no manual model management needed.
+
+## Configuration
+
+Configuration uses pydantic-settings with environment variables (prefix: `PARA_FILES_`) or `.env` file:
+
+```bash
+# Required
+PARA_FILES_PARA_ROOT=/path/to/para/folder
+
+# MLX settings
+PARA_FILES_MLX_MODEL_NAME=mlx-community/nomic-embed-text-v1.5
+PARA_FILES_MLX_SCORE_THRESHOLD=0.75
+
+# Optional LLM fallback
+PARA_FILES_LLM_ENABLED=false
+PARA_FILES_LLM_MODEL=ollama/qwen2.5:1.5b
+```
+
+See `.env.example` for all options.
 
 ## Key Files
 
-| File | Purpose |
-|------|---------|
-| `personal_file_tree.yaml` | PARA folder structure, semantic utterances, routing rules, known issuers |
-| `src/para_files/` | Main package (src-layout) |
+| File                                     | Purpose                                                            |
+|------------------------------------------|--------------------------------------------------------------------|
+| `personal_file_tree.yaml`                | PARA folder structure, semantic utterances, routing rules, issuers |
+| `.env.example`                           | Configuration template with all available options                  |
+| `src/para_files/config.py`               | Configuration management with pydantic-settings                    |
+| `src/para_files/pipeline.py`             | 5-signal classification orchestrator                               |
+| `src/para_files/encoders/mlx_encoder.py` | MLX embedding encoder with lazy loading                            |
+| `src/para_files/reference_tree.py`       | YAML reference tree loader                                         |
+| `src/para_files/classifiers/`            | Classification signal implementations                              |
 
 ## Code Style
 

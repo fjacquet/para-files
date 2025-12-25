@@ -1,0 +1,139 @@
+"""Tests for the config module."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+from pydantic import ValidationError
+
+from para_files.config import Config, LLMConfig, MLXConfig, load_config
+
+
+class TestMLXConfig:
+    """Tests for MLXConfig."""
+
+    def test_default_values(self):
+        """Test default MLX configuration values."""
+        config = MLXConfig()
+        assert config.model_name == "mlx-community/nomic-embed-text-v1.5"
+        assert config.score_threshold == 0.75
+
+    def test_custom_values(self):
+        """Test custom MLX configuration values."""
+        config = MLXConfig(model_name="custom/model", score_threshold=0.8)
+        assert config.model_name == "custom/model"
+        assert config.score_threshold == 0.8
+
+    def test_threshold_boundaries(self):
+        """Test score threshold at boundaries."""
+        low = MLXConfig(score_threshold=0.0)
+        high = MLXConfig(score_threshold=1.0)
+        assert low.score_threshold == 0.0
+        assert high.score_threshold == 1.0
+
+    def test_threshold_out_of_range(self):
+        """Test that out-of-range threshold fails."""
+        with pytest.raises(ValidationError):
+            MLXConfig(score_threshold=1.5)
+        with pytest.raises(ValidationError):
+            MLXConfig(score_threshold=-0.1)
+
+
+class TestLLMConfig:
+    """Tests for LLMConfig."""
+
+    def test_default_values(self):
+        """Test default LLM configuration values."""
+        config = LLMConfig()
+        assert config.enabled is False
+        assert config.model == "ollama/qwen2.5:1.5b"
+        assert config.confidence_threshold == 0.6
+        assert config.api_base is None
+
+    def test_enabled_config(self):
+        """Test LLM configuration when enabled."""
+        config = LLMConfig(
+            enabled=True,
+            model="openai/gpt-4",
+            confidence_threshold=0.8,
+            api_base="https://api.openai.com/v1",
+        )
+        assert config.enabled is True
+        assert config.model == "openai/gpt-4"
+        assert config.api_base == "https://api.openai.com/v1"
+
+
+class TestConfig:
+    """Tests for Config."""
+
+    def test_minimal_config(self, tmp_path: Path):
+        """Test config with only required field."""
+        config = Config(para_root=tmp_path)
+        assert config.para_root == tmp_path
+        assert config.reference_tree_path == Path("personal_file_tree.yaml")
+        assert config.validated_db_path is None
+
+    def test_full_config(self, tmp_path: Path):
+        """Test config with all fields."""
+        ref_tree = tmp_path / "tree.yaml"
+        validated_db = tmp_path / "validated.json"
+
+        config = Config(
+            para_root=tmp_path,
+            reference_tree_path=ref_tree,
+            validated_db_path=validated_db,
+            content_preview_chars=5000,
+            mlx=MLXConfig(score_threshold=0.8),
+            llm=LLMConfig(enabled=True),
+        )
+        assert config.reference_tree_path == ref_tree
+        assert config.validated_db_path == validated_db
+        assert config.content_preview_chars == 5000
+        assert config.mlx.score_threshold == 0.8
+        assert config.llm.enabled is True
+
+    def test_para_paths(self, tmp_path: Path):
+        """Test PARA folder path properties."""
+        config = Config(para_root=tmp_path)
+        assert config.inbox_path == tmp_path / "0_Inbox"
+        assert config.projects_path == tmp_path / "1_Projects"
+        assert config.areas_path == tmp_path / "2_Areas"
+        assert config.resources_path == tmp_path / "3_Resources"
+        assert config.archives_path == tmp_path / "4_Archives"
+
+    def test_content_preview_chars_boundaries(self, tmp_path: Path):
+        """Test content preview character limits."""
+        low = Config(para_root=tmp_path, content_preview_chars=100)
+        high = Config(para_root=tmp_path, content_preview_chars=10000)
+        assert low.content_preview_chars == 100
+        assert high.content_preview_chars == 10000
+
+    def test_content_preview_chars_out_of_range(self, tmp_path: Path):
+        """Test that out-of-range preview chars fails."""
+        with pytest.raises(ValidationError):
+            Config(para_root=tmp_path, content_preview_chars=50)
+        with pytest.raises(ValidationError):
+            Config(para_root=tmp_path, content_preview_chars=20000)
+
+    def test_missing_para_root_fails(self):
+        """Test that missing para_root fails validation."""
+        with pytest.raises(ValidationError):
+            Config()  # type: ignore[call-arg]
+
+
+class TestLoadConfig:
+    """Tests for load_config function."""
+
+    def test_load_with_overrides(self, tmp_path: Path):
+        """Test loading config with overrides."""
+        config = load_config(para_root=tmp_path)
+        assert config.para_root == tmp_path
+
+    def test_load_with_nested_overrides(self, tmp_path: Path):
+        """Test loading config with nested overrides."""
+        config = load_config(
+            para_root=tmp_path,
+            mlx=MLXConfig(score_threshold=0.9),
+        )
+        assert config.mlx.score_threshold == 0.9

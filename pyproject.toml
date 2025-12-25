@@ -22,11 +22,18 @@ classifiers = [
 
 dependencies = [
     "mlx>=0.30.1",
+    "mlx-lm>=0.20.0",
     "pydantic>=2.12.0",
+    "pydantic-settings>=2.6.0",
     "pyyaml>=6.0",
+    "semantic-router>=0.1.0",
+    "litellm>=1.50.0",
 ]
 
 [project.optional-dependencies]
+pdf = [
+    "pypdf>=4.0.0",
+]
 dev = [
     "mypy>=1.15.0",
     "pytest>=8.3.0",
@@ -37,7 +44,7 @@ dev = [
 ]
 
 [project.scripts]
-para-files = "para_files.main:main"
+para-files = "para_files.main:cli"
 
 [project.urls]
 Homepage = "https://github.com/yourusername/para-files"
@@ -122,6 +129,10 @@ ignore = [
     "TD002",   # Missing author in TODO
     "TD003",   # Missing issue link in TODO
     "FIX002",  # Line contains TODO
+    "TC001",   # Move application import into type-checking block (can cause circular imports)
+    "TC002",   # Move third-party import into type-checking block (over-optimization)
+    "TC003",   # Move stdlib import into type-checking block (over-optimization)
+    "PLC0415", # Import should be at top-level (intentional lazy imports)
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -131,6 +142,13 @@ ignore = [
     "FBT",     # Boolean trap in test parameters
     "PLR2004", # Magic values in tests
     "ANN",     # Type annotations optional in tests
+    "SLF001",  # Private member access allowed in tests
+    "S108",    # Temp file paths allowed in tests
+    "DTZ",     # Datetime timezone not required in tests
+    "RUF059",  # Unused unpacked variables allowed in tests
+]
+"src/para_files/classifiers/rules_engine.py" = [
+    "C901",    # classify() intentionally handles multiple rule types
 ]
 
 [tool.ruff.lint.isort]
@@ -176,8 +194,13 @@ show_column_numbers = true
 pretty = true
 
 [[tool.mypy.overrides]]
-module = ["mlx.*"]
+module = ["mlx.*", "mlx_lm.*", "pypdf", "pypdf.*", "semantic_router.*", "litellm.*", "transformers.*"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
 
 # ============================================================================
 # Pytest - Testing
@@ -222,3 +245,4 @@ exclude_lines = [
 ]
 fail_under = 80
 show_missing = true
+

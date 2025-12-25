@@ -1,0 +1,56 @@
+---
+version: "1.0"
+generated: "2025-12-25"
+
+routing_rules:
+  photos:
+    source: "0_Inbox"
+    extensions: [".jpg", ".jpeg", ".png", ".heic"]
+    destination: "4_Archives/photos/{YYYY}/{MM}/{DD}"
+    date_source: "exif"
+    fallback_date: "file_modified"
+
+  screenshots:
+    patterns: ["Screenshot*", "Capture*"]
+    destination: "4_Archives/screenshots/{YYYY}/{MM}"
+
+inbox:
+  path: "0_Inbox"
+  utterances:
+    - "fichier non classé"
+    - "document à trier"
+    - "nouveau fichier"
+
+archives:
+  path: "4_Archives"
+  routes:
+    - name: "factures_assurance"
+      pattern: "4_Archives/factures/{year}/_Assurances/{issuer}"
+      utterances:
+        - "facture assurance"
+        - "police d'assurance"
+        - "prime annuelle"
+        - "attestation d'assurance"
+
+    - name: "factures_banque"
+      pattern: "4_Archives/factures/{year}/_Banques/{issuer}"
+      utterances:
+        - "relevé bancaire"
+        - "extrait de compte"
+        - "frais bancaires"
+
+known_issuers:
+  assurances:
+    - "Swica"
+    - "CSS"
+    - "Helsana"
+  banques:
+    - "UBS"
+    - "Credit Suisse"
+    - "PostFinance"
+  energie:
+    - "SIG"
+  telephonie:
+    - "Swisscom"
+  cloud:
+    - "AWS"

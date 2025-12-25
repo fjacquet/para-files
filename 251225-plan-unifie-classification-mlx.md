@@ -15,19 +15,20 @@ tags:
 ## Décision Clé : SLM vs LLM
 
 ### Situation Actuelle (à remplacer)
-| Projet | Solution Actuelle | Problème |
-|--------|-------------------|----------|
-| mailtag | litellm → Ollama/Gemini/OpenRouter | Dépendance serveur, latence, coût |
-| classifai | Ollama (gemma:2b) | Serveur local requis, 4-16GB RAM |
+
+| Projet    | Solution Actuelle                  | Problème                          |
+| --------- | ---------------------------------- | --------------------------------- |
+| mailtag   | litellm → Ollama/Gemini/OpenRouter | Dépendance serveur, latence, coût |
+| classifai | Ollama (gemma:2b)                  | Serveur local requis, 4-16GB RAM  |
 
 ### Options SLM (Small Language Models)
 
-| Option | Runtime | Modèles | Avantages | Inconvénients |
-|--------|---------|---------|-----------|---------------|
-| **ONNX Runtime** | Cross-platform | mDeBERTa, MiniLM, DistilBERT | Fonctionne partout, bien documenté, quantization facile | Moins optimisé Mac que MLX |
-| **MLX** | macOS only | Qwen 2.5, Llama 3, Gemma 2 | Performance maximale sur M1-M4, Apple officiel | macOS uniquement |
-| **llama.cpp** | Cross-platform | GGUF (Qwen, Llama, Phi) | Très rapide, communauté active | Plus complexe à intégrer |
-| **Transformers.js** | Node/Browser | ONNX models | JavaScript natif | Moins mature pour Python |
+| Option              | Runtime        | Modèles                      | Avantages                                               | Inconvénients              |
+| ------------------- | -------------- | ---------------------------- | ------------------------------------------------------- | -------------------------- |
+| **ONNX Runtime**    | Cross-platform | mDeBERTa, MiniLM, DistilBERT | Fonctionne partout, bien documenté, quantization facile | Moins optimisé Mac que MLX |
+| **MLX**             | macOS only     | Qwen 2.5, Llama 3, Gemma 2   | Performance maximale sur M1-M4, Apple officiel          | macOS uniquement           |
+| **llama.cpp**       | Cross-platform | GGUF (Qwen, Llama, Phi)      | Très rapide, communauté active                          | Plus complexe à intégrer   |
+| **Transformers.js** | Node/Browser   | ONNX models                  | JavaScript natif                                        | Moins mature pour Python   |
 
 ### Recommandation : Architecture Hybride
 
@@ -58,12 +59,12 @@ tags:
 
 ### DÉCISIONS
 
-| Question | Choix |
-|----------|-------|
-| **Runtime** | **MLX** (Apple) - Optimisation maximale Mac |
-| **Fallback** | **LLM optionnel** - Configurable Ollama/API pour cas ambigus |
-| **Référence** | **Deux arbres séparés** - Dell mail ≠ fichiers personnels |
-| **Platform** | **Mac uniquement** - Autorise MLX, Vision Framework |
+| Question      | Choix                                                        |
+| ------------- | ------------------------------------------------------------ |
+| **Runtime**   | **MLX** (Apple) - Optimisation maximale Mac                  |
+| **Fallback**  | **LLM optionnel** - Configurable Ollama/API pour cas ambigus |
+| **Référence** | **Deux arbres séparés** - Dell mail ≠ fichiers personnels    |
+| **Platform**  | **Mac uniquement** - Autorise MLX, Vision Framework          |
 
 ### Stack Technique Finale
 
@@ -86,11 +87,13 @@ tags:
 ## Synthèse des Deux Propositions de Collègues
 
 ### Document 1 : `251225-onnx-classification-plan.md`
+
 - **Focus** : ONNX Runtime avec mDeBERTa zero-shot multilingue
 - **Avantages** : 10-50ms latence, 500MB RAM, pas de serveur
 - **Approche** : Remplacer LLM (Ollama/litellm) par ONNX
 
 ### Document 2 : `Classification IA locale Mac Fichiers Mails.md`
+
 - **Focus** : MLX + semantic-router pour déterminisme absolu
 - **Modèles** : Qwen 2.5 (7B) + Nomic-Embed embeddings
 - **Approche** : Routage sémantique vectoriel + génération structurée fallback
@@ -102,12 +105,13 @@ tags:
 
 ### Principe Clé : Deux Arbres de Référence Séparés
 
-| Arbre | Source | Usage | Projet |
-|-------|--------|-------|--------|
-| **Dell Mail Tree** | `outlook-mail-structure.md` | Classification emails professionnels | mailtag |
-| **Personal File Tree** | `categories.yaml` | Classification fichiers personnels | classifai |
+| Arbre                  | Source                      | Usage                                | Projet    |
+| ---------------------- | --------------------------- | ------------------------------------ | --------- |
+| **Dell Mail Tree**     | `outlook-mail-structure.md` | Classification emails professionnels | mailtag   |
+| **Personal File Tree** | `categories.yaml`           | Classification fichiers personnels   | classifai |
 
 Avantages de la séparation :
+
 1. Taxonomies indépendantes (vocabulaire Dell ≠ vocabulaire personnel)
 2. Évolution séparée (mise à jour Dell n'impacte pas fichiers perso)
 3. Modèles d'embeddings optimisés par domaine
@@ -172,10 +176,12 @@ Avantages de la séparation :
 ### 1. Reference Tree Manager
 
 **Fichiers sources** :
+
 - `2_Areas/dell/outlook-mail-structure.md` → Catégories mail Dell
 - `config/categories.yaml` (classifai) → Catégories fichiers personnels
 
 **Fonctionnalités** :
+
 ```python
 class ReferenceTreeManager:
     def load_from_markdown(self, path: str) -> dict[str, list[str]]
@@ -190,10 +196,12 @@ class ReferenceTreeManager:
 **Bibliothèque** : `aurelio-labs/semantic-router` + custom MLX encoder
 
 **Modèle d'embedding MLX** :
+
 - `mlx-community/nomic-embed-text-v1.5` (8K context, multilingue)
 - Ou `mlx-community/bge-m3` (excellent pour FR/EN/DE)
 
 **Implémentation MLX** :
+
 ```python
 import mlx.core as mx
 from mlx_embedding import load_model, embed
@@ -227,6 +235,7 @@ result = dell_router(email_text)  # Retourne Route.name ou None
 ```
 
 **Avantages MLX** :
+
 - DÉTERMINISTE (même input → même output, toujours)
 - Ultra-rapide (~10-15ms sur Apple Silicon)
 - Utilise la mémoire unifiée (UMA) - pas de copie GPU
@@ -238,6 +247,7 @@ result = dell_router(email_text)  # Retourne Route.name ou None
 **Réutilisation** : `/Users/fjacquet/Projects/mailtag/src/mailtag/imap_service.py`
 
 **Adaptations** :
+
 1. Configurer pour Outlook Exchange (Dell) ou Infomaniak (perso)
 2. Mapper folders IMAP vers reference tree
 3. Sync bidirectionnelle : reference tree ↔ IMAP folders
@@ -265,25 +275,26 @@ result = dell_router(email_text)  # Retourne Route.name ou None
 
 ### Modifications mailtag
 
-| Fichier | Modification |
-|---------|--------------|
-| `pyproject.toml` | Ajouter dépendance `classifai-core` |
+| Fichier                     | Modification                              |
+| --------------------------- | ----------------------------------------- |
+| `pyproject.toml`            | Ajouter dépendance `classifai-core`       |
 | `src/mailtag/classifier.py` | Intégrer semantic router comme Signal 4.5 |
-| `config.toml` | Ajouter section `[semantic_router]` |
+| `config.toml`               | Ajouter section `[semantic_router]`       |
 
 ### Modifications classifai
 
-| Fichier | Modification |
-|---------|--------------|
-| `pyproject.toml` | Ajouter dépendance `classifai-core` |
-| `src/classifai/pipeline.py` | Intégrer semantic router après rules |
-| `config/` | Remplacer categories.yaml par reference_tree.yaml |
+| Fichier                     | Modification                                      |
+| --------------------------- | ------------------------------------------------- |
+| `pyproject.toml`            | Ajouter dépendance `classifai-core`               |
+| `src/classifai/pipeline.py` | Intégrer semantic router après rules              |
+| `config/`                   | Remplacer categories.yaml par reference_tree.yaml |
 
 ---
 
 ## Stratégie de Migration
 
 ### Phase 1 : Bibliothèque Core MLX
+
 **Objectif** : Créer `classifai-core` avec MLX encoder
 
 1. Initialiser projet Python (`uv init classifai-core`)
@@ -294,6 +305,7 @@ result = dell_router(email_text)  # Retourne Route.name ou None
 6. Benchmark : mesurer latence sur Mac
 
 ### Phase 2 : Intégration mailtag
+
 **Objectif** : Ajouter Signal 4.5 (semantic router MLX)
 
 1. Ajouter dépendance `classifai-core`
@@ -304,6 +316,7 @@ result = dell_router(email_text)  # Retourne Route.name ou None
 6. Mesurer réduction appels LLM
 
 ### Phase 3 : Intégration classifai
+
 **Objectif** : Remplacer LLM par semantic router quand possible
 
 1. Ajouter dépendance `classifai-core`
@@ -312,6 +325,7 @@ result = dell_router(email_text)  # Retourne Route.name ou None
 4. Valider que LLM n'est appelé que pour cas ambigus
 
 ### Phase 4 : Optimisation & Documentation
+
 **Objectif** : Peaufiner et documenter
 
 1. Cache LRU pour embeddings fréquents
@@ -323,15 +337,15 @@ result = dell_router(email_text)  # Retourne Route.name ou None
 
 ## Comparaison : Architecture Actuelle vs Proposée
 
-| Aspect | Actuel (mailtag) | Actuel (classifai) | Unifié (MLX) |
-|--------|------------------|-------------------|--------------|
-| Catégories | IMAP dynamique | categories.yaml | **2 arbres séparés** |
-| Signal rapide | Domain lookup | Rules engine | **Semantic router MLX** |
-| AI fallback | litellm | Ollama | **Optionnel (configurable)** |
-| Latence classification | 50-500ms | 100-500ms | **10-15ms** |
-| Déterminisme | Non (AI) | Non (AI) | **Oui (embeddings)** |
-| Mémoire | 4-16GB (LLM) | 4-16GB (Ollama) | **200-500MB (MLX)** |
-| Platform | Cross-platform | Cross-platform | **Mac only (optimisé)** |
+| Aspect                 | Actuel (mailtag) | Actuel (classifai) | Unifié (MLX)                 |
+| ---------------------- | ---------------- | ------------------ | ---------------------------- |
+| Catégories             | IMAP dynamique   | categories.yaml    | **2 arbres séparés**         |
+| Signal rapide          | Domain lookup    | Rules engine       | **Semantic router MLX**      |
+| AI fallback            | litellm          | Ollama             | **Optionnel (configurable)** |
+| Latence classification | 50-500ms         | 100-500ms          | **10-15ms**                  |
+| Déterminisme           | Non (AI)         | Non (AI)           | **Oui (embeddings)**         |
+| Mémoire                | 4-16GB (LLM)     | 4-16GB (Ollama)    | **200-500MB (MLX)**          |
+| Platform               | Cross-platform   | Cross-platform     | **Mac only (optimisé)**      |
 
 ---
 

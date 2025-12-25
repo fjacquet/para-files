@@ -1,0 +1,218 @@
+# para-files
+
+**macOS-only (Apple Silicon)** intelligent file classification system using MLX-powered semantic routing.
+
+Implements the PARA method (Projects, Areas, Resources, Archives) with a deterministic 5-signal classification pipeline.
+
+## Requirements
+
+- macOS with Apple Silicon (M1/M2/M3)
+- Python 3.12+
+- [uv](https://docs.astral.sh/uv/) package manager
+
+## Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/para-files.git
+cd para-files
+
+# Install dependencies
+uv sync --all-extras
+```
+
+## Quick Start
+
+```bash
+# Set required configuration (see Configuration section)
+export PARA_FILES_PARA_ROOT="/path/to/your/para/folder"
+
+# Classify a file
+uv run para-files classify document.pdf
+
+# Verbose output
+uv run para-files -v classify document.pdf
+
+# JSON output
+uv run para-files classify document.pdf --json
+```
+
+## Configuration
+
+Configuration is managed via environment variables (prefixed with `PARA_FILES_`) or a `.env` file.
+
+### Required Settings
+
+| Variable               | Description                                                        |
+|------------------------|--------------------------------------------------------------------|
+| `PARA_FILES_PARA_ROOT` | Root directory containing PARA folders (0_Inbox, 1_Projects, etc.) |
+
+### MLX Model Configuration
+
+The embedding model is **loaded lazily** on first classification. No manual download is needed - the model is fetched automatically from Hugging Face on first use.
+
+| Variable                         | Default                               | Description                          |
+|----------------------------------|---------------------------------------|--------------------------------------|
+| `PARA_FILES_MLX_MODEL_NAME`      | `mlx-community/nomic-embed-text-v1.5` | MLX embedding model from HuggingFace |
+| `PARA_FILES_MLX_SCORE_THRESHOLD` | `0.75`                                | Minimum similarity score (0.0-1.0)   |
+
+### LLM Fallback Configuration (Optional)
+
+| Variable                              | Default               | Description                      |
+|---------------------------------------|-----------------------|----------------------------------|
+| `PARA_FILES_LLM_ENABLED`              | `false`               | Enable LLM for ambiguous cases   |
+| `PARA_FILES_LLM_MODEL`                | `ollama/qwen2.5:1.5b` | LLM model identifier for litellm |
+| `PARA_FILES_LLM_CONFIDENCE_THRESHOLD` | `0.6`                 | Minimum LLM confidence           |
+| `PARA_FILES_LLM_API_BASE`             | `null`                | API base URL (for Ollama, etc.)  |
+
+### Other Settings
+
+| Variable                           | Default                   | Description                        |
+|------------------------------------|---------------------------|------------------------------------|
+| `PARA_FILES_REFERENCE_TREE_PATH`   | `personal_file_tree.yaml` | Path to PARA reference tree YAML   |
+| `PARA_FILES_VALIDATED_DB_PATH`     | `null`                    | Path to validated mappings JSON    |
+| `PARA_FILES_CONTENT_PREVIEW_CHARS` | `2000`                    | Characters to extract for matching |
+
+### Example `.env` File
+
+```bash
+# Required
+PARA_FILES_PARA_ROOT=/Users/you/Documents/PARA
+
+# Optional: Reference tree location
+PARA_FILES_REFERENCE_TREE_PATH=/Users/you/.config/para-files/personal_file_tree.yaml
+
+# Optional: Adjust similarity threshold
+PARA_FILES_MLX_SCORE_THRESHOLD=0.80
+
+# Optional: Enable LLM fallback with Ollama
+PARA_FILES_LLM_ENABLED=true
+PARA_FILES_LLM_API_BASE=http://localhost:11434
+```
+
+## Model Loading
+
+The MLX embedding model is loaded **lazily** - it downloads automatically on first use:
+
+```python
+from para_files.encoders import MLXEncoder
+
+# Create encoder (model not loaded yet)
+encoder = MLXEncoder(
+    model_name="mlx-community/nomic-embed-text-v1.5",
+    score_threshold=0.75,
+)
+
+# Model loads on first call (~100MB download, cached thereafter)
+embeddings = encoder(["Hello world"])
+```
+
+The model is cached in `~/.cache/huggingface/` after first download.
+
+### Programmatic Usage
+
+```python
+from pathlib import Path
+from para_files.config import load_config
+from para_files.pipeline import ClassificationPipeline
+
+# Load config from environment
+config = load_config()
+
+# Or with explicit values
+config = load_config(
+    para_root=Path("/Users/you/PARA"),
+    reference_tree_path=Path("personal_file_tree.yaml"),
+)
+
+# Create pipeline (lazy initialization)
+pipeline = ClassificationPipeline(config)
+
+# Classify a file
+result = pipeline.classify_file(Path("document.pdf"))
+
+print(f"Category: {result.category}")
+print(f"Confidence: {result.confidence.value:.0%}")
+print(f"Source: {result.confidence.source.value}")
+```
+
+## Architecture
+
+### 5-Signal Classification Pipeline
+
+Files are classified using signals in priority order (first match wins):
+
+| Signal             | Confidence   | Description                                      |
+|--------------------|--------------|--------------------------------------------------|
+| 1. Validated DB    | 100%         | Manual sender/issuer → category mappings         |
+| 2. Rules Engine    | 95%          | Glob patterns on filename/path/domain            |
+| 3. Domain KB       | 90%          | Known domain/issuer to category mappings         |
+| 4. Semantic Router | 85%          | MLX embedding similarity to reference categories |
+| 5. LLM Fallback    | Configurable | Optional AI for ambiguous cases                  |
+
+### MLX Stack
+
+- **Embeddings**: `nomic-embed-text-v1.5` via `mlx-community` (~100MB, 10-15ms latency)
+- **Semantic Router**: Custom implementation with cosine similarity
+- **SLM Fallback**: Optional Qwen 2.5-1.5B-Instruct via Ollama
+- **OCR**: Vision Framework (Apple Neural Engine) - coming soon
+
+### Reference Tree
+
+The `personal_file_tree.yaml` defines:
+- PARA folder structure with paths
+- Semantic utterances for each category (used for embedding matching)
+- Special routing rules (photos by date, courses by platform)
+- Known issuers database (banks, insurance, utilities)
+
+## Development
+
+```bash
+# Install with dev dependencies
+uv sync --all-extras
+
+# Run linter
+uv run ruff check src/ tests/
+
+# Run formatter
+uv run ruff format src/ tests/
+
+# Run type checker
+uv run mypy src/
+
+# Run tests
+uv run pytest -v
+
+# Run all checks
+uv run ruff check src/ tests/ && uv run ruff format --check src/ tests/ && uv run mypy src/ && uv run pytest
+```
+
+## Project Structure
+
+```text
+para-files/
+├── src/para_files/
+│   ├── __init__.py
+│   ├── main.py              # CLI entry point
+│   ├── config.py            # Configuration management
+│   ├── pipeline.py          # 5-signal classification orchestrator
+│   ├── reference_tree.py    # YAML reference tree loader
+│   ├── types.py             # Data types and models
+│   ├── classifiers/         # Classification signals
+│   │   ├── validated_db.py  # Signal 1: Manual mappings
+│   │   ├── rules_engine.py  # Signal 2: Glob patterns
+│   │   ├── domain_kb.py     # Signal 3: Known issuers
+│   │   ├── semantic_router.py  # Signal 4: MLX embeddings
+│   │   └── llm_fallback.py  # Signal 5: LLM fallback
+│   ├── encoders/
+│   │   └── mlx_encoder.py   # MLX embedding encoder
+│   └── utils/
+│       └── file_utils.py    # File content extraction
+├── tests/
+├── personal_file_tree.yaml  # PARA reference tree
+└── pyproject.toml
+```
+
+## License
+
+MIT
