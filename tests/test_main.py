@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-import sys
-from unittest.mock import patch
+from typer.testing import CliRunner
 
-import pytest
+from para_files import __version__
+from para_files.main import app
 
-from para_files import __version__, main
+
+runner = CliRunner()
 
 
 def test_version():
@@ -15,24 +16,48 @@ def test_version():
     assert __version__ == "0.1.0"
 
 
-def test_main_help(capsys):
+def test_main_help():
     """Verify main function shows help."""
-    with patch.object(sys, "argv", ["para-files", "--help"]):
-        with pytest.raises(SystemExit) as exc_info:
-            main()
-        assert exc_info.value.code == 0
-
-    captured = capsys.readouterr()
-    assert "para-files" in captured.out.lower()
+    result = runner.invoke(app, ["--help"])
+    assert result.exit_code == 0
+    assert "para-files" in result.output.lower()
+    assert "classify" in result.output
+    assert "move" in result.output
 
 
-def test_main_classify_missing_path(capsys):
-    """Verify main function errors on missing file path."""
-    with patch.object(sys, "argv", ["para-files", "classify"]):
-        with pytest.raises(SystemExit) as exc_info:
-            main()
-        # Should fail because no file path provided
-        assert exc_info.value.code == 2
+def test_main_version():
+    """Verify version flag works."""
+    result = runner.invoke(app, ["--version"])
+    assert result.exit_code == 0
+    assert __version__ in result.output
 
-    captured = capsys.readouterr()
-    assert "error" in captured.err.lower()
+
+def test_classify_missing_path():
+    """Verify classify command errors on missing file path."""
+    result = runner.invoke(app, ["classify"])
+    # Should fail because no file path provided
+    assert result.exit_code == 2
+    assert "missing argument" in result.output.lower()
+
+
+def test_classify_nonexistent_file():
+    """Verify classify command errors on nonexistent file."""
+    result = runner.invoke(app, ["classify", "/nonexistent/file.txt"])
+    assert result.exit_code == 1
+
+
+def test_move_missing_path():
+    """Verify move command errors on missing file path."""
+    result = runner.invoke(app, ["move"])
+    # Should fail because no file path provided
+    assert result.exit_code == 2
+    assert "missing argument" in result.output.lower()
+
+
+def test_move_help():
+    """Verify move command help."""
+    result = runner.invoke(app, ["move", "--help"])
+    assert result.exit_code == 0
+    assert "dry-run" in result.output
+    assert "copy" in result.output
+    assert "conflict" in result.output

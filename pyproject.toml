@@ -31,6 +31,7 @@ dependencies = [
     "pyobjc-framework-vision>=12.1",
     "pyobjc-framework-quartz>=12.1",
     "pyobjc-framework-cocoa>=12.1",
+    "typer>=0.21.0",
 ]
 
 [project.optional-dependencies]
@@ -155,6 +156,10 @@ ignore = [
 ]
 "src/para_files/utils/ocr.py" = [
     "ANN401",  # PyObjC objects require Any type annotations
+]
+"src/para_files/main.py" = [
+    "FBT002",   # Boolean default positional arguments are standard for Typer CLI
+    "PLR0913",  # CLI commands naturally have many parameters
 ]
 
 [tool.ruff.lint.isort]
