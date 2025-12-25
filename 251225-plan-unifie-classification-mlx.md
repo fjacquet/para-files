@@ -32,29 +32,20 @@ tags:
 
 ### Recommandation : Architecture Hybride
 
-```
-┌────────────────────────────────────────────────────────────────────┐
-│                    CLASSIFICATION RAPIDE (99% des cas)             │
-│                                                                    │
-│  Embedding Model (MLX) + Similarité Cosinus                        │
-│  → Modèle : nomic-embed-text (100MB)                               │
-│  → Latence : 10-15ms                                               │
-│  → RAM : 100-500MB                                                 │
-│  → DÉTERMINISTE : même input = même output                         │
-└────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼ (si confidence < seuil)
-┌────────────────────────────────────────────────────────────────────┐
-│                    FALLBACK INTELLIGENT (1% des cas)               │
-│                                                                    │
-│  Option A : SLM local (Qwen 2.5-1.5B ou Phi-3-mini)               │
-│  → Taille : 1-3GB quantifié                                        │
-│  → Latence : 200-500ms                                             │
-│  → Génère suggestion catégorie + confidence                        │
-│                                                                    │
-│  Option B : LLM optionnel (Ollama/API configurable)               │
-│  → Pour cas complexes nécessitant raisonnement                     │
-└────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph rapide["🚀 CLASSIFICATION RAPIDE (99% des cas)"]
+        emb["Embedding Model MLX + Similarité Cosinus"]
+        specs["nomic-embed-text (100MB) • 10-15ms • 100-500MB RAM"]
+        det["✅ DÉTERMINISTE : même input = même output"]
+    end
+
+    rapide -->|"confidence < seuil"| fallback
+
+    subgraph fallback["🔄 FALLBACK INTELLIGENT (1% des cas)"]
+        optA["**Option A** : SLM local<br/>Qwen 2.5-1.5B / Phi-3-mini<br/>1-3GB quantifié • 200-500ms"]
+        optB["**Option B** : LLM optionnel<br/>Ollama/API configurable<br/>Cas complexes"]
+    end
 ```
 
 ### DÉCISIONS
@@ -68,18 +59,24 @@ tags:
 
 ### Stack Technique Finale
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         STACK MLX (Mac Only)                         │
-├─────────────────────────────────────────────────────────────────────┤
-│  Embeddings    : nomic-embed-text-v1.5 (MLX Community)              │
-│  Semantic      : semantic-router avec MLX encoder                    │
-│  SLM Fallback  : Qwen 2.5-1.5B-Instruct (MLX 4-bit, ~1GB)           │
-│  LLM Optionnel : Ollama/Gemini/OpenRouter via litellm               │
-│  OCR           : Vision Framework (Apple Neural Engine)             │
-│  Mail          : IMAPClient (Python)                                 │
-│  Files         : watchdog + pyobjc (FSEvents)                        │
-└─────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    subgraph stack["🍎 STACK MLX (Mac Only)"]
+        direction TB
+        subgraph core["Core AI"]
+            emb["📊 Embeddings<br/>nomic-embed-text-v1.5"]
+            sem["🔀 Semantic Router<br/>MLX encoder"]
+        end
+        subgraph fallback["Fallback"]
+            slm["🤖 SLM<br/>Qwen 2.5-1.5B (4-bit, ~1GB)"]
+            llm["☁️ LLM Optionnel<br/>Ollama/Gemini/OpenRouter"]
+        end
+        subgraph io["I/O"]
+            ocr["👁️ OCR<br/>Vision Framework (ANE)"]
+            mail["📧 Mail<br/>IMAPClient"]
+            files["📁 Files<br/>watchdog + pyobjc"]
+        end
+    end
 ```
 
 ---
@@ -118,55 +115,44 @@ Avantages de la séparation :
 
 ### Diagramme d'Architecture
 
-```
-┌──────────────────────────────────┐    ┌──────────────────────────────────┐
-│     DELL MAIL TREE               │    │     PERSONAL FILE TREE           │
-│  outlook-mail-structure.md       │    │  categories.yaml                 │
-│  → embeddings Dell               │    │  → embeddings Perso              │
-│  → ~50 catégories mail           │    │  → ~50 catégories fichiers       │
-└──────────────────────────────────┘    └──────────────────────────────────┘
-                                       │
-                                       ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              INGESTORS                                       │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                   │
-│  │ IMAP Client  │    │ File Watcher │    │ Manual Input │                   │
-│  │ (mailtag)    │    │ (classifai)  │    │ (Streamlit)  │                   │
-│  └──────────────┘    └──────────────┘    └──────────────┘                   │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                       │
-                                       ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    CLASSIFICATION PIPELINE (5 signaux)                       │
-│                                                                              │
-│  Signal 1: Validated DB (100%)                                              │
-│     └── sender/issuer → catégorie (mappings manuels validés)                │
-│                                                                              │
-│  Signal 2: Rules Engine (95%)                                               │
-│     └── Glob patterns sur filename/path/sender domain                       │
-│                                                                              │
-│  Signal 3: Domain/Issuer KB (90%)                                           │
-│     └── domain → catégorie (domain_classifications.json)                    │
-│     └── issuer → sector (sector_issuer_mapping.yaml)                        │
-│                                                                              │
-│  Signal 4: Semantic Router MLX (85%) ◄── NOUVEAU                            │
-│     └── Embedding du contenu vs embeddings des catégories référence         │
-│     └── Similarité cosinus → catégorie la plus proche                       │
-│     └── DÉTERMINISTE : même texte = même vecteur = même catégorie           │
-│                                                                              │
-│  Signal 5: LLM Fallback (configurable 0.8)                                  │
-│     └── Génération structurée JSON pour cas ambigus                         │
-│     └── Propose nouvelle catégorie si confidence < seuil                    │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                       │
-                                       ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              ACTUATORS                                       │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                   │
-│  │ IMAP Move    │    │ File Move    │    │ À Classer    │                   │
-│  │ (batch)      │    │ + Rename     │    │ (low conf)   │                   │
-│  └──────────────┘    └──────────────┘    └──────────────┘                   │
-└─────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph trees["📚 REFERENCE TREES"]
+        direction LR
+        dell["🏢 DELL MAIL TREE<br/>outlook-mail-structure.md<br/>~50 catégories mail"]
+        perso["🏠 PERSONAL FILE TREE<br/>categories.yaml<br/>~50 catégories fichiers"]
+    end
+
+    trees --> ingestors
+
+    subgraph ingestors["📥 INGESTORS"]
+        direction LR
+        imap["📧 IMAP Client<br/>(mailtag)"]
+        watch["👁️ File Watcher<br/>(classifai)"]
+        manual["✍️ Manual Input<br/>(Streamlit)"]
+    end
+
+    ingestors --> pipeline
+
+    subgraph pipeline["⚙️ CLASSIFICATION PIPELINE (5 signaux)"]
+        direction TB
+        s1["🎯 Signal 1: Validated DB (100%)<br/>sender/issuer → catégorie"]
+        s2["📋 Signal 2: Rules Engine (95%)<br/>Glob patterns filename/path/domain"]
+        s3["🌐 Signal 3: Domain/Issuer KB (90%)<br/>domain → catégorie"]
+        s4["🧠 Signal 4: Semantic Router MLX (85%) ⭐ NOUVEAU<br/>Embeddings + Cosinus = DÉTERMINISTE"]
+        s5["🤖 Signal 5: LLM Fallback (configurable)<br/>Génération structurée JSON"]
+
+        s1 --> s2 --> s3 --> s4 --> s5
+    end
+
+    pipeline --> actuators
+
+    subgraph actuators["📤 ACTUATORS"]
+        direction LR
+        move_imap["📧 IMAP Move<br/>(batch)"]
+        move_file["📁 File Move<br/>+ Rename"]
+        pending["⏳ À Classer<br/>(low confidence)"]
+    end
 ```
 
 ---
@@ -258,7 +244,7 @@ result = dell_router(email_text)  # Retourne Route.name ou None
 
 ### Nouveau : Bibliothèque Partagée `classifai-core`
 
-```
+```text
 /Users/fjacquet/Projects/classifai-core/
 ├── src/classifai_core/
 │   ├── __init__.py

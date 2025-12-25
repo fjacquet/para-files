@@ -116,3 +116,24 @@ See `.env.example` for all options.
 This project is **macOS only** (Apple Silicon required) because it uses:
 - MLX for optimized embeddings on Apple Neural Engine
 - Vision Framework for OCR
+
+## Documentation Preferences
+
+### Diagrams: Always Use Mermaid
+
+**NEVER use ASCII box art** in markdown files. Always use **Mermaid diagrams** instead:
+
+- ASCII boxes are fragile and break with different fonts/renderers
+- Mermaid renders consistently across GitHub, Obsidian, VS Code
+
+**For architecture/flow diagrams:**
+```mermaid
+flowchart TB
+    subgraph layer["Layer Name"]
+        a["Component A"]
+        b["Component B"]
+    end
+    layer --> next
+```
+
+**For simple component lists:** Use markdown tables instead of ASCII boxes.
