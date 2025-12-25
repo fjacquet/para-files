@@ -1,0 +1,409 @@
+# personal_file_tree.yaml
+# Structure PARA cible pour OneDrive Personnel
+# Utilisé par MLX Semantic Router pour classification automatique
+#
+# Source: Analyse 142,218 fichiers OneDrive (2025-12-25)
+
+version: "1.0"
+generated: "2025-12-25"
+
+# =============================================================================
+# RÈGLES DE ROUTAGE SPÉCIALES
+# =============================================================================
+routing_rules:
+
+  # Photos et vidéos - UNIQUEMENT depuis Inbox
+  photos:
+    source: "0_Inbox"  # Ne cherche que dans Inbox
+    extensions: [".jpg", ".jpeg", ".png", ".heic", ".raw", ".cr2", ".nef"]
+    destination: "4_Archives/photos/{YYYY}/{MM}/{DD}"
+    date_source: "exif"
+    fallback_date: "file_modified"
+
+  videos:
+    source: "0_Inbox"  # Ne cherche que dans Inbox
+    extensions: [".mp4", ".mov", ".avi", ".mkv"]
+    destination: "4_Archives/photos/{YYYY}/{MM}/{DD}"
+    date_source: "exif"
+    fallback_date: "file_modified"
+
+  screenshots:
+    source: "0_Inbox"
+    patterns: ["Screenshot*", "Capture*", "Screen Shot*"]
+    destination: "4_Archives/photos/{YYYY}/{MM}/{DD}"
+    date_source: "file_modified"
+
+  # Formations → Archive, structure interne préservée
+  courses:
+    action: "preserve_structure"
+    destination: "4_Archives/courses-completed/{platform}"
+    platforms:
+      coursera: ["*[Cc]oursera*"]
+      linkedin-learning: ["*[Ll]inked[Ii]n*[Ll]earning*"]
+      oreilly: ["*[Oo][Rr]eilly*"]
+      udemy: ["*[Uu]demy*"]
+      pluralsight: ["*[Pp]luralsight*"]
+      datacamp: ["*[Dd]atacamp*"]
+
+  # Dossiers génériques → Retour Inbox (contenu aplati)
+  generic_folders:
+    patterns: ["New Folder*", "Untitled*", "Sans titre*"]
+    action: "flatten_to_inbox"
+
+# =============================================================================
+# 0_INBOX - Point d'entrée PLAT
+# =============================================================================
+inbox:
+  path: "0_Inbox"
+  behavior: "flat"
+  description: "Point d'entrée temporaire - AUCUN sous-dossier"
+  utterances:
+    - "nouveau fichier"
+    - "téléchargement"
+    - "à trier"
+    - "temporary"
+
+# =============================================================================
+# 1_PROJECTS - Projets actifs avec deadline
+# =============================================================================
+projects:
+  path: "1_Projects"
+
+  routes:
+    - name: "dell-customer-project"
+      pattern: "1_Projects/dell-{customer}-{project}"
+      utterances:
+        - "projet client Dell"
+        - "delivery"
+        - "implementation"
+        - "POC client"
+        - "migration projet"
+        - "RFP réponse"
+        - "proposal"
+
+    - name: "home-improvement"
+      pattern: "1_Projects/renovation-{room}"
+      utterances:
+        - "rénovation"
+        - "travaux maison"
+        - "devis artisan"
+        - "matériaux construction"
+
+    - name: "tech-lab"
+      pattern: "1_Projects/{name}"
+      utterances:
+        - "homelab"
+        - "lab setup"
+        - "configuration test"
+        - "development project"
+
+# =============================================================================
+# 2_AREAS - Responsabilités continues (suivi actif)
+# =============================================================================
+areas:
+  path: "2_Areas"
+
+  routes:
+    # --- Dell Work ---
+    - name: "dell-customers"
+      pattern: "2_Areas/dell/customers/{sector}/{customer}"
+      utterances:
+        - "suivi client"
+        - "account management"
+        - "relationship ongoing"
+
+    - name: "dell-competitive"
+      pattern: "2_Areas/dell/competitive"
+      utterances:
+        - "battlecard"
+        - "analyse concurrence"
+        - "HPE vs Dell"
+        - "NetApp comparaison"
+
+    - name: "dell-team"
+      pattern: "2_Areas/dell/team"
+      utterances:
+        - "équipe"
+        - "management"
+        - "1on1"
+        - "performance review"
+
+    # --- Finances courantes (pas les factures archivées) ---
+    - name: "finances-banques"
+      pattern: "2_Areas/finances/banques/{bank}"
+      utterances:
+        - "compte courant"
+        - "gestion compte"
+        - "IBAN actif"
+
+    - name: "finances-investissements"
+      pattern: "2_Areas/finances/investissements"
+      utterances:
+        - "portfolio actif"
+        - "trading"
+        - "ETF suivi"
+
+    # --- Photography (pratique active) ---
+    - name: "photography"
+      pattern: "2_Areas/photography"
+      utterances:
+        - "lightroom preset"
+        - "workflow photo"
+        - "matériel actuel"
+
+# =============================================================================
+# 3_RESOURCES - Références stables
+# =============================================================================
+resources:
+  path: "3_Resources"
+
+  routes:
+    - name: "books"
+      pattern: "3_Resources/books"
+      utterances:
+        - "livre"
+        - "ebook"
+        - "lecture"
+        - "kindle"
+        - "epub"
+
+    - name: "certifications"
+      pattern: "3_Resources/certifications/{vendor}/{year}"
+      utterances:
+        - "certification"
+        - "badge"
+        - "credential"
+        - "exam"
+
+    - name: "dell-products"
+      pattern: "3_Resources/dell-docs/products/{family}"
+      utterances:
+        - "product datasheet"
+        - "spec sheet"
+        - "technical specs"
+
+    - name: "dell-designs"
+      pattern: "3_Resources/dell-docs/validated-designs"
+      utterances:
+        - "reference architecture"
+        - "validated design"
+
+    - name: "dell-whitepapers"
+      pattern: "3_Resources/dell-docs/whitepapers"
+      utterances:
+        - "whitepaper"
+        - "technical paper"
+
+    - name: "legal-edocuments"
+      pattern: "3_Resources/legal/e-documents"
+      utterances:
+        - "passeport"
+        - "carte identité"
+        - "permis"
+        - "AVS"
+        - "document officiel"
+
+    - name: "legal-contrats"
+      pattern: "3_Resources/legal/contrats"
+      utterances:
+        - "contrat actif"
+        - "bail"
+        - "assurance vie"
+
+    - name: "recettes"
+      pattern: "3_Resources/recettes/{category}"
+      utterances:
+        - "recette"
+        - "cuisine"
+        - "thermomix"
+
+    - name: "tech-guides"
+      pattern: "3_Resources/tech/{topic}"
+      utterances:
+        - "howto"
+        - "guide technique"
+        - "documentation"
+
+# =============================================================================
+# 4_ARCHIVES - Contenu terminé/historique
+# =============================================================================
+archives:
+  path: "4_Archives"
+
+  routes:
+    # --- Photos par date EXIF ---
+    - name: "photos"
+      pattern: "4_Archives/photos/{YYYY}/{MM}/{DD}"
+      date_format: "YYYY/MM/DD"
+      utterances:
+        - "photo"
+        - "image"
+        - "camera"
+        - "screenshot"
+
+    # --- Formations terminées (structure préservée) ---
+    - name: "courses-completed"
+      pattern: "4_Archives/courses-completed/{platform}"
+      preserve_structure: true
+      utterances:
+        - "cours"
+        - "formation"
+        - "learning"
+        - "tutorial"
+
+    # --- Factures par ANNÉE puis catégorie/émetteur ---
+    - name: "factures-assurances"
+      pattern: "4_Archives/factures/{year}/_Assurances/{issuer}"
+      utterances:
+        - "facture assurance"
+        - "prime assurance"
+        - "police"
+        - "Swica"
+        - "Groupe Mutuel"
+        - "Vaudoise"
+
+    - name: "factures-banques"
+      pattern: "4_Archives/factures/{year}/_Banques/{issuer}"
+      utterances:
+        - "relevé bancaire"
+        - "facture banque"
+        - "frais bancaires"
+
+    - name: "factures-energie"
+      pattern: "4_Archives/factures/{year}/_Energie/{issuer}"
+      utterances:
+        - "facture électricité"
+        - "facture gaz"
+        - "Romande Energie"
+        - "SIG"
+
+    - name: "factures-telephonie"
+      pattern: "4_Archives/factures/{year}/_Telephonie/{issuer}"
+      utterances:
+        - "facture téléphone"
+        - "facture mobile"
+        - "Swisscom"
+        - "Salt"
+
+    - name: "factures-impots"
+      pattern: "4_Archives/factures/{year}/_Impots"
+      utterances:
+        - "déclaration fiscale"
+        - "impôt"
+        - "taxation"
+
+    - name: "factures-logement"
+      pattern: "4_Archives/factures/{year}/_Logement/{issuer}"
+      utterances:
+        - "facture loyer"
+        - "charges"
+        - "régie"
+
+    - name: "factures-sante"
+      pattern: "4_Archives/factures/{year}/_Santé/{issuer}"
+      utterances:
+        - "facture médecin"
+        - "facture pharmacie"
+        - "facture dentiste"
+
+    - name: "factures-mobilite"
+      pattern: "4_Archives/factures/{year}/_Mobilité/{issuer}"
+      utterances:
+        - "facture garage"
+        - "facture essence"
+        - "facture CFF"
+
+    - name: "factures-cloud"
+      pattern: "4_Archives/factures/{year}/_Cloud/{issuer}"
+      utterances:
+        - "facture cloud"
+        - "facture Netflix"
+        - "facture Spotify"
+        - "facture Adobe"
+
+    - name: "factures-licences"
+      pattern: "4_Archives/factures/{year}/_Licences/{issuer}"
+      utterances:
+        - "facture licence"
+        - "subscription software"
+
+    - name: "factures-dons"
+      pattern: "4_Archives/factures/{year}/_Dons/{organization}"
+      utterances:
+        - "reçu don"
+        - "attestation donation"
+        - "Croix-Rouge"
+
+    # --- Santé par année/praticien ---
+    - name: "sante"
+      pattern: "4_Archives/sante/{year}/{practitioner}"
+      utterances:
+        - "consultation médicale"
+        - "ordonnance"
+        - "analyse"
+        - "radiographie"
+        - "prescription"
+
+    # --- Maison par année ---
+    - name: "maison"
+      pattern: "4_Archives/maison/{year}"
+      utterances:
+        - "entretien maison"
+        - "réparation"
+        - "travaux terminés"
+
+    # --- Dell projets clos : customer/year ---
+    - name: "dell-projects-closed"
+      pattern: "4_Archives/dell-projects-closed/{customer}/{year}"
+      utterances:
+        - "projet Dell terminé"
+        - "closed project"
+        - "delivery completed"
+
+    # --- Archives personnelles ---
+    - name: "personal-old"
+      pattern: "4_Archives/personal-old/{category}"
+      utterances:
+        - "ancien"
+        - "old backup"
+        - "legacy"
+        - "historique"
+
+# =============================================================================
+# ÉMETTEURS CONNUS
+# =============================================================================
+known_issuers:
+  assurances:
+    - Swica
+    - Groupe Mutuel
+    - Vaudoise Assurances
+    - Axa-Winterthur
+    - Zurich
+    - TCS
+    - Rega
+    - Baloise
+
+  banques:
+    - PostFinance
+    - UBS
+    - Raiffeisen
+    - Credit Suisse
+
+  energie:
+    - Romande Energie
+    - SIG
+    - Holdigaz
+
+  telephonie:
+    - Swisscom
+    - Salt
+    - Sunrise
+
+  cloud:
+    - Apple
+    - Microsoft
+    - Google
+    - Dropbox
+    - Netflix
+    - Spotify
+    - Adobe
