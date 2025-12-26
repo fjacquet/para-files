@@ -294,11 +294,12 @@ archives:
         - "Groupe Mutuel"
         - "Vaudoise"
 
-    - name: "factures-banques"
-      pattern: "4_Archives/factures/Banques/{issuer}/{year}"
+    - name: "banques"
+      pattern: "4_Archives/banques/{issuer}/{year}"
       utterances:
         - "relevé bancaire"
-        - "facture banque"
+        - "relevé de compte"
+        - "extrait de compte"
         - "frais bancaires"
 
     - name: "factures-energie"
@@ -317,12 +318,14 @@ archives:
         - "Swisscom"
         - "Salt"
 
-    - name: "factures-impots"
-      pattern: "4_Archives/factures/Impots/{year}"
+    - name: "impots"
+      pattern: "4_Archives/impots/{year}"
       utterances:
         - "déclaration fiscale"
         - "impôt"
         - "taxation"
+        - "avis d'imposition"
+        - "bordereau fiscal"
 
     - name: "factures-logement"
       pattern: "4_Archives/factures/Logement/{issuer}/{year}"
@@ -382,8 +385,8 @@ archives:
         - "achat matériel"
         - "commande en ligne"
 
-    - name: "factures-prevoyance"
-      pattern: "4_Archives/factures/Prevoyance/{issuer}/{year}"
+    - name: "prevoyance"
+      pattern: "4_Archives/prevoyance/{issuer}/{year}"
       utterances:
         - "2e pilier"
         - "3e pilier"
@@ -404,16 +407,17 @@ archives:
         - "école"
         - "activités enfants"
 
-    - name: "factures-voyages"
-      pattern: "4_Archives/factures/Voyages/{destination}/{year}"
+    - name: "voyages"
+      pattern: "4_Archives/voyages/{destination}/{year}"
       utterances:
-        - "facture voyage"
+        - "voyage"
         - "billet avion"
         - "réservation hôtel"
         - "location vacances"
         - "ESTA"
         - "visa voyage"
-        - "péage autoroute"
+        - "boarding pass"
+        - "confirmation réservation"
 
     - name: "salaires"
       pattern: "4_Archives/salaires/{employer}/{year}"
@@ -430,16 +434,17 @@ archives:
         - "facture licence"
         - "subscription software"
 
-    - name: "factures-dons"
-      pattern: "4_Archives/factures/Dons/{organization}/{year}"
+    - name: "dons"
+      pattern: "4_Archives/dons/{organization}/{year}"
       utterances:
         - "reçu don"
         - "attestation donation"
+        - "attestation fiscale don"
         - "Croix-Rouge"
 
-    # --- Santé par année/praticien ---
+    # --- Santé par praticien/année ---
     - name: "sante"
-      pattern: "4_Archives/sante/{year}/{practitioner}"
+      pattern: "4_Archives/sante/{practitioner}/{year}"
       utterances:
         - "consultation médicale"
         - "ordonnance"
@@ -496,7 +501,7 @@ known_issuers:
       - ECA
 
   banques:
-    pattern: "4_Archives/factures/Banques/{issuer}/{year}"
+    pattern: "4_Archives/banques/{issuer}/{year}"
     issuers:
       - PostFinance
       - UBS
@@ -575,7 +580,7 @@ known_issuers:
       - MediaMarkt
 
   prevoyance:
-    pattern: "4_Archives/factures/Prevoyance/{issuer}/{year}"
+    pattern: "4_Archives/prevoyance/{issuer}/{year}"
     issuers:
       - Generali
       - Vaudoise
@@ -593,13 +598,36 @@ known_issuers:
       - Leukerbad Skischule
 
   voyages:
-    pattern: "4_Archives/factures/Voyages/{issuer}/{year}"
+    pattern: "4_Archives/voyages/{destination}/{year}"
+    destinations:
+      - Islande
+      - Las Vegas
+      - Dublin
+      - Rome
+      - Ireland
+      - St Moritz
+      - Miami
+
+  logement:
+    pattern: "4_Archives/factures/Logement/{issuer}/{year}"
     issuers:
-      - ebookers
-      - Interhome
-      - Ulys
-      - Kontiki
-      - Alitalia
-      - Swiss
-      - Air France
-      - EasyJet
+      - Régie du Rhône
+      - Naef
+      - Foncia
+      - Gérance Privée
+
+  licences:
+    pattern: "4_Archives/factures/Licences/{issuer}/{year}"
+    issuers:
+      - JetBrains
+      - Microsoft 365
+      - 1Password
+      - Parallels
+
+  dons:
+    pattern: "4_Archives/dons/{organization}/{year}"
+    organizations:
+      - Croix-Rouge
+      - Médecins Sans Frontières
+      - WWF
+      - Caritas
