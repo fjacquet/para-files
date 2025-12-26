@@ -445,3 +445,8 @@ known_issuers:
       - VMCV
       - Fart
       - Travys
+
+  sante:
+    pattern: "4_Archives/factures/{year}/Santé/{issuer}"
+    issuers:
+      - Médecine Chinoise HAN
