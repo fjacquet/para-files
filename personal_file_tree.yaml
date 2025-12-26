@@ -49,6 +49,11 @@ routing_rules:
     patterns: ["New Folder*", "Untitled*", "Sans titre*"]
     action: "flatten_to_inbox"
 
+  # Programmes et installeurs
+  programmes:
+    extensions: [".exe", ".msi", ".dmg", ".pkg", ".app", ".deb", ".rpm", ".appimage", ".snap", ".flatpak", ".jar", ".war", ".apk", ".ipa"]
+    destination: "4_Archives/programmes"
+
 # =============================================================================
 # 0_INBOX - Point d'entrée PLAT
 # =============================================================================
