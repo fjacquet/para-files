@@ -128,7 +128,7 @@ class Config(BaseSettings):
 
     # Reference tree configuration
     reference_tree_path: Path = Field(
-        default=Path("personal_file_tree.yaml"),
+        default=DEFAULT_REFERENCE_TREE,
         description="Path to the PARA reference tree YAML file",
     )
 

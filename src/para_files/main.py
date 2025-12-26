@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Annotated, Any
 import typer
 from pydantic import ValidationError
 
-from para_files.config import load_config
+from para_files.config import DEFAULT_REFERENCE_TREE, load_config
 from para_files.mover import ConflictStrategy, move_classified_file
 from para_files.pipeline import ClassificationPipeline
 
@@ -62,7 +62,7 @@ def _get_reference_tree_path(
     try:
         cfg = load_config()
     except ValidationError:
-        return Path("personal_file_tree.yaml")
+        return DEFAULT_REFERENCE_TREE
     else:
         return cfg.reference_tree_path
 
