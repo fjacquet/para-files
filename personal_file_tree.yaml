@@ -54,6 +54,11 @@ routing_rules:
     extensions: [".exe", ".msi", ".dmg", ".pkg", ".app", ".deb", ".rpm", ".appimage", ".snap", ".flatpak", ".jar", ".war", ".apk", ".ipa"]
     destination: "4_Archives/programmes"
 
+  # Images disque ISO
+  isos:
+    extensions: [".iso", ".img", ".bin", ".cue", ".nrg", ".mdf", ".vhd", ".vhdx", ".vmdk", ".qcow2"]
+    destination: "4_Archives/isos"
+
 # =============================================================================
 # 0_INBOX - Point d'entrée PLAT
 # =============================================================================
