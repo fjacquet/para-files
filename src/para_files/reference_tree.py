@@ -17,6 +17,7 @@ from typing import Any
 import yaml
 
 from para_files.types import (
+    IssuerCategory,
     KnownIssuers,
     Route,
     RoutingRule,
@@ -129,16 +130,22 @@ class ReferenceTree:
                 )
 
     def _parse_known_issuers(self) -> None:
-        """Parse known issuers database from YAML."""
-        issuers_data = self._data.get("known_issuers", {})
+        """Parse known issuers database from YAML.
 
-        self._known_issuers = KnownIssuers(
-            assurances=issuers_data.get("assurances", []),
-            banques=issuers_data.get("banques", []),
-            energie=issuers_data.get("energie", []),
-            telephonie=issuers_data.get("telephonie", []),
-            cloud=issuers_data.get("cloud", []),
-        )
+        Dynamically loads all categories - no hardcoded category names.
+        Each category in YAML should have 'pattern' and 'issuers' keys.
+        """
+        issuers_data = self._data.get("known_issuers", {})
+        categories: dict[str, IssuerCategory] = {}
+
+        for category_name, category_data in issuers_data.items():
+            if isinstance(category_data, dict):
+                categories[category_name] = IssuerCategory(
+                    pattern=category_data.get("pattern", ""),
+                    issuers=category_data.get("issuers", []),
+                )
+
+        self._known_issuers = KnownIssuers(categories=categories)
 
     def get_all_routes(self) -> list[Route]:
         """Return all routes flattened for semantic router.

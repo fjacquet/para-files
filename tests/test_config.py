@@ -16,7 +16,7 @@ class TestMLXConfig:
     def test_default_values(self):
         """Test default MLX configuration values."""
         config = MLXConfig()
-        assert config.model_name == "mlx-community/nomic-embed-text-v1.5"
+        assert config.model_name == "nomic-text-v1.5"
         assert config.score_threshold == 0.75
 
     def test_custom_values(self):
@@ -116,10 +116,12 @@ class TestConfig:
         with pytest.raises(ValidationError):
             Config(para_root=tmp_path, content_preview_chars=20000)
 
-    def test_missing_para_root_fails(self):
-        """Test that missing para_root fails validation."""
-        with pytest.raises(ValidationError):
-            Config()  # type: ignore[call-arg]
+    def test_para_root_has_default(self):
+        """Test that para_root has a sensible default."""
+        from pathlib import Path
+
+        config = Config()
+        assert config.para_root == Path.home() / "Documents" / "PARA"
 
 
 class TestLoadConfig:

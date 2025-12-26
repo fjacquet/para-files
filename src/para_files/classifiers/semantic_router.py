@@ -7,8 +7,12 @@ input always produces the same classification.
 
 from __future__ import annotations
 
+import logging
+
 from semantic_router import Route as SRRoute
 from semantic_router.routers import SemanticRouter
+
+logger = logging.getLogger(__name__)
 
 from para_files.classifiers.base import BaseClassifier
 from para_files.encoders.mlx_encoder import MLXEncoder
@@ -81,7 +85,7 @@ class SemanticRouterClassifier(BaseClassifier):
             ]
 
             self._router = SemanticRouter(
-                encoder=self._encoder,  # type: ignore[arg-type]
+                encoder=self._encoder,
                 routes=sr_routes,
                 auto_sync="local",
             )
@@ -107,20 +111,66 @@ class SemanticRouterClassifier(BaseClassifier):
 
         router = self._ensure_router()
 
+        # Truncate content to avoid exceeding encoder's token limit
+        max_chars = getattr(self._encoder, "max_chars", 20000)
+        truncated_content = content[:max_chars] if len(content) > max_chars else content
+
         # Get classification from semantic router
-        router_result = router(content)
+        router_result = router(truncated_content)
+
+        # Try to get similarity scores for debugging
+        if logger.isEnabledFor(logging.DEBUG):
+            try:
+                # Get embedding for the content
+                query_embedding = self._encoder([content[:500]])[0]  # Truncate for speed
+
+                # Get route embeddings from router index
+                if hasattr(router, "index") and router.index is not None:
+                    index = router.index
+                    if hasattr(index, "get_routes"):
+                        route_names_list, embeddings, _ = index.get_routes()
+                        if embeddings is not None and len(embeddings) > 0:
+                            # Compute cosine similarities
+                            import numpy as np
+
+                            query_np = np.array(query_embedding)
+                            embeddings_np = np.array(embeddings)
+
+                            # Compute dot products (embeddings should be normalized)
+                            similarities = embeddings_np @ query_np
+
+                            # Get top 5 scores
+                            top_indices = np.argsort(similarities)[-5:][::-1]
+                            logger.debug("Top 5 semantic matches:")
+                            for idx in top_indices:
+                                route_n = route_names_list[idx] if idx < len(route_names_list) else "?"
+                                score = similarities[idx]
+                                logger.debug("  %s: %.4f", route_n, score)
+            except Exception as e:
+                logger.debug("Could not compute similarity scores: %s", e)
 
         # Handle case where result is a list (multi-route mode)
         if isinstance(router_result, list):
             if not router_result:
+                logger.debug("Semantic router returned empty result list")
                 return None
             choice = router_result[0]
         else:
             choice = router_result
 
-        # Check if we got a match
+        # Log the result for debugging
         route_name = getattr(choice, "name", None)
+        similarity_score = getattr(choice, "similarity_score", None)
+        logger.debug(
+            "Semantic router result: route=%s, score=%s, threshold=%s",
+            route_name,
+            f"{similarity_score:.4f}" if similarity_score else "None",
+            self._score_threshold,
+        )
+
+        # Check if we got a match
         if route_name is None:
+            logger.debug("No route matched (below threshold)")
             return None
 
         # Find the matching Route to get the pattern

@@ -1,59 +1,59 @@
 """MLX-based encoder for semantic routing.
 
-Uses mlx-lm to load embedding models from Hugging Face
-and encode texts for semantic similarity matching.
+Uses mlx-embedding-models to load embedding models optimized for Apple Silicon.
 """
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
-import mlx.core as mx
-from mlx_lm import load
+from mlx_embedding_models.embedding import EmbeddingModel  # type: ignore[import-untyped]
+from pydantic import ConfigDict, PrivateAttr
+from semantic_router.encoders import DenseEncoder
 
 
-class MLXEncoder:
+class MLXEncoder(DenseEncoder):
     """Custom encoder for semantic-router using MLX embeddings.
 
-    This encoder implements the interface expected by semantic-router
-    while using MLX for optimized inference on Apple Silicon.
+    This encoder inherits from DenseEncoder (Pydantic model) and uses
+    mlx-embedding-models for optimized inference on Apple Silicon.
+
+    Available models in registry:
+        - nomic-text-v1.5 (default, 768 dims, 8192 token context)
+        - nomic-text-v1 (768 dims)
+        - bge-small (384 dims)
+        - bge-base (768 dims)
+        - bge-large (1024 dims)
+        - minilm-l6 (384 dims)
+        - minilm-l12 (384 dims)
+        - multilingual-e5-small (384 dims)
     """
 
-    def __init__(
-        self,
-        model_name: str = "mlx-community/nomic-embed-text-v1.5",
-        score_threshold: float = 0.75,
-    ) -> None:
-        """Initialize MLX encoder with model.
+    name: str = "nomic-text-v1.5"
+    score_threshold: float | None = 0.75
+    type: str = "mlx"
+    # Max chars to avoid exceeding model's token limit
+    # mlx-embedding-models uses buckets up to 512 tokens max
+    # Conservative: 512 * 2 = 1024 chars (accounts for multi-byte, numbers, etc.)
+    max_chars: int = 1000
 
-        Args:
-            model_name: Hugging Face model identifier.
-            score_threshold: Minimum similarity score for matching.
-        """
-        self._model_name = model_name
-        self._score_threshold = score_threshold
-        self._model: Any = None
-        self._tokenizer: Any = None
-        self._loaded = False
+    model_config: ClassVar[ConfigDict] = ConfigDict(arbitrary_types_allowed=True)
 
-    @property
-    def name(self) -> str:
-        """Return encoder name."""
-        return self._model_name
-
-    @property
-    def score_threshold(self) -> float:
-        """Return minimum similarity score threshold."""
-        return self._score_threshold
+    # Private attributes for lazy loading
+    _model: Any = PrivateAttr(default=None)
+    _loaded: bool = PrivateAttr(default=False)
 
     def _ensure_loaded(self) -> None:
         """Lazily load model on first use."""
         if not self._loaded:
-            # load() returns (model, tokenizer, tokenizer_config)
-            result = load(self._model_name)
-            self._model = result[0]
-            self._tokenizer = result[1]
+            self._model = EmbeddingModel.from_registry(self.name)
             self._loaded = True
+
+    def _truncate(self, text: str) -> str:
+        """Truncate text to max_chars to avoid exceeding model's token limit."""
+        if len(text) > self.max_chars:
+            return text[: self.max_chars]
+        return text
 
     def __call__(self, texts: list[str]) -> list[list[float]]:
         """Encode texts to embeddings.
@@ -69,40 +69,14 @@ class MLXEncoder:
 
         self._ensure_loaded()
 
-        embeddings: list[list[float]] = []
+        # Truncate texts to avoid exceeding model's token limit
+        truncated_texts = [self._truncate(t) for t in texts]
 
-        for text in texts:
-            # Tokenize
-            inputs = self._tokenizer(
-                text,
-                return_tensors="np",
-                padding=True,
-                truncation=True,
-                max_length=512,
-            )
+        # EmbeddingModel.encode returns numpy array of shape (n_texts, embedding_dim)
+        embeddings_array = self._model.encode(truncated_texts)
 
-            # Convert to MLX arrays
-            input_ids = mx.array(inputs["input_ids"])
-            attention_mask = mx.array(inputs["attention_mask"])
-
-            # Get embeddings from model
-            outputs = self._model(input_ids)
-
-            # Mean pooling over sequence length
-            # outputs shape: (batch_size, seq_len, hidden_size)
-            masked_outputs = outputs * attention_mask[:, :, None]
-            sum_embeddings = mx.sum(masked_outputs, axis=1)
-            sum_mask = mx.sum(attention_mask, axis=1, keepdims=True)
-            mean_embeddings = sum_embeddings / mx.maximum(sum_mask, mx.array(1e-9))
-
-            # L2 normalize
-            norm = mx.sqrt(mx.sum(mean_embeddings * mean_embeddings, axis=-1, keepdims=True))
-            normalized = mean_embeddings / mx.maximum(norm, mx.array(1e-9))
-
-            # Convert to Python list
-            embedding_list: list[float] = normalized[0].tolist()  # type: ignore[assignment]
-            embeddings.append(embedding_list)
-
+        # Convert to list of lists
+        embeddings: list[list[float]] = embeddings_array.tolist()
         return embeddings
 
     def encode_batch(self, texts: list[str], batch_size: int = 32) -> list[list[float]]:

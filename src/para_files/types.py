@@ -160,29 +160,62 @@ class FileMetadata(BaseModel):
         return self.exif_date or self.modified_at or self.created_at
 
 
-class KnownIssuers(BaseModel):
-    """Database of known issuers organized by category."""
+class IssuerCategory(BaseModel):
+    """A category of issuers with its destination pattern."""
 
-    assurances: list[str] = Field(default_factory=list)
-    banques: list[str] = Field(default_factory=list)
-    energie: list[str] = Field(default_factory=list)
-    telephonie: list[str] = Field(default_factory=list)
-    cloud: list[str] = Field(default_factory=list)
+    pattern: str = Field(
+        default="4_Archives/factures/{year}/_Other/{issuer}",
+        description="Path pattern with {year} and {issuer} placeholders",
+    )
+    issuers: list[str] = Field(default_factory=list)
+
+
+class KnownIssuers(BaseModel):
+    """Database of known issuers organized by category.
+
+    Categories are loaded dynamically from YAML - no hardcoded fields.
+    Each category has a pattern and list of issuer names.
+    """
+
+    categories: dict[str, IssuerCategory] = Field(default_factory=dict)
 
     def all_issuers(self) -> dict[str, str]:
         """Return a mapping of issuer name (lowercase) to category."""
         result: dict[str, str] = {}
-        for issuer in self.assurances:
-            result[issuer.lower()] = "assurances"
-        for issuer in self.banques:
-            result[issuer.lower()] = "banques"
-        for issuer in self.energie:
-            result[issuer.lower()] = "energie"
-        for issuer in self.telephonie:
-            result[issuer.lower()] = "telephonie"
-        for issuer in self.cloud:
-            result[issuer.lower()] = "cloud"
+        for category_name, category in self.categories.items():
+            for issuer in category.issuers:
+                result[issuer.lower()] = category_name
         return result
+
+    def get_pattern(self, category: str) -> str:
+        """Get path pattern for a category.
+
+        Args:
+            category: Category name.
+
+        Returns:
+            Path pattern string, or default pattern if category not found.
+        """
+        if category in self.categories:
+            return self.categories[category].pattern
+        return f"4_Archives/factures/{{year}}/_Other/{category}"
+
+    def get_issuers(self, category: str) -> list[str]:
+        """Get issuers for a category.
+
+        Args:
+            category: Category name.
+
+        Returns:
+            List of issuer names, or empty list if category not found.
+        """
+        if category in self.categories:
+            return self.categories[category].issuers
+        return []
+
+    def list_categories(self) -> list[str]:
+        """Return list of all category names."""
+        return list(self.categories.keys())
 
 
 class ReferenceTreeData(BaseModel):

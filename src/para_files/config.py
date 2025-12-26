@@ -17,8 +17,8 @@ class MLXConfig(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="PARA_FILES_MLX_")
 
     model_name: str = Field(
-        default="mlx-community/nomic-embed-text-v1.5",
-        description="MLX embedding model from Hugging Face",
+        default="nomic-text-v1.5",
+        description="MLX embedding model from mlx-embedding-models registry",
     )
     score_threshold: float = Field(
         default=0.75,
@@ -66,6 +66,7 @@ class Config(BaseSettings):
 
     # PARA filesystem root
     para_root: Path = Field(
+        default=Path.home() / "Documents" / "PARA",
         description="Root directory for PARA folders (0_Inbox, 1_Projects, etc.)",
     )
 

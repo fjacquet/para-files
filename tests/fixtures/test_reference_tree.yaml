@@ -41,16 +41,26 @@ archives:
 
 known_issuers:
   assurances:
-    - "Swica"
-    - "CSS"
-    - "Helsana"
+    pattern: "4_Archives/factures/{year}/Assurances/{issuer}"
+    issuers:
+      - "Swica"
+      - "CSS"
+      - "Helsana"
   banques:
-    - "UBS"
-    - "Credit Suisse"
-    - "PostFinance"
+    pattern: "4_Archives/factures/{year}/Banques/{issuer}"
+    issuers:
+      - "UBS"
+      - "Credit Suisse"
+      - "PostFinance"
   energie:
-    - "SIG"
+    pattern: "4_Archives/factures/{year}/Energie/{issuer}"
+    issuers:
+      - "SIG"
   telephonie:
-    - "Swisscom"
+    pattern: "4_Archives/factures/{year}/Telephonie/{issuer}"
+    issuers:
+      - "Swisscom"
   cloud:
-    - "AWS"
+    pattern: "4_Archives/factures/{year}/Cloud/{issuer}"
+    issuers:
+      - "AWS"

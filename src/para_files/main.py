@@ -48,6 +48,7 @@ def setup_logging(*, verbose: bool = False) -> None:
     logging.basicConfig(
         level=level,
         format="%(levelname)s: %(message)s",
+        force=True,  # Override any existing configuration
     )
 
 
@@ -223,6 +224,174 @@ def move(
         else:
             typer.echo(f"Failed: {move_result.message}", err=True)
             raise typer.Exit(1)
+
+
+@app.command("add-issuer")
+def add_issuer(
+    issuer: Annotated[str, typer.Argument(help="Name of the issuer to add")],
+    category: Annotated[
+        str,
+        typer.Option("--category", "-c", help="Category to add issuer to"),
+    ],
+    reference_tree: Annotated[
+        Path | None,
+        typer.Option("--reference-tree", "-r", help="Path to reference tree YAML file"),
+    ] = None,
+) -> None:
+    """Add a new issuer to the reference tree."""
+    from para_files.learner import RoutingLearner
+
+    # Determine reference tree path
+    tree_path = reference_tree
+    if tree_path is None:
+        try:
+            config = load_config()
+            tree_path = config.reference_tree_path
+        except ValidationError:
+            tree_path = Path("personal_file_tree.yaml")
+
+    if not tree_path.exists():
+        typer.echo(f"Reference tree not found: {tree_path}", err=True)
+        raise typer.Exit(1)
+
+    learner = RoutingLearner(tree_path)
+
+    # Show available categories if needed
+    categories = learner.list_issuer_categories()
+    if category not in categories:
+        typer.echo(f"Creating new category: {category}")
+
+    if learner.add_issuer(issuer, category):
+        typer.echo(f"Added issuer '{issuer}' to category '{category}'")
+    else:
+        typer.echo(f"Issuer '{issuer}' already exists in '{category}'")
+
+
+@app.command("add-utterance")
+def add_utterance(
+    route: Annotated[str, typer.Argument(help="Name of the route to update")],
+    utterance: Annotated[str, typer.Argument(help="New utterance to add")],
+    reference_tree: Annotated[
+        Path | None,
+        typer.Option("--reference-tree", "-r", help="Path to reference tree YAML file"),
+    ] = None,
+) -> None:
+    """Add a new utterance to a route for better matching."""
+    from para_files.learner import RoutingLearner
+
+    # Determine reference tree path
+    tree_path = reference_tree
+    if tree_path is None:
+        try:
+            config = load_config()
+            tree_path = config.reference_tree_path
+        except ValidationError:
+            tree_path = Path("personal_file_tree.yaml")
+
+    if not tree_path.exists():
+        typer.echo(f"Reference tree not found: {tree_path}", err=True)
+        raise typer.Exit(1)
+
+    learner = RoutingLearner(tree_path)
+
+    if learner.add_utterance(route, utterance):
+        typer.echo(f"Added utterance '{utterance}' to route '{route}'")
+    else:
+        # Check if route exists
+        if learner.get_route_info(route) is None:
+            typer.echo(f"Route '{route}' not found", err=True)
+            typer.echo("Available routes:")
+            for r in learner.list_routes():
+                typer.echo(f"  - {r}")
+            raise typer.Exit(1)
+        typer.echo(f"Utterance '{utterance}' already exists in route '{route}'")
+
+
+@app.command("routes")
+def list_routes(
+    reference_tree: Annotated[
+        Path | None,
+        typer.Option("--reference-tree", "-r", help="Path to reference tree YAML file"),
+    ] = None,
+    show_utterances: Annotated[
+        bool,
+        typer.Option("--utterances", "-u", help="Show utterances for each route"),
+    ] = False,
+) -> None:
+    """List all available routes in the reference tree."""
+    from para_files.learner import RoutingLearner
+
+    # Determine reference tree path
+    tree_path = reference_tree
+    if tree_path is None:
+        try:
+            config = load_config()
+            tree_path = config.reference_tree_path
+        except ValidationError:
+            tree_path = Path("personal_file_tree.yaml")
+
+    if not tree_path.exists():
+        typer.echo(f"Reference tree not found: {tree_path}", err=True)
+        raise typer.Exit(1)
+
+    learner = RoutingLearner(tree_path)
+    routes = learner.list_routes()
+
+    if not routes:
+        typer.echo("No routes found")
+        return
+
+    max_utterances_shown = 5
+    typer.echo(f"Available routes ({len(routes)}):")
+    for route_name in routes:
+        if show_utterances:
+            route_info = learner.get_route_info(route_name)
+            utterances = route_info.get("utterances", []) if route_info else []
+            typer.echo(f"\n  {route_name}:")
+            for utt in utterances[:max_utterances_shown]:
+                typer.echo(f"    - {utt}")
+            if len(utterances) > max_utterances_shown:
+                remaining = len(utterances) - max_utterances_shown
+                typer.echo(f"    ... and {remaining} more")
+        else:
+            typer.echo(f"  - {route_name}")
+
+
+@app.command("issuers")
+def list_issuers(
+    reference_tree: Annotated[
+        Path | None,
+        typer.Option("--reference-tree", "-r", help="Path to reference tree YAML file"),
+    ] = None,
+) -> None:
+    """List all known issuers by category."""
+    from para_files.learner import RoutingLearner
+
+    # Determine reference tree path
+    tree_path = reference_tree
+    if tree_path is None:
+        try:
+            config = load_config()
+            tree_path = config.reference_tree_path
+        except ValidationError:
+            tree_path = Path("personal_file_tree.yaml")
+
+    if not tree_path.exists():
+        typer.echo(f"Reference tree not found: {tree_path}", err=True)
+        raise typer.Exit(1)
+
+    learner = RoutingLearner(tree_path)
+    known_issuers = learner.get_known_issuers()
+
+    if not known_issuers:
+        typer.echo("No issuers defined")
+        return
+
+    typer.echo("Known issuers by category:")
+    for category, issuers in known_issuers.items():
+        typer.echo(f"\n  {category}:")
+        for issuer in issuers:
+            typer.echo(f"    - {issuer}")
 
 
 @app.callback(invoke_without_command=True)

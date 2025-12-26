@@ -13,6 +13,7 @@ from para_files.types import (
     ClassificationSource,
     Confidence,
     FileMetadata,
+    IssuerCategory,
     KnownIssuers,
     Route,
     RoutingRule,
@@ -165,27 +166,45 @@ class TestKnownIssuers:
     def test_empty_issuers(self):
         """Test creating empty known issuers."""
         issuers = KnownIssuers()
-        assert issuers.assurances == []
-        assert issuers.banques == []
+        assert issuers.categories == {}
         assert len(issuers.all_issuers()) == 0
+        assert issuers.list_categories() == []
 
     def test_populated_issuers(self):
-        """Test creating populated known issuers."""
+        """Test creating populated known issuers with dynamic categories."""
         issuers = KnownIssuers(
-            assurances=["Swica", "CSS", "Helsana"],
-            banques=["UBS", "Credit Suisse", "PostFinance"],
-            energie=["SIG", "Romande Energie"],
-            telephonie=["Swisscom", "Salt", "Sunrise"],
-            cloud=["AWS", "Azure", "GCP"],
+            categories={
+                "assurances": IssuerCategory(
+                    pattern="4_Archives/factures/{year}/Assurances/{issuer}",
+                    issuers=["Swica", "CSS", "Helsana"],
+                ),
+                "banques": IssuerCategory(
+                    pattern="4_Archives/factures/{year}/Banques/{issuer}",
+                    issuers=["UBS", "Credit Suisse", "PostFinance"],
+                ),
+                "energie": IssuerCategory(
+                    pattern="4_Archives/factures/{year}/Energie/{issuer}",
+                    issuers=["SIG", "Romande Energie"],
+                ),
+            }
         )
-        assert len(issuers.assurances) == 3
-        assert len(issuers.banques) == 3
+        assert len(issuers.get_issuers("assurances")) == 3
+        assert len(issuers.get_issuers("banques")) == 3
+        assert len(issuers.list_categories()) == 3
 
     def test_all_issuers_mapping(self):
         """Test the all_issuers() method returns correct mapping."""
         issuers = KnownIssuers(
-            assurances=["Swica"],
-            banques=["UBS"],
+            categories={
+                "assurances": IssuerCategory(
+                    pattern="4_Archives/factures/{year}/Assurances/{issuer}",
+                    issuers=["Swica"],
+                ),
+                "banques": IssuerCategory(
+                    pattern="4_Archives/factures/{year}/Banques/{issuer}",
+                    issuers=["UBS"],
+                ),
+            }
         )
         mapping = issuers.all_issuers()
         assert mapping["swica"] == "assurances"
@@ -193,10 +212,44 @@ class TestKnownIssuers:
 
     def test_all_issuers_case_insensitive(self):
         """Test that issuer lookup is case-insensitive."""
-        issuers = KnownIssuers(assurances=["SWICA", "Helsana"])
+        issuers = KnownIssuers(
+            categories={
+                "assurances": IssuerCategory(
+                    pattern="4_Archives/factures/{year}/Assurances/{issuer}",
+                    issuers=["SWICA", "Helsana"],
+                ),
+            }
+        )
         mapping = issuers.all_issuers()
         assert "swica" in mapping
         assert "helsana" in mapping
+
+    def test_get_pattern(self):
+        """Test get_pattern returns correct pattern for category."""
+        issuers = KnownIssuers(
+            categories={
+                "transport": IssuerCategory(
+                    pattern="4_Archives/factures/{year}/Mobilité/{issuer}",
+                    issuers=["MOB", "CFF"],
+                ),
+            }
+        )
+        assert issuers.get_pattern("transport") == "4_Archives/factures/{year}/Mobilité/{issuer}"
+        # Unknown category returns default pattern
+        assert "/_Other/" in issuers.get_pattern("unknown")
+
+    def test_get_issuers(self):
+        """Test get_issuers returns correct list for category."""
+        issuers = KnownIssuers(
+            categories={
+                "cloud": IssuerCategory(
+                    pattern="4_Archives/factures/{year}/Cloud/{issuer}",
+                    issuers=["Netflix", "Spotify"],
+                ),
+            }
+        )
+        assert issuers.get_issuers("cloud") == ["Netflix", "Spotify"]
+        assert issuers.get_issuers("unknown") == []
 
 
 class TestClassificationResult:

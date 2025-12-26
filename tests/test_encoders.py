@@ -45,24 +45,23 @@ class TestMLXEncoder:
     def test_init_defaults(self):
         """Test initialization with default values."""
         encoder = MLXEncoder()
-        assert encoder.name == "mlx-community/nomic-embed-text-v1.5"
+        assert encoder.name == "nomic-text-v1.5"
         assert encoder.score_threshold == 0.75
         assert encoder._loaded is False
 
     def test_init_custom_values(self):
         """Test initialization with custom values."""
         encoder = MLXEncoder(
-            model_name="custom/model",
+            name="bge-small",
             score_threshold=0.8,
         )
-        assert encoder.name == "custom/model"
+        assert encoder.name == "bge-small"
         assert encoder.score_threshold == 0.8
 
     def test_lazy_loading(self):
         """Test that model is not loaded on init."""
         encoder = MLXEncoder()
         assert encoder._model is None
-        assert encoder._tokenizer is None
         assert encoder._loaded is False
 
     def test_empty_input(self):
@@ -72,32 +71,30 @@ class TestMLXEncoder:
         result = encoder([])
         assert result == []
 
-    @patch("para_files.encoders.mlx_encoder.load")
-    def test_ensure_loaded(self, mock_load: MagicMock):
+    @patch("para_files.encoders.mlx_encoder.EmbeddingModel.from_registry")
+    def test_ensure_loaded(self, mock_from_registry: MagicMock):
         """Test model loading on first use."""
         mock_model = MagicMock()
-        mock_tokenizer = MagicMock()
-        mock_load.return_value = (mock_model, mock_tokenizer, {})
+        mock_from_registry.return_value = mock_model
 
         encoder = MLXEncoder()
         encoder._ensure_loaded()
 
         assert encoder._loaded is True
-        mock_load.assert_called_once_with("mlx-community/nomic-embed-text-v1.5")
+        mock_from_registry.assert_called_once_with("nomic-text-v1.5")
 
-    @patch("para_files.encoders.mlx_encoder.load")
-    def test_only_loads_once(self, mock_load: MagicMock):
+    @patch("para_files.encoders.mlx_encoder.EmbeddingModel.from_registry")
+    def test_only_loads_once(self, mock_from_registry: MagicMock):
         """Test model is only loaded once."""
         mock_model = MagicMock()
-        mock_tokenizer = MagicMock()
-        mock_load.return_value = (mock_model, mock_tokenizer, {})
+        mock_from_registry.return_value = mock_model
 
         encoder = MLXEncoder()
         encoder._ensure_loaded()
         encoder._ensure_loaded()
         encoder._ensure_loaded()
 
-        mock_load.assert_called_once()
+        mock_from_registry.assert_called_once()
 
 
 class TestMLXEncoderIntegration:

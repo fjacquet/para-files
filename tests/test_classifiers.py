@@ -16,6 +16,7 @@ from para_files.types import (
     ClassificationSource,
     Confidence,
     FileMetadata,
+    IssuerCategory,
     KnownIssuers,
     RoutingRule,
 )
@@ -221,13 +222,30 @@ class TestDomainKBClassifier:
 
     @pytest.fixture
     def known_issuers(self) -> KnownIssuers:
-        """Create sample known issuers."""
+        """Create sample known issuers with dynamic categories."""
         return KnownIssuers(
-            assurances=["Swica", "CSS", "Helsana"],
-            banques=["UBS", "Credit Suisse"],
-            energie=["SIG"],
-            telephonie=["Swisscom"],
-            cloud=["AWS", "Azure"],
+            categories={
+                "assurances": IssuerCategory(
+                    pattern="4_Archives/factures/{year}/Assurances/{issuer}",
+                    issuers=["Swica", "CSS", "Helsana"],
+                ),
+                "banques": IssuerCategory(
+                    pattern="4_Archives/factures/{year}/Banques/{issuer}",
+                    issuers=["UBS", "Credit Suisse"],
+                ),
+                "energie": IssuerCategory(
+                    pattern="4_Archives/factures/{year}/Energie/{issuer}",
+                    issuers=["SIG"],
+                ),
+                "telephonie": IssuerCategory(
+                    pattern="4_Archives/factures/{year}/Telephonie/{issuer}",
+                    issuers=["Swisscom"],
+                ),
+                "cloud": IssuerCategory(
+                    pattern="4_Archives/factures/{year}/Cloud/{issuer}",
+                    issuers=["AWS", "Azure"],
+                ),
+            }
         )
 
     def test_init(self, known_issuers: KnownIssuers):
@@ -297,3 +315,33 @@ class TestDomainKBClassifier:
         result = classifier.classify("Facture Swisscom mobile", metadata)
         assert result is not None
         assert "2024" in result.category
+
+    def test_filename_priority_over_content(self, known_issuers: KnownIssuers):
+        """Test that issuer in filename takes priority over issuer in content.
+
+        This prevents false matches like "Zurich" (address) matching when
+        the actual issuer (e.g., Viseca) is in the filename.
+        """
+        # Add Viseca to the known issuers for this test
+        from para_files.types import IssuerCategory
+
+        known_issuers.categories["cartes"] = IssuerCategory(
+            pattern="4_Archives/factures/{year}/Cartes/{issuer}",
+            issuers=["Viseca"],
+        )
+        classifier = DomainKBClassifier(known_issuers)
+
+        # Filename contains "Viseca", content contains "Zurich" (from assurances)
+        metadata = FileMetadata(
+            path=Path("/tmp/viseca-payment-services-2025.pdf"),
+            filename="viseca-payment-services-2025.pdf",
+            extension=".pdf",
+            size_bytes=1000,
+        )
+        content = "Invoice from Viseca Payment Services AG, Zurich, Switzerland"
+
+        result = classifier.classify(content, metadata)
+        assert result is not None
+        # Should match Viseca from filename, not Zurich from content
+        assert result.extracted_params["issuer"] == "Viseca"
+        assert "Cartes" in result.category

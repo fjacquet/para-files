@@ -89,7 +89,7 @@ class ClassificationPipeline:
         routes_with_utterances = [r for r in routes if r.utterances]
         if routes_with_utterances:
             self._encoder = MLXEncoder(
-                model_name=self._config.mlx.model_name,
+                name=self._config.mlx.model_name,
                 score_threshold=self._config.mlx.score_threshold,
             )
             semantic_router = SemanticRouterClassifier(

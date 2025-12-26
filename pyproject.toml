@@ -32,6 +32,8 @@ dependencies = [
     "pyobjc-framework-quartz>=12.1",
     "pyobjc-framework-cocoa>=12.1",
     "typer>=0.21.0",
+    "mlx-embedding-models>=0.0.11",
+    "einops>=0.8.1",
 ]
 
 [project.optional-dependencies]

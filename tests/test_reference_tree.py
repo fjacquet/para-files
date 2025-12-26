@@ -110,11 +110,26 @@ class TestReferenceTreeKnownIssuers:
     def test_get_known_issuers(self, loaded_tree: ReferenceTree):
         """Test getting known issuers."""
         issuers = loaded_tree.get_known_issuers()
-        assert "Swica" in issuers.assurances
-        assert "UBS" in issuers.banques
-        assert "SIG" in issuers.energie
-        assert "Swisscom" in issuers.telephonie
-        assert "AWS" in issuers.cloud
+        assert "Swica" in issuers.get_issuers("assurances")
+        assert "UBS" in issuers.get_issuers("banques")
+        assert "SIG" in issuers.get_issuers("energie")
+        assert "Swisscom" in issuers.get_issuers("telephonie")
+        assert "AWS" in issuers.get_issuers("cloud")
+
+    def test_get_issuer_pattern(self, loaded_tree: ReferenceTree):
+        """Test getting patterns from known issuers."""
+        issuers = loaded_tree.get_known_issuers()
+        pattern = issuers.get_pattern("assurances")
+        assert "{year}" in pattern
+        assert "{issuer}" in pattern
+        assert "Assurances" in pattern
+
+    def test_list_categories(self, loaded_tree: ReferenceTree):
+        """Test listing all issuer categories."""
+        issuers = loaded_tree.get_known_issuers()
+        categories = issuers.list_categories()
+        assert "assurances" in categories
+        assert "banques" in categories
 
 
 class TestReferenceTreePatternResolution:

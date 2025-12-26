@@ -11,17 +11,16 @@ generated: "2025-12-25"
 # RÈGLES DE ROUTAGE SPÉCIALES
 # =============================================================================
 routing_rules:
-
   # Photos et vidéos - UNIQUEMENT depuis Inbox
   photos:
-    source: "0_Inbox"  # Ne cherche que dans Inbox
+    source: "0_Inbox" # Ne cherche que dans Inbox
     extensions: [".jpg", ".jpeg", ".png", ".heic", ".raw", ".cr2", ".nef"]
     destination: "4_Archives/photos/{YYYY}/{MM}/{DD}"
     date_source: "exif"
     fallback_date: "file_modified"
 
   videos:
-    source: "0_Inbox"  # Ne cherche que dans Inbox
+    source: "0_Inbox" # Ne cherche que dans Inbox
     extensions: [".mp4", ".mov", ".avi", ".mkv"]
     destination: "4_Archives/photos/{YYYY}/{MM}/{DD}"
     date_source: "exif"
@@ -253,7 +252,7 @@ archives:
 
     # --- Factures par ANNÉE puis catégorie/émetteur ---
     - name: "factures-assurances"
-      pattern: "4_Archives/factures/{year}/_Assurances/{issuer}"
+      pattern: "4_Archives/factures/{year}Assurances/{issuer}"
       utterances:
         - "facture assurance"
         - "prime assurance"
@@ -263,14 +262,14 @@ archives:
         - "Vaudoise"
 
     - name: "factures-banques"
-      pattern: "4_Archives/factures/{year}/_Banques/{issuer}"
+      pattern: "4_Archives/factures/{year}/Banques/{issuer}"
       utterances:
         - "relevé bancaire"
         - "facture banque"
         - "frais bancaires"
 
     - name: "factures-energie"
-      pattern: "4_Archives/factures/{year}/_Energie/{issuer}"
+      pattern: "4_Archives/factures/{year}/Energie/{issuer}"
       utterances:
         - "facture électricité"
         - "facture gaz"
@@ -278,7 +277,7 @@ archives:
         - "SIG"
 
     - name: "factures-telephonie"
-      pattern: "4_Archives/factures/{year}/_Telephonie/{issuer}"
+      pattern: "4_Archives/factures/{year}/Telephonie/{issuer}"
       utterances:
         - "facture téléphone"
         - "facture mobile"
@@ -286,35 +285,44 @@ archives:
         - "Salt"
 
     - name: "factures-impots"
-      pattern: "4_Archives/factures/{year}/_Impots"
+      pattern: "4_Archives/factures/{year}/Impots"
       utterances:
         - "déclaration fiscale"
         - "impôt"
         - "taxation"
 
     - name: "factures-logement"
-      pattern: "4_Archives/factures/{year}/_Logement/{issuer}"
+      pattern: "4_Archives/factures/{year}/Logement/{issuer}"
       utterances:
         - "facture loyer"
         - "charges"
         - "régie"
 
     - name: "factures-sante"
-      pattern: "4_Archives/factures/{year}/_Santé/{issuer}"
+      pattern: "4_Archives/factures/{year}/Santé/{issuer}"
       utterances:
         - "facture médecin"
         - "facture pharmacie"
         - "facture dentiste"
 
     - name: "factures-mobilite"
-      pattern: "4_Archives/factures/{year}/_Mobilité/{issuer}"
+      pattern: "4_Archives/factures/{year}/Mobilité/{issuer}"
       utterances:
         - "facture garage"
         - "facture essence"
         - "facture CFF"
+        - "facture transport"
+        - "transports publics"
+        - "MOB facture"
+        - "Golden Pass Line"
+        - "abonnement transport"
+        - "billet de parcours"
+        - "billet train"
+        - "Chemin de fer"
+        - "Montreux Oberland bernois"
 
     - name: "factures-cloud"
-      pattern: "4_Archives/factures/{year}/_Cloud/{issuer}"
+      pattern: "4_Archives/factures/{year}/Cloud/{issuer}"
       utterances:
         - "facture cloud"
         - "facture Netflix"
@@ -322,13 +330,13 @@ archives:
         - "facture Adobe"
 
     - name: "factures-licences"
-      pattern: "4_Archives/factures/{year}/_Licences/{issuer}"
+      pattern: "4_Archives/factures/{year}/Licences/{issuer}"
       utterances:
         - "facture licence"
         - "subscription software"
 
     - name: "factures-dons"
-      pattern: "4_Archives/factures/{year}/_Dons/{organization}"
+      pattern: "4_Archives/factures/{year}/Dons/{organization}"
       utterances:
         - "reçu don"
         - "attestation donation"
@@ -371,39 +379,69 @@ archives:
 
 # =============================================================================
 # ÉMETTEURS CONNUS
+# Each category has a pattern (with {year} and {issuer} placeholders) and issuers list
 # =============================================================================
 known_issuers:
   assurances:
-    - Swica
-    - Groupe Mutuel
-    - Vaudoise Assurances
-    - Axa-Winterthur
-    - Zurich
-    - TCS
-    - Rega
-    - Baloise
+    pattern: "4_Archives/factures/{year}/Assurances/{issuer}"
+    issuers:
+      - Swica
+      - Groupe Mutuel
+      - Vaudoise Assurances
+      - Axa-Winterthur
+      - Zurich
+      - TCS
+      - Rega
+      - Baloise
 
   banques:
-    - PostFinance
-    - UBS
-    - Raiffeisen
-    - Credit Suisse
+    pattern: "4_Archives/factures/{year}/Banques/{issuer}"
+    issuers:
+      - PostFinance
+      - UBS
+      - Raiffeisen
+      - Credit Suisse
+      - Viseca
+      - Cornèrcard
+      - Cembra
+      - BCV
+      - BCGE
+      - BCN
 
   energie:
-    - Romande Energie
-    - SIG
-    - Holdigaz
+    pattern: "4_Archives/factures/{year}/Energie/{issuer}"
+    issuers:
+      - Romande Energie
+      - SIG
+      - Holdigaz
 
   telephonie:
-    - Swisscom
-    - Salt
-    - Sunrise
+    pattern: "4_Archives/factures/{year}/Telephonie/{issuer}"
+    issuers:
+      - Swisscom
+      - Salt
+      - Sunrise
 
   cloud:
-    - Apple
-    - Microsoft
-    - Google
-    - Dropbox
-    - Netflix
-    - Spotify
-    - Adobe
+    pattern: "4_Archives/factures/{year}/Cloud/{issuer}"
+    issuers:
+      - Apple
+      - Microsoft
+      - Google
+      - Dropbox
+      - Netflix
+      - Spotify
+      - Adobe
+
+  transport:
+    pattern: "4_Archives/factures/{year}/Mobilité/{issuer}"
+    issuers:
+      - MOB
+      - Montreux Oberland bernois
+      - CFF
+      - SBB
+      - TL
+      - TPG
+      - VMCV
+      - Fart
+      - Travys
