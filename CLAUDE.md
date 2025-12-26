@@ -45,6 +45,8 @@ pre-commit run --all-files         # Run manually
 | `issuers` | List known issuers by category |
 | `add-issuer <name> -c <category>` | Add issuer to reference tree |
 | `add-utterance <route> <text>` | Add utterance to route |
+| `learn <file>` | Interactive classification learning from a file |
+| `test-route <route>` | Test route configuration and optionally match a file (`--file`) |
 | `config` | Show/initialize configuration (`--show`, `--init`, `--path`) |
 
 All commands support `-r/--reference-tree` to specify a custom YAML file.

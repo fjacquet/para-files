@@ -431,6 +431,220 @@ def list_issuers(
 
 
 @app.command()
+def learn(
+    file: Annotated[Path, typer.Argument(help="Path to file to learn from")],
+    reference_tree: Annotated[
+        Path | None,
+        typer.Option("--reference-tree", "-r", help="Path to reference tree YAML file"),
+    ] = None,
+    verbose: Annotated[
+        bool, typer.Option("--verbose", "-v", help="Enable verbose logging")
+    ] = False,
+) -> None:
+    """Interactive classification learning from a file.
+
+    Classifies a file, shows the result, and optionally saves feedback
+    to improve future classifications.
+    """
+    from para_files.learner import RoutingLearner
+
+    setup_logging(verbose=verbose)
+
+    file_path = file.resolve()
+    if not file_path.exists():
+        logger.error("File not found: %s", file_path)
+        raise typer.Exit(1)
+
+    if not file_path.is_file():
+        logger.error("Not a file: %s", file_path)
+        raise typer.Exit(1)
+
+    # Load configuration
+    try:
+        config = load_config()
+    except ValidationError:
+        logger.exception("Configuration error")
+        raise typer.Exit(1) from None
+
+    # Override config with CLI args if provided
+    if reference_tree:
+        config.reference_tree_path = reference_tree
+
+    # Classify the file
+    pipeline = ClassificationPipeline(config)
+    result = pipeline.classify_file(file_path)
+    target_path = pipeline.get_target_path(result)
+
+    # Show classification result
+    typer.echo(f"\n📄 File: {file_path.name}")
+    typer.echo(f"   Classification: {result.category}")
+    conf = result.confidence
+    typer.echo(f"   Confidence: {conf.value:.0%} ({conf.source.value})")
+    typer.echo(f"   Target: {target_path}")
+    if result.route_name:
+        typer.echo(f"   Route: {result.route_name}")
+
+    # Ask user if classification is correct
+    typer.echo("")
+    is_correct = typer.confirm("Is this classification correct?", default=True)
+
+    if is_correct:
+        typer.echo("✅ Classification confirmed. No changes needed.")
+        return
+
+    # Get learner
+    tree_path = config.reference_tree_path
+    if not tree_path.exists():
+        typer.echo(f"Reference tree not found: {tree_path}", err=True)
+        raise typer.Exit(1)
+
+    learner = RoutingLearner(tree_path)
+    routes = learner.list_routes()
+
+    typer.echo("\nAvailable routes:")
+    for i, route_name in enumerate(routes, 1):
+        typer.echo(f"  {i}. {route_name}")
+
+    # Ask for correct route
+    choice = typer.prompt(
+        "\nEnter route number or name (or 'skip' to cancel)",
+        default="skip",
+    )
+
+    if choice.lower() == "skip":
+        typer.echo("Learning cancelled.")
+        return
+
+    # Find the selected route
+    correct_route = None
+    if choice.isdigit():
+        idx = int(choice) - 1
+        if 0 <= idx < len(routes):
+            correct_route = routes[idx]
+    else:
+        if choice in routes:
+            correct_route = choice
+
+    if correct_route is None:
+        typer.echo(f"Invalid selection: {choice}", err=True)
+        raise typer.Exit(1)
+
+    typer.echo(f"\nSelected route: {correct_route}")
+
+    # Ask if user wants to add a keyword
+    add_keyword = typer.confirm(
+        "Would you like to add a keyword to improve matching?",
+        default=True,
+    )
+
+    if add_keyword:
+        keyword = typer.prompt("Enter keyword to add (from document content)")
+        if keyword.strip():
+            if learner.add_utterance(correct_route, keyword.strip()):
+                typer.echo(f"✅ Added keyword '{keyword}' to route '{correct_route}'")
+            else:
+                typer.echo(f"ℹ️  Keyword already exists or could not be added")
+
+    typer.echo("\n✅ Learning complete!")
+
+
+@app.command("test-route")
+def test_route(
+    route: Annotated[str, typer.Argument(help="Name of the route to test")],
+    file: Annotated[
+        Path | None,
+        typer.Option("--file", "-f", help="Optional file to test against the route"),
+    ] = None,
+    reference_tree: Annotated[
+        Path | None,
+        typer.Option("--reference-tree", "-r", help="Path to reference tree YAML file"),
+    ] = None,
+    verbose: Annotated[
+        bool, typer.Option("--verbose", "-v", help="Enable verbose logging")
+    ] = False,
+) -> None:
+    """Test a route's configuration and optionally match a file against it.
+
+    Use this to debug why files are or aren't matching a specific route.
+    """
+    from para_files.learner import RoutingLearner
+
+    setup_logging(verbose=verbose)
+
+    # Determine reference tree path
+    tree_path = reference_tree
+    if tree_path is None:
+        try:
+            config = load_config()
+            tree_path = config.reference_tree_path
+        except ValidationError:
+            tree_path = Path("personal_file_tree.yaml")
+
+    if not tree_path.exists():
+        typer.echo(f"Reference tree not found: {tree_path}", err=True)
+        raise typer.Exit(1)
+
+    learner = RoutingLearner(tree_path)
+    route_info = learner.get_route_info(route)
+
+    if route_info is None:
+        typer.echo(f"Route '{route}' not found", err=True)
+        typer.echo("\nAvailable routes:")
+        for r in learner.list_routes():
+            typer.echo(f"  - {r}")
+        raise typer.Exit(1)
+
+    # Show route details
+    typer.echo(f"\n📋 Route: {route}")
+    if "pattern" in route_info:
+        typer.echo(f"   Pattern: {route_info['pattern']}")
+    if "utterances" in route_info:
+        typer.echo(f"   Utterances ({len(route_info['utterances'])}):")
+        for utterance in route_info["utterances"]:
+            typer.echo(f"     - {utterance}")
+    else:
+        typer.echo("   Utterances: (none)")
+
+    # If file provided, test matching
+    if file is not None:
+        file_path = file.resolve()
+        if not file_path.exists():
+            logger.error("File not found: %s", file_path)
+            raise typer.Exit(1)
+
+        if not file_path.is_file():
+            logger.error("Not a file: %s", file_path)
+            raise typer.Exit(1)
+
+        typer.echo(f"\n🔍 Testing file: {file_path.name}")
+
+        # Load config and classify
+        try:
+            config = load_config()
+        except ValidationError:
+            logger.exception("Configuration error")
+            raise typer.Exit(1) from None
+
+        if reference_tree:
+            config.reference_tree_path = reference_tree
+
+        pipeline = ClassificationPipeline(config)
+        result = pipeline.classify_file(file_path)
+
+        typer.echo(f"   Classification: {result.category}")
+        conf = result.confidence
+        typer.echo(f"   Confidence: {conf.value:.0%} ({conf.source.value})")
+        if result.route_name:
+            typer.echo(f"   Matched route: {result.route_name}")
+            if result.route_name == route:
+                typer.echo("\n   ✅ File matches this route!")
+            else:
+                typer.echo(f"\n   ❌ File matched different route: {result.route_name}")
+        else:
+            typer.echo("\n   ❌ No route matched (defaulted to inbox)")
+
+
+@app.command()
 def scan(
     directory: Annotated[Path, typer.Argument(help="Directory to scan for files")],
     reference_tree: Annotated[

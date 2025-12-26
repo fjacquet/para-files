@@ -96,3 +96,31 @@ def test_config_show():
     assert "para_root" in result.output
     assert "mlx" in result.output
     assert "llm" in result.output
+
+
+def test_learn_help():
+    """Verify learn command help."""
+    result = runner.invoke(app, ["learn", "--help"])
+    assert result.exit_code == 0
+    assert "interactive" in result.output.lower()
+    assert "learning" in result.output.lower()
+
+
+def test_learn_missing_file():
+    """Verify learn command handles missing file."""
+    result = runner.invoke(app, ["learn", "/nonexistent/file.txt"])
+    assert result.exit_code == 1
+
+
+def test_test_route_help():
+    """Verify test-route command help."""
+    result = runner.invoke(app, ["test-route", "--help"])
+    assert result.exit_code == 0
+    assert "route" in result.output.lower()
+
+
+def test_test_route_not_found():
+    """Verify test-route command handles nonexistent route."""
+    result = runner.invoke(app, ["test-route", "nonexistent-route"])
+    assert result.exit_code == 1
+    assert "not found" in result.output.lower()

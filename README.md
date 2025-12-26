@@ -185,6 +185,42 @@ Add a new utterance to a route for better semantic matching.
 uv run para-files add-utterance factures-mobilite "Golden Pass Line"
 ```
 
+### learn
+
+Interactive classification learning from a file.
+
+```bash
+# Learn from a file interactively
+uv run para-files learn document.pdf
+
+# With custom reference tree
+uv run para-files learn document.pdf -r my_tree.yaml
+
+# Verbose mode
+uv run para-files learn document.pdf -v
+```
+
+The learn command:
+1. Classifies the file using the current pipeline
+2. Shows the suggested route and confidence
+3. Asks for confirmation or correction
+4. Optionally adds new keywords to improve future matching
+
+### test-route
+
+Test a route's configuration and optionally match a file against it.
+
+```bash
+# Show route details
+uv run para-files test-route factures-mobilite
+
+# Test a file against a specific route
+uv run para-files test-route factures-mobilite --file invoice.pdf
+
+# Verbose mode shows more details
+uv run para-files test-route factures-mobilite -v
+```
+
 ### config
 
 Show or initialize configuration.
