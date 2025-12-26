@@ -185,9 +185,28 @@ Add a new utterance to a route for better semantic matching.
 uv run para-files add-utterance factures-mobilite "Golden Pass Line"
 ```
 
+### config
+
+Show or initialize configuration.
+
+```bash
+# Show current configuration values
+uv run para-files config --show
+
+# Show config file path
+uv run para-files config --path
+
+# Create config directory and example file
+uv run para-files config --init
+```
+
 ## Configuration
 
-Configuration is managed via environment variables (prefixed with `PARA_FILES_`) or a `.env` file.
+Configuration is loaded from (in priority order):
+1. Environment variables with `PARA_FILES_` prefix
+2. `.env` file in current directory
+3. TOML config file at `~/.config/para-files/config.toml`
+4. Default values
 
 ### Required Settings
 
@@ -236,6 +255,25 @@ PARA_FILES_MLX_SCORE_THRESHOLD=0.80
 # Optional: Enable LLM fallback with Ollama
 PARA_FILES_LLM_ENABLED=true
 PARA_FILES_LLM_API_BASE=http://localhost:11434
+```
+
+### Example `config.toml` File
+
+Create with `uv run para-files config --init`:
+
+```toml
+# ~/.config/para-files/config.toml
+para_root = "~/Documents/PARA"
+reference_tree_path = "personal_file_tree.yaml"
+
+[mlx]
+model_name = "nomic-text-v1.5"
+score_threshold = 0.75
+
+[llm]
+enabled = false
+# model = "ollama/qwen2.5:1.5b"
+# api_base = "http://localhost:11434"
 ```
 
 ## Model Loading

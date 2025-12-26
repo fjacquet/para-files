@@ -45,8 +45,10 @@ pre-commit run --all-files         # Run manually
 | `issuers` | List known issuers by category |
 | `add-issuer <name> -c <category>` | Add issuer to reference tree |
 | `add-utterance <route> <text>` | Add utterance to route |
+| `config` | Show/initialize configuration (`--show`, `--init`, `--path`) |
 
 All commands support `-r/--reference-tree` to specify a custom YAML file.
+Configuration can be set via env vars, `.env` file, or `~/.config/para-files/config.toml`.
 
 ## Architecture
 

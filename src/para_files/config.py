@@ -1,6 +1,21 @@
 """Configuration management for para-files.
 
-Supports environment variables with PARA_FILES_ prefix and .env files.
+Supports configuration from (in priority order):
+1. Environment variables with PARA_FILES_ prefix
+2. .env files in current directory
+3. TOML config file at ~/.config/para-files/config.toml
+4. Default values
+
+Example config.toml:
+    para_root = "~/Documents/PARA"
+    reference_tree = "personal_file_tree.yaml"
+
+    [mlx]
+    model_name = "nomic-text-v1.5"
+    score_threshold = 0.8
+
+    [llm]
+    enabled = false
 """
 
 from __future__ import annotations
@@ -9,6 +24,11 @@ from pathlib import Path
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+# Default config file location
+DEFAULT_CONFIG_DIR = Path.home() / ".config" / "para-files"
+DEFAULT_CONFIG_FILE = DEFAULT_CONFIG_DIR / "config.toml"
 
 
 class MLXConfig(BaseSettings):
@@ -53,6 +73,13 @@ class LLMConfig(BaseSettings):
     )
 
 
+def _get_toml_file() -> Path | None:
+    """Get TOML config file path if it exists."""
+    if DEFAULT_CONFIG_FILE.exists():
+        return DEFAULT_CONFIG_FILE
+    return None
+
+
 class Config(BaseSettings):
     """Root configuration for para-files classification system."""
 
@@ -61,6 +88,7 @@ class Config(BaseSettings):
         env_nested_delimiter="__",
         env_file=".env",
         env_file_encoding="utf-8",
+        toml_file=_get_toml_file(),
         extra="ignore",
     )
 

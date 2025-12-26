@@ -3,11 +3,19 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from pydantic import ValidationError
 
-from para_files.config import Config, LLMConfig, MLXConfig, load_config
+from para_files.config import (
+    DEFAULT_CONFIG_DIR,
+    DEFAULT_CONFIG_FILE,
+    Config,
+    LLMConfig,
+    MLXConfig,
+    load_config,
+)
 
 
 class TestMLXConfig:
@@ -139,3 +147,21 @@ class TestLoadConfig:
             mlx=MLXConfig(score_threshold=0.9),
         )
         assert config.mlx.score_threshold == 0.9
+
+
+class TestTOMLConfig:
+    """Tests for TOML configuration file support."""
+
+    def test_default_config_paths(self):
+        """Test default config directory and file paths."""
+        assert DEFAULT_CONFIG_DIR == Path.home() / ".config" / "para-files"
+        assert DEFAULT_CONFIG_FILE == DEFAULT_CONFIG_DIR / "config.toml"
+
+    def test_config_file_does_not_exist_by_default(self, tmp_path: Path):
+        """Test that config loads without a TOML file."""
+        # Patch the default config file to a non-existent location
+        fake_config = tmp_path / "nonexistent.toml"
+        with patch("para_files.config.DEFAULT_CONFIG_FILE", fake_config):
+            config = load_config()
+            # Should still work with defaults
+            assert config.mlx.model_name == "nomic-text-v1.5"

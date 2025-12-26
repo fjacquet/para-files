@@ -79,3 +79,20 @@ def test_move_help():
     assert "dry-run" in result.output
     assert "copy" in result.output
     assert "conflict" in result.output
+
+
+def test_config_path():
+    """Verify config command shows path."""
+    result = runner.invoke(app, ["config", "--path"])
+    assert result.exit_code == 0
+    assert "config.toml" in result.output
+    assert "Exists:" in result.output
+
+
+def test_config_show():
+    """Verify config command shows configuration."""
+    result = runner.invoke(app, ["config", "--show"])
+    assert result.exit_code == 0
+    assert "para_root" in result.output
+    assert "mlx" in result.output
+    assert "llm" in result.output

@@ -830,6 +830,92 @@ def tree(
             raise typer.Exit(1)
 
 
+@app.command()
+def config(
+    show: Annotated[
+        bool,
+        typer.Option("--show", "-s", help="Show current configuration values"),
+    ] = True,
+    init: Annotated[
+        bool,
+        typer.Option("--init", "-i", help="Create config directory and example file"),
+    ] = False,
+    path: Annotated[
+        bool,
+        typer.Option("--path", "-p", help="Show config file path"),
+    ] = False,
+) -> None:
+    """Show or initialize configuration."""
+    from para_files.config import DEFAULT_CONFIG_DIR, DEFAULT_CONFIG_FILE
+
+    if path:
+        typer.echo(f"Config file: {DEFAULT_CONFIG_FILE}")
+        typer.echo(f"  Exists: {DEFAULT_CONFIG_FILE.exists()}")
+        return
+
+    if init:
+        # Create config directory
+        DEFAULT_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        typer.echo(f"Created config directory: {DEFAULT_CONFIG_DIR}")
+
+        if not DEFAULT_CONFIG_FILE.exists():
+            # Create example config file
+            example_config = '''# para-files configuration
+# See: uv run para-files config --show
+
+# PARA root directory
+para_root = "~/Documents/PARA"
+
+# Reference tree file (relative to current dir or absolute)
+# reference_tree_path = "personal_file_tree.yaml"
+
+# Content extraction settings
+# content_preview_chars = 2000
+
+[mlx]
+# MLX embedding model from mlx-embedding-models registry
+model_name = "nomic-text-v1.5"
+# Minimum similarity score (0.0-1.0)
+score_threshold = 0.75
+
+[llm]
+# Enable LLM fallback for ambiguous classifications
+enabled = false
+# LLM model identifier for litellm
+# model = "ollama/qwen2.5:1.5b"
+# API base URL for Ollama
+# api_base = "http://localhost:11434"
+'''
+            DEFAULT_CONFIG_FILE.write_text(example_config)
+            typer.echo(f"Created example config: {DEFAULT_CONFIG_FILE}")
+        else:
+            typer.echo(f"Config file already exists: {DEFAULT_CONFIG_FILE}")
+        return
+
+    if show:
+        # Show current configuration
+        try:
+            cfg = load_config()
+            typer.echo("Current configuration:\n")
+            typer.echo(f"  para_root: {cfg.para_root}")
+            typer.echo(f"  reference_tree_path: {cfg.reference_tree_path}")
+            typer.echo(f"  validated_db_path: {cfg.validated_db_path}")
+            typer.echo(f"  content_preview_chars: {cfg.content_preview_chars}")
+            typer.echo("\n  [mlx]")
+            typer.echo(f"    model_name: {cfg.mlx.model_name}")
+            typer.echo(f"    score_threshold: {cfg.mlx.score_threshold}")
+            typer.echo("\n  [llm]")
+            typer.echo(f"    enabled: {cfg.llm.enabled}")
+            typer.echo(f"    model: {cfg.llm.model}")
+            typer.echo(f"    confidence_threshold: {cfg.llm.confidence_threshold}")
+            typer.echo(f"    api_base: {cfg.llm.api_base}")
+            typer.echo(f"\nConfig file: {DEFAULT_CONFIG_FILE}")
+            typer.echo(f"  Exists: {DEFAULT_CONFIG_FILE.exists()}")
+        except ValidationError:
+            logger.exception("Configuration error")
+            raise typer.Exit(1) from None
+
+
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
