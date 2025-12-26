@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Intelligent file classification using MLX-powered semantic routing with PARA method"
 readme = "README.md"
 license = { text = "MIT" }
-authors = [{ name = "Your Name", email = "your.email@example.com" }]
+authors = [{ name = "Frédéric Jacquet", email = "fred.jacquet@gmail.com" }]
 requires-python = ">=3.12"
 keywords = ["mlx", "classification", "para", "semantic-routing", "macos"]
 classifiers = [
@@ -53,10 +53,10 @@ dev = [
 para-files = "para_files.main:cli"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/para-files"
-Repository = "https://github.com/yourusername/para-files"
-Documentation = "https://github.com/yourusername/para-files#readme"
-Issues = "https://github.com/yourusername/para-files/issues"
+Homepage = "https://github.com/fjacquet/para-files"
+Repository = "https://github.com/fjacquet/para-files"
+Documentation = "https://fjacquet.github.io/para-files"
+Issues = "https://github.com/fjacquet/para-files/issues"
 
 [build-system]
 requires = ["hatchling"]
@@ -258,4 +258,3 @@ exclude_lines = [
 ]
 fail_under = 80
 show_missing = true
-

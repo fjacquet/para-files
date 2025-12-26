@@ -269,7 +269,7 @@ The embedding model is **loaded lazily** on first classification. No manual down
 
 | Variable                           | Default                   | Description                        |
 |------------------------------------|---------------------------|------------------------------------|
-| `PARA_FILES_REFERENCE_TREE_PATH`   | `personal_file_tree.yaml` | Path to PARA reference tree YAML   |
+| `PARA_FILES_REFERENCE_TREE_PATH`   | `config/personal_file_tree.yaml` | Path to PARA reference tree YAML   |
 | `PARA_FILES_VALIDATED_DB_PATH`     | `null`                    | Path to validated mappings JSON    |
 | `PARA_FILES_CONTENT_PREVIEW_CHARS` | `2000`                    | Characters to extract for matching |
 
@@ -344,7 +344,7 @@ config = load_config()
 # Or with explicit values
 config = load_config(
     para_root=Path("/Users/you/PARA"),
-    reference_tree_path=Path("personal_file_tree.yaml"),
+    reference_tree_path=Path("config/personal_file_tree.yaml"),
 )
 
 # Create pipeline (lazy initialization)
@@ -431,7 +431,8 @@ para-files/
 │   └── utils/
 │       └── file_utils.py    # File content extraction
 ├── tests/
-├── personal_file_tree.yaml  # PARA reference tree
+├── config/
+│   └── personal_file_tree.yaml  # PARA reference tree
 └── pyproject.toml
 ```
 

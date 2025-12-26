@@ -27,7 +27,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 # Default reference tree location
-DEFAULT_REFERENCE_TREE = Path("personal_file_tree.yaml")
+DEFAULT_REFERENCE_TREE = Path("config/personal_file_tree.yaml")
+
+# Default configuration values (centralized to avoid duplication)
+DEFAULT_MLX_MODEL = "nomic-text-v1.5"
+DEFAULT_SCORE_THRESHOLD = 0.75
+DEFAULT_LLM_MODEL = "ollama/qwen2.5:1.5b"
+DEFAULT_LLM_CONFIDENCE_THRESHOLD = 0.6
+DEFAULT_CONTENT_PREVIEW_CHARS = 2000
 
 
 def _load_yaml_config(yaml_path: Path | None = None) -> dict[str, Any]:
@@ -44,7 +51,8 @@ def _load_yaml_config(yaml_path: Path | None = None) -> dict[str, Any]:
         paths_to_try.append(yaml_path)
     paths_to_try.extend([
         DEFAULT_REFERENCE_TREE,
-        Path.cwd() / "personal_file_tree.yaml",
+        Path.cwd() / "config" / "personal_file_tree.yaml",
+        Path.cwd() / "personal_file_tree.yaml",  # Backwards compatibility
     ])
 
     for path in paths_to_try:
@@ -62,11 +70,11 @@ class MLXConfig(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="PARA_FILES_MLX_")
 
     model_name: str = Field(
-        default="nomic-text-v1.5",
+        default=DEFAULT_MLX_MODEL,
         description="MLX embedding model from mlx-embedding-models registry",
     )
     score_threshold: float = Field(
-        default=0.75,
+        default=DEFAULT_SCORE_THRESHOLD,
         ge=0.0,
         le=1.0,
         description="Minimum similarity score for semantic matching",
@@ -83,11 +91,11 @@ class LLMConfig(BaseSettings):
         description="Enable LLM fallback for ambiguous classifications",
     )
     model: str = Field(
-        default="ollama/qwen2.5:1.5b",
+        default=DEFAULT_LLM_MODEL,
         description="LLM model identifier for litellm",
     )
     confidence_threshold: float = Field(
-        default=0.6,
+        default=DEFAULT_LLM_CONFIDENCE_THRESHOLD,
         ge=0.0,
         le=1.0,
         description="Minimum confidence from LLM to accept classification",
@@ -129,7 +137,7 @@ class Config(BaseSettings):
 
     # Content extraction settings
     content_preview_chars: int = Field(
-        default=2000,
+        default=DEFAULT_CONTENT_PREVIEW_CHARS,
         ge=100,
         le=10000,
         description="Number of characters to extract for semantic matching",

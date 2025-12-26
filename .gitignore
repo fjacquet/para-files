@@ -147,3 +147,5 @@ site/
 secrets.yaml
 secrets.yml
 credentials.json
+.python-version
+all-files.txt

@@ -9,7 +9,11 @@ import pytest
 from pydantic import ValidationError
 
 from para_files.config import (
+    DEFAULT_LLM_CONFIDENCE_THRESHOLD,
+    DEFAULT_LLM_MODEL,
+    DEFAULT_MLX_MODEL,
     DEFAULT_REFERENCE_TREE,
+    DEFAULT_SCORE_THRESHOLD,
     Config,
     LLMConfig,
     MLXConfig,
@@ -24,8 +28,8 @@ class TestMLXConfig:
     def test_default_values(self):
         """Test default MLX configuration values."""
         config = MLXConfig()
-        assert config.model_name == "nomic-text-v1.5"
-        assert config.score_threshold == 0.75
+        assert config.model_name == DEFAULT_MLX_MODEL
+        assert config.score_threshold == DEFAULT_SCORE_THRESHOLD
 
     def test_custom_values(self):
         """Test custom MLX configuration values."""
@@ -55,8 +59,8 @@ class TestLLMConfig:
         """Test default LLM configuration values."""
         config = LLMConfig()
         assert config.enabled is False
-        assert config.model == "ollama/qwen2.5:1.5b"
-        assert config.confidence_threshold == 0.6
+        assert config.model == DEFAULT_LLM_MODEL
+        assert config.confidence_threshold == DEFAULT_LLM_CONFIDENCE_THRESHOLD
         assert config.api_base is None
 
     def test_enabled_config(self):
@@ -154,7 +158,7 @@ class TestYAMLConfig:
 
     def test_default_reference_tree_path(self):
         """Test default reference tree path."""
-        assert DEFAULT_REFERENCE_TREE == Path("personal_file_tree.yaml")
+        assert Path("config/personal_file_tree.yaml") == DEFAULT_REFERENCE_TREE
 
     def test_load_yaml_config_from_file(self, tmp_path: Path):
         """Test loading config from a YAML file."""
@@ -213,5 +217,5 @@ config:
         with patch("para_files.config.DEFAULT_REFERENCE_TREE", fake_path):
             config = load_config(reference_tree_path=fake_path)
             # Should still work with defaults
-            assert config.mlx.model_name == "nomic-text-v1.5"
-            assert config.mlx.score_threshold == 0.75
+            assert config.mlx.model_name == DEFAULT_MLX_MODEL
+            assert config.mlx.score_threshold == DEFAULT_SCORE_THRESHOLD

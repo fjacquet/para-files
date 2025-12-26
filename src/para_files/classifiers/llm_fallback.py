@@ -10,6 +10,7 @@ import json
 import logging
 
 from para_files.classifiers.base import BaseClassifier
+from para_files.config import DEFAULT_CONTENT_PREVIEW_CHARS
 from para_files.types import (
     ClassificationResult,
     ClassificationSource,
@@ -63,6 +64,7 @@ class LLMFallbackClassifier(BaseClassifier):
         confidence_threshold: float = 0.6,
         api_base: str | None = None,
         available_routes: list[Route] | None = None,
+        content_preview_chars: int = DEFAULT_CONTENT_PREVIEW_CHARS,
     ) -> None:
         """Initialize LLM fallback classifier.
 
@@ -72,12 +74,14 @@ class LLMFallbackClassifier(BaseClassifier):
             confidence_threshold: Minimum confidence to accept LLM result.
             api_base: Optional API base URL for Ollama.
             available_routes: List of available routes for context.
+            content_preview_chars: Max characters of content to send to LLM.
         """
         self._enabled = enabled
         self._model = model
         self._confidence_threshold = confidence_threshold
         self._api_base = api_base
         self._available_routes = available_routes or []
+        self._content_preview_chars = content_preview_chars
 
     @property
     def name(self) -> str:
@@ -184,7 +188,7 @@ class LLMFallbackClassifier(BaseClassifier):
             if metadata.modified_at:
                 parts.append(f"Modified: {metadata.modified_at.isoformat()}")
 
-        parts.append(f"\nContent preview:\n{content[:2000]}")
+        parts.append(f"\nContent preview:\n{content[:self._content_preview_chars]}")
 
         if self._available_routes:
             route_names = [r.name for r in self._available_routes[:20]]

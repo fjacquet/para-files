@@ -68,7 +68,7 @@ The system classifies files using signals in priority order:
 
 The project maintains distinct taxonomies that should never be mixed:
 - **Dell Mail Tree** - Professional email classification (from `outlook-mail-structure.md`)
-- **Personal File Tree** - Personal files using PARA structure (`personal_file_tree.yaml`)
+- **Personal File Tree** - Personal files using PARA structure (`config/personal_file_tree.yaml`)
 
 ### MLX Stack
 

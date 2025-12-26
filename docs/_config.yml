@@ -1,0 +1,30 @@
+title: para-files
+description: Intelligent file classification using MLX-powered semantic routing with PARA method
+remote_theme: just-the-docs/just-the-docs
+color_scheme: dark
+
+url: "https://fjacquet.github.io"
+baseurl: "/para-files"
+
+aux_links:
+  "View on GitHub":
+    - "https://github.com/fjacquet/para-files"
+
+nav_enabled: true
+search_enabled: true
+heading_anchors: true
+
+# Back to top link
+back_to_top: true
+back_to_top_text: "Back to top"
+
+footer_content: "Copyright &copy; 2025 Frédéric Jacquet. Distributed under the <a href=\"https://github.com/fjacquet/para-files/blob/main/LICENSE\">MIT license.</a>"
+
+# Mermaid support
+mermaid:
+  version: "10.6.0"
+
+kramdown:
+  syntax_highlighter_opts:
+    block:
+      line_numbers: false
