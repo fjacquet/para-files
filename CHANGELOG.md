@@ -15,12 +15,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MIT LICENSE file
 - CONTRIBUTING.md with development guidelines
 - Architecture documentation with Mermaid diagrams
+- New routes in reference tree (from all-files.txt analysis):
+  - `factures-materiels`: Shopping/retail invoices (fnac, Migros, Manor, digitec, etc.)
+  - `factures-prevoyance`: Pension documents (2e/3e pilier, LPP, libre passage)
+  - `factures-enfant`: Children expenses (crèche, garderie, activités)
+  - `factures-voyages`: Travel documents and invoices
+  - `salaires`: Salary archives by employer/year
+- New known issuers:
+  - Assurances: Generali, SwissCaution, Swiss Life, Maif, Allianz, ECA
+  - Cloud: SwitchPlus, Azure, Infomaniak, AWS, OVH, Hetzner
+  - Santé: CHUV, HUG, Pharmacie
+  - Materiels: fnac, Migros, Manor, coop@home, digitec, Galaxus, Nespresso
+  - Prévoyance: Generali, Vaudoise, Swiss Life, Retraites Populaires, PUBLICA
+  - Enfant: Commune de Montreux, Leukerbad Skischule
+  - Voyages: ebookers, Interhome, Ulys, Kontiki, airlines
 
 ### Changed
 
 - Moved `personal_file_tree.yaml` to `config/` folder
 - Centralized configuration defaults in `config.py`
 - LLM fallback now uses configurable content preview chars
+- Enhanced `factures-cloud` route with AWS, Azure, Infomaniak utterances
+- **Breaking**: Changed all factures patterns from `{year}/Category/{issuer}` to `Category/{issuer}/{year}` for better folder organization
 
 ### Fixed
 

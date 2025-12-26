@@ -283,9 +283,9 @@ archives:
         - "learning"
         - "tutorial"
 
-    # --- Factures par ANNÉE puis catégorie/émetteur ---
+    # --- Factures par catégorie/émetteur/année ---
     - name: "factures-assurances"
-      pattern: "4_Archives/factures/{year}Assurances/{issuer}"
+      pattern: "4_Archives/factures/Assurances/{issuer}/{year}"
       utterances:
         - "facture assurance"
         - "prime assurance"
@@ -295,14 +295,14 @@ archives:
         - "Vaudoise"
 
     - name: "factures-banques"
-      pattern: "4_Archives/factures/{year}/Banques/{issuer}"
+      pattern: "4_Archives/factures/Banques/{issuer}/{year}"
       utterances:
         - "relevé bancaire"
         - "facture banque"
         - "frais bancaires"
 
     - name: "factures-energie"
-      pattern: "4_Archives/factures/{year}/Energie/{issuer}"
+      pattern: "4_Archives/factures/Energie/{issuer}/{year}"
       utterances:
         - "facture électricité"
         - "facture gaz"
@@ -310,7 +310,7 @@ archives:
         - "SIG"
 
     - name: "factures-telephonie"
-      pattern: "4_Archives/factures/{year}/Telephonie/{issuer}"
+      pattern: "4_Archives/factures/Telephonie/{issuer}/{year}"
       utterances:
         - "facture téléphone"
         - "facture mobile"
@@ -318,28 +318,28 @@ archives:
         - "Salt"
 
     - name: "factures-impots"
-      pattern: "4_Archives/factures/{year}/Impots"
+      pattern: "4_Archives/factures/Impots/{year}"
       utterances:
         - "déclaration fiscale"
         - "impôt"
         - "taxation"
 
     - name: "factures-logement"
-      pattern: "4_Archives/factures/{year}/Logement/{issuer}"
+      pattern: "4_Archives/factures/Logement/{issuer}/{year}"
       utterances:
         - "facture loyer"
         - "charges"
         - "régie"
 
     - name: "factures-sante"
-      pattern: "4_Archives/factures/{year}/Santé/{issuer}"
+      pattern: "4_Archives/factures/Santé/{issuer}/{year}"
       utterances:
         - "facture médecin"
         - "facture pharmacie"
         - "facture dentiste"
 
     - name: "factures-mobilite"
-      pattern: "4_Archives/factures/{year}/Mobilité/{issuer}"
+      pattern: "4_Archives/factures/Mobilité/{issuer}/{year}"
       utterances:
         - "facture garage"
         - "facture essence"
@@ -355,21 +355,83 @@ archives:
         - "Montreux Oberland bernois"
 
     - name: "factures-cloud"
-      pattern: "4_Archives/factures/{year}/Cloud/{issuer}"
+      pattern: "4_Archives/factures/Cloud/{issuer}/{year}"
       utterances:
         - "facture cloud"
         - "facture Netflix"
         - "facture Spotify"
         - "facture Adobe"
+        - "facture AWS"
+        - "facture Azure"
+        - "facture Infomaniak"
+        - "hébergement web"
+        - "domaine internet"
+
+    - name: "factures-materiels"
+      pattern: "4_Archives/factures/Materiels/{issuer}/{year}"
+      utterances:
+        - "facture achat"
+        - "facture magasin"
+        - "facture électronique"
+        - "facture Fnac"
+        - "facture Migros"
+        - "facture Manor"
+        - "facture digitec"
+        - "facture Galaxus"
+        - "facture Nespresso"
+        - "achat matériel"
+        - "commande en ligne"
+
+    - name: "factures-prevoyance"
+      pattern: "4_Archives/factures/Prevoyance/{issuer}/{year}"
+      utterances:
+        - "2e pilier"
+        - "3e pilier"
+        - "libre passage"
+        - "LPP"
+        - "prévoyance professionnelle"
+        - "attestation pilier"
+        - "caisse de pension"
+        - "retraite"
+
+    - name: "factures-enfant"
+      pattern: "4_Archives/factures/Enfant/{issuer}/{year}"
+      utterances:
+        - "facture crèche"
+        - "facture garderie"
+        - "accueil parascolaire"
+        - "frais enfant"
+        - "école"
+        - "activités enfants"
+
+    - name: "factures-voyages"
+      pattern: "4_Archives/factures/Voyages/{destination}/{year}"
+      utterances:
+        - "facture voyage"
+        - "billet avion"
+        - "réservation hôtel"
+        - "location vacances"
+        - "ESTA"
+        - "visa voyage"
+        - "péage autoroute"
+
+    - name: "salaires"
+      pattern: "4_Archives/salaires/{employer}/{year}"
+      utterances:
+        - "fiche de paie"
+        - "bulletin de salaire"
+        - "certificat de salaire"
+        - "salaire mensuel"
+        - "rémunération"
 
     - name: "factures-licences"
-      pattern: "4_Archives/factures/{year}/Licences/{issuer}"
+      pattern: "4_Archives/factures/Licences/{issuer}/{year}"
       utterances:
         - "facture licence"
         - "subscription software"
 
     - name: "factures-dons"
-      pattern: "4_Archives/factures/{year}/Dons/{organization}"
+      pattern: "4_Archives/factures/Dons/{organization}/{year}"
       utterances:
         - "reçu don"
         - "attestation donation"
@@ -416,7 +478,7 @@ archives:
 # =============================================================================
 known_issuers:
   assurances:
-    pattern: "4_Archives/factures/{year}/Assurances/{issuer}"
+    pattern: "4_Archives/factures/Assurances/{issuer}/{year}"
     issuers:
       - Swica
       - Groupe Mutuel
@@ -426,9 +488,15 @@ known_issuers:
       - TCS
       - Rega
       - Baloise
+      - Generali
+      - SwissCaution
+      - Swiss Life
+      - Maif
+      - Allianz
+      - ECA
 
   banques:
-    pattern: "4_Archives/factures/{year}/Banques/{issuer}"
+    pattern: "4_Archives/factures/Banques/{issuer}/{year}"
     issuers:
       - PostFinance
       - UBS
@@ -442,21 +510,21 @@ known_issuers:
       - BCN
 
   energie:
-    pattern: "4_Archives/factures/{year}/Energie/{issuer}"
+    pattern: "4_Archives/factures/Energie/{issuer}/{year}"
     issuers:
       - Romande Energie
       - SIG
       - Holdigaz
 
   telephonie:
-    pattern: "4_Archives/factures/{year}/Telephonie/{issuer}"
+    pattern: "4_Archives/factures/Telephonie/{issuer}/{year}"
     issuers:
       - Swisscom
       - Salt
       - Sunrise
 
   cloud:
-    pattern: "4_Archives/factures/{year}/Cloud/{issuer}"
+    pattern: "4_Archives/factures/Cloud/{issuer}/{year}"
     issuers:
       - Apple
       - Microsoft
@@ -465,9 +533,15 @@ known_issuers:
       - Netflix
       - Spotify
       - Adobe
+      - SwitchPlus
+      - Azure
+      - Infomaniak
+      - AWS
+      - OVH
+      - Hetzner
 
   transport:
-    pattern: "4_Archives/factures/{year}/Mobilité/{issuer}"
+    pattern: "4_Archives/factures/Mobilité/{issuer}/{year}"
     issuers:
       - MOB
       - Montreux Oberland bernois
@@ -480,6 +554,52 @@ known_issuers:
       - Travys
 
   sante:
-    pattern: "4_Archives/factures/{year}/Santé/{issuer}"
+    pattern: "4_Archives/factures/Santé/{issuer}/{year}"
     issuers:
       - Médecine Chinoise HAN
+      - CHUV
+      - HUG
+      - Pharmacie
+
+  materiels:
+    pattern: "4_Archives/factures/Materiels/{issuer}/{year}"
+    issuers:
+      - fnac
+      - Migros
+      - Manor
+      - coop@home
+      - digitec
+      - Galaxus
+      - Nespresso
+      - interdiscount
+      - MediaMarkt
+
+  prevoyance:
+    pattern: "4_Archives/factures/Prevoyance/{issuer}/{year}"
+    issuers:
+      - Generali
+      - Vaudoise
+      - Swiss Life
+      - Retraites Populaires
+      - Allianz
+      - BCV
+      - PUBLICA
+      - Axa
+
+  enfant:
+    pattern: "4_Archives/factures/Enfant/{issuer}/{year}"
+    issuers:
+      - Commune de Montreux
+      - Leukerbad Skischule
+
+  voyages:
+    pattern: "4_Archives/factures/Voyages/{issuer}/{year}"
+    issuers:
+      - ebookers
+      - Interhome
+      - Ulys
+      - Kontiki
+      - Alitalia
+      - Swiss
+      - Air France
+      - EasyJet
