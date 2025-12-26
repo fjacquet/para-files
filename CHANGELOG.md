@@ -39,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Routes books to `3_Resources/livres/{technology}`
 - New `BOOK_DETECTOR` classification source for book detection results
 - `geopy` dependency for GPS reverse geocoding
-- Comprehensive test suite for book detection (83 new tests)
+- Comprehensive test suite for book detection (83 new tests, 395 total)
 - GitHub Actions CI workflow with macOS-14 runner (Apple Silicon)
 - New 2_Areas routes for personal collections:
   - `perso-photos`: Collection photos personnelles

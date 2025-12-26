@@ -420,7 +420,8 @@ Files are classified using signals in priority order (first match wins):
 - **Embeddings**: `nomic-embed-text-v1.5` via `mlx-community` (~100MB, 10-15ms latency)
 - **Semantic Router**: Custom implementation with cosine similarity
 - **SLM Fallback**: Optional Qwen 2.5-1.5B-Instruct via Ollama
-- **OCR**: Vision Framework (Apple Neural Engine) - coming soon
+- **OCR**: Vision Framework (Apple Neural Engine) for image text extraction
+- **Document Conversion**: Pandoc integration for Office/ebook formats
 
 ### Reference Tree
 
@@ -483,6 +484,9 @@ para-files/
 │       ├── geolocation.py   # GPS reverse geocoding
 │       ├── pdf_metadata.py  # PDF metadata & ISBN extraction
 │       ├── isbn_lookup.py   # ISBN lookup service
+│       ├── ocr.py           # Vision Framework OCR
+│       ├── exiftool.py      # EXIF metadata extraction
+│       ├── pandoc.py        # Document format conversion
 │       ├── cleanup.py       # Junk file detection & deletion
 │       ├── cleanup_log.py   # Cleanup audit logging
 │       └── nfo_parser.py    # NFO file metadata parsing

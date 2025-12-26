@@ -55,12 +55,13 @@ Configuration is set via the `config:` section in YAML, env vars, or `.env` file
 
 ## Architecture
 
-### 5-Signal Classification Pipeline
+### 6-Signal Classification Pipeline
 
 The system classifies files using signals in priority order:
 
 1. **Validated DB** (100% confidence) - Manual sender/issuer → category mappings
 2. **Rules Engine** (95%) - Glob patterns on filename/path/sender domain
+2.5. **Book Detector** (92%) - PDF book detection via ISBN/metadata/structure
 3. **Domain/Issuer KB** (90%) - Known domain/issuer to category mappings
 4. **Semantic Router MLX** (85%) - Embedding similarity to reference categories (deterministic)
 5. **LLM Fallback** (configurable) - Optional AI for ambiguous cases
@@ -124,7 +125,7 @@ Override via environment: `PARA_FILES_PARA_ROOT=/custom/path`
 | `personal_file_tree.yaml`                | PARA structure, routes, issuers, AND app config (`config:` section) |
 | `.env.example`                           | Configuration template with all available options                   |
 | `src/para_files/config.py`               | Configuration management with pydantic-settings                     |
-| `src/para_files/pipeline.py`             | 5-signal classification orchestrator                                |
+| `src/para_files/pipeline.py`             | 6-signal classification orchestrator                                |
 | `src/para_files/encoders/mlx_encoder.py` | MLX embedding encoder with lazy loading                             |
 | `src/para_files/reference_tree.py`       | YAML reference tree loader                                          |
 | `src/para_files/classifiers/`            | Classification signal implementations                               |
