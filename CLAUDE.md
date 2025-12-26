@@ -37,7 +37,7 @@ pre-commit run --all-files         # Run manually
 | Command | Description |
 |---------|-------------|
 | `classify <files...>` | Classify one or more files (supports `--json`, `-v`) |
-| `move <file>` | Classify and move file to PARA destination (`--dry-run`, `--copy`, `--conflict`) |
+| `move <files...>` | Classify and move files to PARA destinations (`--dry-run`, `--copy`, `--conflict`) |
 | `scan <dir>` | Preview classifications for directory (`--recursive`, `--ext`, `--json`) |
 | `init [dest]` | Pre-create PARA folder structure (`--subfolders`, `--dry-run`). Note: `move` auto-creates folders |
 | `tree` | Display/validate reference tree (`--validate`, `--issuers`, `--rules`) |

@@ -62,14 +62,17 @@ uv run para-files classify document.pdf -v
 
 ### move
 
-Classify and move a file to its PARA destination.
+Classify and move one or more files to their PARA destinations.
 
 ```bash
-# Move file to classified destination
+# Move single file
 uv run para-files move document.pdf
 
+# Move multiple files
+uv run para-files move file1.pdf file2.docx file3.txt
+
 # Dry run (preview without moving)
-uv run para-files move document.pdf --dry-run
+uv run para-files move *.pdf --dry-run
 
 # Copy instead of move
 uv run para-files move document.pdf --copy
@@ -79,6 +82,9 @@ uv run para-files move document.pdf --conflict rename
 
 # Add date prefix to filename
 uv run para-files move document.pdf --date-prefix
+
+# JSON output
+uv run para-files move *.pdf --json
 ```
 
 ### scan

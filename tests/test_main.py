@@ -60,6 +60,18 @@ def test_move_missing_path():
     assert "missing argument" in result.output.lower()
 
 
+def test_move_nonexistent_file():
+    """Verify move command warns on nonexistent file.
+
+    With multi-file support, the command continues with warnings
+    instead of failing on individual missing files.
+    """
+    result = runner.invoke(app, ["move", "/nonexistent/file.txt", "--dry-run"])
+    # Should succeed but with warning (no files to process)
+    assert result.exit_code == 0
+    assert "not found" in result.output.lower() or "warning" in result.output.lower()
+
+
 def test_move_help():
     """Verify move command help."""
     result = runner.invoke(app, ["move", "--help"])

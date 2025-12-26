@@ -131,7 +131,7 @@ def classify(
 
 @app.command()
 def move(
-    file: Annotated[Path, typer.Argument(help="Path to file to classify and move")],
+    files: Annotated[list[Path], typer.Argument(help="Path(s) to file(s) to classify and move")],
     reference_tree: Annotated[
         Path | None,
         typer.Option("--reference-tree", "-r", help="Path to reference tree YAML file"),
@@ -159,18 +159,8 @@ def move(
         bool, typer.Option("--verbose", "-v", help="Enable verbose logging")
     ] = False,
 ) -> None:
-    """Classify and move a file to its PARA destination."""
+    """Classify and move one or more files to their PARA destinations."""
     setup_logging(verbose=verbose)
-
-    file_path = file.resolve()
-
-    if not file_path.exists():
-        logger.error("File not found: %s", file_path)
-        raise typer.Exit(1)
-
-    if not file_path.is_file():
-        logger.error("Not a file: %s", file_path)
-        raise typer.Exit(1)
 
     # Load configuration
     try:
@@ -183,56 +173,93 @@ def move(
     if reference_tree:
         config.reference_tree_path = reference_tree
 
-    # Create pipeline and classify
+    # Create pipeline once for all files
     pipeline = ClassificationPipeline(config)
-    result = pipeline.classify_file(file_path)
-    target_dir = pipeline.get_target_path(result)
 
     # Convert conflict choice to strategy
     conflict_strategy = ConflictStrategy(conflict.value)
 
-    # Move the file
-    move_result = move_classified_file(
-        file_path,
-        target_dir,
-        dry_run=dry_run,
-        copy_mode=copy,
-        conflict_strategy=conflict_strategy,
-        add_date_prefix=date_prefix,
-    )
+    # Track results
+    results = []
+    success_count = 0
+    fail_count = 0
 
-    # Output result
-    if output_json:
-        output = {
-            "source_file": str(file_path),
-            "category": result.category,
-            "confidence": result.confidence.value,
-            "source": result.confidence.source.value,
-            "target_path": str(target_dir),
-            "destination": str(move_result.destination),
-            "action": move_result.action,
-            "success": move_result.success,
-        }
-        if move_result.message:
-            output["message"] = move_result.message
-        if result.route_name:
-            output["route_name"] = result.route_name
-        typer.echo(json.dumps(output, indent=2))
-    else:
-        action_verb = "Would move" if dry_run else "Moved"
-        if copy:
-            action_verb = "Would copy" if dry_run else "Copied"
+    action_verb = "Would move" if dry_run else "Moved"
+    if copy:
+        action_verb = "Would copy" if dry_run else "Copied"
 
-        if move_result.success:
-            typer.echo(f"{action_verb}: {file_path.name}")
-            typer.echo(f"  -> {move_result.destination}")
-            typer.echo(
-                f"Classification: {result.category} "
-                f"({result.confidence.value:.0%} {result.confidence.source.value})"
+    for file in files:
+        file_path = file.resolve()
+
+        if not file_path.exists():
+            logger.warning("File not found: %s", file_path)
+            fail_count += 1
+            if output_json:
+                results.append({"source_file": str(file_path), "error": "file not found"})
+            continue
+
+        if not file_path.is_file():
+            logger.warning("Not a file: %s", file_path)
+            fail_count += 1
+            if output_json:
+                results.append({"source_file": str(file_path), "error": "not a file"})
+            continue
+
+        try:
+            # Classify and get target
+            result = pipeline.classify_file(file_path)
+            target_dir = pipeline.get_target_path(result)
+
+            # Move the file
+            move_result = move_classified_file(
+                file_path,
+                target_dir,
+                dry_run=dry_run,
+                copy_mode=copy,
+                conflict_strategy=conflict_strategy,
+                add_date_prefix=date_prefix,
             )
-        else:
-            typer.echo(f"Failed: {move_result.message}", err=True)
-            raise typer.Exit(1)
+
+            if output_json:
+                output = {
+                    "source_file": str(file_path),
+                    "category": result.category,
+                    "confidence": result.confidence.value,
+                    "source": result.confidence.source.value,
+                    "target_path": str(target_dir),
+                    "destination": str(move_result.destination),
+                    "action": move_result.action,
+                    "success": move_result.success,
+                }
+                if move_result.message:
+                    output["message"] = move_result.message
+                if result.route_name:
+                    output["route_name"] = result.route_name
+                results.append(output)
+            elif move_result.success:
+                typer.echo(f"{action_verb}: {file_path.name}")
+                typer.echo(f"  -> {move_result.destination}")
+                conf = result.confidence
+                typer.echo(f"  Classification: {result.category} ({conf.value:.0%})")
+            else:
+                typer.echo(f"Failed: {file_path.name} - {move_result.message}", err=True)
+
+            if move_result.success:
+                success_count += 1
+            else:
+                fail_count += 1
+
+        except Exception:
+            logger.exception("Failed to process %s", file_path)
+            fail_count += 1
+            if output_json:
+                results.append({"source_file": str(file_path), "error": "processing failed"})
+
+    # Output summary
+    if output_json:
+        typer.echo(json.dumps(results, indent=2))
+    elif len(files) > 1:
+        typer.echo(f"\nSummary: {success_count} succeeded, {fail_count} failed")
 
 
 @app.command("add-issuer")
