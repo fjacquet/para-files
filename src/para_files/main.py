@@ -54,7 +54,7 @@ def setup_logging(*, verbose: bool = False) -> None:
 
 @app.command()
 def classify(
-    file: Annotated[Path, typer.Argument(help="Path to file to classify")],
+    files: Annotated[list[Path], typer.Argument(help="Path(s) to file(s) to classify")],
     reference_tree: Annotated[
         Path | None,
         typer.Option("--reference-tree", "-r", help="Path to reference tree YAML file"),
@@ -66,18 +66,8 @@ def classify(
         bool, typer.Option("--verbose", "-v", help="Enable verbose logging")
     ] = False,
 ) -> None:
-    """Classify a file using the PARA method."""
+    """Classify one or more files using the PARA method."""
     setup_logging(verbose=verbose)
-
-    file_path = file.resolve()
-
-    if not file_path.exists():
-        logger.error("File not found: %s", file_path)
-        raise typer.Exit(1)
-
-    if not file_path.is_file():
-        logger.error("Not a file: %s", file_path)
-        raise typer.Exit(1)
 
     # Load configuration
     try:
@@ -90,34 +80,54 @@ def classify(
     if reference_tree:
         config.reference_tree_path = reference_tree
 
-    # Create pipeline and classify
+    # Create pipeline once for all files
     pipeline = ClassificationPipeline(config)
-    result = pipeline.classify_file(file_path)
 
-    # Output result
-    target_path = pipeline.get_target_path(result)
+    results = []
+    for file in files:
+        file_path = file.resolve()
+
+        if not file_path.exists():
+            logger.warning("File not found: %s", file_path)
+            continue
+
+        if not file_path.is_file():
+            logger.warning("Not a file: %s", file_path)
+            continue
+
+        try:
+            result = pipeline.classify_file(file_path)
+            target_path = pipeline.get_target_path(result)
+
+            if output_json:
+                output = {
+                    "source_file": str(file_path),
+                    "category": result.category,
+                    "confidence": result.confidence.value,
+                    "source": result.confidence.source.value,
+                    "target_path": str(target_path),
+                }
+                if result.route_name:
+                    output["route_name"] = result.route_name
+                if result.extracted_params:
+                    output["params"] = result.extracted_params
+                results.append(output)
+            else:
+                typer.echo(f"\n📄 {file_path.name}")
+                typer.echo(f"   Category: {result.category}")
+                typer.echo(
+                    f"   Confidence: {result.confidence.value:.0%} ({result.confidence.source.value})"
+                )
+                typer.echo(f"   Target: {target_path}")
+                if result.route_name:
+                    typer.echo(f"   Route: {result.route_name}")
+        except Exception as e:
+            logger.error("Failed to classify %s: %s", file_path, e)
+            if output_json:
+                results.append({"source_file": str(file_path), "error": str(e)})
 
     if output_json:
-        output = {
-            "source_file": str(file_path),
-            "category": result.category,
-            "confidence": result.confidence.value,
-            "source": result.confidence.source.value,
-            "target_path": str(target_path),
-        }
-        if result.route_name:
-            output["route_name"] = result.route_name
-        if result.extracted_params:
-            output["params"] = result.extracted_params
-        typer.echo(json.dumps(output, indent=2))
-    else:
-        typer.echo(f"Category: {result.category}")
-        typer.echo(
-            f"Confidence: {result.confidence.value:.0%} ({result.confidence.source.value})"
-        )
-        typer.echo(f"Target: {target_path}")
-        if result.route_name:
-            typer.echo(f"Route: {result.route_name}")
+        typer.echo(json.dumps(results, indent=2))
 
 
 @app.command()
