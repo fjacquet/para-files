@@ -8,6 +8,29 @@ version: "1.0"
 generated: "2025-12-25"
 
 # =============================================================================
+# CONFIGURATION
+# App settings - can be overridden by environment variables (PARA_FILES_*)
+# =============================================================================
+config:
+  # Root directory for PARA folders (0_Inbox, 1_Projects, etc.)
+  para_root: "~/Documents/PARA"
+
+  # Number of characters to extract for semantic matching
+  content_preview_chars: 2000
+
+  # MLX embedding model settings
+  mlx:
+    model_name: "nomic-text-v1.5"
+    score_threshold: 0.75
+
+  # LLM fallback settings (optional)
+  llm:
+    enabled: false
+    model: "ollama/qwen2.5:1.5b"
+    confidence_threshold: 0.6
+    # api_base: "http://localhost:11434"
+
+# =============================================================================
 # RÈGLES DE ROUTAGE SPÉCIALES
 # =============================================================================
 routing_rules:

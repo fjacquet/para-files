@@ -82,10 +82,10 @@ def test_move_help():
 
 
 def test_config_path():
-    """Verify config command shows path."""
+    """Verify config command shows reference tree path."""
     result = runner.invoke(app, ["config", "--path"])
     assert result.exit_code == 0
-    assert "config.toml" in result.output
+    assert "Reference tree:" in result.output
     assert "Exists:" in result.output
 
 

@@ -223,17 +223,14 @@ uv run para-files test-route factures-mobilite -v
 
 ### config
 
-Show or initialize configuration.
+Show configuration values.
 
 ```bash
 # Show current configuration values
 uv run para-files config --show
 
-# Show config file path
+# Show reference tree path
 uv run para-files config --path
-
-# Create config directory and example file
-uv run para-files config --init
 ```
 
 ## Configuration
@@ -241,7 +238,7 @@ uv run para-files config --init
 Configuration is loaded from (in priority order):
 1. Environment variables with `PARA_FILES_` prefix
 2. `.env` file in current directory
-3. TOML config file at `~/.config/para-files/config.toml`
+3. `config:` section in reference tree YAML (`personal_file_tree.yaml`)
 4. Default values
 
 ### Required Settings
@@ -293,23 +290,26 @@ PARA_FILES_LLM_ENABLED=true
 PARA_FILES_LLM_API_BASE=http://localhost:11434
 ```
 
-### Example `config.toml` File
+### Example `config:` Section in YAML
 
-Create with `uv run para-files config --init`:
+Add to your `personal_file_tree.yaml`:
 
-```toml
-# ~/.config/para-files/config.toml
-para_root = "~/Documents/PARA"
-reference_tree_path = "personal_file_tree.yaml"
+```yaml
+# At the top of personal_file_tree.yaml
+config:
+  para_root: "~/Documents/PARA"
+  content_preview_chars: 2000
 
-[mlx]
-model_name = "nomic-text-v1.5"
-score_threshold = 0.75
+  mlx:
+    model_name: "nomic-text-v1.5"
+    score_threshold: 0.75
 
-[llm]
-enabled = false
-# model = "ollama/qwen2.5:1.5b"
-# api_base = "http://localhost:11434"
+  llm:
+    enabled: false
+    # model: "ollama/qwen2.5:1.5b"
+    # api_base: "http://localhost:11434"
+
+# ... rest of your routes, issuers, etc.
 ```
 
 ## Model Loading

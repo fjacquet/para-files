@@ -9,11 +9,11 @@ import pytest
 from pydantic import ValidationError
 
 from para_files.config import (
-    DEFAULT_CONFIG_DIR,
-    DEFAULT_CONFIG_FILE,
+    DEFAULT_REFERENCE_TREE,
     Config,
     LLMConfig,
     MLXConfig,
+    _load_yaml_config,
     load_config,
 )
 
@@ -149,19 +149,69 @@ class TestLoadConfig:
         assert config.mlx.score_threshold == 0.9
 
 
-class TestTOMLConfig:
-    """Tests for TOML configuration file support."""
+class TestYAMLConfig:
+    """Tests for YAML configuration loading from reference tree."""
 
-    def test_default_config_paths(self):
-        """Test default config directory and file paths."""
-        assert DEFAULT_CONFIG_DIR == Path.home() / ".config" / "para-files"
-        assert DEFAULT_CONFIG_FILE == DEFAULT_CONFIG_DIR / "config.toml"
+    def test_default_reference_tree_path(self):
+        """Test default reference tree path."""
+        assert DEFAULT_REFERENCE_TREE == Path("personal_file_tree.yaml")
 
-    def test_config_file_does_not_exist_by_default(self, tmp_path: Path):
-        """Test that config loads without a TOML file."""
-        # Patch the default config file to a non-existent location
-        fake_config = tmp_path / "nonexistent.toml"
-        with patch("para_files.config.DEFAULT_CONFIG_FILE", fake_config):
-            config = load_config()
+    def test_load_yaml_config_from_file(self, tmp_path: Path):
+        """Test loading config from a YAML file."""
+        yaml_file = tmp_path / "test_tree.yaml"
+        yaml_file.write_text("""
+config:
+  para_root: "/custom/para"
+  mlx:
+    model_name: "custom-model"
+    score_threshold: 0.85
+  llm:
+    enabled: true
+""")
+        config_dict = _load_yaml_config(yaml_file)
+        assert config_dict["para_root"] == "/custom/para"
+        assert config_dict["mlx"]["model_name"] == "custom-model"
+        assert config_dict["mlx"]["score_threshold"] == 0.85
+        assert config_dict["llm"]["enabled"] is True
+
+    def test_load_yaml_config_missing_file(self, tmp_path: Path, monkeypatch):
+        """Test loading config when YAML file doesn't exist."""
+        fake_path = tmp_path / "nonexistent.yaml"
+        # Change to tmp_path so cwd fallback also fails
+        monkeypatch.chdir(tmp_path)
+        with patch("para_files.config.DEFAULT_REFERENCE_TREE", fake_path):
+            config_dict = _load_yaml_config(fake_path)
+            assert config_dict == {}
+
+    def test_load_yaml_config_no_config_section(self, tmp_path: Path):
+        """Test loading config from YAML without config section."""
+        yaml_file = tmp_path / "test_tree.yaml"
+        yaml_file.write_text("""
+routes:
+  - name: "test-route"
+    path: "/test"
+""")
+        config_dict = _load_yaml_config(yaml_file)
+        assert config_dict == {}
+
+    def test_load_config_from_yaml(self, tmp_path: Path):
+        """Test full config loading from YAML."""
+        yaml_file = tmp_path / "test_tree.yaml"
+        yaml_file.write_text("""
+config:
+  para_root: "~/TestPARA"
+  mlx:
+    score_threshold: 0.9
+""")
+        config = load_config(reference_tree_path=yaml_file)
+        assert config.para_root == Path.home() / "TestPARA"
+        assert config.mlx.score_threshold == 0.9
+
+    def test_config_defaults_without_yaml(self, tmp_path: Path):
+        """Test that config loads with defaults when no YAML exists."""
+        fake_path = tmp_path / "nonexistent.yaml"
+        with patch("para_files.config.DEFAULT_REFERENCE_TREE", fake_path):
+            config = load_config(reference_tree_path=fake_path)
             # Should still work with defaults
             assert config.mlx.model_name == "nomic-text-v1.5"
+            assert config.mlx.score_threshold == 0.75

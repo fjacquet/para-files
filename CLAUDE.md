@@ -47,10 +47,10 @@ pre-commit run --all-files         # Run manually
 | `add-utterance <route> <text>` | Add utterance to route |
 | `learn <file>` | Interactive classification learning from a file |
 | `test-route <route>` | Test route configuration and optionally match a file (`--file`) |
-| `config` | Show/initialize configuration (`--show`, `--init`, `--path`) |
+| `config` | Show configuration (`--show`, `--path`) |
 
 All commands support `-r/--reference-tree` to specify a custom YAML file.
-Configuration can be set via env vars, `.env` file, or `~/.config/para-files/config.toml`.
+Configuration is set via the `config:` section in YAML, env vars, or `.env` file.
 
 ## Architecture
 
@@ -95,28 +95,30 @@ The `ClassificationPipeline` handles this automatically - no manual model manage
 
 ## Configuration
 
-Configuration uses pydantic-settings with environment variables (prefix: `PARA_FILES_`) or `.env` file:
+Configuration is loaded from (in priority order):
+1. Environment variables (prefix: `PARA_FILES_`)
+2. `.env` file
+3. `config:` section in `personal_file_tree.yaml`
+4. Default values
 
-```bash
-# Required
-PARA_FILES_PARA_ROOT=/path/to/para/folder
-
-# MLX settings
-PARA_FILES_MLX_MODEL_NAME=mlx-community/nomic-embed-text-v1.5
-PARA_FILES_MLX_SCORE_THRESHOLD=0.75
-
-# Optional LLM fallback
-PARA_FILES_LLM_ENABLED=false
-PARA_FILES_LLM_MODEL=ollama/qwen2.5:1.5b
+```yaml
+# In personal_file_tree.yaml
+config:
+  para_root: "~/Documents/PARA"
+  mlx:
+    model_name: "nomic-text-v1.5"
+    score_threshold: 0.75
+  llm:
+    enabled: false
 ```
 
-See `.env.example` for all options.
+Override via environment: `PARA_FILES_PARA_ROOT=/custom/path`
 
 ## Key Files
 
 | File                                     | Purpose                                                            |
 |------------------------------------------|--------------------------------------------------------------------|
-| `personal_file_tree.yaml`                | PARA folder structure, semantic utterances, routing rules, issuers |
+| `personal_file_tree.yaml`                | PARA structure, routes, issuers, AND app config (`config:` section)|
 | `.env.example`                           | Configuration template with all available options                  |
 | `src/para_files/config.py`               | Configuration management with pydantic-settings                    |
 | `src/para_files/pipeline.py`             | 5-signal classification orchestrator                               |

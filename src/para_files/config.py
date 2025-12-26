@@ -3,32 +3,57 @@
 Supports configuration from (in priority order):
 1. Environment variables with PARA_FILES_ prefix
 2. .env files in current directory
-3. TOML config file at ~/.config/para-files/config.toml
+3. config section in reference tree YAML (personal_file_tree.yaml)
 4. Default values
 
-Example config.toml:
-    para_root = "~/Documents/PARA"
-    reference_tree = "personal_file_tree.yaml"
-
-    [mlx]
-    model_name = "nomic-text-v1.5"
-    score_threshold = 0.8
-
-    [llm]
-    enabled = false
+Example config section in YAML:
+    config:
+      para_root: "~/Documents/PARA"
+      mlx:
+        model_name: "nomic-text-v1.5"
+        score_threshold: 0.8
+      llm:
+        enabled: false
 """
 
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
+import yaml
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-# Default config file location
-DEFAULT_CONFIG_DIR = Path.home() / ".config" / "para-files"
-DEFAULT_CONFIG_FILE = DEFAULT_CONFIG_DIR / "config.toml"
+# Default reference tree location
+DEFAULT_REFERENCE_TREE = Path("personal_file_tree.yaml")
+
+
+def _load_yaml_config(yaml_path: Path | None = None) -> dict[str, Any]:
+    """Load config section from reference tree YAML.
+
+    Args:
+        yaml_path: Path to YAML file. If None, tries default locations.
+
+    Returns:
+        Config dict from YAML, or empty dict if not found.
+    """
+    paths_to_try = []
+    if yaml_path:
+        paths_to_try.append(yaml_path)
+    paths_to_try.extend([
+        DEFAULT_REFERENCE_TREE,
+        Path.cwd() / "personal_file_tree.yaml",
+    ])
+
+    for path in paths_to_try:
+        if path.exists():
+            with path.open() as f:
+                data = yaml.safe_load(f) or {}
+                return data.get("config", {})
+
+    return {}
 
 
 class MLXConfig(BaseSettings):
@@ -73,13 +98,6 @@ class LLMConfig(BaseSettings):
     )
 
 
-def _get_toml_file() -> Path | None:
-    """Get TOML config file path if it exists."""
-    if DEFAULT_CONFIG_FILE.exists():
-        return DEFAULT_CONFIG_FILE
-    return None
-
-
 class Config(BaseSettings):
     """Root configuration for para-files classification system."""
 
@@ -88,7 +106,6 @@ class Config(BaseSettings):
         env_nested_delimiter="__",
         env_file=".env",
         env_file_encoding="utf-8",
-        toml_file=_get_toml_file(),
         extra="ignore",
     )
 
@@ -148,11 +165,22 @@ class Config(BaseSettings):
         return self.para_root / "4_Archives"
 
 
-def load_config(**overrides: object) -> Config:
-    """Load configuration from environment and optional overrides.
+def load_config(
+    reference_tree_path: Path | None = None,
+    **overrides: object,
+) -> Config:
+    """Load configuration from YAML, environment, and optional overrides.
+
+    Priority (highest to lowest):
+    1. Explicit overrides passed to this function
+    2. Environment variables (PARA_FILES_*)
+    3. .env file
+    4. config section in reference tree YAML
+    5. Default values
 
     Args:
-        **overrides: Configuration values to override environment settings.
+        reference_tree_path: Path to reference tree YAML with config section.
+        **overrides: Configuration values to override all other settings.
 
     Returns:
         Loaded and validated Config instance.
@@ -160,4 +188,23 @@ def load_config(**overrides: object) -> Config:
     Raises:
         ValidationError: If required fields are missing or invalid.
     """
-    return Config(**overrides)  # type: ignore[arg-type]
+    # Load base config from YAML
+    yaml_config = _load_yaml_config(reference_tree_path)
+
+    # Handle nested configs from YAML
+    mlx_yaml = yaml_config.pop("mlx", {})
+    llm_yaml = yaml_config.pop("llm", {})
+
+    # Expand ~ in para_root if present
+    if "para_root" in yaml_config:
+        yaml_config["para_root"] = Path(yaml_config["para_root"]).expanduser()
+
+    # Build nested config objects (env vars override YAML)
+    mlx_config = MLXConfig(**mlx_yaml)
+    llm_config = LLMConfig(**llm_yaml)
+
+    # Merge: YAML < env vars < overrides
+    # pydantic-settings handles env var overlay automatically
+    merged = {**yaml_config, "mlx": mlx_config, "llm": llm_config, **overrides}
+
+    return Config(**merged)  # type: ignore[arg-type]
