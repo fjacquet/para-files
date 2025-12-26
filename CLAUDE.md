@@ -32,6 +32,22 @@ pre-commit install                 # Install hooks
 pre-commit run --all-files         # Run manually
 ```
 
+## CLI Commands Reference
+
+| Command | Description |
+|---------|-------------|
+| `classify <files...>` | Classify one or more files (supports `--json`, `-v`) |
+| `move <file>` | Classify and move file to PARA destination (`--dry-run`, `--copy`, `--conflict`) |
+| `scan <dir>` | Preview classifications for directory (`--recursive`, `--ext`, `--json`) |
+| `init [dest]` | Pre-create PARA folder structure (`--subfolders`, `--dry-run`). Note: `move` auto-creates folders |
+| `tree` | Display/validate reference tree (`--validate`, `--issuers`, `--rules`) |
+| `routes` | List available routes (`--utterances`) |
+| `issuers` | List known issuers by category |
+| `add-issuer <name> -c <category>` | Add issuer to reference tree |
+| `add-utterance <route> <text>` | Add utterance to route |
+
+All commands support `-r/--reference-tree` to specify a custom YAML file.
+
 ## Architecture
 
 ### 5-Signal Classification Pipeline

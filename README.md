@@ -30,11 +30,153 @@ export PARA_FILES_PARA_ROOT="/path/to/your/para/folder"
 # Classify a file
 uv run para-files classify document.pdf
 
-# Verbose output
-uv run para-files -v classify document.pdf
+# Classify multiple files
+uv run para-files classify *.pdf
 
 # JSON output
 uv run para-files classify document.pdf --json
+```
+
+## CLI Commands
+
+### classify
+
+Classify one or more files using the PARA method.
+
+```bash
+# Single file
+uv run para-files classify document.pdf
+
+# Multiple files
+uv run para-files classify file1.pdf file2.docx file3.txt
+
+# With custom reference tree
+uv run para-files classify document.pdf -r my_tree.yaml
+
+# JSON output
+uv run para-files classify document.pdf --json
+
+# Verbose logging
+uv run para-files classify document.pdf -v
+```
+
+### move
+
+Classify and move a file to its PARA destination.
+
+```bash
+# Move file to classified destination
+uv run para-files move document.pdf
+
+# Dry run (preview without moving)
+uv run para-files move document.pdf --dry-run
+
+# Copy instead of move
+uv run para-files move document.pdf --copy
+
+# Handle conflicts (skip, overwrite, rename, rename_with_date)
+uv run para-files move document.pdf --conflict rename
+
+# Add date prefix to filename
+uv run para-files move document.pdf --date-prefix
+```
+
+### scan
+
+Scan a directory and preview file classifications without moving.
+
+```bash
+# Scan directory
+uv run para-files scan ~/Downloads
+
+# Recursive scan
+uv run para-files scan ~/Downloads --recursive
+
+# Filter by extensions
+uv run para-files scan ~/Downloads --ext ".pdf,.docx"
+
+# JSON output with statistics
+uv run para-files scan ~/Downloads --json
+```
+
+### init
+
+Initialize PARA folder structure from reference tree.
+
+> **Note**: The `move` command automatically creates destination folders if they don't exist.
+> Use `init` only for pre-creating the folder structure before any classification.
+
+```bash
+# Create PARA folders at default location
+uv run para-files init
+
+# Create at specific location
+uv run para-files init /path/to/para
+
+# Include subfolders from routes
+uv run para-files init --subfolders
+
+# Preview without creating
+uv run para-files init --dry-run
+```
+
+### tree
+
+Display and validate the reference tree structure.
+
+```bash
+# Show tree structure
+uv run para-files tree
+
+# Validate for errors/warnings
+uv run para-files tree --validate
+
+# Show known issuers
+uv run para-files tree --issuers
+
+# Show routing rules
+uv run para-files tree --rules
+
+# Verbose (show all issuers)
+uv run para-files tree --issuers -v
+```
+
+### routes
+
+List all available routes in the reference tree.
+
+```bash
+# List routes
+uv run para-files routes
+
+# Show utterances for each route
+uv run para-files routes --utterances
+```
+
+### issuers
+
+List all known issuers by category.
+
+```bash
+uv run para-files issuers
+```
+
+### add-issuer
+
+Add a new issuer to the reference tree.
+
+```bash
+# Add issuer to category
+uv run para-files add-issuer "New Bank SA" --category banques
+```
+
+### add-utterance
+
+Add a new utterance to a route for better semantic matching.
+
+```bash
+# Add utterance to route
+uv run para-files add-utterance factures-mobilite "Golden Pass Line"
 ```
 
 ## Configuration
