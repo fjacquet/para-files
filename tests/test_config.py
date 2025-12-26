@@ -83,7 +83,7 @@ class TestConfig:
         """Test config with only required field."""
         config = Config(para_root=tmp_path)
         assert config.para_root == tmp_path
-        assert config.reference_tree_path == Path("personal_file_tree.yaml")
+        assert config.reference_tree_path == Path("config/personal_file_tree.yaml")
         assert config.validated_db_path is None
 
     def test_full_config(self, tmp_path: Path):
