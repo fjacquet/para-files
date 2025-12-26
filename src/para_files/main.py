@@ -404,6 +404,130 @@ def list_issuers(
             typer.echo(f"    - {issuer}")
 
 
+@app.command()
+def scan(
+    directory: Annotated[Path, typer.Argument(help="Directory to scan for files")],
+    reference_tree: Annotated[
+        Path | None,
+        typer.Option("--reference-tree", "-r", help="Path to reference tree YAML file"),
+    ] = None,
+    recursive: Annotated[
+        bool,
+        typer.Option("--recursive", "-R", help="Scan subdirectories recursively"),
+    ] = False,
+    extensions: Annotated[
+        str | None,
+        typer.Option("--ext", "-e", help="Filter by extensions (comma-separated, e.g., '.pdf,.docx')"),
+    ] = None,
+    output_json: Annotated[
+        bool, typer.Option("--json", "-j", help="Output results as JSON")
+    ] = False,
+    verbose: Annotated[
+        bool, typer.Option("--verbose", "-v", help="Enable verbose logging")
+    ] = False,
+) -> None:
+    """Scan a directory and preview file classifications without moving."""
+    setup_logging(verbose=verbose)
+
+    dir_path = directory.resolve()
+
+    if not dir_path.exists():
+        logger.error("Directory not found: %s", dir_path)
+        raise typer.Exit(1)
+
+    if not dir_path.is_dir():
+        logger.error("Not a directory: %s", dir_path)
+        raise typer.Exit(1)
+
+    # Load configuration
+    try:
+        config = load_config()
+    except ValidationError:
+        logger.exception("Configuration error")
+        raise typer.Exit(1) from None
+
+    # Override config with CLI args if provided
+    if reference_tree:
+        config.reference_tree_path = reference_tree
+
+    # Parse extensions filter
+    ext_filter: set[str] | None = None
+    if extensions:
+        ext_filter = {ext.strip().lower() if ext.startswith(".") else f".{ext.strip().lower()}"
+                      for ext in extensions.split(",")}
+
+    # Find files
+    if recursive:
+        files = list(dir_path.rglob("*"))
+    else:
+        files = list(dir_path.glob("*"))
+
+    # Filter to only files (not directories)
+    files = [f for f in files if f.is_file()]
+
+    # Apply extension filter
+    if ext_filter:
+        files = [f for f in files if f.suffix.lower() in ext_filter]
+
+    if not files:
+        typer.echo("No files found matching criteria")
+        return
+
+    # Create pipeline once for all files
+    pipeline = ClassificationPipeline(config)
+
+    results = []
+    stats: dict[str, int] = {}
+
+    for file_path in sorted(files):
+        try:
+            result = pipeline.classify_file(file_path)
+            target_path = pipeline.get_target_path(result)
+
+            # Track stats by source
+            source = result.confidence.source.value
+            stats[source] = stats.get(source, 0) + 1
+
+            if output_json:
+                output = {
+                    "source_file": str(file_path),
+                    "filename": file_path.name,
+                    "category": result.category,
+                    "confidence": result.confidence.value,
+                    "source": source,
+                    "target_path": str(target_path),
+                }
+                if result.route_name:
+                    output["route_name"] = result.route_name
+                results.append(output)
+            else:
+                confidence_pct = f"{result.confidence.value:.0%}"
+                typer.echo(f"📄 {file_path.name}")
+                typer.echo(f"   → {result.category} ({confidence_pct} {source})")
+
+        except Exception as e:
+            logger.warning("Failed to classify %s: %s", file_path.name, e)
+            if output_json:
+                results.append({
+                    "source_file": str(file_path),
+                    "filename": file_path.name,
+                    "error": str(e),
+                })
+
+    if output_json:
+        output_data = {
+            "directory": str(dir_path),
+            "total_files": len(files),
+            "stats": stats,
+            "results": results,
+        }
+        typer.echo(json.dumps(output_data, indent=2))
+    else:
+        typer.echo(f"\n📊 Summary: {len(files)} files scanned")
+        for source, count in sorted(stats.items(), key=lambda x: -x[1]):
+            typer.echo(f"   {source}: {count}")
+
+
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
