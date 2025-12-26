@@ -151,11 +151,13 @@ class TestMLXEncoderIntegration:
     def test_similar_texts_have_similar_embeddings(self):
         """Test that semantically similar texts have similar embeddings."""
         encoder = MLXEncoder()
-        result = encoder([
-            "Invoice for health insurance premium",
-            "Insurance invoice for premium payment",
-            "Bank account statement for checking",
-        ])
+        result = encoder(
+            [
+                "Invoice for health insurance premium",
+                "Insurance invoice for premium payment",
+                "Bank account statement for checking",
+            ]
+        )
 
         # Compute cosine similarity between embeddings
         def cosine_sim(a: list[float], b: list[float]) -> float:

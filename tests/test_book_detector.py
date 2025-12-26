@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -165,9 +165,7 @@ class TestBookDetector:
         """Test default confidence."""
         assert detector.default_confidence == 0.92
 
-    def test_non_pdf_returns_none(
-        self, detector: BookDetector, non_pdf_metadata: FileMetadata
-    ):
+    def test_non_pdf_returns_none(self, detector: BookDetector, non_pdf_metadata: FileMetadata):
         """Test that non-PDF files return None."""
         result = detector.classify("Some content", non_pdf_metadata)
         assert result is None
@@ -219,20 +217,22 @@ class TestBookDetectorClassify:
             isbn_13="9781234567890",
         )
 
-        with patch(
-            "para_files.classifiers.book_detector.extract_pdf_metadata",
-            return_value=mock_pdf_meta,
-        ):
-            with patch(
+        with (
+            patch(
+                "para_files.classifiers.book_detector.extract_pdf_metadata",
+                return_value=mock_pdf_meta,
+            ),
+            patch(
                 "para_files.classifiers.book_detector.lookup_isbn",
                 return_value=mock_book_info,
-            ):
-                content = "Chapter 1: Introduction\nChapter 2: Basics"
-                result = detector.classify(content, metadata)
+            ),
+        ):
+            content = "Chapter 1: Introduction\nChapter 2: Basics"
+            result = detector.classify(content, metadata)
 
-                assert result is not None
-                assert result.confidence.source == ClassificationSource.BOOK_DETECTOR
-                assert "Python" in result.category or "technology" in str(result.extracted_params)
+            assert result is not None
+            assert result.confidence.source == ClassificationSource.BOOK_DETECTOR
+            assert "Python" in result.category or "technology" in str(result.extracted_params)
 
     def test_classify_non_pdf_rejected(self, detector: BookDetector, tmp_path: Path):
         """Test that non-PDF files are rejected."""

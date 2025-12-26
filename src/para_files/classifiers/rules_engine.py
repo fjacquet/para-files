@@ -7,6 +7,8 @@ Handles special routing rules for photos, videos, courses, etc.
 from __future__ import annotations
 
 import fnmatch
+import logging
+import re
 from datetime import UTC, datetime
 
 from para_files.classifiers.base import BaseClassifier
@@ -17,6 +19,10 @@ from para_files.types import (
     FileMetadata,
     RoutingRule,
 )
+from para_files.utils.geolocation import get_location_folder
+
+
+logger = logging.getLogger(__name__)
 
 
 class RulesEngineClassifier(BaseClassifier):
@@ -131,10 +137,18 @@ class RulesEngineClassifier(BaseClassifier):
         if platform:
             params["platform"] = platform
 
+        # Try to get location from GPS coordinates
+        location = self._get_location(metadata)
+        if location:
+            params["location"] = location
+
         # Resolve destination pattern
         category = rule.destination
         for key, value in params.items():
             category = category.replace(f"{{{key}}}", value)
+
+        # Clean up unreplaced {location} placeholder if no GPS data
+        category = self._clean_unreplaced_location(category)
 
         return ClassificationResult(
             category=category,
@@ -145,6 +159,48 @@ class RulesEngineClassifier(BaseClassifier):
             route_name=rule_name,
             extracted_params=params,
         )
+
+    def _get_location(self, metadata: FileMetadata) -> str | None:
+        """Get location from GPS coordinates if available.
+
+        Args:
+            metadata: File metadata with potential GPS data.
+
+        Returns:
+            Location folder name, or None if no GPS or lookup fails.
+        """
+        if metadata.exif_gps_lat is None or metadata.exif_gps_lon is None:
+            return None
+
+        location = get_location_folder(metadata.exif_gps_lat, metadata.exif_gps_lon)
+        if location:
+            logger.debug(
+                "GPS location resolved: %.4f, %.4f → %s",
+                metadata.exif_gps_lat,
+                metadata.exif_gps_lon,
+                location,
+            )
+        return location
+
+    def _clean_unreplaced_location(self, category: str) -> str:
+        """Remove unreplaced {location} placeholder and clean up path.
+
+        Handles patterns like:
+        - "path/{location}/more" → "path/more"
+        - "path/{location}" → "path"
+
+        Args:
+            category: Category path possibly containing {location}.
+
+        Returns:
+            Cleaned category path without empty segments.
+        """
+        # Remove {location} placeholder if still present
+        category = category.replace("{location}", "")
+        # Clean up double slashes
+        category = re.sub(r"/+", "/", category)
+        # Remove trailing slash
+        return category.rstrip("/")
 
     def _get_date(
         self,

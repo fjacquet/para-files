@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from para_files.utils.pdf_metadata import (
     PdfMetadata,
     contains_book_keywords,

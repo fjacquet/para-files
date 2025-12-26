@@ -49,17 +49,20 @@ def _load_yaml_config(yaml_path: Path | None = None) -> dict[str, Any]:
     paths_to_try = []
     if yaml_path:
         paths_to_try.append(yaml_path)
-    paths_to_try.extend([
-        DEFAULT_REFERENCE_TREE,
-        Path.cwd() / "config" / "personal_file_tree.yaml",
-        Path.cwd() / "personal_file_tree.yaml",  # Backwards compatibility
-    ])
+    paths_to_try.extend(
+        [
+            DEFAULT_REFERENCE_TREE,
+            Path.cwd() / "config" / "personal_file_tree.yaml",
+            Path.cwd() / "personal_file_tree.yaml",  # Backwards compatibility
+        ]
+    )
 
     for path in paths_to_try:
         if path.exists():
             with path.open() as f:
                 data = yaml.safe_load(f) or {}
-                return data.get("config", {})
+                config_section: dict[str, Any] = data.get("config", {})
+                return config_section
 
     return {}
 
@@ -215,4 +218,4 @@ def load_config(
     # pydantic-settings handles env var overlay automatically
     merged = {**yaml_config, "mlx": mlx_config, "llm": llm_config, **overrides}
 
-    return Config(**merged)  # type: ignore[arg-type]
+    return Config(**merged)

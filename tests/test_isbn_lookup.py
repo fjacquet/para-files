@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
-
-import pytest
-
 from para_files.utils.isbn_lookup import (
     BookInfo,
     infer_technology_from_subjects,

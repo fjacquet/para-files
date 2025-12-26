@@ -9,7 +9,7 @@ import json
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated, Any
 
 import typer
 from pydantic import ValidationError
@@ -17,6 +17,13 @@ from pydantic import ValidationError
 from para_files.config import load_config
 from para_files.mover import ConflictStrategy, move_classified_file
 from para_files.pipeline import ClassificationPipeline
+
+
+if TYPE_CHECKING:
+    from para_files.config import Config
+    from para_files.learner import RoutingLearner
+    from para_files.mover import MoveResult
+    from para_files.types import ClassificationResult
 
 
 logger = logging.getLogger(__name__)
@@ -27,6 +34,382 @@ app = typer.Typer(
     help="Classify files using the PARA method with MLX-powered semantic routing.",
     add_completion=True,
 )
+
+# Constants
+MAX_PATTERNS_SHOWN = 3
+MAX_UTTERANCES_SHOWN = 5
+
+
+def _load_config_or_exit() -> Config:
+    """Load configuration, exit on error."""
+    try:
+        return load_config()
+    except ValidationError:
+        logger.exception("Configuration error")
+        raise typer.Exit(1) from None
+
+
+def _get_reference_tree_path(
+    reference_tree: Path | None,
+    config: Config | None = None,
+) -> Path:
+    """Get reference tree path from CLI or config."""
+    if reference_tree:
+        return reference_tree
+    if config:
+        return config.reference_tree_path
+    try:
+        cfg = load_config()
+    except ValidationError:
+        return Path("personal_file_tree.yaml")
+    else:
+        return cfg.reference_tree_path
+
+
+def _validate_file_exists(file_path: Path) -> bool:
+    """Validate file exists and is a file, log warnings if not."""
+    if not file_path.exists():
+        logger.warning("File not found: %s", file_path)
+        return False
+    if not file_path.is_file():
+        logger.warning("Not a file: %s", file_path)
+        return False
+    return True
+
+
+def _format_result_json(
+    file_path: Path,
+    result: ClassificationResult,
+    target_path: Path,
+) -> dict[str, Any]:
+    """Format classification result as JSON dict."""
+    output: dict[str, Any] = {
+        "source_file": str(file_path),
+        "category": result.category,
+        "confidence": result.confidence.value,
+        "source": result.confidence.source.value,
+        "target_path": str(target_path),
+    }
+    if result.route_name:
+        output["route_name"] = result.route_name
+    if result.extracted_params:
+        output["params"] = result.extracted_params
+    return output
+
+
+def _print_classification_result(
+    file_path: Path,
+    result: ClassificationResult,
+    target_path: Path,
+) -> None:
+    """Print classification result to console."""
+    typer.echo(f"\n📄 {file_path.name}")
+    typer.echo(f"   Category: {result.category}")
+    conf = result.confidence
+    typer.echo(f"   Confidence: {conf.value:.0%} ({conf.source.value})")
+    typer.echo(f"   Target: {target_path}")
+    if result.route_name:
+        typer.echo(f"   Route: {result.route_name}")
+
+
+def _format_move_result_json(
+    file_path: Path,
+    result: ClassificationResult,
+    target_dir: Path,
+    move_result: MoveResult,
+) -> dict[str, Any]:
+    """Format move result as JSON dict."""
+    output: dict[str, Any] = {
+        "source_file": str(file_path),
+        "category": result.category,
+        "confidence": result.confidence.value,
+        "source": result.confidence.source.value,
+        "target_path": str(target_dir),
+        "destination": str(move_result.destination),
+        "action": move_result.action,
+        "success": move_result.success,
+    }
+    if move_result.message:
+        output["message"] = move_result.message
+    if result.route_name:
+        output["route_name"] = result.route_name
+    return output
+
+
+def _ensure_tree_exists(tree_path: Path) -> None:
+    """Ensure reference tree file exists, exit if not."""
+    if not tree_path.exists():
+        typer.echo(f"Reference tree not found: {tree_path}", err=True)
+        raise typer.Exit(1)
+
+
+# --- Scan command helpers ---
+
+
+def _validate_directory_or_exit(dir_path: Path) -> None:
+    """Validate directory exists, exit on error."""
+    if not dir_path.exists():
+        logger.error("Directory not found: %s", dir_path)
+        raise typer.Exit(1)
+    if not dir_path.is_dir():
+        logger.error("Not a directory: %s", dir_path)
+        raise typer.Exit(1)
+
+
+def _parse_extensions_filter(extensions: str | None) -> set[str] | None:
+    """Parse comma-separated extensions into a set."""
+    if not extensions:
+        return None
+    return {
+        ext.strip().lower() if ext.startswith(".") else f".{ext.strip().lower()}"
+        for ext in extensions.split(",")
+    }
+
+
+def _discover_files(
+    dir_path: Path,
+    *,
+    recursive: bool,
+    ext_filter: set[str] | None,
+) -> list[Path]:
+    """Discover files in directory with optional filtering."""
+    files = list(dir_path.rglob("*")) if recursive else list(dir_path.glob("*"))
+    files = [f for f in files if f.is_file()]
+    if ext_filter:
+        files = [f for f in files if f.suffix.lower() in ext_filter]
+    return sorted(files)
+
+
+def _classify_file_for_scan(
+    file_path: Path,
+    pipeline: ClassificationPipeline,
+    stats: dict[str, int],
+    *,
+    output_json: bool,
+) -> dict[str, Any] | None:
+    """Classify a single file for scan command."""
+    try:
+        result = pipeline.classify_file(file_path)
+        target_path = pipeline.get_target_path(result)
+        source = result.confidence.source.value
+        stats[source] = stats.get(source, 0) + 1
+
+        if output_json:
+            output: dict[str, Any] = {
+                "source_file": str(file_path),
+                "filename": file_path.name,
+                "category": result.category,
+                "confidence": result.confidence.value,
+                "source": source,
+                "target_path": str(target_path),
+            }
+            if result.route_name:
+                output["route_name"] = result.route_name
+            return output
+
+        confidence_pct = f"{result.confidence.value:.0%}"
+        typer.echo(f"\u0001F4C4 {file_path.name}")
+        typer.echo(f"   \u2192 {result.category} ({confidence_pct} {source})")
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Failed to classify %s: %s", file_path.name, e)
+        if output_json:
+            return {
+                "source_file": str(file_path),
+                "filename": file_path.name,
+                "error": str(e),
+            }
+    return None
+
+
+def _print_scan_summary(
+    dir_path: Path,
+    files: list[Path],
+    stats: dict[str, int],
+    results: list[dict[str, Any]],
+    *,
+    output_json: bool,
+) -> None:
+    """Print scan summary."""
+    if output_json:
+        output_data = {
+            "directory": str(dir_path),
+            "total_files": len(files),
+            "stats": stats,
+            "results": results,
+        }
+        typer.echo(json.dumps(output_data, indent=2))
+    else:
+        typer.echo(f"\n\U0001f4ca Summary: {len(files)} files scanned")
+        for source, count in sorted(stats.items(), key=lambda x: -x[1]):
+            typer.echo(f"   {source}: {count}")
+
+
+# --- Init command helpers ---
+
+
+def _create_directory(
+    dir_path: Path,
+    *,
+    dry_run: bool,
+    created: list[Path],
+    existing: list[Path],
+) -> None:
+    """Create a directory or track it for dry run."""
+    if dry_run:
+        if dir_path.exists():
+            typer.echo(f"  [exists] {dir_path}")
+            existing.append(dir_path)
+        else:
+            typer.echo(f"  [create] {dir_path}")
+            created.append(dir_path)
+    elif dir_path.exists():
+        logger.debug("Directory exists: %s", dir_path)
+        existing.append(dir_path)
+    else:
+        dir_path.mkdir(parents=True, exist_ok=True)
+        typer.echo(f"  Created: {dir_path}")
+        created.append(dir_path)
+
+
+def _extract_subfolder_patterns(tree_data: dict[str, Any]) -> list[str]:
+    """Extract static subfolder patterns from tree data."""
+    patterns: list[str] = []
+    for section in ["projects", "areas", "resources", "archives"]:
+        section_data = tree_data.get(section, {})
+        routes = section_data.get("routes", [])
+        for route in routes:
+            pattern = route.get("pattern", "")
+            if pattern:
+                static_path = pattern.split("{")[0].rstrip("/")
+                if static_path and static_path not in patterns:
+                    patterns.append(static_path)
+    return patterns
+
+
+def _print_init_summary(
+    para_root: Path,
+    created: list[Path],
+    existing: list[Path],
+    *,
+    dry_run: bool,
+) -> None:
+    """Print init command summary."""
+    if dry_run:
+        msg = f"{len(created)} folders to create, {len(existing)} already exist"
+        typer.echo(f"\n\U0001f4c1 Dry run: {msg}")
+    else:
+        typer.echo(f"\n\u2705 PARA structure initialized at {para_root}")
+        typer.echo(f"   Created: {len(created)} folders")
+        typer.echo(f"   Existing: {len(existing)} folders")
+
+
+# --- Tree command helpers ---
+
+
+def _show_tree_sections(
+    tree_data: dict[str, Any],
+    *,
+    validate: bool,
+    errors: list[str],
+    warnings: list[str],
+) -> tuple[int, int]:
+    """Show tree sections and return route/utterance counts."""
+    sections = ["inbox", "projects", "areas", "resources", "archives"]
+    route_count = 0
+    utterance_count = 0
+
+    for section in sections:
+        section_data = tree_data.get(section, {})
+        if not section_data:
+            if validate:
+                warnings.append(f"Section '{section}' is empty or missing")
+            continue
+
+        path = section_data.get("path", section)
+        routes = section_data.get("routes", [])
+        route_count += len(routes)
+
+        typer.echo(f"\n\U0001f4c2 {path}")
+
+        for route in routes:
+            name = route.get("name", "unnamed")
+            pattern = route.get("pattern", "")
+            utts = route.get("utterances", [])
+            utterance_count += len(utts)
+
+            if validate:
+                if not pattern:
+                    errors.append(f"Route '{name}' has no pattern")
+                if not utts:
+                    warnings.append(f"Route '{name}' has no utterances")
+
+            typer.echo(f"   \u2514\u2500\u2500 {name}: {pattern} ({len(utts)} utterances)")
+
+    return route_count, utterance_count
+
+
+def _show_routing_rules(tree_data: dict[str, Any]) -> None:
+    """Show routing rules from tree data."""
+    rules = tree_data.get("routing_rules", {})
+    if not rules:
+        return
+
+    typer.echo("\n\u2699\ufe0f  Routing Rules:")
+    max_show = 5
+    for rule_name, rule_data in rules.items():
+        dest = rule_data.get("destination", "N/A")
+        exts = rule_data.get("extensions", [])
+        patterns = rule_data.get("patterns", [])
+        typer.echo(f"   \u2514\u2500\u2500 {rule_name}:")
+        if exts:
+            ext_str = ", ".join(exts[:max_show])
+            suffix = "..." if len(exts) > max_show else ""
+            typer.echo(f"       Extensions: {ext_str}{suffix}")
+        if patterns:
+            pat_str = ", ".join(patterns[:MAX_PATTERNS_SHOWN])
+            suffix = "..." if len(patterns) > MAX_PATTERNS_SHOWN else ""
+            typer.echo(f"       Patterns: {pat_str}{suffix}")
+        typer.echo(f"       \u2192 {dest}")
+
+
+def _show_known_issuers(tree_data: dict[str, Any], *, verbose: bool) -> None:
+    """Show known issuers from tree data."""
+    known_issuers = tree_data.get("known_issuers", {})
+    if not known_issuers:
+        return
+
+    typer.echo("\n\U0001f3e2 Known Issuers:")
+    issuer_count = 0
+    for category, category_data in known_issuers.items():
+        issuers = category_data.get("issuers", [])
+        issuer_count += len(issuers)
+        pattern = category_data.get("pattern", "")
+        typer.echo(f"   \u2514\u2500\u2500 {category}: {len(issuers)} issuers \u2192 {pattern}")
+        if verbose:
+            for issuer in issuers:
+                typer.echo(f"       - {issuer}")
+    typer.echo(f"\n   Total: {issuer_count} issuers across {len(known_issuers)} categories")
+
+
+def _print_validation_results(
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    """Print validation results and exit if errors."""
+    if errors:
+        typer.echo("\n\u274c Errors:", err=True)
+        for error in errors:
+            typer.echo(f"   - {error}", err=True)
+
+    if warnings:
+        typer.echo("\n\u26a0\ufe0f  Warnings:")
+        for warning in warnings:
+            typer.echo(f"   - {warning}")
+
+    if not errors and not warnings:
+        typer.echo("\n\u2705 Validation passed!")
+    elif errors:
+        raise typer.Exit(1)
 
 
 class ConflictChoice(str, Enum):
@@ -68,31 +451,17 @@ def classify(
 ) -> None:
     """Classify one or more files using the PARA method."""
     setup_logging(verbose=verbose)
+    config = _load_config_or_exit()
 
-    # Load configuration
-    try:
-        config = load_config()
-    except ValidationError:
-        logger.exception("Configuration error")
-        raise typer.Exit(1) from None
-
-    # Override config with CLI args if provided
     if reference_tree:
         config.reference_tree_path = reference_tree
 
-    # Create pipeline once for all files
     pipeline = ClassificationPipeline(config)
+    results: list[dict[str, Any]] = []
 
-    results = []
     for file in files:
         file_path = file.resolve()
-
-        if not file_path.exists():
-            logger.warning("File not found: %s", file_path)
-            continue
-
-        if not file_path.is_file():
-            logger.warning("Not a file: %s", file_path)
+        if not _validate_file_exists(file_path):
             continue
 
         try:
@@ -100,26 +469,9 @@ def classify(
             target_path = pipeline.get_target_path(result)
 
             if output_json:
-                output = {
-                    "source_file": str(file_path),
-                    "category": result.category,
-                    "confidence": result.confidence.value,
-                    "source": result.confidence.source.value,
-                    "target_path": str(target_path),
-                }
-                if result.route_name:
-                    output["route_name"] = result.route_name
-                if result.extracted_params:
-                    output["params"] = result.extracted_params
-                results.append(output)
+                results.append(_format_result_json(file_path, result, target_path))
             else:
-                typer.echo(f"\n📄 {file_path.name}")
-                typer.echo(f"   Category: {result.category}")
-                conf = result.confidence
-                typer.echo(f"   Confidence: {conf.value:.0%} ({conf.source.value})")
-                typer.echo(f"   Target: {target_path}")
-                if result.route_name:
-                    typer.echo(f"   Route: {result.route_name}")
+                _print_classification_result(file_path, result, target_path)
         except Exception:
             logger.exception("Failed to classify %s", file_path)
             if output_json:
@@ -127,6 +479,94 @@ def classify(
 
     if output_json:
         typer.echo(json.dumps(results, indent=2))
+
+
+def _process_single_move(
+    file_path: Path,
+    pipeline: ClassificationPipeline,
+    *,
+    dry_run: bool,
+    copy: bool,
+    conflict_strategy: ConflictStrategy,
+    date_prefix: bool,
+    smart_rename: bool,
+) -> tuple[Any, Any, bool]:
+    """Process a single file move. Returns (result, move_result, success)."""
+    result = pipeline.classify_file(file_path)
+    target_dir = pipeline.get_target_path(result)
+
+    move_result = move_classified_file(
+        file_path,
+        target_dir,
+        dry_run=dry_run,
+        copy_mode=copy,
+        conflict_strategy=conflict_strategy,
+        add_date_prefix=date_prefix,
+        smart_rename=smart_rename,
+        classification=result,
+    )
+    return result, move_result, move_result.success
+
+
+def _print_move_result(
+    file_path: Path,
+    result: ClassificationResult,
+    move_result: MoveResult,
+    action_verb: str,
+) -> None:
+    """Print move result to console."""
+    if move_result.success:
+        typer.echo(f"{action_verb}: {file_path.name}")
+        typer.echo(f"  -> {move_result.destination}")
+        conf = result.confidence
+        typer.echo(f"  Classification: {result.category} ({conf.value:.0%})")
+    else:
+        typer.echo(f"Failed: {file_path.name} - {move_result.message}", err=True)
+
+
+def _handle_move_file(
+    file_path: Path,
+    pipeline: ClassificationPipeline,
+    results: list[dict[str, Any]],
+    action_verb: str,
+    *,
+    dry_run: bool,
+    copy: bool,
+    conflict_strategy: ConflictStrategy,
+    date_prefix: bool,
+    smart_rename: bool,
+    output_json: bool,
+) -> bool:
+    """Handle a single file in move command. Returns True if successful."""
+    if not _validate_file_exists(file_path):
+        if output_json:
+            results.append({"source_file": str(file_path), "error": "file validation failed"})
+        return False
+
+    try:
+        result, move_result, success = _process_single_move(
+            file_path,
+            pipeline,
+            dry_run=dry_run,
+            copy=copy,
+            conflict_strategy=conflict_strategy,
+            date_prefix=date_prefix,
+            smart_rename=smart_rename,
+        )
+
+        if output_json:
+            target_dir = pipeline.get_target_path(result)
+            results.append(_format_move_result_json(file_path, result, target_dir, move_result))
+        else:
+            _print_move_result(file_path, result, move_result, action_verb)
+
+    except Exception:
+        logger.exception("Failed to process %s", file_path)
+        if output_json:
+            results.append({"source_file": str(file_path), "error": "processing failed"})
+        return False
+    else:
+        return success
 
 
 @app.command()
@@ -152,6 +592,14 @@ def move(
         bool,
         typer.Option("--date-prefix", "-d", help="Add date prefix (YYYY-MM-DD) to filename"),
     ] = False,
+    smart_rename: Annotated[
+        bool,
+        typer.Option(
+            "--smart-rename",
+            "-s",
+            help="Use intelligent naming from metadata (e.g., book titles from ISBN)",
+        ),
+    ] = False,
     output_json: Annotated[
         bool, typer.Option("--json", "-j", help="Output result as JSON")
     ] = False,
@@ -161,101 +609,38 @@ def move(
 ) -> None:
     """Classify and move one or more files to their PARA destinations."""
     setup_logging(verbose=verbose)
+    config = _load_config_or_exit()
 
-    # Load configuration
-    try:
-        config = load_config()
-    except ValidationError:
-        logger.exception("Configuration error")
-        raise typer.Exit(1) from None
-
-    # Override config with CLI args if provided
     if reference_tree:
         config.reference_tree_path = reference_tree
 
-    # Create pipeline once for all files
     pipeline = ClassificationPipeline(config)
-
-    # Convert conflict choice to strategy
     conflict_strategy = ConflictStrategy(conflict.value)
-
-    # Track results
-    results = []
+    results: list[dict[str, Any]] = []
     success_count = 0
     fail_count = 0
-
-    action_verb = "Would move" if dry_run else "Moved"
-    if copy:
-        action_verb = "Would copy" if dry_run else "Copied"
+    action_verb = (
+        ("Would copy" if copy else "Would move") if dry_run else ("Copied" if copy else "Moved")
+    )
 
     for file in files:
-        file_path = file.resolve()
-
-        if not file_path.exists():
-            logger.warning("File not found: %s", file_path)
+        success = _handle_move_file(
+            file.resolve(),
+            pipeline,
+            results,
+            action_verb,
+            dry_run=dry_run,
+            copy=copy,
+            conflict_strategy=conflict_strategy,
+            date_prefix=date_prefix,
+            smart_rename=smart_rename,
+            output_json=output_json,
+        )
+        if success:
+            success_count += 1
+        else:
             fail_count += 1
-            if output_json:
-                results.append({"source_file": str(file_path), "error": "file not found"})
-            continue
 
-        if not file_path.is_file():
-            logger.warning("Not a file: %s", file_path)
-            fail_count += 1
-            if output_json:
-                results.append({"source_file": str(file_path), "error": "not a file"})
-            continue
-
-        try:
-            # Classify and get target
-            result = pipeline.classify_file(file_path)
-            target_dir = pipeline.get_target_path(result)
-
-            # Move the file
-            move_result = move_classified_file(
-                file_path,
-                target_dir,
-                dry_run=dry_run,
-                copy_mode=copy,
-                conflict_strategy=conflict_strategy,
-                add_date_prefix=date_prefix,
-            )
-
-            if output_json:
-                output = {
-                    "source_file": str(file_path),
-                    "category": result.category,
-                    "confidence": result.confidence.value,
-                    "source": result.confidence.source.value,
-                    "target_path": str(target_dir),
-                    "destination": str(move_result.destination),
-                    "action": move_result.action,
-                    "success": move_result.success,
-                }
-                if move_result.message:
-                    output["message"] = move_result.message
-                if result.route_name:
-                    output["route_name"] = result.route_name
-                results.append(output)
-            elif move_result.success:
-                typer.echo(f"{action_verb}: {file_path.name}")
-                typer.echo(f"  -> {move_result.destination}")
-                conf = result.confidence
-                typer.echo(f"  Classification: {result.category} ({conf.value:.0%})")
-            else:
-                typer.echo(f"Failed: {file_path.name} - {move_result.message}", err=True)
-
-            if move_result.success:
-                success_count += 1
-            else:
-                fail_count += 1
-
-        except Exception:
-            logger.exception("Failed to process %s", file_path)
-            fail_count += 1
-            if output_json:
-                results.append({"source_file": str(file_path), "error": "processing failed"})
-
-    # Output summary
     if output_json:
         typer.echo(json.dumps(results, indent=2))
     elif len(files) > 1:
@@ -277,30 +662,26 @@ def add_issuer(
     """Add a new issuer to the reference tree."""
     from para_files.learner import RoutingLearner
 
-    # Determine reference tree path
-    tree_path = reference_tree
-    if tree_path is None:
-        try:
-            config = load_config()
-            tree_path = config.reference_tree_path
-        except ValidationError:
-            tree_path = Path("personal_file_tree.yaml")
-
-    if not tree_path.exists():
-        typer.echo(f"Reference tree not found: {tree_path}", err=True)
-        raise typer.Exit(1)
+    tree_path = _get_reference_tree_path(reference_tree)
+    _ensure_tree_exists(tree_path)
 
     learner = RoutingLearner(tree_path)
 
-    # Show available categories if needed
-    categories = learner.list_issuer_categories()
-    if category not in categories:
+    if category not in learner.list_issuer_categories():
         typer.echo(f"Creating new category: {category}")
 
     if learner.add_issuer(issuer, category):
         typer.echo(f"Added issuer '{issuer}' to category '{category}'")
     else:
         typer.echo(f"Issuer '{issuer}' already exists in '{category}'")
+
+
+def _show_available_routes(learner: RoutingLearner) -> None:
+    """Show available routes and exit."""
+    typer.echo("Available routes:")
+    for r in learner.list_routes():
+        typer.echo(f"  - {r}")
+    raise typer.Exit(1)
 
 
 @app.command("add-utterance")
@@ -315,32 +696,29 @@ def add_utterance(
     """Add a new utterance to a route for better matching."""
     from para_files.learner import RoutingLearner
 
-    # Determine reference tree path
-    tree_path = reference_tree
-    if tree_path is None:
-        try:
-            config = load_config()
-            tree_path = config.reference_tree_path
-        except ValidationError:
-            tree_path = Path("personal_file_tree.yaml")
-
-    if not tree_path.exists():
-        typer.echo(f"Reference tree not found: {tree_path}", err=True)
-        raise typer.Exit(1)
-
+    tree_path = _get_reference_tree_path(reference_tree)
+    _ensure_tree_exists(tree_path)
     learner = RoutingLearner(tree_path)
 
     if learner.add_utterance(route, utterance):
         typer.echo(f"Added utterance '{utterance}' to route '{route}'")
+    elif learner.get_route_info(route) is None:
+        typer.echo(f"Route '{route}' not found", err=True)
+        _show_available_routes(learner)
     else:
-        # Check if route exists
-        if learner.get_route_info(route) is None:
-            typer.echo(f"Route '{route}' not found", err=True)
-            typer.echo("Available routes:")
-            for r in learner.list_routes():
-                typer.echo(f"  - {r}")
-            raise typer.Exit(1)
         typer.echo(f"Utterance '{utterance}' already exists in route '{route}'")
+
+
+def _print_route_with_utterances(learner: RoutingLearner, route_name: str) -> None:
+    """Print route with its utterances."""
+    route_info = learner.get_route_info(route_name)
+    utterances = route_info.get("utterances", []) if route_info else []
+    typer.echo(f"\n  {route_name}:")
+    for utt in utterances[:MAX_UTTERANCES_SHOWN]:
+        typer.echo(f"    - {utt}")
+    if len(utterances) > MAX_UTTERANCES_SHOWN:
+        remaining = len(utterances) - MAX_UTTERANCES_SHOWN
+        typer.echo(f"    ... and {remaining} more")
 
 
 @app.command("routes")
@@ -357,19 +735,8 @@ def list_routes(
     """List all available routes in the reference tree."""
     from para_files.learner import RoutingLearner
 
-    # Determine reference tree path
-    tree_path = reference_tree
-    if tree_path is None:
-        try:
-            config = load_config()
-            tree_path = config.reference_tree_path
-        except ValidationError:
-            tree_path = Path("personal_file_tree.yaml")
-
-    if not tree_path.exists():
-        typer.echo(f"Reference tree not found: {tree_path}", err=True)
-        raise typer.Exit(1)
-
+    tree_path = _get_reference_tree_path(reference_tree)
+    _ensure_tree_exists(tree_path)
     learner = RoutingLearner(tree_path)
     routes = learner.list_routes()
 
@@ -377,18 +744,10 @@ def list_routes(
         typer.echo("No routes found")
         return
 
-    max_utterances_shown = 5
     typer.echo(f"Available routes ({len(routes)}):")
     for route_name in routes:
         if show_utterances:
-            route_info = learner.get_route_info(route_name)
-            utterances = route_info.get("utterances", []) if route_info else []
-            typer.echo(f"\n  {route_name}:")
-            for utt in utterances[:max_utterances_shown]:
-                typer.echo(f"    - {utt}")
-            if len(utterances) > max_utterances_shown:
-                remaining = len(utterances) - max_utterances_shown
-                typer.echo(f"    ... and {remaining} more")
+            _print_route_with_utterances(learner, route_name)
         else:
             typer.echo(f"  - {route_name}")
 
@@ -403,19 +762,8 @@ def list_issuers(
     """List all known issuers by category."""
     from para_files.learner import RoutingLearner
 
-    # Determine reference tree path
-    tree_path = reference_tree
-    if tree_path is None:
-        try:
-            config = load_config()
-            tree_path = config.reference_tree_path
-        except ValidationError:
-            tree_path = Path("personal_file_tree.yaml")
-
-    if not tree_path.exists():
-        typer.echo(f"Reference tree not found: {tree_path}", err=True)
-        raise typer.Exit(1)
-
+    tree_path = _get_reference_tree_path(reference_tree)
+    _ensure_tree_exists(tree_path)
     learner = RoutingLearner(tree_path)
     known_issuers = learner.get_known_issuers()
 
@@ -430,6 +778,40 @@ def list_issuers(
             typer.echo(f"    - {issuer}")
 
 
+def _validate_file_or_exit(file_path: Path) -> None:
+    """Validate file exists and is a file, exit on error."""
+    if not file_path.exists():
+        logger.error("File not found: %s", file_path)
+        raise typer.Exit(1)
+    if not file_path.is_file():
+        logger.error("Not a file: %s", file_path)
+        raise typer.Exit(1)
+
+
+def _select_route_from_choice(choice: str, routes: list[str]) -> str | None:
+    """Parse user route selection choice."""
+    if choice.isdigit():
+        idx = int(choice) - 1
+        if 0 <= idx < len(routes):
+            return routes[idx]
+    elif choice in routes:
+        return choice
+    return None
+
+
+def _handle_keyword_addition(learner: RoutingLearner, route: str) -> None:
+    """Handle optional keyword addition during learning."""
+    if not typer.confirm("Would you like to add a keyword to improve matching?", default=True):
+        return
+
+    keyword = typer.prompt("Enter keyword to add (from document content)")
+    if keyword.strip():
+        if learner.add_utterance(route, keyword.strip()):
+            typer.echo(f"Added keyword '{keyword}' to route '{route}'")
+        else:
+            typer.echo("Keyword already exists or could not be added")
+
+
 @app.command()
 def learn(
     file: Annotated[Path, typer.Argument(help="Path to file to learn from")],
@@ -441,161 +823,53 @@ def learn(
         bool, typer.Option("--verbose", "-v", help="Enable verbose logging")
     ] = False,
 ) -> None:
-    """Interactive classification learning from a file.
-
-    Classifies a file, shows the result, and optionally saves feedback
-    to improve future classifications.
-    """
+    """Interactive classification learning from a file."""
     from para_files.learner import RoutingLearner
 
     setup_logging(verbose=verbose)
-
     file_path = file.resolve()
-    if not file_path.exists():
-        logger.error("File not found: %s", file_path)
-        raise typer.Exit(1)
+    _validate_file_or_exit(file_path)
 
-    if not file_path.is_file():
-        logger.error("Not a file: %s", file_path)
-        raise typer.Exit(1)
-
-    # Load configuration
-    try:
-        config = load_config()
-    except ValidationError:
-        logger.exception("Configuration error")
-        raise typer.Exit(1) from None
-
-    # Override config with CLI args if provided
+    config = _load_config_or_exit()
     if reference_tree:
         config.reference_tree_path = reference_tree
 
-    # Classify the file
     pipeline = ClassificationPipeline(config)
     result = pipeline.classify_file(file_path)
     target_path = pipeline.get_target_path(result)
 
-    # Show classification result
-    typer.echo(f"\n📄 File: {file_path.name}")
-    typer.echo(f"   Classification: {result.category}")
-    conf = result.confidence
-    typer.echo(f"   Confidence: {conf.value:.0%} ({conf.source.value})")
-    typer.echo(f"   Target: {target_path}")
-    if result.route_name:
-        typer.echo(f"   Route: {result.route_name}")
+    _print_classification_result(file_path, result, target_path)
 
-    # Ask user if classification is correct
-    typer.echo("")
-    is_correct = typer.confirm("Is this classification correct?", default=True)
-
-    if is_correct:
-        typer.echo("✅ Classification confirmed. No changes needed.")
+    if typer.confirm("\nIs this classification correct?", default=True):
+        typer.echo("Classification confirmed. No changes needed.")
         return
 
-    # Get learner
-    tree_path = config.reference_tree_path
-    if not tree_path.exists():
-        typer.echo(f"Reference tree not found: {tree_path}", err=True)
-        raise typer.Exit(1)
-
-    learner = RoutingLearner(tree_path)
+    _ensure_tree_exists(config.reference_tree_path)
+    learner = RoutingLearner(config.reference_tree_path)
     routes = learner.list_routes()
 
     typer.echo("\nAvailable routes:")
     for i, route_name in enumerate(routes, 1):
         typer.echo(f"  {i}. {route_name}")
 
-    # Ask for correct route
-    choice = typer.prompt(
-        "\nEnter route number or name (or 'skip' to cancel)",
-        default="skip",
-    )
-
+    choice = typer.prompt("\nEnter route number or name (or 'skip' to cancel)", default="skip")
     if choice.lower() == "skip":
         typer.echo("Learning cancelled.")
         return
 
-    # Find the selected route
-    correct_route = None
-    if choice.isdigit():
-        idx = int(choice) - 1
-        if 0 <= idx < len(routes):
-            correct_route = routes[idx]
-    else:
-        if choice in routes:
-            correct_route = choice
-
+    correct_route = _select_route_from_choice(choice, routes)
     if correct_route is None:
         typer.echo(f"Invalid selection: {choice}", err=True)
         raise typer.Exit(1)
 
     typer.echo(f"\nSelected route: {correct_route}")
-
-    # Ask if user wants to add a keyword
-    add_keyword = typer.confirm(
-        "Would you like to add a keyword to improve matching?",
-        default=True,
-    )
-
-    if add_keyword:
-        keyword = typer.prompt("Enter keyword to add (from document content)")
-        if keyword.strip():
-            if learner.add_utterance(correct_route, keyword.strip()):
-                typer.echo(f"✅ Added keyword '{keyword}' to route '{correct_route}'")
-            else:
-                typer.echo(f"ℹ️  Keyword already exists or could not be added")
-
-    typer.echo("\n✅ Learning complete!")
+    _handle_keyword_addition(learner, correct_route)
+    typer.echo("\nLearning complete!")
 
 
-@app.command("test-route")
-def test_route(
-    route: Annotated[str, typer.Argument(help="Name of the route to test")],
-    file: Annotated[
-        Path | None,
-        typer.Option("--file", "-f", help="Optional file to test against the route"),
-    ] = None,
-    reference_tree: Annotated[
-        Path | None,
-        typer.Option("--reference-tree", "-r", help="Path to reference tree YAML file"),
-    ] = None,
-    verbose: Annotated[
-        bool, typer.Option("--verbose", "-v", help="Enable verbose logging")
-    ] = False,
-) -> None:
-    """Test a route's configuration and optionally match a file against it.
-
-    Use this to debug why files are or aren't matching a specific route.
-    """
-    from para_files.learner import RoutingLearner
-
-    setup_logging(verbose=verbose)
-
-    # Determine reference tree path
-    tree_path = reference_tree
-    if tree_path is None:
-        try:
-            config = load_config()
-            tree_path = config.reference_tree_path
-        except ValidationError:
-            tree_path = Path("personal_file_tree.yaml")
-
-    if not tree_path.exists():
-        typer.echo(f"Reference tree not found: {tree_path}", err=True)
-        raise typer.Exit(1)
-
-    learner = RoutingLearner(tree_path)
-    route_info = learner.get_route_info(route)
-
-    if route_info is None:
-        typer.echo(f"Route '{route}' not found", err=True)
-        typer.echo("\nAvailable routes:")
-        for r in learner.list_routes():
-            typer.echo(f"  - {r}")
-        raise typer.Exit(1)
-
-    # Show route details
-    typer.echo(f"\n📋 Route: {route}")
+def _print_route_details(route: str, route_info: dict[str, Any]) -> None:
+    """Print route details."""
+    typer.echo(f"\nRoute: {route}")
     if "pattern" in route_info:
         typer.echo(f"   Pattern: {route_info['pattern']}")
     if "utterances" in route_info:
@@ -605,43 +879,72 @@ def test_route(
     else:
         typer.echo("   Utterances: (none)")
 
-    # If file provided, test matching
+
+def _test_file_against_route(
+    file_path: Path,
+    expected_route: str,
+    reference_tree: Path | None,
+) -> None:
+    """Test a file against an expected route."""
+    typer.echo(f"\nTesting file: {file_path.name}")
+
+    config = _load_config_or_exit()
+    if reference_tree:
+        config.reference_tree_path = reference_tree
+
+    pipeline = ClassificationPipeline(config)
+    result = pipeline.classify_file(file_path)
+
+    typer.echo(f"   Classification: {result.category}")
+    conf = result.confidence
+    typer.echo(f"   Confidence: {conf.value:.0%} ({conf.source.value})")
+
+    if not result.route_name:
+        typer.echo("\n   No route matched (defaulted to inbox)")
+    elif result.route_name == expected_route:
+        typer.echo(f"   Matched route: {result.route_name}")
+        typer.echo("\n   File matches this route!")
+    else:
+        typer.echo(f"   Matched route: {result.route_name}")
+        typer.echo(f"\n   File matched different route: {result.route_name}")
+
+
+@app.command("test-route")
+def test_route(
+    route: Annotated[str, typer.Argument(help="Name of the route to test")],
+    file: Annotated[
+        Path | None,
+        typer.Option("--file", "-f", help="Optional file to test against the route"),
+    ] = None,  # noqa: PT028
+    reference_tree: Annotated[
+        Path | None,
+        typer.Option("--reference-tree", "-r", help="Path to reference tree YAML file"),
+    ] = None,  # noqa: PT028
+    verbose: Annotated[
+        bool, typer.Option("--verbose", "-v", help="Enable verbose logging")
+    ] = False,  # noqa: PT028
+) -> None:
+    """Test a route's configuration and optionally match a file against it."""
+    from para_files.learner import RoutingLearner
+
+    setup_logging(verbose=verbose)
+    tree_path = _get_reference_tree_path(reference_tree)
+    _ensure_tree_exists(tree_path)
+
+    learner = RoutingLearner(tree_path)
+    route_info = learner.get_route_info(route)
+
+    if route_info is None:
+        typer.echo(f"Route '{route}' not found", err=True)
+        _show_available_routes(learner)
+        raise typer.Exit(1)
+
+    _print_route_details(route, route_info)
+
     if file is not None:
         file_path = file.resolve()
-        if not file_path.exists():
-            logger.error("File not found: %s", file_path)
-            raise typer.Exit(1)
-
-        if not file_path.is_file():
-            logger.error("Not a file: %s", file_path)
-            raise typer.Exit(1)
-
-        typer.echo(f"\n🔍 Testing file: {file_path.name}")
-
-        # Load config and classify
-        try:
-            config = load_config()
-        except ValidationError:
-            logger.exception("Configuration error")
-            raise typer.Exit(1) from None
-
-        if reference_tree:
-            config.reference_tree_path = reference_tree
-
-        pipeline = ClassificationPipeline(config)
-        result = pipeline.classify_file(file_path)
-
-        typer.echo(f"   Classification: {result.category}")
-        conf = result.confidence
-        typer.echo(f"   Confidence: {conf.value:.0%} ({conf.source.value})")
-        if result.route_name:
-            typer.echo(f"   Matched route: {result.route_name}")
-            if result.route_name == route:
-                typer.echo("\n   ✅ File matches this route!")
-            else:
-                typer.echo(f"\n   ❌ File matched different route: {result.route_name}")
-        else:
-            typer.echo("\n   ❌ No route matched (defaulted to inbox)")
+        _validate_file_or_exit(file_path)
+        _test_file_against_route(file_path, route, reference_tree)
 
 
 @app.command()
@@ -670,103 +973,29 @@ def scan(
     setup_logging(verbose=verbose)
 
     dir_path = directory.resolve()
+    _validate_directory_or_exit(dir_path)
 
-    if not dir_path.exists():
-        logger.error("Directory not found: %s", dir_path)
-        raise typer.Exit(1)
-
-    if not dir_path.is_dir():
-        logger.error("Not a directory: %s", dir_path)
-        raise typer.Exit(1)
-
-    # Load configuration
-    try:
-        config = load_config()
-    except ValidationError:
-        logger.exception("Configuration error")
-        raise typer.Exit(1) from None
-
-    # Override config with CLI args if provided
+    config = _load_config_or_exit()
     if reference_tree:
         config.reference_tree_path = reference_tree
 
-    # Parse extensions filter
-    ext_filter: set[str] | None = None
-    if extensions:
-        ext_filter = {
-            ext.strip().lower() if ext.startswith(".") else f".{ext.strip().lower()}"
-            for ext in extensions.split(",")
-        }
-
-    # Find files
-    files = list(dir_path.rglob("*")) if recursive else list(dir_path.glob("*"))
-
-    # Filter to only files (not directories)
-    files = [f for f in files if f.is_file()]
-
-    # Apply extension filter
-    if ext_filter:
-        files = [f for f in files if f.suffix.lower() in ext_filter]
+    ext_filter = _parse_extensions_filter(extensions)
+    files = _discover_files(dir_path, recursive=recursive, ext_filter=ext_filter)
 
     if not files:
         typer.echo("No files found matching criteria")
         return
 
-    # Create pipeline once for all files
     pipeline = ClassificationPipeline(config)
-
-    results = []
+    results: list[dict[str, Any]] = []
     stats: dict[str, int] = {}
 
-    for file_path in sorted(files):
-        try:
-            result = pipeline.classify_file(file_path)
-            target_path = pipeline.get_target_path(result)
+    for file_path in files:
+        file_result = _classify_file_for_scan(file_path, pipeline, stats, output_json=output_json)
+        if file_result is not None:
+            results.append(file_result)
 
-            # Track stats by source
-            source = result.confidence.source.value
-            stats[source] = stats.get(source, 0) + 1
-
-            if output_json:
-                output = {
-                    "source_file": str(file_path),
-                    "filename": file_path.name,
-                    "category": result.category,
-                    "confidence": result.confidence.value,
-                    "source": source,
-                    "target_path": str(target_path),
-                }
-                if result.route_name:
-                    output["route_name"] = result.route_name
-                results.append(output)
-            else:
-                confidence_pct = f"{result.confidence.value:.0%}"
-                typer.echo(f"📄 {file_path.name}")
-                typer.echo(f"   → {result.category} ({confidence_pct} {source})")
-
-        except Exception as e:
-            logger.warning("Failed to classify %s: %s", file_path.name, e)
-            if output_json:
-                results.append(
-                    {
-                        "source_file": str(file_path),
-                        "filename": file_path.name,
-                        "error": str(e),
-                    }
-                )
-
-    if output_json:
-        output_data = {
-            "directory": str(dir_path),
-            "total_files": len(files),
-            "stats": stats,
-            "results": results,
-        }
-        typer.echo(json.dumps(output_data, indent=2))
-    else:
-        typer.echo(f"\n📊 Summary: {len(files)} files scanned")
-        for source, count in sorted(stats.items(), key=lambda x: -x[1]):
-            typer.echo(f"   {source}: {count}")
+    _print_scan_summary(dir_path, files, stats, results, output_json=output_json)
 
 
 @app.command()
@@ -791,110 +1020,42 @@ def init(
         bool, typer.Option("--verbose", "-v", help="Enable verbose logging")
     ] = False,
 ) -> None:
-    """Initialize PARA folder structure from reference tree.
-
-    Creates the main PARA directories (0_Inbox, 1_Projects, 2_Areas,
-    3_Resources, 4_Archives) and optionally subfolders based on the
-    reference tree routes.
-    """
+    """Initialize PARA folder structure from reference tree."""
     import yaml
 
     setup_logging(verbose=verbose)
 
-    # Load configuration
-    try:
-        config = load_config()
-    except ValidationError:
-        logger.exception("Configuration error")
-        raise typer.Exit(1) from None
-
-    # Determine destination
+    config = _load_config_or_exit()
     para_root = destination or config.para_root
-
-    # Determine reference tree path
     tree_path = reference_tree or config.reference_tree_path
+    _ensure_tree_exists(tree_path)
 
-    if not tree_path.exists():
-        typer.echo(f"Reference tree not found: {tree_path}", err=True)
-        raise typer.Exit(1)
-
-    # Load reference tree
     with tree_path.open() as f:
         tree_data = yaml.safe_load(f)
 
-    # Main PARA directories
-    main_dirs = [
-        ("0_Inbox", tree_data.get("inbox", {}).get("description", "Inbox - temporary files")),
-        ("1_Projects", "Active projects with deadlines"),
-        ("2_Areas", "Ongoing responsibilities"),
-        ("3_Resources", "Reference materials"),
-        ("4_Archives", "Completed items"),
-    ]
-
+    main_dirs = ["0_Inbox", "1_Projects", "2_Areas", "3_Resources", "4_Archives"]
     created_dirs: list[Path] = []
     existing_dirs: list[Path] = []
 
-    # Create main directories
-    for dir_name, _description in main_dirs:
-        dir_path = para_root / dir_name
-        if dry_run:
-            if dir_path.exists():
-                typer.echo(f"  [exists] {dir_path}")
-                existing_dirs.append(dir_path)
-            else:
-                typer.echo(f"  [create] {dir_path}")
-                created_dirs.append(dir_path)
-        elif dir_path.exists():
-            logger.debug("Directory exists: %s", dir_path)
-            existing_dirs.append(dir_path)
-        else:
-            dir_path.mkdir(parents=True, exist_ok=True)
-            typer.echo(f"  Created: {dir_path}")
-            created_dirs.append(dir_path)
+    for dir_name in main_dirs:
+        _create_directory(
+            para_root / dir_name,
+            dry_run=dry_run,
+            created=created_dirs,
+            existing=existing_dirs,
+        )
 
-    # Optionally create subfolders from routes
     if create_subfolders:
-        subfolder_patterns: list[str] = []
+        patterns = _extract_subfolder_patterns(tree_data)
+        for pattern in sorted(patterns):
+            _create_directory(
+                para_root / pattern,
+                dry_run=dry_run,
+                created=created_dirs,
+                existing=existing_dirs,
+            )
 
-        # Extract patterns from routes sections
-        for section in ["projects", "areas", "resources", "archives"]:
-            section_data = tree_data.get(section, {})
-            routes = section_data.get("routes", [])
-            for route in routes:
-                pattern = route.get("pattern", "")
-                if pattern:
-                    # Extract static parts (no placeholders like {year})
-                    static_path = pattern.split("{")[0].rstrip("/")
-                    if static_path and static_path not in subfolder_patterns:
-                        subfolder_patterns.append(static_path)
-
-        # Create subfolders
-        for pattern in sorted(subfolder_patterns):
-            subfolder_path = para_root / pattern
-            if dry_run:
-                if subfolder_path.exists():
-                    typer.echo(f"  [exists] {subfolder_path}")
-                    existing_dirs.append(subfolder_path)
-                else:
-                    typer.echo(f"  [create] {subfolder_path}")
-                    created_dirs.append(subfolder_path)
-            elif subfolder_path.exists():
-                logger.debug("Subfolder exists: %s", subfolder_path)
-                existing_dirs.append(subfolder_path)
-            else:
-                subfolder_path.mkdir(parents=True, exist_ok=True)
-                typer.echo(f"  Created: {subfolder_path}")
-                created_dirs.append(subfolder_path)
-
-    # Summary
-    if dry_run:
-        to_create = len(created_dirs)
-        exists = len(existing_dirs)
-        typer.echo(f"\n📁 Dry run: {to_create} folders to create, {exists} already exist")
-    else:
-        typer.echo(f"\n✅ PARA structure initialized at {para_root}")
-        typer.echo(f"   Created: {len(created_dirs)} folders")
-        typer.echo(f"   Existing: {len(existing_dirs)} folders")
+    _print_init_summary(para_root, created_dirs, existing_dirs, dry_run=dry_run)
 
 
 @app.command()
@@ -919,129 +1080,39 @@ def tree(
         bool, typer.Option("--verbose", "-v", help="Enable verbose logging")
     ] = False,
 ) -> None:
-    """Show or validate the reference tree structure.
-
-    Displays the PARA folder structure, routes, and known issuers
-    defined in the reference tree YAML file.
-    """
+    """Show or validate the reference tree structure."""
     import yaml
 
     setup_logging(verbose=verbose)
 
-    # Determine reference tree path
-    tree_path = reference_tree
-    if tree_path is None:
-        try:
-            config = load_config()
-            tree_path = config.reference_tree_path
-        except ValidationError:
-            tree_path = Path("personal_file_tree.yaml")
+    tree_path = _get_reference_tree_path(reference_tree)
+    _ensure_tree_exists(tree_path)
 
-    if not tree_path.exists():
-        typer.echo(f"Reference tree not found: {tree_path}", err=True)
-        raise typer.Exit(1)
-
-    # Load reference tree
     with tree_path.open() as f:
         tree_data = yaml.safe_load(f)
 
     version = tree_data.get("version", "unknown")
     generated = tree_data.get("generated", "unknown")
-    typer.echo(f"📚 Reference Tree: {tree_path}")
+    typer.echo(f"\U0001f4da Reference Tree: {tree_path}")
     typer.echo(f"   Version: {version} | Generated: {generated}")
 
     errors: list[str] = []
     warnings: list[str] = []
 
-    # Show main sections
-    sections = ["inbox", "projects", "areas", "resources", "archives"]
-    route_count = 0
-    utterance_count = 0
+    route_count, utterance_count = _show_tree_sections(
+        tree_data, validate=validate, errors=errors, warnings=warnings
+    )
 
-    for section in sections:
-        section_data = tree_data.get(section, {})
-        if not section_data:
-            if validate:
-                warnings.append(f"Section '{section}' is empty or missing")
-            continue
-
-        path = section_data.get("path", section)
-        routes = section_data.get("routes", [])
-        route_count += len(routes)
-
-        typer.echo(f"\n📂 {path}")
-
-        # Count utterances and show routes
-        for route in routes:
-            name = route.get("name", "unnamed")
-            pattern = route.get("pattern", "")
-            utts = route.get("utterances", [])
-            utterance_count += len(utts)
-
-            if validate:
-                if not pattern:
-                    errors.append(f"Route '{name}' has no pattern")
-                if not utts:
-                    warnings.append(f"Route '{name}' has no utterances")
-
-            typer.echo(f"   └── {name}: {pattern} ({len(utts)} utterances)")
-
-    # Show routing rules
     if show_rules:
-        rules = tree_data.get("routing_rules", {})
-        if rules:
-            typer.echo("\n⚙️  Routing Rules:")
-            for rule_name, rule_data in rules.items():
-                dest = rule_data.get("destination", "N/A")
-                exts = rule_data.get("extensions", [])
-                patterns = rule_data.get("patterns", [])
-                typer.echo(f"   └── {rule_name}:")
-                max_show = 5
-                if exts:
-                    ext_str = ", ".join(exts[:max_show])
-                    suffix = "..." if len(exts) > max_show else ""
-                    typer.echo(f"       Extensions: {ext_str}{suffix}")
-                if patterns:
-                    pat_str = ", ".join(patterns[:3])
-                    suffix = "..." if len(patterns) > 3 else ""
-                    typer.echo(f"       Patterns: {pat_str}{suffix}")
-                typer.echo(f"       → {dest}")
+        _show_routing_rules(tree_data)
 
-    # Show known issuers
     if show_issuers:
-        known_issuers = tree_data.get("known_issuers", {})
-        if known_issuers:
-            typer.echo("\n🏢 Known Issuers:")
-            issuer_count = 0
-            for category, category_data in known_issuers.items():
-                issuers = category_data.get("issuers", [])
-                issuer_count += len(issuers)
-                pattern = category_data.get("pattern", "")
-                typer.echo(f"   └── {category}: {len(issuers)} issuers → {pattern}")
-                if verbose:
-                    for issuer in issuers:
-                        typer.echo(f"       - {issuer}")
-            typer.echo(f"\n   Total: {issuer_count} issuers across {len(known_issuers)} categories")
+        _show_known_issuers(tree_data, verbose=verbose)
 
-    # Summary
-    typer.echo(f"\n📊 Summary: {route_count} routes, {utterance_count} utterances")
+    typer.echo(f"\n\U0001f4ca Summary: {route_count} routes, {utterance_count} utterances")
 
-    # Validation results
     if validate:
-        if errors:
-            typer.echo("\n❌ Errors:", err=True)
-            for error in errors:
-                typer.echo(f"   - {error}", err=True)
-
-        if warnings:
-            typer.echo("\n⚠️  Warnings:")
-            for warning in warnings:
-                typer.echo(f"   - {warning}")
-
-        if not errors and not warnings:
-            typer.echo("\n✅ Validation passed!")
-        elif errors:
-            raise typer.Exit(1)
+        _print_validation_results(errors, warnings)
 
 
 @app.command()

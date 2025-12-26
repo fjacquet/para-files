@@ -12,8 +12,6 @@ import logging
 from semantic_router import Route as SRRoute
 from semantic_router.routers import SemanticRouter
 
-logger = logging.getLogger(__name__)
-
 from para_files.classifiers.base import BaseClassifier
 from para_files.encoders.mlx_encoder import MLXEncoder
 from para_files.types import (
@@ -23,6 +21,9 @@ from para_files.types import (
     FileMetadata,
     Route,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class SemanticRouterClassifier(BaseClassifier):
@@ -92,6 +93,49 @@ class SemanticRouterClassifier(BaseClassifier):
 
         return self._router
 
+    def _log_debug_similarities(self, content: str, router: SemanticRouter) -> None:
+        """Log debug similarity scores for troubleshooting.
+
+        Args:
+            content: Content that was classified.
+            router: The semantic router instance.
+        """
+        try:
+            # Get embedding for the content
+            query_embedding = self._encoder([content[:500]])[0]  # Truncate for speed
+
+            # Get route embeddings from router index
+            if not (hasattr(router, "index") and router.index is not None):
+                return
+
+            index = router.index
+            if not hasattr(index, "get_routes"):
+                return
+
+            routes_data = index.get_routes()
+            route_names: list[str] = list(routes_data[0])  # type: ignore[arg-type]
+            embeddings = routes_data[1]
+            if embeddings is None or not hasattr(embeddings, "__len__"):
+                return
+
+            # Compute cosine similarities
+            import numpy as np
+
+            query_np = np.array(query_embedding)
+            embeddings_np = np.array(embeddings)
+
+            # Compute dot products (embeddings should be normalized)
+            similarities = embeddings_np @ query_np
+
+            # Get top 5 scores
+            top_indices = np.argsort(similarities)[-5:][::-1]
+            logger.debug("Top 5 semantic matches:")
+            for idx in top_indices:
+                route_n = route_names[idx] if idx < len(route_names) else "?"
+                logger.debug("  %s: %.4f", route_n, similarities[idx])
+        except (ImportError, ValueError, TypeError) as e:
+            logger.debug("Could not compute similarity scores: %s", e)
+
     def classify(
         self,
         content: str,
@@ -118,36 +162,9 @@ class SemanticRouterClassifier(BaseClassifier):
         # Get classification from semantic router
         router_result = router(truncated_content)
 
-        # Try to get similarity scores for debugging
+        # Log similarity scores for debugging
         if logger.isEnabledFor(logging.DEBUG):
-            try:
-                # Get embedding for the content
-                query_embedding = self._encoder([content[:500]])[0]  # Truncate for speed
-
-                # Get route embeddings from router index
-                if hasattr(router, "index") and router.index is not None:
-                    index = router.index
-                    if hasattr(index, "get_routes"):
-                        route_names_list, embeddings, _ = index.get_routes()
-                        if embeddings is not None and len(embeddings) > 0:
-                            # Compute cosine similarities
-                            import numpy as np
-
-                            query_np = np.array(query_embedding)
-                            embeddings_np = np.array(embeddings)
-
-                            # Compute dot products (embeddings should be normalized)
-                            similarities = embeddings_np @ query_np
-
-                            # Get top 5 scores
-                            top_indices = np.argsort(similarities)[-5:][::-1]
-                            logger.debug("Top 5 semantic matches:")
-                            for idx in top_indices:
-                                route_n = route_names_list[idx] if idx < len(route_names_list) else "?"
-                                score = similarities[idx]
-                                logger.debug("  %s: %.4f", route_n, score)
-            except Exception as e:
-                logger.debug("Could not compute similarity scores: %s", e)
+            self._log_debug_similarities(content, router)
 
         # Handle case where result is a list (multi-route mode)
         if isinstance(router_result, list):

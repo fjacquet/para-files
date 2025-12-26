@@ -60,11 +60,7 @@ class RoutingLearner:
         # Collect routes from all sections
         for section in ["projects", "areas", "resources", "archives"]:
             if section in tree and "routes" in tree[section]:
-                routes.extend(
-                    route["name"]
-                    for route in tree[section]["routes"]
-                    if "name" in route
-                )
+                routes.extend(route["name"] for route in tree[section]["routes"] if "name" in route)
 
         return routes
 

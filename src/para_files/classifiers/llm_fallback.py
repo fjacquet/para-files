@@ -188,7 +188,7 @@ class LLMFallbackClassifier(BaseClassifier):
             if metadata.modified_at:
                 parts.append(f"Modified: {metadata.modified_at.isoformat()}")
 
-        parts.append(f"\nContent preview:\n{content[:self._content_preview_chars]}")
+        parts.append(f"\nContent preview:\n{content[: self._content_preview_chars]}")
 
         if self._available_routes:
             route_names = [r.name for r in self._available_routes[:20]]

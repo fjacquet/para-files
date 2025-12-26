@@ -25,6 +25,8 @@ PANDOC_FORMATS: dict[str, str] = {
     ".docx": "docx",
     ".odt": "odt",
     ".rtf": "rtf",
+    # Presentations
+    ".pptx": "pptx",
     # eBooks
     ".epub": "epub",
     ".fb2": "fb2",

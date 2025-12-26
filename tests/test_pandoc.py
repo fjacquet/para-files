@@ -261,8 +261,7 @@ class TestExtractTextIntegration:
         """Test extracting text from an HTML file."""
         html_file = tmp_path / "test.html"
         html_file.write_text(
-            "<html><head><title>Test</title></head>"
-            "<body><h1>Hello</h1><p>World</p></body></html>"
+            "<html><head><title>Test</title></head><body><h1>Hello</h1><p>World</p></body></html>"
         )
 
         result = extract_text(html_file)
@@ -276,9 +275,7 @@ class TestExtractTextIntegration:
     def test_extract_from_rst(self, check_pandoc, tmp_path: Path):
         """Test extracting text from reStructuredText file."""
         rst_file = tmp_path / "test.rst"
-        rst_file.write_text(
-            "Title\n=====\n\nThis is a paragraph.\n\n* Bullet point"
-        )
+        rst_file.write_text("Title\n=====\n\nThis is a paragraph.\n\n* Bullet point")
 
         result = extract_text(rst_file)
 

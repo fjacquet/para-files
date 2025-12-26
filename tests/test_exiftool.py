@@ -380,7 +380,9 @@ class TestExtractExifIntegration:
         # Create a minimal JPEG file (no actual EXIF data)
         jpeg_file = tmp_path / "test.jpg"
         # Minimal valid JPEG (SOI + EOI markers)
-        jpeg_file.write_bytes(b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff\xd9")
+        jpeg_file.write_bytes(
+            b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff\xd9"
+        )
 
         result = extract_exif(jpeg_file)
         # May return ExifData with all None fields, or None
