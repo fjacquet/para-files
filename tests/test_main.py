@@ -41,9 +41,15 @@ def test_classify_missing_path():
 
 
 def test_classify_nonexistent_file():
-    """Verify classify command errors on nonexistent file."""
+    """Verify classify command warns on nonexistent file.
+
+    With multi-file support, the command continues with warnings
+    instead of failing on individual missing files.
+    """
     result = runner.invoke(app, ["classify", "/nonexistent/file.txt"])
-    assert result.exit_code == 1
+    # Should succeed but with warning (no files to process)
+    assert result.exit_code == 0
+    assert "not found" in result.output.lower() or "warning" in result.output.lower()
 
 
 def test_move_missing_path():
