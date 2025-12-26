@@ -6,6 +6,7 @@ Usage: python3 md_to_paprika.py <fichier.md> [--with-image <image_path>]
 Crée un fichier .paprikarecipe (JSON gzippé) à partir d'un fichier Markdown.
 Utilise Pydantic pour valider les données avant écriture.
 """
+
 import base64
 import gzip
 import hashlib
@@ -19,6 +20,7 @@ from pathlib import Path
 
 try:
     from pydantic import BaseModel, Field, field_validator
+
     PYDANTIC_AVAILABLE = True
 except ImportError:
     PYDANTIC_AVAILABLE = False
@@ -31,6 +33,7 @@ except ImportError:
 # ============================================================================
 
 if PYDANTIC_AVAILABLE:
+
     class PaprikaRecipe(BaseModel):
         """Schéma validé pour un fichier .paprikarecipe"""
 
@@ -97,6 +100,7 @@ if PYDANTIC_AVAILABLE:
 # ============================================================================
 # FONCTIONS DE PARSING MARKDOWN
 # ============================================================================
+
 
 def parse_frontmatter(content: str) -> tuple[dict, str]:
     """Parse YAML frontmatter et retourne (metadata, body)"""
@@ -275,6 +279,7 @@ def extract_nutrition(body: str) -> str:
 # FONCTION PRINCIPALE
 # ============================================================================
 
+
 def md_to_paprika(md_path: str, image_path: str = None) -> bool:
     """Convertit un fichier Markdown en fichier Paprika"""
     import shutil
@@ -343,11 +348,7 @@ def md_to_paprika(md_path: str, image_path: str = None) -> bool:
             if wikilink not in content:
                 # Insérer après le titre H1
                 new_content = re.sub(
-                    r"^(#\s+.+)$",
-                    rf"\1\n\n{wikilink}",
-                    content,
-                    count=1,
-                    flags=re.MULTILINE
+                    r"^(#\s+.+)$", rf"\1\n\n{wikilink}", content, count=1, flags=re.MULTILINE
                 )
                 if new_content != content:
                     md_file.write_text(new_content, encoding="utf-8")
@@ -369,7 +370,7 @@ def md_to_paprika(md_path: str, image_path: str = None) -> bool:
                 directions=directions,
                 description=description,
                 photo=photo,
-                photo_data=photo_data
+                photo_data=photo_data,
             )
             recipe_dict = recipe.to_paprika_dict()
         except Exception as e:
@@ -402,7 +403,7 @@ def md_to_paprika(md_path: str, image_path: str = None) -> bool:
             "hash": hash_value,
             "created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "photo": photo,
-            "photo_data": photo_data
+            "photo_data": photo_data,
         }
 
     # Sauvegarder en .paprikarecipe (gzippé)

@@ -3,6 +3,7 @@
 Outil Chef Antoine - Intégration d'image dans une recette Paprika
 Usage: python3 integrate_image.py <image_path> <recipe_name> [--notes "astuces"]
 """
+
 import base64
 import gzip
 import json
@@ -17,11 +18,13 @@ VAULT_ROOT = Path("/Users/fjacquet/Documents/Second Brain")
 RECETTES_ROOT = VAULT_ROOT / "3_Resources/recettes"
 MEDIA_PATH = RECETTES_ROOT / "_media"
 
+
 def find_recipe_path(recipe_name: str) -> Path | None:
     """Trouve le chemin du fichier .paprikarecipe"""
     for paprika_file in RECETTES_ROOT.rglob(f"{recipe_name}.paprikarecipe"):
         return paprika_file
     return None
+
 
 def integrate_image(image_path: str, recipe_name: str, notes: str = None):
     """Intègre une image dans un fichier .paprikarecipe et met à jour le .md"""
@@ -69,12 +72,7 @@ def integrate_image(image_path: str, recipe_name: str, notes: str = None):
         image_ref = f"![[{recipe_name}.png]]"
         if image_ref not in content:
             # Ajouter après le titre
-            content = re.sub(
-                r"(# .+\n)",
-                f"\\1\n{image_ref}\n",
-                content,
-                count=1
-            )
+            content = re.sub(r"(# .+\n)", f"\\1\n{image_ref}\n", content, count=1)
             with open(md_path, "w", encoding="utf-8") as f:
                 f.write(content)
 
@@ -85,6 +83,7 @@ def integrate_image(image_path: str, recipe_name: str, notes: str = None):
         print(f"   📝 Markdown: {md_path.name}")
 
     return True
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
