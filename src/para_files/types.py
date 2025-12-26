@@ -19,6 +19,7 @@ class ClassificationSource(str, Enum):
 
     VALIDATED_DB = "validated_db"  # Signal 1: 100% confidence
     RULES_ENGINE = "rules_engine"  # Signal 2: 95% confidence
+    BOOK_DETECTOR = "book_detector"  # Signal 2.5: 92% confidence (100% if ISBN found)
     DOMAIN_KB = "domain_kb"  # Signal 3: 90% confidence
     SEMANTIC_ROUTER = "semantic_router"  # Signal 4: 85% confidence
     LLM_FALLBACK = "llm_fallback"  # Signal 5: configurable confidence

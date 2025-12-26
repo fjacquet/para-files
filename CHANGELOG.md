@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Geolocation for photos and videos**: Photos and videos with GPS EXIF data now include location in the destination path (e.g., `4_Archives/photos/2024/Geneva/06/15/IMG_1234.jpg`)
+  - Uses reverse geocoding via Nominatim/OpenStreetMap
+  - LRU-cached lookups for efficiency
+  - Graceful fallback when no GPS data or lookup fails
+- **Book detector classifier** (Signal 2.5, 92% confidence): Intelligent detection of technical books in PDF format
+  - Multi-signal analysis: ISBN extraction, PDF metadata, content structure, file size
+  - ISBN lookup via Google Books/Open Library for book enrichment
+  - Automatic technology categorization (Python, JavaScript, Kubernetes, etc.)
+  - Routes books to `3_Resources/livres/{technology}`
+- New `BOOK_DETECTOR` classification source for book detection results
+- `geopy` dependency for GPS reverse geocoding
+- Comprehensive test suite for book detection (83 new tests)
 - GitHub Actions CI workflow with macOS-14 runner (Apple Silicon)
 - New 2_Areas routes for personal collections:
   - `perso-photos`: Collection photos personnelles
@@ -80,4 +92,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - macOS-only (Apple Silicon required for MLX)
 - Python 3.12+ with strict type checking
 - Pydantic for configuration validation
-- Comprehensive test suite (235+ tests)
+- Comprehensive test suite (318+ tests)

@@ -10,8 +10,13 @@ import shutil
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
+
+
+if TYPE_CHECKING:
+    from para_files.types import ClassificationResult
 
 
 # Maximum number of rename attempts before failing
@@ -53,6 +58,7 @@ class FileMover:
     - Multiple conflict resolution strategies
     - Optional date-based renaming
     - Copy mode (preserve original)
+    - Smart rename (use suggested name from classification)
     """
 
     def __init__(
@@ -62,6 +68,7 @@ class FileMover:
         copy_mode: bool = False,
         conflict_strategy: ConflictStrategy = ConflictStrategy.RENAME,
         add_date_prefix: bool = False,
+        smart_rename: bool = False,
     ) -> None:
         """Initialize the file mover.
 
@@ -70,18 +77,26 @@ class FileMover:
             copy_mode: If True, copy files instead of moving them.
             conflict_strategy: How to handle existing files at destination.
             add_date_prefix: If True, add date prefix to filename (YYYY-MM-DD_).
+            smart_rename: If True, use suggested name from classification (e.g., book title).
         """
         self.dry_run = dry_run
         self.copy_mode = copy_mode
         self.conflict_strategy = conflict_strategy
         self.add_date_prefix = add_date_prefix
+        self.smart_rename = smart_rename
 
-    def move(self, source: Path, destination_dir: Path) -> MoveResult:
+    def move(
+        self,
+        source: Path,
+        destination_dir: Path,
+        classification: ClassificationResult | None = None,
+    ) -> MoveResult:
         """Move or copy a file to the destination directory.
 
         Args:
             source: Source file path.
             destination_dir: Target directory (will be created if needed).
+            classification: Optional classification result for smart renaming.
 
         Returns:
             MoveResult with operation details.
@@ -105,7 +120,7 @@ class FileMover:
             )
 
         # Build destination filename
-        filename = self._build_filename(source)
+        filename = self._build_filename(source, classification)
         initial_destination = destination_dir / filename
 
         # Handle conflicts
@@ -126,15 +141,35 @@ class FileMover:
         # Perform the operation
         return self._execute_move(source, resolved_destination)
 
-    def _build_filename(self, source: Path) -> str:
-        """Build the destination filename, optionally with date prefix.
+    def _build_filename(
+        self,
+        source: Path,
+        classification: ClassificationResult | None = None,
+    ) -> str:
+        """Build the destination filename, optionally with smart rename or date prefix.
 
         Args:
             source: Source file path.
+            classification: Optional classification result for smart renaming.
 
         Returns:
             Filename string.
         """
+        # Use suggested name from classification if smart_rename is enabled
+        if self.smart_rename and classification:
+            suggested_name = classification.extracted_params.get("suggested_name")
+            if suggested_name:
+                # Preserve original extension
+                base_name = f"{suggested_name}{source.suffix}"
+                logger.debug("Smart rename: %s → %s", source.name, base_name)
+
+                if self.add_date_prefix:
+                    mtime = datetime.fromtimestamp(source.stat().st_mtime, tz=UTC)
+                    date_prefix = mtime.strftime("%Y-%m-%d")
+                    return f"{date_prefix}_{base_name}"
+                return base_name
+
+        # Default behavior: use original filename
         if not self.add_date_prefix:
             return source.name
 
@@ -243,7 +278,7 @@ class FileMover:
             )
 
 
-def move_classified_file(
+def move_classified_file(  # noqa: PLR0913
     source: Path,
     target_dir: Path,
     *,
@@ -251,6 +286,8 @@ def move_classified_file(
     copy_mode: bool = False,
     conflict_strategy: ConflictStrategy = ConflictStrategy.RENAME,
     add_date_prefix: bool = False,
+    smart_rename: bool = False,
+    classification: ClassificationResult | None = None,
 ) -> MoveResult:
     """Convenience function to move a single classified file.
 
@@ -261,6 +298,8 @@ def move_classified_file(
         copy_mode: Copy instead of move.
         conflict_strategy: How to handle existing files.
         add_date_prefix: Add date prefix to filename.
+        smart_rename: Use suggested name from classification (e.g., book title).
+        classification: Optional classification result for smart renaming.
 
     Returns:
         MoveResult with operation details.
@@ -270,5 +309,6 @@ def move_classified_file(
         copy_mode=copy_mode,
         conflict_strategy=conflict_strategy,
         add_date_prefix=add_date_prefix,
+        smart_rename=smart_rename,
     )
-    return mover.move(source, target_dir)
+    return mover.move(source, target_dir, classification)

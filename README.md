@@ -360,7 +360,7 @@ print(f"Source: {result.confidence.source.value}")
 
 ## Architecture
 
-### 5-Signal Classification Pipeline
+### 6-Signal Classification Pipeline
 
 Files are classified using signals in priority order (first match wins):
 
@@ -368,6 +368,7 @@ Files are classified using signals in priority order (first match wins):
 |--------------------|--------------|--------------------------------------------------|
 | 1. Validated DB    | 100%         | Manual sender/issuer → category mappings         |
 | 2. Rules Engine    | 95%          | Glob patterns on filename/path/domain            |
+| 2.5 Book Detector  | 92%          | PDF book detection via ISBN/metadata/structure   |
 | 3. Domain KB       | 90%          | Known domain/issuer to category mappings         |
 | 4. Semantic Router | 85%          | MLX embedding similarity to reference categories |
 | 5. LLM Fallback    | Configurable | Optional AI for ambiguous cases                  |
@@ -384,8 +385,14 @@ Files are classified using signals in priority order (first match wins):
 The `personal_file_tree.yaml` defines:
 - PARA folder structure with paths
 - Semantic utterances for each category (used for embedding matching)
-- Special routing rules (photos by date, courses by platform)
+- Special routing rules (photos by date/location, videos, courses by platform)
 - Known issuers database (banks, insurance, utilities)
+
+### Special Features
+
+- **Photo/Video Geolocation**: Files with GPS EXIF data are organized by location (e.g., `4_Archives/photos/2024/Geneva/06/15/`)
+- **Book Detection**: Technical PDF books are automatically detected via ISBN lookup, metadata analysis, and content structure patterns
+- **Technology Categorization**: Books are routed to `3_Resources/livres/{technology}` based on detected technology (Python, Kubernetes, etc.)
 
 ## Development
 
@@ -417,19 +424,23 @@ para-files/
 │   ├── __init__.py
 │   ├── main.py              # CLI entry point
 │   ├── config.py            # Configuration management
-│   ├── pipeline.py          # 5-signal classification orchestrator
+│   ├── pipeline.py          # 6-signal classification orchestrator
 │   ├── reference_tree.py    # YAML reference tree loader
 │   ├── types.py             # Data types and models
 │   ├── classifiers/         # Classification signals
 │   │   ├── validated_db.py  # Signal 1: Manual mappings
 │   │   ├── rules_engine.py  # Signal 2: Glob patterns
+│   │   ├── book_detector.py # Signal 2.5: Book detection
 │   │   ├── domain_kb.py     # Signal 3: Known issuers
 │   │   ├── semantic_router.py  # Signal 4: MLX embeddings
 │   │   └── llm_fallback.py  # Signal 5: LLM fallback
 │   ├── encoders/
 │   │   └── mlx_encoder.py   # MLX embedding encoder
 │   └── utils/
-│       └── file_utils.py    # File content extraction
+│       ├── file_utils.py    # File content extraction
+│       ├── geolocation.py   # GPS reverse geocoding
+│       ├── pdf_metadata.py  # PDF metadata & ISBN extraction
+│       └── isbn_lookup.py   # ISBN lookup service
 ├── tests/
 ├── config/
 │   └── personal_file_tree.yaml  # PARA reference tree

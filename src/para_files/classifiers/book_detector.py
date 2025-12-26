@@ -1,0 +1,366 @@
+"""Signal 2.5: Book detector classifier (92% confidence).
+
+Detects technical books through multi-signal analysis:
+- ISBN extraction and lookup
+- PDF metadata analysis
+- Content structure patterns (chapters, ToC, etc.)
+- File characteristics (size, page count)
+
+Uses semantic matching to determine the appropriate technology category.
+"""
+
+from __future__ import annotations
+
+import logging
+import re
+from typing import TYPE_CHECKING
+
+from para_files.classifiers.base import BaseClassifier
+
+
+if TYPE_CHECKING:
+    from para_files.encoders import MLXEncoder
+
+from para_files.types import (
+    ClassificationResult,
+    ClassificationSource,
+    Confidence,
+    FileMetadata,
+)
+from para_files.utils.isbn_lookup import BookInfo, infer_technology_from_subjects, lookup_isbn
+from para_files.utils.pdf_metadata import (
+    PdfMetadata,
+    contains_book_keywords,
+    extract_pdf_metadata,
+    is_book_creator,
+)
+
+
+logger = logging.getLogger(__name__)
+
+
+# Patterns that indicate book structure
+BOOK_STRUCTURE_PATTERNS = [
+    re.compile(r"table\s+of\s+contents", re.IGNORECASE),
+    re.compile(r"chapter\s+\d+", re.IGNORECASE),
+    re.compile(r"part\s+[IVX]+", re.IGNORECASE),
+    re.compile(r"ISBN[:\s-]*[\d-]+", re.IGNORECASE),
+    re.compile(r"copyright\s+\d{4}", re.IGNORECASE),
+    re.compile(r"all\s+rights\s+reserved", re.IGNORECASE),
+    re.compile(r"published\s+by", re.IGNORECASE),
+    re.compile(r"first\s+edition", re.IGNORECASE),
+    re.compile(r"\b(preface|foreword|acknowledgments)\b", re.IGNORECASE),
+    re.compile(r"printed\s+in", re.IGNORECASE),
+]
+
+# Minimum thresholds
+MIN_PAGES_FOR_BOOK = 50
+MIN_SIZE_MB_FOR_BOOK = 5.0
+DETECTION_THRESHOLD = 0.7  # Strict threshold
+TECHNOLOGY_MATCH_THRESHOLD = 0.5  # Minimum similarity for technology detection
+SMART_RENAME_THRESHOLD = 0.9  # Minimum confidence to suggest renaming with title
+
+
+def sanitize_title(title: str, max_length: int = 80) -> str:
+    """Convert a book title to a valid filename.
+
+    Args:
+        title: Original title from PDF or ISBN lookup.
+        max_length: Maximum filename length.
+
+    Returns:
+        Sanitized filename-safe string.
+    """
+    # Replace forbidden characters
+    safe = re.sub(r'[<>:"/\\|?*]', "_", title)
+    # Replace multiple spaces/underscores with single underscore
+    safe = re.sub(r"[\s_]+", "_", safe)
+    # Remove leading/trailing underscores
+    safe = safe.strip("_")
+    # Limit length (try to break at word boundary)
+    if len(safe) > max_length:
+        safe = safe[:max_length].rsplit("_", 1)[0]
+    return safe
+
+
+def score_book_structure(content: str) -> float:
+    """Score content based on book structure patterns.
+
+    Args:
+        content: Text content to analyze.
+
+    Returns:
+        Score between 0.0 and 1.0 based on pattern matches.
+    """
+    matches = sum(1 for pattern in BOOK_STRUCTURE_PATTERNS if pattern.search(content))
+    # 4+ patterns = max score of 1.0
+    return min(matches / 4, 1.0)
+
+
+class BookDetector(BaseClassifier):
+    """Signal 2.5: Technical book detector (92% confidence).
+
+    Detects books through multi-signal analysis:
+    1. ISBN extraction and API lookup (100% confidence if found)
+    2. PDF metadata (title, author, creator, pages)
+    3. Content structure (chapters, ToC, ISBN mentions)
+    4. File characteristics (size)
+
+    Returns the technology-specific destination path if detected.
+    """
+
+    def __init__(
+        self,
+        technologies: list[str] | None = None,
+        *,
+        enable_isbn_lookup: bool = True,
+        base_pattern: str = "3_Resources/livres/{technology}",
+    ) -> None:
+        """Initialize the book detector.
+
+        Args:
+            technologies: List of known technology categories for matching.
+            enable_isbn_lookup: Whether to call ISBN lookup API.
+            base_pattern: Base path pattern for book classification.
+        """
+        self._technologies = technologies or []
+        self._enable_isbn_lookup = enable_isbn_lookup
+        self._base_pattern = base_pattern
+        self._encoder: MLXEncoder | None = None  # Lazy-loaded MLX encoder
+
+    @property
+    def name(self) -> str:
+        """Return classifier name."""
+        return "book_detector"
+
+    @property
+    def source(self) -> ClassificationSource:
+        """Return classification source."""
+        return ClassificationSource.BOOK_DETECTOR
+
+    @property
+    def default_confidence(self) -> float:
+        """Return default confidence (92%)."""
+        return 0.92
+
+    def _get_encoder(self) -> MLXEncoder | None:
+        """Lazy-load the MLX encoder for technology detection."""
+        if self._encoder is None:
+            try:
+                from para_files.encoders import MLXEncoder
+
+                self._encoder = MLXEncoder()
+            except ImportError:
+                logger.warning("MLX encoder not available for technology detection")
+        return self._encoder
+
+    def _detect_technology_semantic(self, content: str) -> str | None:
+        """Detect technology using semantic matching.
+
+        Args:
+            content: Book content to match.
+
+        Returns:
+            Best matching technology or None.
+        """
+        if not self._technologies:
+            return None
+
+        encoder = self._get_encoder()
+        if encoder is None:
+            return None
+
+        try:
+            import numpy as np
+
+            # Get embeddings
+            tech_embeddings = encoder(self._technologies)
+            content_embedding = encoder([content[:2000]])[0]
+
+            # Calculate cosine similarities
+            similarities = np.dot(tech_embeddings, content_embedding) / (
+                np.linalg.norm(tech_embeddings, axis=1) * np.linalg.norm(content_embedding)
+            )
+
+            best_idx = int(np.argmax(similarities))
+            if similarities[best_idx] >= TECHNOLOGY_MATCH_THRESHOLD:
+                return self._technologies[best_idx]
+
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Technology detection failed: %s", e)
+
+        return None
+
+    def _detect_technology(
+        self,
+        content: str,
+        book_info: BookInfo | None,
+        pdf_meta: PdfMetadata | None,
+    ) -> str | None:
+        """Detect technology category from available information.
+
+        Tries multiple sources in order of reliability.
+
+        Args:
+            content: Book content.
+            book_info: ISBN lookup result if available.
+            pdf_meta: PDF metadata if available.
+
+        Returns:
+            Technology category or None.
+        """
+        # Try ISBN subjects first (most reliable)
+        if book_info and book_info.subjects:
+            tech = infer_technology_from_subjects(book_info.subjects, self._technologies)
+            if tech:
+                logger.debug("Detected technology from ISBN subjects: %s", tech)
+                return tech
+
+        # Try PDF subject field
+        if pdf_meta and pdf_meta.subject:
+            for tech in self._technologies:
+                if tech.lower() in pdf_meta.subject.lower():
+                    logger.debug("Detected technology from PDF subject: %s", tech)
+                    return tech
+
+        # Try semantic matching on content
+        tech = self._detect_technology_semantic(content)
+        if tech:
+            logger.debug("Detected technology via semantic matching: %s", tech)
+            return tech
+
+        return None
+
+    def classify(  # noqa: C901, PLR0912, PLR0915
+        self,
+        content: str,
+        metadata: FileMetadata | None = None,
+    ) -> ClassificationResult | None:
+        """Detect if the file is a technical book.
+
+        Args:
+            content: Text content from the PDF.
+            metadata: File metadata including path.
+
+        Returns:
+            ClassificationResult if book detected, None otherwise.
+        """
+        # Only process PDFs
+        if metadata is None or metadata.extension.lower() != ".pdf":
+            return None
+
+        file_path = metadata.path
+        if not file_path or not file_path.exists():
+            return None
+
+        # Extract PDF metadata
+        pdf_meta = extract_pdf_metadata(file_path)
+        if pdf_meta is None:
+            logger.debug("Could not extract PDF metadata from %s", file_path.name)
+            return None
+
+        score = 0.0
+        signals: list[str] = []
+        book_info: BookInfo | None = None
+        suggested_name: str | None = None
+
+        # Signal 1: ISBN (highest confidence)
+        if pdf_meta.isbn:
+            signals.append(f"isbn={pdf_meta.isbn}")
+
+            if self._enable_isbn_lookup:
+                book_info = lookup_isbn(pdf_meta.isbn)
+                if book_info:
+                    signals.append("isbn_lookup=success")
+                    # ISBN with successful lookup = 100% confidence book
+                    score = 1.0
+                    if book_info.title:
+                        suggested_name = sanitize_title(book_info.title)
+                else:
+                    # ISBN found but no lookup = very likely book
+                    score = 0.9
+            else:
+                score = 0.9  # ISBN alone is strong indicator
+
+        # Signal 2: PDF metadata (if not already at max score)
+        if score < 1.0:
+            # Page count
+            if pdf_meta.page_count and pdf_meta.page_count >= MIN_PAGES_FOR_BOOK:
+                score += 0.2
+                signals.append(f"pages={pdf_meta.page_count}")
+
+            # Creator tool (LaTeX, InDesign = likely book)
+            if pdf_meta.creator and is_book_creator(pdf_meta.creator):
+                score += 0.15
+                signals.append("creator=book_tool")
+
+            # Title keywords
+            if pdf_meta.title and contains_book_keywords(pdf_meta.title):
+                score += 0.2
+                signals.append("title=book_keywords")
+
+        # Signal 3: Content structure
+        if score < 1.0:
+            structure_score = score_book_structure(content)
+            if structure_score > 0:
+                score += structure_score * 0.3
+                signals.append(f"structure={structure_score:.2f}")
+
+        # Signal 4: File size
+        if score < 1.0 and pdf_meta.file_size_mb >= MIN_SIZE_MB_FOR_BOOK:
+            score += 0.15
+            signals.append(f"size={pdf_meta.file_size_mb:.1f}MB")
+
+        # Check against threshold
+        if score < DETECTION_THRESHOLD:
+            logger.debug(
+                "Book score %.2f below threshold %.2f for %s",
+                score,
+                DETECTION_THRESHOLD,
+                file_path.name,
+            )
+            return None
+
+        # Detect technology category
+        technology = self._detect_technology(content, book_info, pdf_meta)
+        if technology:
+            signals.append(f"technology={technology}")
+        else:
+            technology = "misc"
+            signals.append("technology=misc")
+
+        # Build category path
+        category = self._base_pattern.format(technology=technology)
+
+        # Determine suggested name if not already set from ISBN
+        if not suggested_name and score >= SMART_RENAME_THRESHOLD and pdf_meta.title:
+            suggested_name = sanitize_title(pdf_meta.title)
+
+        # Cap confidence
+        confidence_value = min(score, 1.0) if score >= 1.0 else 0.92
+
+        logger.info(
+            "Detected book: %s → %s (confidence=%.2f, signals=%s)",
+            file_path.name,
+            category,
+            confidence_value,
+            signals,
+        )
+
+        result = ClassificationResult(
+            category=category,
+            confidence=Confidence(
+                value=confidence_value,
+                source=self.source,
+            ),
+            route_name="livres",
+            extracted_params={
+                "technology": technology,
+            },
+        )
+
+        # Store suggested name in extracted_params for smart rename
+        if suggested_name:
+            result.extracted_params["suggested_name"] = suggested_name
+
+        return result

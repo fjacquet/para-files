@@ -9,6 +9,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from para_files.classifiers.book_detector import BookDetector
 from para_files.classifiers.domain_kb import DomainKBClassifier
 from para_files.classifiers.llm_fallback import LLMFallbackClassifier
 from para_files.classifiers.rules_engine import RulesEngineClassifier
@@ -32,11 +33,12 @@ logger = logging.getLogger(__name__)
 
 
 class ClassificationPipeline:
-    """Orchestrates 5-signal classification cascade.
+    """Orchestrates 6-signal classification cascade.
 
     Classifiers are tried in priority order (highest confidence first):
     1. Validated DB (100%) - Manual mappings
     2. Rules Engine (95%) - Glob patterns
+    2.5. Book Detector (92%, 100% with ISBN) - Technical books detection
     3. Domain KB (90%) - Known issuers
     4. Semantic Router (85%) - MLX embeddings
     5. LLM Fallback (configurable) - Optional AI
@@ -77,6 +79,36 @@ class ClassificationPipeline:
         if routing_rules:
             rules_engine = RulesEngineClassifier(routing_rules)
             self._classifiers.append(rules_engine)
+
+        # Signal 2.5: Book Detector (92%, 100% with ISBN)
+        # Known technologies for livres classification
+        technologies = [
+            "Ansible",
+            "C++",
+            "Cloud",
+            "Containers",
+            "DevOps",
+            "Go",
+            "Java",
+            "JavaScript",
+            "Kubernetes",
+            "Linux",
+            "Network",
+            "Node.js",
+            "Python",
+            "React",
+            "Rust",
+            "Security",
+            "Shell",
+            "Terraform",
+            "TypeScript",
+        ]
+        book_detector = BookDetector(
+            technologies=technologies,
+            enable_isbn_lookup=True,
+            base_pattern="3_Resources/livres/{technology}",
+        )
+        self._classifiers.append(book_detector)
 
         # Signal 3: Domain KB (90%)
         known_issuers = self._reference_tree.get_known_issuers()

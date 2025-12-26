@@ -27,14 +27,15 @@ class TestClassificationSource:
         """Verify all expected sources exist."""
         assert ClassificationSource.VALIDATED_DB == "validated_db"
         assert ClassificationSource.RULES_ENGINE == "rules_engine"
+        assert ClassificationSource.BOOK_DETECTOR == "book_detector"
         assert ClassificationSource.DOMAIN_KB == "domain_kb"
         assert ClassificationSource.SEMANTIC_ROUTER == "semantic_router"
         assert ClassificationSource.LLM_FALLBACK == "llm_fallback"
         assert ClassificationSource.DEFAULT == "default"
 
     def test_source_count(self):
-        """Verify we have exactly 6 sources."""
-        assert len(ClassificationSource) == 6
+        """Verify we have exactly 7 sources (including BOOK_DETECTOR)."""
+        assert len(ClassificationSource) == 7
 
 
 class TestConfidence:
