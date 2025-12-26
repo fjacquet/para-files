@@ -83,6 +83,12 @@ uv run para-files move document.pdf --conflict rename
 # Add date prefix to filename
 uv run para-files move document.pdf --date-prefix
 
+# Skip files that can't be classified (instead of warning)
+uv run para-files move *.pdf --skip-unclassifiable
+
+# Clean up empty directories after moving files
+uv run para-files move *.pdf --cleanup-empty
+
 # JSON output
 uv run para-files move *.pdf --json
 ```
@@ -232,6 +238,42 @@ uv run para-files config --show
 # Show reference tree path
 uv run para-files config --path
 ```
+
+### clean
+
+Clean up junk files, empty directories, and optional NFO files from a directory.
+
+```bash
+# Clean junk files from directory (default: recursive)
+uv run para-files clean ~/Downloads
+
+# Non-recursive clean
+uv run para-files clean ~/Downloads --no-recursive
+
+# Dry run (preview without deleting)
+uv run para-files clean ~/Downloads --dry-run
+
+# Also delete .nfo files
+uv run para-files clean ~/Downloads --nfo
+
+# Skip empty directory cleanup
+uv run para-files clean ~/Downloads --no-empty-dirs
+
+# Log cleanup actions to JSON file
+uv run para-files clean ~/Downloads --log cleanup.json
+
+# JSON output
+uv run para-files clean ~/Downloads --json
+
+# Verbose mode
+uv run para-files clean ~/Downloads -v
+```
+
+Cleaned file types:
+- **Apple temp files**: `.DS_Store`, `._*` (AppleDouble), `.Spotlight-V100`, `.Trashes`, `.fseventsd`
+- **Windows temp files**: `Thumbs.db`, `desktop.ini`, `$RECYCLE.BIN`
+- **Editor backup files**: `*~`, `.swp`, `.swo`
+- **Empty directories**: Removed bottom-up after junk cleanup
 
 ## Configuration
 
@@ -440,7 +482,10 @@ para-files/
 │       ├── file_utils.py    # File content extraction
 │       ├── geolocation.py   # GPS reverse geocoding
 │       ├── pdf_metadata.py  # PDF metadata & ISBN extraction
-│       └── isbn_lookup.py   # ISBN lookup service
+│       ├── isbn_lookup.py   # ISBN lookup service
+│       ├── cleanup.py       # Junk file detection & deletion
+│       ├── cleanup_log.py   # Cleanup audit logging
+│       └── nfo_parser.py    # NFO file metadata parsing
 ├── tests/
 ├── config/
 │   └── personal_file_tree.yaml  # PARA reference tree

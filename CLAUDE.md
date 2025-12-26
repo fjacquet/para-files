@@ -34,20 +34,21 @@ pre-commit run --all-files         # Run manually
 
 ## CLI Commands Reference
 
-| Command                           | Description                                                                                       |
-| --------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `classify <files...>`             | Classify one or more files (supports `--json`, `-v`)                                              |
-| `move <files...>`                 | Classify and move files to PARA destinations (`--dry-run`, `--copy`, `--conflict`)                |
-| `scan <dir>`                      | Preview classifications for directory (`--recursive`, `--ext`, `--json`)                          |
-| `init [dest]`                     | Pre-create PARA folder structure (`--subfolders`, `--dry-run`). Note: `move` auto-creates folders |
-| `tree`                            | Display/validate reference tree (`--validate`, `--issuers`, `--rules`)                            |
-| `routes`                          | List available routes (`--utterances`)                                                            |
-| `issuers`                         | List known issuers by category                                                                    |
-| `add-issuer <name> -c <category>` | Add issuer to reference tree                                                                      |
-| `add-utterance <route> <text>`    | Add utterance to route                                                                            |
-| `learn <file>`                    | Interactive classification learning from a file                                                   |
-| `test-route <route>`              | Test route configuration and optionally match a file (`--file`)                                   |
-| `config`                          | Show configuration (`--show`, `--path`)                                                           |
+| Command                           | Description                                                                                                   |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `classify <files...>`             | Classify one or more files (supports `--json`, `-v`)                                                          |
+| `move <files...>`                 | Classify and move files to PARA destinations (`--dry-run`, `--copy`, `--conflict`, `--skip-unclassifiable`)  |
+| `scan <dir>`                      | Preview classifications for directory (`--recursive`, `--ext`, `--json`)                                      |
+| `clean <dir>`                     | Remove junk files (.DS_Store, etc.), empty dirs, optionally .nfo files (`--dry-run`, `--nfo`, `--log`)       |
+| `init [dest]`                     | Pre-create PARA folder structure (`--subfolders`, `--dry-run`). Note: `move` auto-creates folders             |
+| `tree`                            | Display/validate reference tree (`--validate`, `--issuers`, `--rules`)                                        |
+| `routes`                          | List available routes (`--utterances`)                                                                        |
+| `issuers`                         | List known issuers by category                                                                                |
+| `add-issuer <name> -c <category>` | Add issuer to reference tree                                                                                  |
+| `add-utterance <route> <text>`    | Add utterance to route                                                                                        |
+| `learn <file>`                    | Interactive classification learning from a file                                                               |
+| `test-route <route>`              | Test route configuration and optionally match a file (`--file`)                                               |
+| `config`                          | Show configuration (`--show`, `--path`)                                                                       |
 
 All commands support `-r/--reference-tree` to specify a custom YAML file.
 Configuration is set via the `config:` section in YAML, env vars, or `.env` file.

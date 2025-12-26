@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from para_files.learner import RoutingLearner
     from para_files.mover import MoveResult
     from para_files.types import ClassificationResult
+    from para_files.utils.cleanup_log import CleanupLogger
 
 
 logger = logging.getLogger(__name__)
@@ -171,12 +172,30 @@ def _discover_files(
     *,
     recursive: bool,
     ext_filter: set[str] | None,
+    skip_junk: bool = True,
 ) -> list[Path]:
-    """Discover files in directory with optional filtering."""
+    """Discover files in directory with optional filtering.
+
+    Args:
+        dir_path: Directory to scan
+        recursive: Whether to scan subdirectories
+        ext_filter: Set of extensions to include (None = all)
+        skip_junk: Whether to skip junk files (DS_Store, etc.)
+
+    Returns:
+        Sorted list of file paths
+    """
+    from para_files.utils.cleanup import is_junk_file
+
     files = list(dir_path.rglob("*")) if recursive else list(dir_path.glob("*"))
     files = [f for f in files if f.is_file()]
+
+    if skip_junk:
+        files = [f for f in files if not is_junk_file(f)]
+
     if ext_filter:
         files = [f for f in files if f.suffix.lower() in ext_filter]
+
     return sorted(files)
 
 
@@ -535,15 +554,40 @@ def _handle_move_file(
     conflict_strategy: ConflictStrategy,
     date_prefix: bool,
     smart_rename: bool,
+    skip_unclassifiable: bool = False,
     output_json: bool,
-) -> bool:
-    """Handle a single file in move command. Returns True if successful."""
+) -> tuple[bool, bool]:
+    """Handle a single file in move command.
+
+    Returns:
+        Tuple of (success, skipped) - skipped is True if file was skipped due to skip_unclassifiable
+    """
+    from para_files.types import ClassificationSource
+
     if not _validate_file_exists(file_path):
         if output_json:
             results.append({"source_file": str(file_path), "error": "file validation failed"})
-        return False
+        return False, False
 
     try:
+        # First classify to check if we should skip
+        classification = pipeline.classify_file(file_path)
+
+        # Skip unclassifiable files if requested
+        if skip_unclassifiable and classification.confidence.source == ClassificationSource.DEFAULT:
+            logger.info("Skipping unclassifiable file: %s", file_path)
+            if output_json:
+                results.append(
+                    {
+                        "source_file": str(file_path),
+                        "skipped": True,
+                        "reason": "unclassifiable",
+                    }
+                )
+            else:
+                typer.echo(f"  Skipped (unclassifiable): {file_path.name}")
+            return True, True  # Success (not an error), but skipped
+
         result, move_result, success = _process_single_move(
             file_path,
             pipeline,
@@ -564,9 +608,39 @@ def _handle_move_file(
         logger.exception("Failed to process %s", file_path)
         if output_json:
             results.append({"source_file": str(file_path), "error": "processing failed"})
-        return False
+        return False, False
     else:
-        return success
+        return success, False
+
+
+def _cleanup_source_dirs(
+    source_dirs: set[Path],
+    *,
+    dry_run: bool,
+    output_json: bool,
+) -> None:
+    """Clean up empty directories in source locations after move."""
+    from para_files.utils.cleanup import cleanup_empty_dirs
+
+    for source_dir in source_dirs:
+        if source_dir.exists():
+            deleted = cleanup_empty_dirs(source_dir, dry_run=dry_run)
+            if deleted and not output_json:
+                typer.echo(f"  Cleaned up {len(deleted)} empty directories")
+
+
+def _print_move_summary(
+    success_count: int,
+    skip_count: int,
+    fail_count: int,
+) -> None:
+    """Print summary of move operation."""
+    summary_parts = [f"{success_count} succeeded"]
+    if skip_count:
+        summary_parts.append(f"{skip_count} skipped")
+    if fail_count:
+        summary_parts.append(f"{fail_count} failed")
+    typer.echo(f"\nSummary: {', '.join(summary_parts)}")
 
 
 @app.command()
@@ -600,6 +674,20 @@ def move(
             help="Use intelligent naming from metadata (e.g., book titles from ISBN)",
         ),
     ] = False,
+    skip_unclassifiable: Annotated[
+        bool,
+        typer.Option(
+            "--skip-unclassifiable",
+            help="Skip files that cannot be classified (default: move to 0_Inbox)",
+        ),
+    ] = False,
+    cleanup_empty: Annotated[
+        bool,
+        typer.Option(
+            "--cleanup-empty",
+            help="Remove empty directories after moving files",
+        ),
+    ] = False,
     output_json: Annotated[
         bool, typer.Option("--json", "-j", help="Output result as JSON")
     ] = False,
@@ -619,13 +707,20 @@ def move(
     results: list[dict[str, Any]] = []
     success_count = 0
     fail_count = 0
+    skip_count = 0
     action_verb = (
         ("Would copy" if copy else "Would move") if dry_run else ("Copied" if copy else "Moved")
     )
 
+    # Collect source directories for empty cleanup
+    source_dirs: set[Path] = set()
+
     for file in files:
-        success = _handle_move_file(
-            file.resolve(),
+        resolved = file.resolve()
+        source_dirs.add(resolved.parent)
+
+        success, skipped = _handle_move_file(
+            resolved,
             pipeline,
             results,
             action_verb,
@@ -634,17 +729,24 @@ def move(
             conflict_strategy=conflict_strategy,
             date_prefix=date_prefix,
             smart_rename=smart_rename,
+            skip_unclassifiable=skip_unclassifiable,
             output_json=output_json,
         )
-        if success:
+        if skipped:
+            skip_count += 1
+        elif success:
             success_count += 1
         else:
             fail_count += 1
 
+    # Cleanup empty directories if requested (only for move, not copy)
+    if cleanup_empty and not copy:
+        _cleanup_source_dirs(source_dirs, dry_run=dry_run, output_json=output_json)
+
     if output_json:
         typer.echo(json.dumps(results, indent=2))
     elif len(files) > 1:
-        typer.echo(f"\nSummary: {success_count} succeeded, {fail_count} failed")
+        _print_move_summary(success_count, skip_count, fail_count)
 
 
 @app.command("add-issuer")
@@ -996,6 +1098,202 @@ def scan(
             results.append(file_result)
 
     _print_scan_summary(dir_path, files, stats, results, output_json=output_json)
+
+
+def _clean_junk_files(
+    dir_path: Path,
+    cleanup_logger: CleanupLogger,
+    results: dict[str, Any],
+    *,
+    recursive: bool,
+    dry_run: bool,
+    output_json: bool,
+) -> None:
+    """Clean junk files from directory."""
+    from para_files.utils.cleanup import cleanup_junk, scan_for_junk
+
+    junk_files, junk_dirs = scan_for_junk(dir_path, recursive=recursive)
+
+    if not junk_files and not junk_dirs:
+        return
+
+    deleted_files, deleted_dirs = cleanup_junk(dir_path, recursive=recursive, dry_run=dry_run)
+
+    for f in deleted_files:
+        cleanup_logger.log_deleted(f, "junk_file", f.name, dry_run=dry_run)
+        results["deleted_files"].append(str(f))
+
+    for d in deleted_dirs:
+        cleanup_logger.log_deleted(d, "junk_dir", d.name, dry_run=dry_run)
+        results["deleted_dirs"].append(str(d))
+
+    if not output_json:
+        action = "Would delete" if dry_run else "Deleted"
+        if deleted_files:
+            typer.echo(f"  {action} {len(deleted_files)} junk files")
+        if deleted_dirs:
+            typer.echo(f"  {action} {len(deleted_dirs)} junk directories")
+
+
+def _clean_nfo_files(
+    dir_path: Path,
+    cleanup_logger: CleanupLogger,
+    results: dict[str, Any],
+    *,
+    recursive: bool,
+    dry_run: bool,
+    output_json: bool,
+) -> None:
+    """Clean .nfo files from directory."""
+    nfo_files = list(dir_path.rglob("*.nfo")) if recursive else list(dir_path.glob("*.nfo"))
+    deleted_count = 0
+
+    for nfo_file in nfo_files:
+        if dry_run:
+            logger.info("[DRY-RUN] Would delete NFO: %s", nfo_file)
+            deleted_count += 1
+        else:
+            try:
+                nfo_file.unlink()
+                logger.info("Deleted NFO: %s", nfo_file)
+                deleted_count += 1
+            except OSError:
+                logger.exception("Failed to delete NFO %s", nfo_file)
+                continue
+
+        cleanup_logger.log_deleted(nfo_file, "nfo", "NFO file cleanup", dry_run=dry_run)
+        results["deleted_nfo"].append(str(nfo_file))
+
+    if deleted_count and not output_json:
+        action = "Would delete" if dry_run else "Deleted"
+        typer.echo(f"  {action} {deleted_count} NFO files")
+
+
+def _clean_empty_directories(
+    dir_path: Path,
+    cleanup_logger: CleanupLogger,
+    results: dict[str, Any],
+    *,
+    dry_run: bool,
+    output_json: bool,
+) -> None:
+    """Clean empty directories from path."""
+    from para_files.utils.cleanup import cleanup_empty_dirs
+
+    deleted_empty = cleanup_empty_dirs(dir_path, dry_run=dry_run)
+
+    for d in deleted_empty:
+        cleanup_logger.log_deleted(d, "empty_dir", "Empty directory", dry_run=dry_run)
+        results["deleted_dirs"].append(str(d))
+
+    if deleted_empty and not output_json:
+        action = "Would delete" if dry_run else "Deleted"
+        typer.echo(f"  {action} {len(deleted_empty)} empty directories")
+
+
+@app.command()
+def clean(
+    directory: Annotated[Path, typer.Argument(help="Directory to clean")],
+    recursive: Annotated[
+        bool,
+        typer.Option("--recursive", "-R", help="Clean subdirectories recursively"),
+    ] = True,
+    junk: Annotated[
+        bool,
+        typer.Option("--junk", help="Delete Apple/Windows temp files (.DS_Store, Thumbs.db, etc.)"),
+    ] = True,
+    nfo: Annotated[
+        bool,
+        typer.Option("--nfo", help="Delete .nfo files after using them as hints"),
+    ] = False,
+    empty_dirs: Annotated[
+        bool,
+        typer.Option("--empty-dirs", help="Delete empty directories"),
+    ] = True,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", "-n", help="Preview deletions without actually deleting"),
+    ] = False,
+    output_json: Annotated[
+        bool, typer.Option("--json", "-j", help="Output results as JSON")
+    ] = False,
+    verbose: Annotated[
+        bool, typer.Option("--verbose", "-v", help="Enable verbose logging")
+    ] = False,
+) -> None:
+    """Clean junk files and empty directories from a location.
+
+    By default, removes Apple/Windows temp files and empty directories.
+    Use --nfo to also remove .nfo files after classification.
+    """
+    from para_files.utils.cleanup_log import CleanupLogger, get_default_log_path
+
+    setup_logging(verbose=verbose)
+    config = _load_config_or_exit()
+
+    dir_path = directory.resolve()
+    _validate_directory_or_exit(dir_path)
+
+    # Setup audit log
+    log_path = get_default_log_path(Path(config.para_root).expanduser())
+    cleanup_logger = CleanupLogger(log_path if not dry_run else None)
+
+    results: dict[str, Any] = {
+        "directory": str(dir_path),
+        "dry_run": dry_run,
+        "deleted_files": [],
+        "deleted_dirs": [],
+        "deleted_nfo": [],
+    }
+
+    if not output_json:
+        mode = "[DRY-RUN] " if dry_run else ""
+        typer.echo(f"{mode}Cleaning {dir_path}")
+
+    # Clean junk files
+    if junk:
+        _clean_junk_files(
+            dir_path,
+            cleanup_logger,
+            results,
+            recursive=recursive,
+            dry_run=dry_run,
+            output_json=output_json,
+        )
+
+    # Clean .nfo files
+    if nfo:
+        _clean_nfo_files(
+            dir_path,
+            cleanup_logger,
+            results,
+            recursive=recursive,
+            dry_run=dry_run,
+            output_json=output_json,
+        )
+
+    # Clean empty directories
+    if empty_dirs:
+        _clean_empty_directories(
+            dir_path, cleanup_logger, results, dry_run=dry_run, output_json=output_json
+        )
+
+    # Write audit log
+    if not dry_run:
+        cleanup_logger.write_log()
+
+    # Summary
+    total_deleted = (
+        len(results["deleted_files"]) + len(results["deleted_dirs"]) + len(results["deleted_nfo"])
+    )
+
+    if output_json:
+        typer.echo(json.dumps(results, indent=2))
+    elif total_deleted == 0:
+        typer.echo("  Nothing to clean")
+    else:
+        action = "would be deleted" if dry_run else "deleted"
+        typer.echo(f"\nTotal: {total_deleted} items {action}")
 
 
 @app.command()

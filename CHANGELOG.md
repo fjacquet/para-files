@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Intelligent Inbox Cleanup** (`clean` command): Automated cleanup of temporary and junk files
+  - Removes Apple temp files: `.DS_Store`, `._*` (AppleDouble), `.Spotlight-V100`, `.Trashes`
+  - Removes Windows temp files: `Thumbs.db`, `desktop.ini`
+  - Removes editor backup files: `*~`, `.swp`, `.swo`
+  - Optional `.nfo` file cleanup with `--nfo` flag
+  - Empty directory removal with bottom-up traversal
+  - Audit logging to JSON (`--log` option)
+  - Full dry-run support with `--dry-run`
+- **NFO file parser**: Extracts classification hints from `.nfo` files
+  - Parses title, category, year, author, publisher, language, tags
+  - Multi-encoding support (UTF-8, CP437, Latin-1, Windows-1252)
+  - Automatic association with media files
+- **Move command enhancements**:
+  - `--skip-unclassifiable`: Skip files that cannot be classified instead of warning
+  - `--cleanup-empty`: Remove empty directories after moving files
+- New utilities in `para_files.utils`:
+  - `cleanup.py`: Junk file detection and deletion
+  - `nfo_parser.py`: NFO file parsing with encoding fallback
+  - `cleanup_log.py`: Audit logging for cleanup operations
 - **Geolocation for photos and videos**: Photos and videos with GPS EXIF data now include location in the destination path (e.g., `4_Archives/photos/2024/Geneva/06/15/IMG_1234.jpg`)
   - Uses reverse geocoding via Nominatim/OpenStreetMap
   - LRU-cached lookups for efficiency

@@ -1,5 +1,21 @@
 """Utility functions for para-files."""
 
+from para_files.utils.cleanup import (
+    JUNK_DIRECTORIES,
+    JUNK_PATTERNS,
+    cleanup_empty_dirs,
+    cleanup_junk,
+    delete_junk_directory,
+    delete_junk_file,
+    is_junk_directory,
+    is_junk_file,
+    scan_for_junk,
+)
+from para_files.utils.cleanup_log import (
+    CleanupLogEntry,
+    CleanupLogger,
+    get_default_log_path,
+)
 from para_files.utils.exiftool import (
     EXIF_EXTENSIONS,
     ExifData,
@@ -20,6 +36,12 @@ from para_files.utils.isbn_lookup import (
     lookup_isbn,
     normalize_isbn,
     validate_isbn,
+)
+from para_files.utils.nfo_parser import (
+    NfoHints,
+    find_associated_nfo,
+    get_nfo_hints_for_file,
+    parse_nfo,
 )
 from para_files.utils.ocr import (
     OCR_EXTENSIONS,
@@ -55,18 +77,30 @@ from para_files.utils.pdf_metadata import (
 
 
 __all__ = [
+    # Original exports
     "EXIF_EXTENSIONS",
+    # Cleanup
+    "JUNK_DIRECTORIES",
+    "JUNK_PATTERNS",
     "OCR_EXTENSIONS",
     "PANDOC_EXTENSIONS",
     "PANDOC_FORMATS",
     "BookInfo",
+    "CleanupLogEntry",
+    "CleanupLogger",
     "ExifData",
     "GPSCoordinates",
     "LocationInfo",
+    # NFO Parser
+    "NfoHints",
     "OCRResult",
     "PandocResult",
     "PdfMetadata",
+    "cleanup_empty_dirs",
+    "cleanup_junk",
     "contains_book_keywords",
+    "delete_junk_directory",
+    "delete_junk_file",
     "extract_exif",
     "extract_file_metadata",
     "extract_isbn",
@@ -75,17 +109,24 @@ __all__ = [
     "extract_pandoc_metadata",
     "extract_pandoc_text",
     "extract_pdf_metadata",
+    "find_associated_nfo",
+    "get_default_log_path",
     "get_location_folder",
+    "get_nfo_hints_for_file",
     "get_pandoc_format",
     "infer_technology_from_subjects",
     "is_book_creator",
     "is_exiftool_available",
+    "is_junk_directory",
+    "is_junk_file",
     "is_pandoc_available",
     "is_vision_available",
     "isbn_to_isbn13",
     "lookup_isbn",
     "normalize_isbn",
+    "parse_nfo",
     "read_content_preview",
     "reverse_geocode",
+    "scan_for_junk",
     "validate_isbn",
 ]
