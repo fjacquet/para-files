@@ -183,6 +183,37 @@ areas:
         - "workflow photo"
         - "matériel actuel"
 
+    # --- Perso (collections personnelles actives) ---
+    - name: "perso-photos"
+      pattern: "2_Areas/perso/photos"
+      utterances:
+        - "collection photos"
+        - "album photo"
+        - "photos personnelles"
+
+    - name: "perso-notebooks"
+      pattern: "2_Areas/perso/notebooks"
+      utterances:
+        - "notes personnelles"
+        - "carnet"
+        - "journal"
+        - "OneNote"
+
+    - name: "perso-mindmaps"
+      pattern: "2_Areas/perso/mindmaps"
+      utterances:
+        - "xmind"
+        - "mindmap"
+        - "carte mentale"
+        - "brainstorming"
+
+    - name: "perso-wallpapers"
+      pattern: "2_Areas/perso/fonds-ecran"
+      utterances:
+        - "fond d'écran"
+        - "wallpaper"
+        - "desktop background"
+
 # =============================================================================
 # 3_RESOURCES - Références stables
 # =============================================================================
@@ -190,14 +221,76 @@ resources:
   path: "3_Resources"
 
   routes:
-    - name: "books"
-      pattern: "3_Resources/books"
+    # --- Livres techniques par technologie ---
+    - name: "livres"
+      pattern: "3_Resources/livres/{technology}"
       utterances:
         - "livre"
         - "ebook"
         - "lecture"
         - "kindle"
         - "epub"
+        - "mobi"
+        - "O'Reilly"
+        - "Packt"
+        - "Manning"
+        - "Apress"
+      technologies:
+        - Ansible
+        - C++
+        - Cloud
+        - Containers
+        - Databases
+        - DevOps
+        - Elastic
+        - Go
+        - Java
+        - JavaScript
+        - Kubernetes
+        - Linux
+        - Microsoft
+        - Networking
+        - Python
+        - Security
+        - Storage
+        - TypeScript
+        - VMware
+
+    # --- Cours et formations par topic ---
+    - name: "cours"
+      pattern: "3_Resources/cours/{topic}"
+      utterances:
+        - "cours"
+        - "formation"
+        - "training"
+        - "tutorial"
+        - "certification prep"
+        - "learning path"
+        - "video course"
+        - "Udemy"
+        - "Coursera"
+        - "LinkedIn Learning"
+        - "Pluralsight"
+      topics:
+        - AI
+        - Automation
+        - Cloud
+        - Containers
+        - Data-Center
+        - Data-Protection
+        - Databases
+        - Dell
+        - Development
+        - Hardware
+        - Identity-Management
+        - Networking
+        - Observability
+        - Operating-Systems
+        - Photo
+        - Project-Management
+        - Security
+        - Storage
+        - VMware
 
     - name: "certifications"
       pattern: "3_Resources/certifications/{vendor}/{year}"

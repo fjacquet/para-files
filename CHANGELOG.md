@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - GitHub Actions CI workflow with macOS-14 runner (Apple Silicon)
+- New 2_Areas routes for personal collections:
+  - `perso-photos`: Collection photos personnelles
+  - `perso-notebooks`: Notes personnelles (OneNote, carnets)
+  - `perso-mindmaps`: Cartes mentales (xmind)
+  - `perso-wallpapers`: Fonds d'écran
+- New 3_Resources routes with organized structure:
+  - `livres/{technology}`: Livres techniques par technologie (Ansible, Python, Go, etc.)
+  - `cours/{topic}`: Formations et cours par sujet (AI, Cloud, Security, etc.)
+- Known technologies for livres: 19 categories (Ansible, C++, Cloud, Containers, etc.)
+- Known topics for cours: 19 categories (AI, Automation, Cloud, Containers, etc.)
 - GitHub Pages documentation site with Jekyll
 - Dependabot for automated dependency updates
 - MIT LICENSE file
