@@ -34,20 +34,20 @@ pre-commit run --all-files         # Run manually
 
 ## CLI Commands Reference
 
-| Command | Description |
-|---------|-------------|
-| `classify <files...>` | Classify one or more files (supports `--json`, `-v`) |
-| `move <files...>` | Classify and move files to PARA destinations (`--dry-run`, `--copy`, `--conflict`) |
-| `scan <dir>` | Preview classifications for directory (`--recursive`, `--ext`, `--json`) |
-| `init [dest]` | Pre-create PARA folder structure (`--subfolders`, `--dry-run`). Note: `move` auto-creates folders |
-| `tree` | Display/validate reference tree (`--validate`, `--issuers`, `--rules`) |
-| `routes` | List available routes (`--utterances`) |
-| `issuers` | List known issuers by category |
-| `add-issuer <name> -c <category>` | Add issuer to reference tree |
-| `add-utterance <route> <text>` | Add utterance to route |
-| `learn <file>` | Interactive classification learning from a file |
-| `test-route <route>` | Test route configuration and optionally match a file (`--file`) |
-| `config` | Show configuration (`--show`, `--path`) |
+| Command                           | Description                                                                                       |
+| --------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `classify <files...>`             | Classify one or more files (supports `--json`, `-v`)                                              |
+| `move <files...>`                 | Classify and move files to PARA destinations (`--dry-run`, `--copy`, `--conflict`)                |
+| `scan <dir>`                      | Preview classifications for directory (`--recursive`, `--ext`, `--json`)                          |
+| `init [dest]`                     | Pre-create PARA folder structure (`--subfolders`, `--dry-run`). Note: `move` auto-creates folders |
+| `tree`                            | Display/validate reference tree (`--validate`, `--issuers`, `--rules`)                            |
+| `routes`                          | List available routes (`--utterances`)                                                            |
+| `issuers`                         | List known issuers by category                                                                    |
+| `add-issuer <name> -c <category>` | Add issuer to reference tree                                                                      |
+| `add-utterance <route> <text>`    | Add utterance to route                                                                            |
+| `learn <file>`                    | Interactive classification learning from a file                                                   |
+| `test-route <route>`              | Test route configuration and optionally match a file (`--file`)                                   |
+| `config`                          | Show configuration (`--show`, `--path`)                                                           |
 
 All commands support `-r/--reference-tree` to specify a custom YAML file.
 Configuration is set via the `config:` section in YAML, env vars, or `.env` file.
@@ -67,6 +67,7 @@ The system classifies files using signals in priority order:
 ### Two Separate Reference Trees
 
 The project maintains distinct taxonomies that should never be mixed:
+
 - **Dell Mail Tree** - Professional email classification (from `outlook-mail-structure.md`)
 - **Personal File Tree** - Personal files using PARA structure (`config/personal_file_tree.yaml`)
 
@@ -96,6 +97,7 @@ The `ClassificationPipeline` handles this automatically - no manual model manage
 ## Configuration
 
 Configuration is loaded from (in priority order):
+
 1. Environment variables (prefix: `PARA_FILES_`)
 2. `.env` file
 3. `config:` section in `personal_file_tree.yaml`
@@ -116,15 +118,15 @@ Override via environment: `PARA_FILES_PARA_ROOT=/custom/path`
 
 ## Key Files
 
-| File                                     | Purpose                                                            |
-|------------------------------------------|--------------------------------------------------------------------|
-| `personal_file_tree.yaml`                | PARA structure, routes, issuers, AND app config (`config:` section)|
-| `.env.example`                           | Configuration template with all available options                  |
-| `src/para_files/config.py`               | Configuration management with pydantic-settings                    |
-| `src/para_files/pipeline.py`             | 5-signal classification orchestrator                               |
-| `src/para_files/encoders/mlx_encoder.py` | MLX embedding encoder with lazy loading                            |
-| `src/para_files/reference_tree.py`       | YAML reference tree loader                                         |
-| `src/para_files/classifiers/`            | Classification signal implementations                              |
+| File                                     | Purpose                                                             |
+| ---------------------------------------- | ------------------------------------------------------------------- |
+| `personal_file_tree.yaml`                | PARA structure, routes, issuers, AND app config (`config:` section) |
+| `.env.example`                           | Configuration template with all available options                   |
+| `src/para_files/config.py`               | Configuration management with pydantic-settings                     |
+| `src/para_files/pipeline.py`             | 5-signal classification orchestrator                                |
+| `src/para_files/encoders/mlx_encoder.py` | MLX embedding encoder with lazy loading                             |
+| `src/para_files/reference_tree.py`       | YAML reference tree loader                                          |
+| `src/para_files/classifiers/`            | Classification signal implementations                               |
 
 ## Code Style
 
@@ -136,8 +138,26 @@ Override via environment: `PARA_FILES_PARA_ROOT=/custom/path`
 ## Platform Constraint
 
 This project is **macOS only** (Apple Silicon required) because it uses:
+
 - MLX for optimized embeddings on Apple Neural Engine
 - Vision Framework for OCR
+
+## Documentation Maintenance
+
+**Always update documentation when making changes:**
+
+| Change Type | Update |
+|-------------|--------|
+| New feature/command | `CHANGELOG.md` (Unreleased), `README.md` |
+| Bug fix | `CHANGELOG.md` (Unreleased) |
+| Architecture change | `CHANGELOG.md`, `docs/architecture.md` |
+| Config change | `CHANGELOG.md`, `README.md` (Configuration section) |
+| Breaking change | `CHANGELOG.md` with migration notes |
+
+Before committing, verify:
+1. `CHANGELOG.md` has entry under `[Unreleased]`
+2. README reflects any new CLI options
+3. Docstrings added for new public functions
 
 ## Documentation Preferences
 
@@ -149,6 +169,7 @@ This project is **macOS only** (Apple Silicon required) because it uses:
 - Mermaid renders consistently across GitHub, Obsidian, VS Code
 
 **For architecture/flow diagrams:**
+
 ```mermaid
 flowchart TB
     subgraph layer["Layer Name"]

@@ -80,6 +80,42 @@ refactor: simplify pipeline initialization
 - Use pytest fixtures for common setup
 - Mark slow tests with `@pytest.mark.slow`
 
+## Documentation Maintenance
+
+Keep documentation up-to-date with every change:
+
+### CHANGELOG.md
+
+Update `CHANGELOG.md` for every PR:
+
+- **Added**: New features or commands
+- **Changed**: Modifications to existing behavior
+- **Fixed**: Bug fixes
+- **Removed**: Removed features
+- **Security**: Security-related changes
+
+Add entries under `## [Unreleased]` section.
+
+### README.md
+
+Update when:
+- Adding new CLI commands
+- Changing configuration options
+- Modifying installation steps
+
+### docs/ (GitHub Pages)
+
+Update `docs/architecture.md` when:
+- Adding new classifiers or signals
+- Changing the pipeline flow
+- Modifying major components
+
+### Code Documentation
+
+- Add docstrings to all public functions/classes
+- Use Google-style docstrings
+- Include type hints in signatures
+
 ## Architecture Guidelines
 
 When adding new classifiers:

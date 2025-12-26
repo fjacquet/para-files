@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- GitHub Actions CI workflow with macOS-14 runner (Apple Silicon)
+- GitHub Pages documentation site with Jekyll
+- Dependabot for automated dependency updates
+- MIT LICENSE file
+- CONTRIBUTING.md with development guidelines
+- Architecture documentation with Mermaid diagrams
+
+### Changed
+
+- Moved `personal_file_tree.yaml` to `config/` folder
+- Centralized configuration defaults in `config.py`
+- LLM fallback now uses configurable content preview chars
+
+### Fixed
+
+- Hardcoded content preview limit in LLM fallback classifier
+
 ## [0.1.0] - 2025-12-26
 
 ### Added
