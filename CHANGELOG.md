@@ -37,6 +37,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - LLM fallback now uses configurable content preview chars
 - Enhanced `factures-cloud` route with AWS, Azure, Infomaniak utterances
 - **Breaking**: Changed all factures patterns from `{year}/Category/{issuer}` to `Category/{issuer}/{year}` for better folder organization
+- **Breaking**: Restructured archives for proper PARA semantics:
+  - `banques` → `4_Archives/banques/{issuer}/{year}` (bank statements, not invoices)
+  - `impots` → `4_Archives/impots/{year}` (tax declarations)
+  - `prevoyance` → `4_Archives/prevoyance/{issuer}/{year}` (pension attestations)
+  - `voyages` → `4_Archives/voyages/{destination}/{year}` (travel documents)
+  - `dons` → `4_Archives/dons/{organization}/{year}` (donation receipts)
+  - Only actual invoices remain under `factures/`
 
 ### Fixed
 
