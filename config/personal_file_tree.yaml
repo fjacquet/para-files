@@ -139,7 +139,19 @@ routing_rules:
 
   # Training certificates and completion documents
   certificates:
-    patterns: ["*[Cc]ertificate*", "*[Cc]ertificat*", "*[Cc]ompletion*", "*[Bb]adge*", "*[Cc]redential*"]
+    patterns: [
+      "*[Cc]ertificate*", "*[Cc]ertificat*", "*[Cc]ompletion*", "*[Bb]adge*", "*[Cc]redential*",
+      "*[Ss]pecialist*", "*[Aa]ccredited*", "*[Cc]ertified*",
+      "EMC *", "EMC_*", "emc_*",
+      "*velocity*partner*",
+      "*knowledge_maintenance*",
+      "Oracle *",
+      "NetApp *",
+      "Novell *", "*NCLA*", "*NASEP*",
+      "VMware *", "Cisco *", "Microsoft *", "AWS *", "Google *",
+      "sacp_*", "*SACP*", "Symantec *",
+      "VTSP*", "VCP*", "VCAP*", "VCDX*"
+    ]
     extensions: [".pdf", ".png", ".jpg"]
     destination: "3_Resources/certifications/{YYYY}"
     date_source: "file_modified"
@@ -172,6 +184,13 @@ routing_rules:
     destination: "4_Archives/impots-france/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})_sur_les_revenus"  # Format: YYYY_sur_les_revenus
+
+  # Health reimbursement documents (justificatifs de remboursement)
+  sante_remboursement:
+    patterns: ["*[Jj]ustificatif*[Rr]emboursement*", "*[Rr]emboursement*[Ss]anté*"]
+    extensions: [".pdf"]
+    destination: "4_Archives/sante/{YYYY}"
+    date_source: "file_modified"
 
 # =============================================================================
 # 0_INBOX - Point d'entrée PLAT
@@ -563,6 +582,10 @@ archives:
         - "billet train"
         - "Chemin de fer"
         - "Montreux Oberland bernois"
+        - "parking receipt"
+        - "EasyPark"
+        - "facture parking"
+        - "stationnement"
 
     - name: "factures-cloud"
       pattern: "4_Archives/factures/Cloud/{issuer}/{year}"
@@ -666,6 +689,12 @@ archives:
         - "IRM"
         - "scanner"
         - "échographie"
+        - "justificatif de remboursement"
+        - "remboursement santé"
+        - "physiothérapie"
+        - "physiotherapeute"
+        - "ostéopathe"
+        - "chiropracteur"
 
     # --- Maison par année ---
     - name: "maison"
@@ -779,6 +808,7 @@ known_issuers:
       - Travys
       - Mobility
       - mobility-genossenschaft
+      - EasyPark
 
   sante:
     pattern: "4_Archives/factures/Santé/{issuer}/{year}"
