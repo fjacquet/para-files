@@ -35,18 +35,18 @@ config:
 # =============================================================================
 routing_rules:
   # Photos et vidéos - UNIQUEMENT depuis Inbox
-  # {location} est remplacé par le lieu (via GPS) si disponible, sinon ignoré
+  # {country} et {location} sont remplacés par le pays/ville (via GPS) si disponible, sinon ignorés
   photos:
     source: "0_Inbox" # Ne cherche que dans Inbox
     extensions: [".jpg", ".jpeg", ".png", ".heic", ".raw", ".cr2", ".nef"]
-    destination: "4_Archives/photos/{YYYY}/{location}/{MM}/{DD}"
+    destination: "4_Archives/photos/{YYYY}/{country}/{location}/{MM}/{DD}"
     date_source: "exif"
     fallback_date: "file_modified"
 
   videos:
     source: "0_Inbox" # Ne cherche que dans Inbox
     extensions: [".mp4", ".mov", ".avi", ".mkv"]
-    destination: "4_Archives/videos/{YYYY}/{location}/{MM}/{DD}"
+    destination: "4_Archives/videos/{YYYY}/{country}/{location}/{MM}/{DD}"
     date_source: "exif"
     fallback_date: "file_modified"
 
