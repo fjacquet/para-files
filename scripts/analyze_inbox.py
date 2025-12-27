@@ -5,9 +5,8 @@ Run this script to get a complete analysis of files in your inbox
 that couldn't be classified, with suggestions for new routes.
 
 Usage:
-    uv run scripts/analyze_inbox.py > inbox_analysis.txt 2>&1 &
-    # or
-    nohup uv run scripts/analyze_inbox.py > inbox_analysis.txt 2>&1 &
+    uv run scripts/analyze_inbox.py --inbox /path/to/inbox
+    uv run scripts/analyze_inbox.py --help
 """
 
 from __future__ import annotations
@@ -16,224 +15,420 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from collections import defaultdict
 from pathlib import Path
+from typing import Any
 
-# Add project root to path
+import click
+
+
+# Add project root to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+from para_files.utils.pandoc import extract_text as pandoc_extract  # noqa: I001
 
-def extract_text(file_path: Path) -> str:
-    """Extract text from a file for analysis."""
+# Maximum number of items to display in reports
+_MAX_DISPLAY_ITEMS = 10
+
+
+def extract_text(file_path: Path, max_chars: int = 2000) -> str:
+    """Extract text from a file for analysis.
+
+    Uses pandoc for supported formats, falls back to direct read for text files.
+
+    Args:
+        file_path: Path to the file.
+        max_chars: Maximum characters to extract.
+
+    Returns:
+        Extracted text content or error message.
+    """
     ext = file_path.suffix.lower()
 
     try:
-        if ext == ".pdf":
-            result = subprocess.run(
-                ["pdftotext", str(file_path), "-"],
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-            return result.stdout[:2000]  # First 2000 chars
-        elif ext == ".xml":
-            with open(file_path, encoding="utf-8", errors="ignore") as f:
-                return f.read()[:2000]
-        elif ext in {".txt", ".md", ".json", ".yaml", ".yml"}:
-            with open(file_path, encoding="utf-8", errors="ignore") as f:
-                return f.read()[:2000]
-        else:
-            return f"[Binary file: {ext}]"
-    except Exception as e:
+        # Try pandoc first (handles PDF, DOCX, etc.)
+        result = pandoc_extract(file_path, max_chars=max_chars)
+        if result and result.text:
+            return result.text[:max_chars]
+
+        # Fallback for simple text formats
+        if ext in {".txt", ".md", ".json", ".yaml", ".yml", ".xml", ".csv"}:
+            with file_path.open(encoding="utf-8", errors="ignore") as f:
+                return f.read()[:max_chars]
+
+    except (OSError, ValueError) as e:
         return f"[Error reading: {e}]"
 
+    return f"[Binary file: {ext}]"
 
-def classify_files(inbox_path: Path, config_path: Path) -> list[dict]:
-    """Classify all files in inbox using para-files."""
+
+def classify_files(
+    inbox_path: Path,
+    config_path: Path,
+    para_root: Path,
+    timeout: int = 1800,
+) -> list[dict[str, Any]]:
+    """Classify all files in inbox using para-files.
+
+    Args:
+        inbox_path: Path to inbox directory.
+        config_path: Path to YAML config file.
+        para_root: PARA root directory.
+        timeout: Maximum time in seconds (default 30 minutes).
+
+    Returns:
+        List of classification result dictionaries.
+    """
     env = os.environ.copy()
-    env["PARA_FILES_PARA_ROOT"] = "/tmp/para"
+    env["PARA_FILES_PARA_ROOT"] = str(para_root)
 
-    result = subprocess.run(
-        [
-            "uv", "run", "para-files", "classify",
-            str(inbox_path),
-            "-r", str(config_path),
-            "-R",  # Recursive
-            "--json",
-        ],
-        capture_output=True,
-        text=True,
-        env=env,
-        timeout=1800,  # 30 minutes max
-    )
+    cmd = [
+        "uv",
+        "run",
+        "para-files",
+        "classify",
+        str(inbox_path),
+        "-r",
+        str(config_path),
+        "-R",  # Recursive
+        "--json",
+    ]
 
-    # Parse JSON output (skip non-JSON lines like INFO/WARNING)
-    for line in result.stdout.split("\n"):
-        line = line.strip()
-        if line.startswith("["):
-            try:
-                return json.loads(line + result.stdout.split(line, 1)[1].split("]")[0] + "]")
-            except json.JSONDecodeError:
-                pass
+    click.echo(f"Running: {' '.join(cmd)}", err=True)
 
-    # Try parsing the whole output
     try:
-        return json.loads(result.stdout)
-    except json.JSONDecodeError:
-        # Return empty if parsing fails
-        print(f"STDERR: {result.stderr}", file=sys.stderr)
+        result = subprocess.run(
+            cmd,
+            check=False,
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        click.echo("ERROR: Classification timed out", err=True)
         return []
 
+    if result.returncode != 0:
+        click.echo(f"WARNING: Command returned {result.returncode}", err=True)
+        if result.stderr:
+            click.echo(f"STDERR: {result.stderr[:500]}", err=True)
 
-def analyze_unclassified(results: list[dict]) -> dict:
-    """Analyze unclassified files and suggest routes."""
+    # Parse JSON output - find the JSON array in the output
+    output = result.stdout.strip()
+
+    result_list: list[dict[str, Any]] = []
+
+    # Try to find JSON array in output (skip log lines)
+    for raw_line in output.split("\n"):
+        line = raw_line.strip()
+        if line.startswith("[") and line.endswith("]"):
+            try:
+                result_list = json.loads(line)
+                return result_list
+            except json.JSONDecodeError:
+                continue
+
+    # Try parsing multi-line JSON
+    try:
+        # Find start of JSON array
+        start_idx = output.find("[")
+        end_idx = output.rfind("]")
+        if start_idx != -1 and end_idx != -1:
+            json_str = output[start_idx : end_idx + 1]
+            result_list = json.loads(json_str)
+            return result_list
+    except json.JSONDecodeError:
+        pass
+
+    # Last resort: try whole output
+    try:
+        result_list = json.loads(output)
+        return result_list
+    except json.JSONDecodeError:
+        click.echo("ERROR: Could not parse JSON output", err=True)
+        click.echo(f"Output preview: {output[:500]}", err=True)
+
+    return result_list
+
+
+def analyze_unclassified(results: list[dict[str, Any]]) -> dict[str, Any]:
+    """Analyze unclassified files and suggest routes.
+
+    Args:
+        results: List of classification results.
+
+    Returns:
+        Analysis dictionary with statistics and suggestions.
+    """
     unclassified = [r for r in results if r.get("confidence", 0) == 0]
     classified = [r for r in results if r.get("confidence", 0) > 0]
 
     # Group by extension
-    by_extension = defaultdict(list)
+    by_extension: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for r in unclassified:
         ext = Path(r["source_file"]).suffix.lower()
         by_extension[ext].append(r)
 
-    # Group by detected patterns
+    # Build suggestions for each extension group
     suggested_routes = []
-
-    for ext, files in by_extension.items():
-        # Analyze content of first few files
+    for ext, files in sorted(by_extension.items(), key=lambda x: -len(x[1])):
+        # Sample content from first few files
         samples = []
         for f in files[:5]:
-            content = extract_text(Path(f["source_file"]))
-            samples.append({
-                "file": Path(f["source_file"]).name,
-                "content_preview": content[:500],
-            })
+            file_path = Path(f["source_file"])
+            if file_path.exists():
+                content = extract_text(file_path, max_chars=500)
+                samples.append(
+                    {
+                        "file": file_path.name,
+                        "content_preview": content[:500],
+                    }
+                )
 
-        suggested_routes.append({
-            "extension": ext,
-            "count": len(files),
-            "samples": samples,
-            "files": [Path(f["source_file"]).name for f in files],
-        })
+        suggested_routes.append(
+            {
+                "extension": ext,
+                "count": len(files),
+                "samples": samples,
+                "files": [Path(f["source_file"]).name for f in files],
+            }
+        )
 
     return {
         "total_files": len(results),
         "classified_count": len(classified),
         "unclassified_count": len(unclassified),
         "classified_by_source": _group_by_source(classified),
+        "classified_by_route": _group_by_route(classified),
         "unclassified_by_extension": suggested_routes,
     }
 
 
-def _group_by_source(results: list[dict]) -> dict:
+def _group_by_source(results: list[dict[str, Any]]) -> dict[str, list[str]]:
     """Group classified files by classification source."""
-    by_source = defaultdict(list)
+    by_source: dict[str, list[str]] = defaultdict(list)
     for r in results:
         source = r.get("source", "unknown")
         by_source[source].append(Path(r["source_file"]).name)
     return dict(by_source)
 
 
-def print_report(analysis: dict) -> None:
-    """Print human-readable report."""
-    print("=" * 80)
-    print("INBOX ANALYSIS REPORT")
-    print("=" * 80)
-    print()
+def _group_by_route(results: list[dict[str, Any]]) -> dict[str, int]:
+    """Group classified files by route/category."""
+    by_route: dict[str, int] = defaultdict(int)
+    for r in results:
+        route = r.get("route_name") or r.get("category", "unknown")
+        by_route[route] += 1
+    return dict(sorted(by_route.items(), key=lambda x: -x[1]))
 
-    print(f"Total files scanned: {analysis['total_files']}")
-    print(f"Successfully classified: {analysis['classified_count']}")
-    print(f"Need new routes: {analysis['unclassified_count']}")
-    print()
 
-    print("-" * 80)
-    print("CLASSIFIED FILES BY SOURCE")
-    print("-" * 80)
-    for source, files in analysis["classified_by_source"].items():
-        print(f"\n{source} ({len(files)} files):")
-        for f in files[:10]:
-            print(f"  - {f}")
-        if len(files) > 10:
-            print(f"  ... and {len(files) - 10} more")
+def suggest_route_config(ext: str) -> str:
+    """Generate suggested route configuration based on extension.
 
-    print()
-    print("-" * 80)
-    print("UNCLASSIFIED FILES - SUGGESTED NEW ROUTES")
-    print("-" * 80)
+    Args:
+        ext: File extension.
+
+    Returns:
+        YAML configuration suggestion.
+    """
+    suggestions = {
+        ".xml": """  # Bank statement XMLs (CAMT.053/054)
+  bank_statements_xml:
+    patterns: ['CAMT.053*', 'CAMT.054*', '*camt053*', '*camt054*']
+    extensions: ['.xml']
+    destination: '4_Archives/banques/{issuer}/{YYYY}'""",
+        ".lic": """  # Software licenses
+  software_licenses:
+    extensions: ['.lic', '.license', '.key']
+    destination: '3_Resources/licences/{YYYY}'""",
+        ".ics": """  # Calendar events
+  calendar_events:
+    extensions: ['.ics']
+    destination: '3_Resources/calendrier/{YYYY}'""",
+        ".vcf": """  # Contact cards
+  contacts:
+    extensions: ['.vcf']
+    destination: '3_Resources/contacts'""",
+        ".eml": """  # Email archives
+  emails:
+    extensions: ['.eml', '.msg']
+    destination: '4_Archives/emails/{YYYY}/{MM}'""",
+    }
+
+    if ext in suggestions:
+        return suggestions[ext]
+
+    if ext in {".pdf", ".docx", ".doc"}:
+        return """  # Analyze content samples above to determine:
+  # - Add issuer to known_issuers.yaml if recognizable sender
+  # - Add pattern to routing_rules if filename has pattern
+  # - Add route with utterances for semantic matching"""
+
+    return f"""  # Custom rule for {ext} files
+  custom_{ext.lstrip(".")}:
+    extensions: ['{ext}']
+    destination: '3_Resources/other/{ext.lstrip(".")}'"""
+
+
+def print_report(analysis: dict[str, Any]) -> None:
+    """Print human-readable analysis report.
+
+    Args:
+        analysis: Analysis dictionary from analyze_unclassified().
+    """
+    click.echo("=" * 80)
+    click.echo("INBOX ANALYSIS REPORT")
+    click.echo("=" * 80)
+    click.echo()
+
+    # Summary
+    total = analysis["total_files"]
+    classified = analysis["classified_count"]
+    unclassified = analysis["unclassified_count"]
+    pct = (classified / total * 100) if total > 0 else 0
+
+    click.echo(f"Total files scanned: {total}")
+    click.echo(f"Successfully classified: {classified} ({pct:.1f}%)")
+    click.echo(f"Need new routes: {unclassified}")
+    click.echo()
+
+    # Classified by source
+    click.echo("-" * 80)
+    click.echo("CLASSIFIED FILES BY SOURCE")
+    click.echo("-" * 80)
+    for source, files in sorted(analysis["classified_by_source"].items(), key=lambda x: -len(x[1])):
+        click.echo(f"\n{source} ({len(files)} files):")
+        for f in files[:_MAX_DISPLAY_ITEMS]:
+            click.echo(f"  - {f}")
+        if len(files) > _MAX_DISPLAY_ITEMS:
+            click.echo(f"  ... and {len(files) - _MAX_DISPLAY_ITEMS} more")
+
+    # Classified by route
+    click.echo()
+    click.echo("-" * 80)
+    click.echo("TOP ROUTES")
+    click.echo("-" * 80)
+    for route, count in list(analysis["classified_by_route"].items())[:15]:
+        click.echo(f"  {count:4d}  {route}")
+
+    # Unclassified suggestions
+    click.echo()
+    click.echo("-" * 80)
+    click.echo("UNCLASSIFIED FILES - SUGGESTED NEW ROUTES")
+    click.echo("-" * 80)
 
     for group in analysis["unclassified_by_extension"]:
-        print(f"\n### Extension: {group['extension']} ({group['count']} files)")
-        print()
-        print("Files:")
-        for f in group["files"][:10]:
-            print(f"  - {f}")
-        if len(group["files"]) > 10:
-            print(f"  ... and {len(group['files']) - 10} more")
+        click.echo(f"\n### Extension: {group['extension']} ({group['count']} files)")
+        click.echo()
 
-        print()
-        print("Content samples:")
-        for sample in group["samples"][:3]:
-            print(f"\n  [{sample['file']}]")
-            preview = sample["content_preview"].replace("\n", " ")[:200]
-            print(f"  {preview}...")
+        click.echo("Files:")
+        for f in group["files"][:_MAX_DISPLAY_ITEMS]:
+            click.echo(f"  - {f}")
+        if len(group["files"]) > _MAX_DISPLAY_ITEMS:
+            click.echo(f"  ... and {len(group['files']) - _MAX_DISPLAY_ITEMS} more")
 
-        # Suggest route based on extension
-        print()
-        print("Suggested route:")
-        if group["extension"] == ".xml":
-            print("  # Bank statement XMLs (CAMT.053)")
-            print("  bank_statements_xml:")
-            print("    patterns: ['CAMT.053*', 'CAMT.054*']")
-            print("    extensions: ['.xml']")
-            print("    destination: '4_Archives/banques/{issuer}/{year}'")
-        elif group["extension"] == ".lic":
-            print("  # Software licenses")
-            print("  software_licenses:")
-            print("    extensions: ['.lic', '.license', '.key']")
-            print("    destination: '3_Resources/licences/{year}'")
-        elif group["extension"] in {".pdf", ".docx", ".doc"}:
-            print("  # Need content analysis - check samples above")
-            print("  # Consider adding issuer to known_issuers or pattern to routing_rules")
-        else:
-            print(f"  # Unknown extension {group['extension']}")
-            print(f"  # Consider creating a category or extension rule")
+        if group["samples"]:
+            click.echo()
+            click.echo("Content samples:")
+            for sample in group["samples"][:3]:
+                click.echo(f"\n  [{sample['file']}]")
+                preview = sample["content_preview"].replace("\n", " ")[:200]
+                click.echo(f"  {preview}...")
+
+        click.echo()
+        click.echo("Suggested route configuration:")
+        suggestion = suggest_route_config(group["extension"])
+        for line in suggestion.split("\n"):
+            click.echo(f"  {line}")
 
 
-def main():
-    """Main entry point."""
-    inbox_path = Path("/Users/fjacquet/Library/CloudStorage/OneDrive-Home/0_Inbox")
-    config_path = Path("/Users/fjacquet/Projects/para-files/config/personal_file_tree.yaml")
+@click.command()
+@click.option(
+    "--inbox",
+    "-i",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    default=Path.home() / "Library/CloudStorage/OneDrive-Home/0_Inbox",
+    help="Path to inbox directory",
+)
+@click.option(
+    "--config",
+    "-c",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=Path(__file__).parent.parent / "config/personal_file_tree.yaml",
+    help="Path to YAML config file",
+)
+@click.option(
+    "--para-root",
+    "-p",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="PARA root directory (default: system temp dir)",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=None,
+    help="Output JSON file path",
+)
+@click.option(
+    "--timeout",
+    "-t",
+    type=int,
+    default=1800,
+    help="Classification timeout in seconds (default: 1800)",
+)
+def main(
+    inbox: Path,
+    config: Path,
+    para_root: Path | None,
+    output: Path | None,
+    timeout: int,
+) -> None:
+    """Analyze inbox files and suggest new routes.
 
-    print("Starting inbox analysis...", file=sys.stderr)
-    print(f"Inbox: {inbox_path}", file=sys.stderr)
-    print(f"Config: {config_path}", file=sys.stderr)
-    print()
+    Classifies all files in the inbox directory and generates a report
+    showing which files couldn't be classified, grouped by extension,
+    with suggested route configurations.
+    """
+    # Use system temp dir if para_root not specified
+    if para_root is None:
+        para_root = Path(tempfile.gettempdir()) / "para-files-analysis"
+
+    click.echo("Starting inbox analysis...", err=True)
+    click.echo(f"Inbox: {inbox}", err=True)
+    click.echo(f"Config: {config}", err=True)
+    click.echo(f"PARA root: {para_root}", err=True)
+    click.echo()
+
+    # Ensure PARA root exists
+    para_root.mkdir(parents=True, exist_ok=True)
 
     # Classify all files
-    print("Classifying files (this may take a while)...", file=sys.stderr)
-    results = classify_files(inbox_path, config_path)
+    click.echo("Classifying files (this may take a while)...", err=True)
+    results = classify_files(inbox, config, para_root, timeout=timeout)
 
     if not results:
-        print("ERROR: No classification results. Check stderr for errors.", file=sys.stderr)
-        return 1
+        click.echo("ERROR: No classification results. Check stderr for errors.", err=True)
+        raise SystemExit(1)
 
-    print(f"Classified {len(results)} files", file=sys.stderr)
+    click.echo(f"Classified {len(results)} files", err=True)
 
     # Analyze results
-    print("Analyzing results...", file=sys.stderr)
+    click.echo("Analyzing results...", err=True)
     analysis = analyze_unclassified(results)
 
-    # Print report
+    # Print report to stdout
     print_report(analysis)
 
-    # Also save JSON for programmatic use
-    json_path = Path("inbox_analysis.json")
-    with open(json_path, "w") as f:
-        json.dump(analysis, f, indent=2)
-    print(f"\nJSON saved to: {json_path}", file=sys.stderr)
-
-    return 0
+    # Save JSON if requested
+    json_path = output or Path("inbox_analysis.json")
+    with json_path.open("w") as f:
+        json.dump(analysis, f, indent=2, default=str)
+    click.echo(f"\nJSON saved to: {json_path}", err=True)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
