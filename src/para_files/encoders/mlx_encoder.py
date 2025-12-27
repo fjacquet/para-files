@@ -5,6 +5,7 @@ Uses mlx-embedding-models to load embedding models optimized for Apple Silicon.
 
 from __future__ import annotations
 
+import threading
 from typing import Any, ClassVar
 
 from mlx_embedding_models.embedding import EmbeddingModel  # type: ignore[import-untyped]
@@ -39,15 +40,20 @@ class MLXEncoder(DenseEncoder):
 
     model_config: ClassVar[ConfigDict] = ConfigDict(arbitrary_types_allowed=True)
 
+    # Class-level lock for thread-safe model loading
+    _load_lock: ClassVar[threading.Lock] = threading.Lock()
+
     # Private attributes for lazy loading
     _model: Any = PrivateAttr(default=None)
     _loaded: bool = PrivateAttr(default=False)
 
     def _ensure_loaded(self) -> None:
-        """Lazily load model on first use."""
+        """Lazily load model on first use (thread-safe with double-check pattern)."""
         if not self._loaded:
-            self._model = EmbeddingModel.from_registry(self.name)
-            self._loaded = True
+            with self._load_lock:
+                if not self._loaded:  # Double-check after acquiring lock
+                    self._model = EmbeddingModel.from_registry(self.name)
+                    self._loaded = True
 
     def _truncate(self, text: str) -> str:
         """Truncate text to max_chars to avoid exceeding model's token limit."""

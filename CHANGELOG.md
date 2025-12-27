@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Parallel file processing**: Configurable multi-threaded classification for faster processing
+  - New `max_workers` configuration option (default: 1, max: 16)
+  - Set via `PARA_FILES_MAX_WORKERS` environment variable or in config
+  - `classify` and `scan` commands support parallel processing
+  - `move` command remains sequential for file operation safety
+  - Thread-safe lazy loading of MLX encoder with double-check locking
+  - Thread-safe SQLite geolocation cache with RLock synchronization
 - **Intelligent Inbox Cleanup** (`clean` command): Automated cleanup of temporary and junk files
   - Removes Apple temp files: `.DS_Store`, `._*` (AppleDouble), `.Spotlight-V100`, `.Trashes`
   - Removes Windows temp files: `Thumbs.db`, `desktop.ini`

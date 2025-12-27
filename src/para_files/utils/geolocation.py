@@ -11,6 +11,7 @@ import json
 import logging
 import re
 import sqlite3
+import threading
 from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -89,6 +90,7 @@ class GeolocationCache:
         """
         self.db_path = db_path or _CACHE_DB
         self._connection: sqlite3.Connection | None = None
+        self._lock = threading.RLock()  # Thread-safe access to SQLite
         self._init_db()
 
     def _init_db(self) -> None:
@@ -121,7 +123,7 @@ class GeolocationCache:
         return self._connection
 
     def get(self, lat: float, lon: float) -> dict[str, str] | None:
-        """Get cached address for coordinates.
+        """Get cached address for coordinates (thread-safe).
 
         Args:
             lat: Latitude (already rounded).
@@ -130,68 +132,72 @@ class GeolocationCache:
         Returns:
             Cached address dictionary, or None if not found.
         """
-        try:
-            conn = self._get_connection()
-            cursor = conn.execute(
-                "SELECT address_json FROM geolocation_cache WHERE lat = ? AND lon = ?",
-                (lat, lon),
-            )
-            row = cursor.fetchone()
-            if row:
-                result: dict[str, str] = json.loads(row[0])
-                logger.debug("Cache hit for coordinates: %s, %s", lat, lon)
-                return result
-        except (sqlite3.Error, json.JSONDecodeError) as e:
-            logger.debug("Cache lookup failed: %s", e)
-        return None
+        with self._lock:
+            try:
+                conn = self._get_connection()
+                cursor = conn.execute(
+                    "SELECT address_json FROM geolocation_cache WHERE lat = ? AND lon = ?",
+                    (lat, lon),
+                )
+                row = cursor.fetchone()
+                if row:
+                    result: dict[str, str] = json.loads(row[0])
+                    logger.debug("Cache hit for coordinates: %s, %s", lat, lon)
+                    return result
+            except (sqlite3.Error, json.JSONDecodeError) as e:
+                logger.debug("Cache lookup failed: %s", e)
+            return None
 
     def set(self, lat: float, lon: float, address: Mapping[str, str]) -> None:
-        """Store address in cache.
+        """Store address in cache (thread-safe).
 
         Args:
             lat: Latitude (already rounded).
             lon: Longitude (already rounded).
             address: Address dictionary from geocoder.
         """
-        try:
-            conn = self._get_connection()
-            conn.execute(
-                """
-                INSERT OR REPLACE INTO geolocation_cache (lat, lon, address_json)
-                VALUES (?, ?, ?)
-                """,
-                (lat, lon, json.dumps(dict(address))),
-            )
-            conn.commit()
-            logger.debug("Cached location for coordinates: %s, %s", lat, lon)
-        except sqlite3.Error as e:
-            logger.debug("Cache write failed: %s", e)
+        with self._lock:
+            try:
+                conn = self._get_connection()
+                conn.execute(
+                    """
+                    INSERT OR REPLACE INTO geolocation_cache (lat, lon, address_json)
+                    VALUES (?, ?, ?)
+                    """,
+                    (lat, lon, json.dumps(dict(address))),
+                )
+                conn.commit()
+                logger.debug("Cached location for coordinates: %s, %s", lat, lon)
+            except sqlite3.Error as e:
+                logger.debug("Cache write failed: %s", e)
 
     def get_stats(self) -> dict[str, int]:
-        """Get cache statistics.
+        """Get cache statistics (thread-safe).
 
         Returns:
             Dictionary with cache statistics.
         """
-        try:
-            conn = self._get_connection()
-            cursor = conn.execute("SELECT COUNT(*) FROM geolocation_cache")
-            row = cursor.fetchone()
-            count = row[0] if row else 0
-        except sqlite3.Error:
-            return {"entries": 0}
-        else:
-            return {"entries": count}
+        with self._lock:
+            try:
+                conn = self._get_connection()
+                cursor = conn.execute("SELECT COUNT(*) FROM geolocation_cache")
+                row = cursor.fetchone()
+                count = row[0] if row else 0
+            except sqlite3.Error:
+                return {"entries": 0}
+            else:
+                return {"entries": count}
 
     def clear(self) -> None:
-        """Clear all cached entries."""
-        try:
-            conn = self._get_connection()
-            conn.execute("DELETE FROM geolocation_cache")
-            conn.commit()
-            logger.info("Geolocation cache cleared")
-        except sqlite3.Error as e:
-            logger.warning("Failed to clear cache: %s", e)
+        """Clear all cached entries (thread-safe)."""
+        with self._lock:
+            try:
+                conn = self._get_connection()
+                conn.execute("DELETE FROM geolocation_cache")
+                conn.commit()
+                logger.info("Geolocation cache cleared")
+            except sqlite3.Error as e:
+                logger.warning("Failed to clear cache: %s", e)
 
     def close(self) -> None:
         """Close the database connection."""
@@ -200,15 +206,18 @@ class GeolocationCache:
             self._connection = None
 
 
-# Global cache instance (lazy initialized)
+# Global cache instance (lazy initialized with thread-safe access)
 _cache: GeolocationCache | None = None
+_cache_lock = threading.Lock()
 
 
 def _get_cache() -> GeolocationCache:
-    """Get or create the global cache instance."""
+    """Get or create the global cache instance (thread-safe with double-check)."""
     global _cache  # noqa: PLW0603
     if _cache is None:
-        _cache = GeolocationCache()
+        with _cache_lock:
+            if _cache is None:  # Double-check after acquiring lock
+                _cache = GeolocationCache()
     return _cache
 
 

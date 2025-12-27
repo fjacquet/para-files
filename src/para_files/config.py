@@ -146,6 +146,14 @@ class Config(BaseSettings):
         description="Number of characters to extract for semantic matching",
     )
 
+    # Parallel processing settings
+    max_workers: int = Field(
+        default=1,
+        ge=1,
+        le=16,
+        description="Number of parallel workers for file processing (1=sequential)",
+    )
+
     # Nested configurations
     mlx: MLXConfig = Field(default_factory=MLXConfig)
     llm: LLMConfig = Field(default_factory=LLMConfig)

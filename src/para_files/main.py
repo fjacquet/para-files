@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any
@@ -488,6 +489,82 @@ def setup_logging(*, verbose: bool = False) -> None:
     )
 
 
+def _classify_single_file(
+    file_path: Path,
+    pipeline: ClassificationPipeline,
+) -> dict[str, Any]:
+    """Classify a single file and return result dict (for parallel processing)."""
+    if not _validate_file_exists(file_path):
+        return {"source_file": str(file_path), "error": "file not found"}
+
+    try:
+        result = pipeline.classify_file(file_path)
+        target_path = pipeline.get_target_path(result)
+        return _format_result_json(file_path, result, target_path)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Failed to classify %s: %s", file_path, e)
+        return {"source_file": str(file_path), "error": "classification failed"}
+
+
+def _print_parallel_result(file_path: Path, result_dict: dict[str, Any]) -> None:
+    """Print classification result from parallel processing."""
+    if "error" not in result_dict:
+        typer.echo(f"\n📄 {file_path.name}")
+        typer.echo(f"   Category: {result_dict['category']}")
+        conf = result_dict["confidence"]
+        typer.echo(f"   Confidence: {conf:.0%} ({result_dict['source']})")
+        typer.echo(f"   Target: {result_dict['target_path']}")
+    else:
+        typer.echo(f"\n⚠️ {file_path.name}: {result_dict.get('error', 'unknown error')}")
+
+
+def _classify_files_parallel(
+    expanded_files: list[Path],
+    pipeline: ClassificationPipeline,
+    max_workers: int,
+    *,
+    output_json: bool,
+) -> list[dict[str, Any]]:
+    """Classify files in parallel using ThreadPoolExecutor."""
+    results: list[dict[str, Any]] = []
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(_classify_single_file, f, pipeline): f for f in expanded_files}
+        for future in as_completed(futures):
+            file_path = futures[future]
+            result_dict = future.result()
+            results.append(result_dict)
+            if not output_json:
+                _print_parallel_result(file_path, result_dict)
+    return results
+
+
+def _classify_files_sequential(
+    expanded_files: list[Path],
+    pipeline: ClassificationPipeline,
+    *,
+    output_json: bool,
+) -> list[dict[str, Any]]:
+    """Classify files sequentially (original behavior)."""
+    results: list[dict[str, Any]] = []
+    for file_path in expanded_files:
+        if not _validate_file_exists(file_path):
+            continue
+
+        try:
+            result = pipeline.classify_file(file_path)
+            target_path = pipeline.get_target_path(result)
+
+            if output_json:
+                results.append(_format_result_json(file_path, result, target_path))
+            else:
+                _print_classification_result(file_path, result, target_path)
+        except Exception:
+            logger.exception("Failed to classify %s", file_path)
+            if output_json:
+                results.append({"source_file": str(file_path), "error": "classification failed"})
+    return results
+
+
 @app.command()
 def classify(
     files: Annotated[
@@ -528,24 +605,15 @@ def classify(
         return
 
     pipeline = ClassificationPipeline(config)
-    results: list[dict[str, Any]] = []
+    max_workers = config.max_workers
 
-    for file_path in expanded_files:
-        if not _validate_file_exists(file_path):
-            continue
-
-        try:
-            result = pipeline.classify_file(file_path)
-            target_path = pipeline.get_target_path(result)
-
-            if output_json:
-                results.append(_format_result_json(file_path, result, target_path))
-            else:
-                _print_classification_result(file_path, result, target_path)
-        except Exception:
-            logger.exception("Failed to classify %s", file_path)
-            if output_json:
-                results.append({"source_file": str(file_path), "error": "classification failed"})
+    # Use parallel or sequential processing based on max_workers
+    if max_workers > 1 and len(expanded_files) > 1:
+        results = _classify_files_parallel(
+            expanded_files, pipeline, max_workers, output_json=output_json
+        )
+    else:
+        results = _classify_files_sequential(expanded_files, pipeline, output_json=output_json)
 
     if output_json:
         typer.echo(json.dumps(results, indent=2))
@@ -1146,11 +1214,35 @@ def scan(
     pipeline = ClassificationPipeline(config)
     results: list[dict[str, Any]] = []
     stats: dict[str, int] = {}
+    max_workers = config.max_workers
 
-    for file_path in files:
-        file_result = _classify_file_for_scan(file_path, pipeline, stats, output_json=output_json)
-        if file_result is not None:
-            results.append(file_result)
+    # Use parallel processing if max_workers > 1
+    if max_workers > 1 and len(files) > 1:
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(_classify_single_file, f, pipeline): f for f in files}
+            for future in as_completed(futures):
+                file_path = futures[future]
+                result_dict = future.result()
+                if "error" not in result_dict:
+                    # Update stats
+                    source = result_dict.get("source", "unknown")
+                    stats[source] = stats.get(source, 0) + 1
+                    results.append(result_dict)
+                    # Print result immediately if not JSON mode
+                    if not output_json:
+                        conf_pct = f"{result_dict['confidence']:.0%}"
+                        typer.echo(f"📄 {file_path.name}")
+                        typer.echo(f"   → {result_dict['category']} ({conf_pct} {source})")
+                elif not output_json:
+                    typer.echo(f"⚠️ {file_path.name}: {result_dict.get('error')}")
+    else:
+        # Sequential processing (original behavior)
+        for file_path in files:
+            file_result = _classify_file_for_scan(
+                file_path, pipeline, stats, output_json=output_json
+            )
+            if file_result is not None:
+                results.append(file_result)
 
     _print_scan_summary(dir_path, files, stats, results, output_json=output_json)
 
