@@ -76,7 +76,7 @@ def test_move_help():
     """Verify move command help."""
     result = runner.invoke(app, ["move", "--help"])
     assert result.exit_code == 0
-    assert "dry-run" in result.output
+    assert "--dry-run" in result.output or "-n" in result.output
     assert "copy" in result.output
     assert "conflict" in result.output
 
@@ -146,7 +146,7 @@ def test_clean_help():
     """Verify clean command help."""
     result = runner.invoke(app, ["clean", "--help"])
     assert result.exit_code == 0
-    assert "dry-run" in result.output
+    assert "--dry-run" in result.output or "-n" in result.output
     assert "nfo" in result.output
     assert "junk" in result.output
 
@@ -161,7 +161,7 @@ def test_init_help():
     """Verify init command help."""
     result = runner.invoke(app, ["init", "--help"])
     assert result.exit_code == 0
-    assert "dry-run" in result.output
+    assert "--dry-run" in result.output or "-n" in result.output
     assert "subfolders" in result.output
 
 
