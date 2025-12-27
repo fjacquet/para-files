@@ -151,7 +151,8 @@ routing_rules:
       "VMware *", "Cisco *", "Microsoft *", "AWS *", "Google *",
       "sacp_*", "*SACP*", "Symantec *", "asc_*",
       "VTSP*", "VCP*", "VCAP*", "VCDX*",
-      "OCA *", "OCP *", "OCM *", "OCE *"
+      "OCA *", "OCP *", "OCM *", "OCE *",
+      "FalconStor *", "*FalconStor*training*", "*FalconStor*CDP*", "*FalconStor*NSS*"
     ]
     extensions: [".pdf", ".png", ".jpg"]
     destination: "3_Resources/certifications/{YYYY}"
@@ -186,11 +187,33 @@ routing_rules:
 
   # French tax documents (impots.gouv.fr)
   impots_france:
-    patterns: ["Avis_d_impot_*", "Avis*impot*", "*impots.gouv*"]
+    patterns: [
+      "Avis_d_impot_*", "Avis*impot*", "*impots.gouv*",
+      "*impôts fonciers*", "*impots fonciers*", "*6704*",
+      "*IMPÔTS LOCAUX*", "*impots locaux*"
+    ]
     extensions: [".pdf"]
     destination: "4_Archives/impots-france/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})_sur_les_revenus"  # Format: YYYY_sur_les_revenus
+
+  # French bank documents (IFU, revenus mobiliers)
+  banques_france:
+    patterns: ["*E-IFU*", "*IFU*", "*revenus mobiliers*"]
+    extensions: [".pdf"]
+    destination: "4_Archives/banques-france/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Insurance claims and accident declarations
+  assurances_sinistres:
+    patterns: [
+      "*[Dd]éclaration*accident*", "*[Dd]eclaration*accident*",
+      "*sinistre*", "*[Cc]laim*", "*[Ss]chadenfall*"
+    ]
+    extensions: [".pdf"]
+    destination: "4_Archives/assurances-sinistres/{YYYY}"
+    date_source: "file_modified"
 
   # Health reimbursement documents (justificatifs de remboursement)
   sante_remboursement:
@@ -551,6 +574,31 @@ archives:
         - "impots.gouv.fr"
         - "avis d'imposition France"
         - "fisc français"
+        - "impôts fonciers"
+        - "impôts locaux"
+        - "taxe foncière"
+        - "formulaire 6704"
+
+    - name: "banques-france"
+      pattern: "4_Archives/banques-france/{issuer}/{year}"
+      utterances:
+        - "IFU imprimé fiscal unique"
+        - "revenus mobiliers France"
+        - "Crédit Agricole France"
+        - "déclaration revenus capitaux"
+        - "banque française"
+        - "E-IFU"
+
+    - name: "assurances-sinistres"
+      pattern: "4_Archives/assurances-sinistres/{year}"
+      utterances:
+        - "déclaration accident"
+        - "déclaration de sinistre"
+        - "accident travail LAA"
+        - "assurance accident"
+        - "Zurich sinistre"
+        - "claim declaration"
+        - "Schadenfall Meldung"
 
     - name: "factures-redevances"
       pattern: "4_Archives/factures/Redevances/{issuer}/{year}"
@@ -576,6 +624,19 @@ archives:
         - "résultats laboratoire"
         - "analyse médicale"
         - "laboratoire médical"
+        - "centre de soins"
+        - "physiothérapie"
+        - "ostéopathie"
+        - "massage thérapeutique"
+
+    - name: "sante-remboursement"
+      pattern: "4_Archives/sante/{year}"
+      utterances:
+        - "justificatif de remboursement"
+        - "remboursement assurance maladie"
+        - "décompte prestations"
+        - "relevé remboursement"
+        - "attestation remboursement santé"
 
     - name: "factures-divers"
       pattern: "4_Archives/factures/Divers/{year}"
@@ -852,6 +913,11 @@ known_issuers:
       - laboratoirescdl
       - CDL
       - Unilabs
+      - Centre de soins
+      - Centre de soins LES ALPES
+      - Physiothérapie
+      - Ostéopathie
+      - Masseur
       - Synlab
 
   materiels:
