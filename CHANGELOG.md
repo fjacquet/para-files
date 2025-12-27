@@ -32,6 +32,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Uses reverse geocoding via Nominatim/OpenStreetMap
   - LRU-cached lookups for efficiency
   - Graceful fallback when no GPS data or lookup fails
+- **Makefile**: Standardized build automation
+  - `make all`: Full pipeline (deps, setup, lint, format, typecheck, test)
+  - `make quality`: Quick lint + typecheck
+  - `make fix`: Auto-fix linting issues
+  - `make test-cov`: Run tests with coverage
+  - `make clean`: Remove build artifacts
 - **Book detector classifier** (Signal 2.5, 92% confidence): Intelligent detection of technical books in PDF format
   - Multi-signal analysis: ISBN extraction, PDF metadata, content structure, file size
   - ISBN lookup via Google Books/Open Library for book enrichment
