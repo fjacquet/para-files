@@ -28,7 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `cleanup.py`: Junk file detection and deletion
   - `nfo_parser.py`: NFO file parsing with encoding fallback
   - `cleanup_log.py`: Audit logging for cleanup operations
-- **Geolocation for photos and videos**: Photos and videos with GPS EXIF data now include location in the destination path (e.g., `4_Archives/photos/2024/Geneva/06/15/IMG_1234.jpg`)
+- **Geolocation for photos and videos**: Photos and videos with GPS EXIF data now include location in the destination path (e.g., `4_Archives/photos/2024/Switzerland/Geneva/06/IMG_1234.jpg`)
+  - Separate `{country}` and `{location}` placeholders for flexible path configuration
   - Uses reverse geocoding via Nominatim/OpenStreetMap
   - LRU-cached lookups for efficiency
   - Graceful fallback when no GPS data or lookup fails

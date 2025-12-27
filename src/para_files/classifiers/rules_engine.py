@@ -19,7 +19,7 @@ from para_files.types import (
     FileMetadata,
     RoutingRule,
 )
-from para_files.utils.geolocation import get_location_folder
+from para_files.utils.geolocation import LocationInfo, reverse_geocode
 
 
 logger = logging.getLogger(__name__)
@@ -151,9 +151,16 @@ class RulesEngineClassifier(BaseClassifier):
             params["platform"] = platform
 
         # Try to get location from GPS coordinates
-        location = self._get_location(metadata)
-        if location:
-            params["location"] = location
+        location_info = self._get_location_info(metadata)
+        if location_info:
+            # Set location as city or region (most specific non-country)
+            if location_info.city:
+                params["location"] = location_info.city.replace(" ", "_")
+            elif location_info.region:
+                params["location"] = location_info.region.replace(" ", "_")
+            # Set country separately
+            if location_info.country:
+                params["country"] = location_info.country.replace(" ", "_")
 
         # Resolve destination pattern
         category = rule.destination
@@ -173,43 +180,45 @@ class RulesEngineClassifier(BaseClassifier):
             extracted_params=params,
         )
 
-    def _get_location(self, metadata: FileMetadata) -> str | None:
-        """Get location from GPS coordinates if available.
+    def _get_location_info(self, metadata: FileMetadata) -> LocationInfo | None:
+        """Get location info from GPS coordinates if available.
 
         Args:
             metadata: File metadata with potential GPS data.
 
         Returns:
-            Location folder name, or None if no GPS or lookup fails.
+            LocationInfo with city/region/country, or None if no GPS or lookup fails.
         """
         if metadata.exif_gps_lat is None or metadata.exif_gps_lon is None:
             return None
 
-        location = get_location_folder(metadata.exif_gps_lat, metadata.exif_gps_lon)
-        if location:
+        location_info = reverse_geocode(metadata.exif_gps_lat, metadata.exif_gps_lon)
+        if location_info:
             logger.debug(
-                "GPS location resolved: %.4f, %.4f → %s",
+                "GPS location resolved: %.4f, %.4f → %s/%s",
                 metadata.exif_gps_lat,
                 metadata.exif_gps_lon,
-                location,
+                location_info.country,
+                location_info.city or location_info.region,
             )
-        return location
+        return location_info
 
     def _clean_unreplaced_location(self, category: str) -> str:
-        """Remove unreplaced {location} placeholder and clean up path.
+        """Remove unreplaced {location} and {country} placeholders and clean up path.
 
         Handles patterns like:
-        - "path/{location}/more" → "path/more"
+        - "path/{country}/{location}/more" → "path/more"
         - "path/{location}" → "path"
 
         Args:
-            category: Category path possibly containing {location}.
+            category: Category path possibly containing {location} or {country}.
 
         Returns:
             Cleaned category path without empty segments.
         """
-        # Remove {location} placeholder if still present
+        # Remove {location} and {country} placeholders if still present
         category = category.replace("{location}", "")
+        category = category.replace("{country}", "")
         # Clean up double slashes
         category = re.sub(r"/+", "/", category)
         # Remove trailing slash

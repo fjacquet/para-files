@@ -108,7 +108,34 @@ routes:
     # Creates: 4_Archives/invoices/2024/01/
 ```
 
-Available variables: `{year}`, `{month}`, `{day}`
+### Date Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `{YYYY}` | 4-digit year | 2025 |
+| `{MM}` | 2-digit month | 01 |
+| `{DD}` | 2-digit day | 15 |
+| `{year}` | 4-digit year (alias) | 2025 |
+
+### Location Variables (for photos with GPS)
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `{country}` | Country name from GPS | Switzerland |
+| `{location}` | City or region from GPS | Geneva |
+
+Example for photos:
+
+```yaml
+routing_rules:
+  photos:
+    extensions: [".jpg", ".jpeg", ".png", ".heic"]
+    destination: "4_Archives/photos/{YYYY}/{country}/{location}/{MM}"
+    date_source: "exif"
+    # Creates: 4_Archives/photos/2025/Switzerland/Geneva/06/
+```
+
+If GPS data is unavailable, the placeholders are removed automatically.
 
 ## Related
 
