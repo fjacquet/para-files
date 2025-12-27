@@ -199,6 +199,42 @@ def _discover_files(
     return sorted(files)
 
 
+def _expand_paths_to_files(
+    paths: list[Path],
+    *,
+    recursive: bool,
+    ext_filter: set[str] | None,
+) -> tuple[list[Path], set[Path]]:
+    """Expand paths (files or directories) to a list of files.
+
+    Args:
+        paths: List of file or directory paths
+        recursive: Whether to scan directories recursively
+        ext_filter: Set of extensions to include (None = all)
+
+    Returns:
+        Tuple of (expanded file list, source directories for cleanup)
+    """
+    expanded_files: list[Path] = []
+    source_dirs: set[Path] = set()
+
+    for path in paths:
+        resolved = path.resolve()
+        if resolved.is_dir():
+            discovered = _discover_files(
+                resolved, recursive=recursive, ext_filter=ext_filter
+            )
+            expanded_files.extend(discovered)
+            source_dirs.add(resolved)
+        elif resolved.is_file():
+            # Apply extension filter to explicit files too
+            if ext_filter is None or resolved.suffix.lower() in ext_filter:
+                expanded_files.append(resolved)
+                source_dirs.add(resolved.parent)
+
+    return expanded_files, source_dirs
+
+
 def _classify_file_for_scan(
     file_path: Path,
     pipeline: ClassificationPipeline,
@@ -456,10 +492,20 @@ def setup_logging(*, verbose: bool = False) -> None:
 
 @app.command()
 def classify(
-    files: Annotated[list[Path], typer.Argument(help="Path(s) to file(s) to classify")],
+    files: Annotated[
+        list[Path], typer.Argument(help="Path(s) to file(s) or directory to classify")
+    ],
     reference_tree: Annotated[
         Path | None,
         typer.Option("--reference-tree", "-r", help="Path to reference tree YAML file"),
+    ] = None,
+    recursive: Annotated[
+        bool,
+        typer.Option("--recursive", "-R", help="Process directories recursively"),
+    ] = False,
+    extensions: Annotated[
+        str | None,
+        typer.Option("--ext", "-e", help="Filter by extensions (comma-separated)"),
     ] = None,
     output_json: Annotated[
         bool, typer.Option("--json", "-j", help="Output result as JSON")
@@ -475,11 +521,20 @@ def classify(
     if reference_tree:
         config.reference_tree_path = reference_tree
 
+    # Expand directories to file lists
+    ext_filter = _parse_extensions_filter(extensions)
+    expanded_files, _ = _expand_paths_to_files(
+        files, recursive=recursive, ext_filter=ext_filter
+    )
+
+    if not expanded_files:
+        typer.echo("No files found matching criteria")
+        return
+
     pipeline = ClassificationPipeline(config)
     results: list[dict[str, Any]] = []
 
-    for file in files:
-        file_path = file.resolve()
+    for file_path in expanded_files:
         if not _validate_file_exists(file_path):
             continue
 
@@ -645,18 +700,28 @@ def _print_move_summary(
 
 @app.command()
 def move(
-    files: Annotated[list[Path], typer.Argument(help="Path(s) to file(s) to classify and move")],
+    files: Annotated[
+        list[Path], typer.Argument(help="Path(s) to file(s) or directory to move")
+    ],
     reference_tree: Annotated[
         Path | None,
         typer.Option("--reference-tree", "-r", help="Path to reference tree YAML file"),
     ] = None,
+    recursive: Annotated[
+        bool,
+        typer.Option("--recursive", "-R", help="Process directories recursively"),
+    ] = False,
+    extensions: Annotated[
+        str | None,
+        typer.Option("--ext", "-e", help="Filter by extensions (comma-separated)"),
+    ] = None,
     dry_run: Annotated[
         bool,
-        typer.Option("--dry-run", "-n", help="Preview the move without actually moving files"),
+        typer.Option("--dry-run", "-n", help="Preview without moving files"),
     ] = False,
     copy: Annotated[
         bool,
-        typer.Option("--copy", "-c", help="Copy file instead of moving (preserve original)"),
+        typer.Option("--copy", "-c", help="Copy file instead of moving"),
     ] = False,
     conflict: Annotated[
         ConflictChoice,
@@ -664,29 +729,19 @@ def move(
     ] = ConflictChoice.rename,
     date_prefix: Annotated[
         bool,
-        typer.Option("--date-prefix", "-d", help="Add date prefix (YYYY-MM-DD) to filename"),
+        typer.Option("--date-prefix", "-d", help="Add date prefix to filename"),
     ] = False,
     smart_rename: Annotated[
         bool,
-        typer.Option(
-            "--smart-rename",
-            "-s",
-            help="Use intelligent naming from metadata (e.g., book titles from ISBN)",
-        ),
+        typer.Option("--smart-rename", "-s", help="Use intelligent naming from metadata"),
     ] = False,
     skip_unclassifiable: Annotated[
         bool,
-        typer.Option(
-            "--skip-unclassifiable",
-            help="Skip files that cannot be classified (default: move to 0_Inbox)",
-        ),
+        typer.Option("--skip-unclassifiable", help="Skip unclassifiable files"),
     ] = False,
     cleanup_empty: Annotated[
         bool,
-        typer.Option(
-            "--cleanup-empty",
-            help="Remove empty directories after moving files",
-        ),
+        typer.Option("--cleanup-empty", help="Remove empty directories after moving"),
     ] = False,
     output_json: Annotated[
         bool, typer.Option("--json", "-j", help="Output result as JSON")
@@ -702,6 +757,16 @@ def move(
     if reference_tree:
         config.reference_tree_path = reference_tree
 
+    # Expand directories to file lists
+    ext_filter = _parse_extensions_filter(extensions)
+    expanded_files, source_dirs = _expand_paths_to_files(
+        files, recursive=recursive, ext_filter=ext_filter
+    )
+
+    if not expanded_files:
+        typer.echo("No files found matching criteria")
+        return
+
     pipeline = ClassificationPipeline(config)
     conflict_strategy = ConflictStrategy(conflict.value)
     results: list[dict[str, Any]] = []
@@ -712,11 +777,7 @@ def move(
         ("Would copy" if copy else "Would move") if dry_run else ("Copied" if copy else "Moved")
     )
 
-    # Collect source directories for empty cleanup
-    source_dirs: set[Path] = set()
-
-    for file in files:
-        resolved = file.resolve()
+    for resolved in expanded_files:
         source_dirs.add(resolved.parent)
 
         success, skipped = _handle_move_file(
@@ -745,7 +806,7 @@ def move(
 
     if output_json:
         typer.echo(json.dumps(results, indent=2))
-    elif len(files) > 1:
+    elif len(expanded_files) > 1:
         _print_move_summary(success_count, skip_count, fail_count)
 
 

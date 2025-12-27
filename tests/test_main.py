@@ -41,15 +41,15 @@ def test_classify_missing_path():
 
 
 def test_classify_nonexistent_file():
-    """Verify classify command warns on nonexistent file.
+    """Verify classify command handles nonexistent file gracefully.
 
-    With multi-file support, the command continues with warnings
-    instead of failing on individual missing files.
+    With directory/file expansion, nonexistent paths result in
+    'no files found' message rather than errors.
     """
     result = runner.invoke(app, ["classify", "/nonexistent/file.txt"])
-    # Should succeed but with warning (no files to process)
+    # Should succeed with informative message
     assert result.exit_code == 0
-    assert "not found" in result.output.lower() or "warning" in result.output.lower()
+    assert "no files found" in result.output.lower()
 
 
 def test_move_missing_path():
@@ -61,15 +61,15 @@ def test_move_missing_path():
 
 
 def test_move_nonexistent_file():
-    """Verify move command warns on nonexistent file.
+    """Verify move command handles nonexistent file gracefully.
 
-    With multi-file support, the command continues with warnings
-    instead of failing on individual missing files.
+    With directory/file expansion, nonexistent paths result in
+    'no files found' message rather than errors.
     """
     result = runner.invoke(app, ["move", "/nonexistent/file.txt", "--dry-run"])
-    # Should succeed but with warning (no files to process)
+    # Should succeed with informative message
     assert result.exit_code == 0
-    assert "not found" in result.output.lower() or "warning" in result.output.lower()
+    assert "no files found" in result.output.lower()
 
 
 def test_move_help():

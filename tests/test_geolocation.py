@@ -57,19 +57,34 @@ class TestLocationInfo:
         info = LocationInfo()
         assert info.display_name == "Unknown"
 
-    def test_folder_name_simple(self):
-        """Test folder_name for simple city name."""
+    def test_folder_name_city_only(self):
+        """Test folder_name for city without country."""
         info = LocationInfo(city="Geneva")
         assert info.folder_name == "Geneva"
 
+    def test_folder_name_country_and_city(self):
+        """Test folder_name returns country/city format."""
+        info = LocationInfo(city="Geneva", country="Switzerland")
+        assert info.folder_name == "Switzerland/Geneva"
+
+    def test_folder_name_country_and_region(self):
+        """Test folder_name returns country/region when no city."""
+        info = LocationInfo(region="California", country="United States")
+        assert info.folder_name == "United_States/California"
+
+    def test_folder_name_country_only(self):
+        """Test folder_name returns country when no city or region."""
+        info = LocationInfo(country="France")
+        assert info.folder_name == "France"
+
     def test_folder_name_with_spaces(self):
         """Test folder_name replaces spaces with underscores."""
-        info = LocationInfo(city="New York")
-        assert info.folder_name == "New_York"
+        info = LocationInfo(city="New York", country="United States")
+        assert info.folder_name == "United_States/New_York"
 
     def test_folder_name_with_forbidden_chars(self):
         """Test folder_name removes forbidden filesystem characters."""
-        info = LocationInfo(city='City: "Test" <name>')
+        info = LocationInfo(city='City: "Test" <name>', country="Country: Test")
         assert "<" not in info.folder_name
         assert ">" not in info.folder_name
         assert ":" not in info.folder_name
@@ -77,9 +92,11 @@ class TestLocationInfo:
 
     def test_folder_name_strips_underscores(self):
         """Test folder_name strips leading/trailing underscores."""
-        info = LocationInfo(city="  Test City  ")
+        info = LocationInfo(city="  Test City  ", country="  Test Country  ")
         assert not info.folder_name.startswith("_")
         assert not info.folder_name.endswith("_")
+        assert "/_" not in info.folder_name
+        assert "_/" not in info.folder_name
 
     def test_folder_name_unknown_fallback(self):
         """Test folder_name returns Unknown for empty location."""
@@ -352,3 +369,14 @@ class TestGetLocationFolder:
         result = get_location_folder(40.7, -74.0)
 
         assert result == "New_York_City"
+
+    @patch("para_files.utils.geolocation.reverse_geocode")
+    def test_returns_country_location_format(self, mock_reverse: MagicMock):
+        """Test returns country/location format when both available."""
+        mock_reverse.return_value = LocationInfo(
+            city="Geneva", country="Switzerland"
+        )
+
+        result = get_location_folder(46.2, 6.1)
+
+        assert result == "Switzerland/Geneva"

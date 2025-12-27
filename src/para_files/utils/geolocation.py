@@ -40,13 +40,30 @@ class LocationInfo(BaseModel):
 
     @property
     def folder_name(self) -> str:
-        """Return a filesystem-safe folder name for the location."""
-        name = self.display_name
-        # Replace forbidden characters and normalize
-        safe = re.sub(r'[<>:"/\\|?*]', "_", name)
-        safe = re.sub(r"\s+", "_", safe)
-        safe = safe.strip("_")
-        return safe or "Unknown"
+        """Return a filesystem-safe folder path for the location.
+
+        Returns country/location format when both are available.
+        E.g., "Switzerland/Geneva" or "United_States/New_York".
+        """
+
+        def sanitize(name: str) -> str:
+            """Make a name filesystem-safe."""
+            safe = re.sub(r'[<>:"/\\|?*]', "_", name)
+            safe = re.sub(r"\s+", "_", safe)
+            return safe.strip("_") or "Unknown"
+
+        # Get the most specific location
+        location = self.city or self.region
+        country = self.country
+
+        if country and location:
+            # Return country/location format
+            return f"{sanitize(country)}/{sanitize(location)}"
+        if country:
+            return sanitize(country)
+        if location:
+            return sanitize(location)
+        return "Unknown"
 
 
 def _get_nominatim_geolocator() -> object | None:
