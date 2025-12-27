@@ -149,8 +149,9 @@ routing_rules:
       "NetApp *",
       "Novell *", "*NCLA*", "*NASEP*",
       "VMware *", "Cisco *", "Microsoft *", "AWS *", "Google *",
-      "sacp_*", "*SACP*", "Symantec *",
-      "VTSP*", "VCP*", "VCAP*", "VCDX*"
+      "sacp_*", "*SACP*", "Symantec *", "asc_*",
+      "VTSP*", "VCP*", "VCAP*", "VCDX*",
+      "OCA *", "OCP *", "OCM *", "OCE *"
     ]
     extensions: [".pdf", ".png", ".jpg"]
     destination: "3_Resources/certifications/{YYYY}"
