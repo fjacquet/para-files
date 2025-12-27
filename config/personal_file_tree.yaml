@@ -117,6 +117,13 @@ routing_rules:
     destination: "3_Resources/documentation/presentations/{YYYY}"
     date_source: "file_modified"
 
+  # Dell technical documentation (presentations, guides, etc.)
+  dell_documentation:
+    patterns: ["*Dell*", "*PowerFlex*", "*PowerStore*", "*PowerScale*", "*VxRail*", "*PFMP*"]
+    extensions: [".pdf", ".pptx", ".ppt", ".docx", ".doc"]
+    destination: "3_Resources/documentation/Dell/{YYYY}"
+    date_source: "file_modified"
+
 # =============================================================================
 # 0_INBOX - Point d'entrée PLAT
 # =============================================================================
