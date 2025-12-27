@@ -1,5 +1,12 @@
 # para-files
 
+[![CI](https://github.com/fjacquet/para-files/actions/workflows/ci.yml/badge.svg?branch=maincd)](https://github.com/fjacquet/para-files/actions/workflows/ci.yml)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Checked with mypy](https://img.shields.io/badge/mypy-checked-blue.svg)](http://mypy-lang.org/)
+[![Platform: macOS](https://img.shields.io/badge/platform-macOS%20(Apple%20Silicon)-lightgrey.svg)](https://www.apple.com/macos/)
+
 **macOS-only (Apple Silicon)** intelligent file classification system using MLX-powered semantic routing.
 
 Implements the PARA method (Projects, Areas, Resources, Archives) with a deterministic 5-signal classification pipeline.
