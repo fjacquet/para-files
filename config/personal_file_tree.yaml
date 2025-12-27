@@ -185,6 +185,22 @@ routing_rules:
     date_source: "filename"
     date_pattern: "du (\\d{2})_(\\d{2})_(\\d{4})"  # Format: du DD_MM_YYYY
 
+  # BCV bank documents (avis, relevés)
+  bcv_avis:
+    patterns: ["5429324*_*", "*_E310_*", "*_E100_*", "*_E204_*"]
+    extensions: [".pdf"]
+    destination: "4_Archives/banques/BCV/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})-(\\d{2})-(\\d{2})"  # Format: YYYY-MM-DD in filename
+
+  # Romande Energie utility invoices
+  romande_energie:
+    patterns: ["*romande-energie*", "*Romande*Energie*"]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/Energie/Romande Energie/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})-(\\d{2})-(\\d{2})"  # Format: YYYY-MM-DD in filename
+
   # French tax documents (impots.gouv.fr)
   impots_france:
     patterns: [
