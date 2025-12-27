@@ -13,7 +13,7 @@ generated: "2025-12-25"
 # =============================================================================
 config:
   # Root directory for PARA folders (0_Inbox, 1_Projects, etc.)
-  para_root: "~/Documents/PARA"
+  para_root: "~/OneDrive\ -\ Home/PARA"
 
   # Number of characters to extract for semantic matching
   content_preview_chars: 2000
@@ -75,13 +75,47 @@ routing_rules:
 
   # Programmes et installeurs
   programmes:
-    extensions: [".exe", ".msi", ".dmg", ".pkg", ".app", ".deb", ".rpm", ".appimage", ".snap", ".flatpak", ".jar", ".war", ".apk", ".ipa"]
+    extensions:
+      [
+        ".exe",
+        ".msi",
+        ".dmg",
+        ".pkg",
+        ".app",
+        ".deb",
+        ".rpm",
+        ".appimage",
+        ".snap",
+        ".flatpak",
+        ".jar",
+        ".war",
+        ".apk",
+        ".ipa",
+      ]
     destination: "4_Archives/programmes"
 
   # Images disque ISO
   isos:
-    extensions: [".iso", ".img", ".bin", ".cue", ".nrg", ".mdf", ".vhd", ".vhdx", ".vmdk", ".qcow2"]
+    extensions:
+      [
+        ".iso",
+        ".img",
+        ".bin",
+        ".cue",
+        ".nrg",
+        ".mdf",
+        ".vhd",
+        ".vhdx",
+        ".vmdk",
+        ".qcow2",
+      ]
     destination: "4_Archives/isos"
+
+  # Presentations - not invoices!
+  presentations:
+    extensions: [".pptx", ".ppt", ".key", ".odp"]
+    destination: "3_Resources/documentation/presentations/{YYYY}"
+    date_source: "file_modified"
 
 # =============================================================================
 # 0_INBOX - Point d'entrée PLAT
@@ -607,6 +641,9 @@ known_issuers:
       - BCV
       - BCGE
       - BCN
+      - Selma
+      - Selma Finance
+      - Saxo Bank
 
   energie:
     pattern: "4_Archives/factures/Energie/{issuer}/{year}"

@@ -43,10 +43,15 @@ class DomainKBClassifier(BaseClassifier):
         """Build reverse mapping from issuer names to categories.
 
         Dynamically iterates all categories - no hardcoded category names.
+        First occurrence wins - if an issuer is in multiple categories,
+        the first one (in YAML order) takes precedence.
         """
         for category_name in self._known_issuers.list_categories():
             for issuer in self._known_issuers.get_issuers(category_name):
-                self._issuer_map[issuer.lower()] = (category_name, issuer)
+                issuer_lower = issuer.lower()
+                # First occurrence wins - don't overwrite if already exists
+                if issuer_lower not in self._issuer_map:
+                    self._issuer_map[issuer_lower] = (category_name, issuer)
 
     @property
     def name(self) -> str:
@@ -68,11 +73,12 @@ class DomainKBClassifier(BaseClassifier):
         content: str,
         metadata: FileMetadata | None = None,
     ) -> ClassificationResult | None:
-        """Search for known issuers, prioritizing filename over content.
+        """Search for known issuers, prioritizing filename and header over body.
 
         Priority order:
         1. Issuer in filename (highest priority - most reliable)
-        2. Issuer in content (lower priority - may have false positives)
+        2. Issuer in header section (first ~1000 chars - letterhead area)
+        3. Issuer in full content (lowest priority - may have false positives)
 
         Args:
             content: Text content to search.
@@ -87,7 +93,15 @@ class DomainKBClassifier(BaseClassifier):
             if filename_match:
                 return self._create_result(*filename_match, metadata)
 
-        # Priority 2: Check content (may have false positives like addresses)
+        # Priority 2: Check header section (letterhead area - first ~1000 chars)
+        # This is where the document issuer's name/logo typically appears
+        header_section = content[:1000].lower()
+        header_match = self._find_issuer_in_text(header_section)
+        if header_match:
+            return self._create_result(*header_match, metadata)
+
+        # Priority 3: Check full content (may have false positives)
+        # Only if nothing found in header - catches edge cases but less reliable
         content_match = self._find_issuer_in_text(content.lower())
         if content_match:
             return self._create_result(*content_match, metadata)
@@ -95,7 +109,11 @@ class DomainKBClassifier(BaseClassifier):
         return None
 
     def _find_issuer_in_text(self, text: str) -> tuple[str, str] | None:
-        """Find first matching issuer in text.
+        """Find the issuer that appears earliest in the text.
+
+        This prioritizes issuers by their position in the document,
+        so letterhead/header issuers are found before those mentioned
+        in the body (e.g., as transaction counterparties).
 
         Args:
             text: Lowercase text to search.
@@ -103,11 +121,19 @@ class DomainKBClassifier(BaseClassifier):
         Returns:
             Tuple of (category, original_name) if found, None otherwise.
         """
+        earliest_match: tuple[int, str, str] | None = None  # (position, category, name)
+
         for issuer_lower, (category, original_name) in self._issuer_map.items():
             # Use word boundary matching to avoid partial matches
             pattern = rf"\b{re.escape(issuer_lower)}\b"
-            if re.search(pattern, text):
-                return (category, original_name)
+            match = re.search(pattern, text)
+            if match:
+                position = match.start()
+                if earliest_match is None or position < earliest_match[0]:
+                    earliest_match = (position, category, original_name)
+
+        if earliest_match:
+            return (earliest_match[1], earliest_match[2])
         return None
 
     def _create_result(
