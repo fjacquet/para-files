@@ -6,8 +6,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from para_files.utils.file_utils import (
     TEXT_EXTENSIONS,
     _read_document_file,

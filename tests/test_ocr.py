@@ -10,8 +10,8 @@ import pytest
 from para_files.utils.ocr import (
     OCR_EXTENSIONS,
     OCRResult,
-    _extract_text_from_results,
     _extract_regions_from_results,
+    _extract_text_from_results,
     extract_text,
     extract_text_with_regions,
     is_vision_available,

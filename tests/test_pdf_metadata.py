@@ -5,8 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from para_files.utils.pdf_metadata import (
     PdfMetadata,
     contains_book_keywords,
@@ -261,7 +259,7 @@ class TestExtractPdfMetadata:
 
             def mock_import(name, *args, **kwargs):
                 if name == "pypdf" or name.startswith("pypdf"):
-                    raise ImportError("No module named 'pypdf'")
+                    raise ImportError(name)
                 return original_import(name, *args, **kwargs)
 
             builtins.__import__ = mock_import
@@ -347,9 +345,7 @@ class TestExtractPdfMetadata:
         assert result.page_count == 1
 
     @patch("pypdf.PdfReader")
-    def test_extraction_page_extraction_failure(
-        self, mock_reader_class: MagicMock, tmp_path: Path
-    ):
+    def test_extraction_page_extraction_failure(self, mock_reader_class: MagicMock, tmp_path: Path):
         """Test extraction when page text extraction fails."""
         pdf_file = tmp_path / "corrupted.pdf"
         pdf_file.write_bytes(b"%PDF-1.4")

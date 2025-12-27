@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from para_files.utils.isbn_lookup import (
     BookInfo,
     _extract_subjects_from_description,
@@ -240,7 +238,7 @@ class TestLookupIsbn:
 
             def mock_import(name, *args, **kwargs):
                 if name == "isbnlib":
-                    raise ImportError("No module named 'isbnlib'")
+                    raise ImportError(name)
                 return original_import(name, *args, **kwargs)
 
             builtins.__import__ = mock_import
@@ -303,7 +301,7 @@ class TestLookupIsbn:
     @patch("isbnlib.meta")
     @patch("isbnlib.desc")
     @patch("isbnlib.cover")
-    def test_lookup_success_with_enrichment(
+    def test_lookup_success_with_enrichment(  # noqa: PLR0913
         self,
         mock_cover: MagicMock,
         mock_desc: MagicMock,
@@ -346,7 +344,7 @@ class TestLookupIsbn:
     @patch("isbnlib.meta")
     @patch("isbnlib.desc")
     @patch("isbnlib.cover")
-    def test_lookup_isbn10_input(
+    def test_lookup_isbn10_input(  # noqa: PLR0913
         self,
         mock_cover: MagicMock,
         mock_desc: MagicMock,
@@ -380,7 +378,7 @@ class TestLookupIsbn:
     @patch("isbnlib.meta")
     @patch("isbnlib.desc")
     @patch("isbnlib.cover")
-    def test_lookup_enrichment_failures(
+    def test_lookup_enrichment_failures(  # noqa: PLR0913
         self,
         mock_cover: MagicMock,
         mock_desc: MagicMock,
@@ -526,7 +524,7 @@ class TestValidateIsbnExceptionHandling:
 
             def mock_import(name, *args, **kwargs):
                 if name == "isbnlib":
-                    raise Exception("Unexpected error")
+                    raise RuntimeError(name)
                 return original_import(name, *args, **kwargs)
 
             builtins.__import__ = mock_import
@@ -555,7 +553,7 @@ class TestNormalizeIsbnExceptionHandling:
 
             def mock_import(name, *args, **kwargs):
                 if name == "isbnlib":
-                    raise Exception("Unexpected error")
+                    raise RuntimeError(name)
                 return original_import(name, *args, **kwargs)
 
             builtins.__import__ = mock_import
@@ -584,7 +582,7 @@ class TestIsbnToIsbn13ExceptionHandling:
 
             def mock_import(name, *args, **kwargs):
                 if name == "isbnlib":
-                    raise Exception("Unexpected error")
+                    raise RuntimeError(name)
                 return original_import(name, *args, **kwargs)
 
             builtins.__import__ = mock_import

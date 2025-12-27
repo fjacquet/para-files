@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from para_files.classifiers.semantic_router import SemanticRouterClassifier
 from para_files.types import ClassificationSource, Route
 

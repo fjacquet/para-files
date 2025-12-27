@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from para_files.classifiers.llm_fallback import (
     SYSTEM_PROMPT,
     LLMFallbackClassifier,
@@ -218,13 +216,13 @@ class TestLLMFallbackCallLLM:
         """Test _call_llm when litellm is not installed."""
         classifier = LLMFallbackClassifier(enabled=True)
 
-        with patch.dict("sys.modules", {"litellm": None}):
-            with patch(
-                "para_files.classifiers.llm_fallback.LLMFallbackClassifier._call_llm"
-            ) as mock:
-                mock.return_value = None
-                result = classifier._call_llm("content", None)
-                assert result is None
+        with (
+            patch.dict("sys.modules", {"litellm": None}),
+            patch("para_files.classifiers.llm_fallback.LLMFallbackClassifier._call_llm") as mock,
+        ):
+            mock.return_value = None
+            result = classifier._call_llm("content", None)
+            assert result is None
 
     @patch("litellm.completion")
     def test_call_llm_success(self, mock_completion: MagicMock):
@@ -233,9 +231,7 @@ class TestLLMFallbackCallLLM:
         mock_response = MagicMock()
         mock_response.choices = [
             MagicMock(
-                message=MagicMock(
-                    content='{"category": "4_Archives/test", "confidence": 0.85}'
-                )
+                message=MagicMock(content='{"category": "4_Archives/test", "confidence": 0.85}')
             )
         ]
         mock_completion.return_value = mock_response

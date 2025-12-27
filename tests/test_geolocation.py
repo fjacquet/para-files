@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from para_files.utils.geolocation import (
     LocationInfo,
     _cached_reverse_geocode,
@@ -123,7 +121,7 @@ class TestGetNominatimGeolocator:
 
             def mock_import(name, *args, **kwargs):
                 if name == "geopy.geocoders" or name.startswith("geopy"):
-                    raise ImportError("No module named 'geopy'")
+                    raise ImportError(name)
                 return original_import(name, *args, **kwargs)
 
             builtins.__import__ = mock_import

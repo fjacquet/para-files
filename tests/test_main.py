@@ -379,9 +379,7 @@ class TestMoveCommand:
         test_file = tmp_path / "original.txt"
         test_file.write_text("Original content")
 
-        result = runner.invoke(
-            app, ["move", str(test_file), "--copy", "--dry-run"]
-        )
+        result = runner.invoke(app, ["move", str(test_file), "--copy", "--dry-run"])
         assert result.exit_code == 0
 
     def test_move_multiple_files_dry_run(self, tmp_path):
@@ -391,9 +389,7 @@ class TestMoveCommand:
         file1.write_text("Content A")
         file2.write_text("Content B")
 
-        result = runner.invoke(
-            app, ["move", str(file1), str(file2), "--dry-run"]
-        )
+        result = runner.invoke(app, ["move", str(file1), str(file2), "--dry-run"])
         assert result.exit_code == 0
 
 
@@ -586,9 +582,7 @@ class TestCleanAdvanced:
         nfo_file = tmp_path / "movie.nfo"
         nfo_file.write_text("<?xml version='1.0'?><movie><title>Test</title></movie>")
 
-        result = runner.invoke(
-            app, ["clean", str(tmp_path), "--nfo", "--dry-run"]
-        )
+        result = runner.invoke(app, ["clean", str(tmp_path), "--nfo", "--dry-run"])
         assert result.exit_code == 0
 
     def test_clean_removes_ds_store(self, tmp_path):
@@ -629,9 +623,7 @@ class TestMoveAdvanced:
         test_file = tmp_path / "test.txt"
         test_file.write_text("Test content")
 
-        result = runner.invoke(
-            app, ["move", str(test_file), "--dry-run", "--conflict", "skip"]
-        )
+        result = runner.invoke(app, ["move", str(test_file), "--dry-run", "--conflict", "skip"])
         assert result.exit_code == 0
 
     def test_move_with_conflict_rename(self, tmp_path):
@@ -639,9 +631,7 @@ class TestMoveAdvanced:
         test_file = tmp_path / "test.txt"
         test_file.write_text("Test content")
 
-        result = runner.invoke(
-            app, ["move", str(test_file), "--dry-run", "--conflict", "rename"]
-        )
+        result = runner.invoke(app, ["move", str(test_file), "--dry-run", "--conflict", "rename"])
         assert result.exit_code == 0
 
     def test_move_with_conflict_overwrite(self, tmp_path):
@@ -659,9 +649,7 @@ class TestMoveAdvanced:
         test_file = tmp_path / "test.txt"
         test_file.write_text("Random content")
 
-        result = runner.invoke(
-            app, ["move", str(test_file), "--dry-run", "--skip-unclassifiable"]
-        )
+        result = runner.invoke(app, ["move", str(test_file), "--dry-run", "--skip-unclassifiable"])
         assert result.exit_code == 0
 
     def test_move_json_output(self, tmp_path):
@@ -669,9 +657,7 @@ class TestMoveAdvanced:
         test_file = tmp_path / "test.txt"
         test_file.write_text("Test content")
 
-        result = runner.invoke(
-            app, ["move", str(test_file), "--dry-run", "--json"]
-        )
+        result = runner.invoke(app, ["move", str(test_file), "--dry-run", "--json"])
         assert result.exit_code == 0
 
 
@@ -684,9 +670,7 @@ class TestClassifyAdvanced:
         test_file.write_text("Test content")
         fake_tree = tmp_path / "nonexistent.yaml"
 
-        result = runner.invoke(
-            app, ["classify", str(test_file), "-r", str(fake_tree)]
-        )
+        result = runner.invoke(app, ["classify", str(test_file), "-r", str(fake_tree)])
         # Should fail because tree doesn't exist
         assert result.exit_code != 0 or "error" in result.output.lower()
 
