@@ -37,7 +37,7 @@ Welcome to para-files! This documentation is organized by how you want to use it
 - **[Architecture Overview](architecture/overview.md)** - The big picture
 - **[6-Signal Pipeline](architecture/overview.md#the-6-signals)** - How files are classified
 - **[Reference Tree](architecture/reference-tree.md)** - YAML structure explained
-- **[MLX Embeddings](architecture/mlx-embeddings.md)** - Semantic matching details
+- **[MLX Embeddings](architecture/signal-4-semantic.md)** - Semantic matching details
 
 ### Troubleshoot Issues
 
@@ -49,7 +49,6 @@ Welcome to para-files! This documentation is organized by how you want to use it
 
 - **[Developer Guide](CLAUDE.md)** - Building & contributing (in CLAUDE.md)
 - **[Python API](advanced/programmatic-usage.md)** - Use para-files in your code
-- **[Custom Classifiers](advanced/custom-classifier.md)** - Add your own signals
 
 ## Quick Commands Reference
 

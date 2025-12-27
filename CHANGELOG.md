@@ -76,6 +76,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Enfant: Commune de Montreux, Leukerbad Skischule
   - Voyages: ebookers, Interhome, Ulys, Kontiki, airlines
 
+### Documentation
+
+- Fixed Jekyll just-the-docs navigation structure:
+  - Created missing parent pages: `cli.md`, `tasks.md`, `configuration.md`, `troubleshooting.md`, `advanced.md`
+  - Added `has_children: true` to parent pages enabling proper sidebar navigation
+  - Fixed broken links in `index.md` (mlx-embeddings, custom-classifier)
+  - Standardized `nav_order` across all parent pages for logical menu ordering
+
 ### Changed
 
 - Moved `personal_file_tree.yaml` to `config/` folder
