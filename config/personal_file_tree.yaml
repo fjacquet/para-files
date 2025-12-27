@@ -157,6 +157,12 @@ routing_rules:
     destination: "3_Resources/certifications/{YYYY}"
     date_source: "file_modified"
 
+  # Exam preparation files (VCE, exam dumps)
+  exam_prep:
+    extensions: [".vce", ".exam"]
+    destination: "3_Resources/certifications/exam-prep"
+    date_source: "file_modified"
+
   # Software licenses
   software_licenses:
     extensions: [".lic", ".license", ".key"]
@@ -567,6 +573,21 @@ archives:
         - "facture médecin"
         - "facture pharmacie"
         - "facture dentiste"
+        - "résultats laboratoire"
+        - "analyse médicale"
+        - "laboratoire médical"
+
+    - name: "factures-divers"
+      pattern: "4_Archives/factures/Divers/{year}"
+      utterances:
+        - "facture achat"
+        - "frais de douane"
+        - "frais de port"
+        - "livraison colis"
+        - "commande en ligne"
+        - "achat internet"
+        - "facture luminaire"
+        - "faire-part"
 
     - name: "factures-mobilite"
       pattern: "4_Archives/factures/Mobilité/{issuer}/{year}"
@@ -704,6 +725,15 @@ archives:
         - "entretien maison"
         - "réparation"
         - "travaux terminés"
+        - "électroménager"
+        - "sèche-linge"
+        - "lave-linge"
+        - "lave-vaisselle"
+        - "réfrigérateur"
+        - "SAV appareil"
+        - "blocage courrier"
+        - "faire-part mariage"
+        - "faire-part naissance"
 
     # --- Dell projets clos : customer/year ---
     - name: "dell-projects-closed"
@@ -818,6 +848,11 @@ known_issuers:
       - CHUV
       - HUG
       - Pharmacie
+      - Laboratoires CDL
+      - laboratoirescdl
+      - CDL
+      - Unilabs
+      - Synlab
 
   materiels:
     pattern: "4_Archives/factures/Materiels/{issuer}/{year}"
@@ -833,6 +868,11 @@ known_issuers:
       - MediaMarkt
       - QoQa
       - QoQa Services
+      - Fust
+      - FedEx
+      - La Poste
+      - DHL
+      - UPS
 
   prevoyance:
     pattern: "4_Archives/prevoyance/{issuer}/{year}"
