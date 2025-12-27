@@ -6,7 +6,7 @@ nav_order: 2
 
 # Architecture
 
-para-files uses a **5-signal classification pipeline** where each signal is tried in priority order. The first classifier that returns a confident result wins.
+para-files uses a **6-signal classification pipeline** where each signal is tried in priority order. The first classifier that returns a confident result wins.
 
 ## Pipeline Overview
 
@@ -16,7 +16,9 @@ flowchart TD
     B -->|Match| Z[Classification Result]
     B -->|No Match| C{Signal 2: Rules Engine}
     C -->|Match| Z
-    C -->|No Match| D{Signal 3: Domain KB}
+    C -->|No Match| C2{Signal 2.5: Book Detector}
+    C2 -->|Match| Z
+    C2 -->|No Match| D{Signal 3: Domain KB}
     D -->|Match| Z
     D -->|No Match| E{Signal 4: Semantic Router}
     E -->|Match| Z
@@ -32,6 +34,7 @@ flowchart TD
 |--------|------------|-------------|
 | **1. Validated DB** | 100% | Manual sender/issuer → category mappings from user feedback |
 | **2. Rules Engine** | 95% | Glob patterns on filename, path, or sender domain |
+| **2.5 Book Detector** | 92% | PDF book detection via ISBN lookup, metadata, and content structure |
 | **3. Domain KB** | 90% | Known domain/issuer to category mappings from reference tree |
 | **4. Semantic Router** | 85% | MLX embedding similarity to reference category utterances |
 | **5. LLM Fallback** | Configurable | Optional AI classification for ambiguous cases |
@@ -53,6 +56,7 @@ graph LR
     subgraph Classifiers
         E[ValidatedDB]
         F[RulesEngine]
+        F2[BookDetector]
         G[DomainKB]
         H[SemanticRouter]
         I[LLMFallback]
@@ -62,15 +66,23 @@ graph LR
         J[MLXEncoder]
     end
 
+    subgraph Utils
+        K[ISBNLookup]
+        L[PDFMetadata]
+    end
+
     A --> B
     B --> C
     B --> D
     B --> E
     B --> F
+    B --> F2
     B --> G
     B --> H
     B --> I
     H --> J
+    F2 --> K
+    F2 --> L
 ```
 
 ## MLX Stack
@@ -79,6 +91,47 @@ graph LR
 - **Library**: `mlx-embedding-models` for Apple Silicon optimization
 - **Semantic Router**: `aurelio-labs/semantic-router` with custom MLX encoder
 - **LLM Fallback**: Optional Qwen 2.5-1.5B via Ollama (requires separate setup)
+
+## Book Detector
+
+The Book Detector (Signal 2.5) identifies technical books in PDF format using a multi-signal approach:
+
+```mermaid
+flowchart LR
+    PDF[PDF File] --> A{ISBN Extraction}
+    A -->|Found| B[ISBN Lookup]
+    B --> C[Book Metadata]
+
+    PDF --> D{PDF Metadata}
+    D --> E[Author/Title/Subject]
+
+    PDF --> F{Content Analysis}
+    F --> G[TOC/Index/Structure]
+
+    C --> H{Technology Detection}
+    E --> H
+    G --> H
+
+    H --> I[Route to livres/technology]
+```
+
+### Detection Signals
+
+| Signal | Weight | Description |
+|--------|--------|-------------|
+| **ISBN Lookup** | Highest | ISBN found and confirmed via Google Books/Open Library |
+| **PDF Metadata** | High | Author, title, subject fields indicate book format |
+| **Content Structure** | Medium | Table of contents, chapter markers, index patterns |
+| **File Size** | Low | Books typically >1MB |
+
+### Technology Categorization
+
+Detected technologies are mapped to subdirectories:
+
+- `3_Resources/livres/python/` - Python books
+- `3_Resources/livres/kubernetes/` - K8s/container books
+- `3_Resources/livres/cloud/` - AWS, Azure, GCP books
+- And 16+ other technology categories
 
 ## Reference Tree Structure
 

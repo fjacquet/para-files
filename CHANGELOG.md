@@ -39,7 +39,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Routes books to `3_Resources/livres/{technology}`
 - New `BOOK_DETECTOR` classification source for book detection results
 - `geopy` dependency for GPS reverse geocoding
-- Comprehensive test suite for book detection (83 new tests, 395 total)
+- Comprehensive test suite for book detection (83 new tests, 621 total)
+- **documentation-master** Claude Code skill for documentation guardianship and onboarding:
+  - Developer onboarding guide with environment setup and codebase orientation
+  - User onboarding guide with quick start and common workflows
+  - Documentation templates for README, CHANGELOG, docstrings, and PRs
+  - Audit checklists for quick, weekly, monthly, and pre-release reviews
 - GitHub Actions CI workflow with macOS-14 runner (Apple Silicon)
 - New 2_Areas routes for personal collections:
   - `perso-photos`: Collection photos personnelles
