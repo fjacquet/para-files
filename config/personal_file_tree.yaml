@@ -157,6 +157,22 @@ routing_rules:
     destination: "4_Archives/banques/exports/{YYYY}"
     date_source: "file_modified"
 
+  # Credit Agricole bank statements
+  credit_agricole:
+    patterns: ["Relevé n°*"]
+    extensions: [".pdf"]
+    destination: "4_Archives/banques/Credit Agricole/{YYYY}"
+    date_source: "filename"
+    date_pattern: "du (\\d{2})_(\\d{2})_(\\d{4})"  # Format: du DD_MM_YYYY
+
+  # French tax documents (impots.gouv.fr)
+  impots_france:
+    patterns: ["Avis_d_impot_*", "Avis*impot*", "*impots.gouv*"]
+    extensions: [".pdf"]
+    destination: "4_Archives/impots-france/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})_sur_les_revenus"  # Format: YYYY_sur_les_revenus
+
 # =============================================================================
 # 0_INBOX - Point d'entrée PLAT
 # =============================================================================
@@ -461,6 +477,9 @@ archives:
         - "Swica"
         - "Groupe Mutuel"
         - "Vaudoise"
+        - "Generali"
+        - "attestation prévoyance"
+        - "cotisations prévoyance"
 
     - name: "banques"
       pattern: "4_Archives/banques/{issuer}/{year}"
@@ -469,6 +488,9 @@ archives:
         - "relevé de compte"
         - "extrait de compte"
         - "frais bancaires"
+        - "Credit Agricole"
+        - "UBS"
+        - "PostFinance"
 
     - name: "factures-energie"
       pattern: "4_Archives/factures/Energie/{issuer}/{year}"
@@ -636,6 +658,14 @@ archives:
         - "analyse"
         - "radiographie"
         - "prescription"
+        - "résultats analyses"
+        - "analyse sanguine"
+        - "bilan sanguin"
+        - "laboratoire"
+        - "prise de sang"
+        - "IRM"
+        - "scanner"
+        - "échographie"
 
     # --- Maison par année ---
     - name: "maison"
