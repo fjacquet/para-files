@@ -9,440 +9,82 @@
 
 **macOS-only (Apple Silicon)** intelligent file classification system using MLX-powered semantic routing.
 
-Implements the PARA method (Projects, Areas, Resources, Archives) with a deterministic 5-signal classification pipeline.
-
-## Requirements
-
-- macOS with Apple Silicon (M1/M2/M3)
-- Python 3.12+
-- [uv](https://docs.astral.sh/uv/) package manager
-
-## Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/para-files.git
-cd para-files
-
-# Install dependencies
-uv sync --all-extras
-```
+Implements the **PARA method** (Projects, Areas, Resources, Archives) with a deterministic **6-signal classification pipeline**.
 
 ## Quick Start
 
 ```bash
-# Set required configuration (see Configuration section)
-export PARA_FILES_PARA_ROOT="/path/to/your/para/folder"
+# 1. Install
+git clone https://github.com/fjacquet/para-files.git
+cd para-files
+uv sync --all-extras
 
-# Classify a file
+# 2. Configure
+export PARA_FILES_PARA_ROOT=~/Documents/PARA
+
+# 3. Classify files
 uv run para-files classify document.pdf
-
-# Classify multiple files
-uv run para-files classify *.pdf
-
-# JSON output
-uv run para-files classify document.pdf --json
-```
-
-## CLI Commands
-
-### classify
-
-Classify one or more files using the PARA method.
-
-```bash
-# Single file
-uv run para-files classify document.pdf
-
-# Multiple files
-uv run para-files classify file1.pdf file2.docx file3.txt
-
-# With custom reference tree
-uv run para-files classify document.pdf -r my_tree.yaml
-
-# JSON output
-uv run para-files classify document.pdf --json
-
-# Verbose logging
-uv run para-files classify document.pdf -v
-```
-
-### move
-
-Classify and move one or more files to their PARA destinations.
-
-```bash
-# Move single file
-uv run para-files move document.pdf
-
-# Move multiple files
-uv run para-files move file1.pdf file2.docx file3.txt
-
-# Dry run (preview without moving)
 uv run para-files move *.pdf --dry-run
-
-# Copy instead of move
-uv run para-files move document.pdf --copy
-
-# Handle conflicts (skip, overwrite, rename, rename_with_date)
-uv run para-files move document.pdf --conflict rename
-
-# Add date prefix to filename
-uv run para-files move document.pdf --date-prefix
-
-# Skip files that can't be classified (instead of warning)
-uv run para-files move *.pdf --skip-unclassifiable
-
-# Clean up empty directories after moving files
-uv run para-files move *.pdf --cleanup-empty
-
-# JSON output
-uv run para-files move *.pdf --json
 ```
 
-### scan
+**→ [Complete Getting Started Guide](docs/getting-started/installation.md)**
 
-Scan a directory and preview file classifications without moving.
+## System Requirements
+
+- **macOS** with Apple Silicon (M1/M2/M3/M4)
+- **Python 3.12+**
+- **[uv](https://docs.astral.sh/uv/)** package manager
+
+## Key Features
+
+- **6-Signal Pipeline** - Cascading classification for high accuracy
+- **MLX Embeddings** - Fast semantic matching on Apple Neural Engine
+- **PARA Method** - Organize into Projects, Areas, Resources, Archives
+- **No Setup** - Works out of the box with reasonable defaults
+- **Extensible** - Add custom routes, issuers, and utterances via YAML
+- **Interactive Learning** - Improve accuracy by correcting classifications
+
+## Essential Commands
 
 ```bash
-# Scan directory
-uv run para-files scan ~/Downloads
-
-# Recursive scan
-uv run para-files scan ~/Downloads --recursive
-
-# Filter by extensions
-uv run para-files scan ~/Downloads --ext ".pdf,.docx"
-
-# JSON output with statistics
-uv run para-files scan ~/Downloads --json
+uv run para-files classify file.pdf         # Determine category
+uv run para-files move *.pdf --dry-run      # Preview move
+uv run para-files move *.pdf                # Move files
+uv run para-files learn wrong_file.pdf      # Learn from mistakes
+uv run para-files add-issuer "Bank" -c cat  # Register company
+uv run para-files add-utterance route "kw"  # Add keywords
 ```
 
-### init
-
-Initialize PARA folder structure from reference tree.
-
-> **Note**: The `move` command automatically creates destination folders if they don't exist.
-> Use `init` only for pre-creating the folder structure before any classification.
-
-```bash
-# Create PARA folders at default location
-uv run para-files init
-
-# Create at specific location
-uv run para-files init /path/to/para
-
-# Include subfolders from routes
-uv run para-files init --subfolders
-
-# Preview without creating
-uv run para-files init --dry-run
-```
-
-### tree
-
-Display and validate the reference tree structure.
-
-```bash
-# Show tree structure
-uv run para-files tree
-
-# Validate for errors/warnings
-uv run para-files tree --validate
-
-# Show known issuers
-uv run para-files tree --issuers
-
-# Show routing rules
-uv run para-files tree --rules
-
-# Verbose (show all issuers)
-uv run para-files tree --issuers -v
-```
-
-### routes
-
-List all available routes in the reference tree.
-
-```bash
-# List routes
-uv run para-files routes
-
-# Show utterances for each route
-uv run para-files routes --utterances
-```
-
-### issuers
-
-List all known issuers by category.
-
-```bash
-uv run para-files issuers
-```
-
-### add-issuer
-
-Add a new issuer to the reference tree.
-
-```bash
-# Add issuer to category
-uv run para-files add-issuer "New Bank SA" --category banques
-```
-
-### add-utterance
-
-Add a new utterance to a route for better semantic matching.
-
-```bash
-# Add utterance to route
-uv run para-files add-utterance factures-mobilite "Golden Pass Line"
-```
-
-### learn
-
-Interactive classification learning from a file.
-
-```bash
-# Learn from a file interactively
-uv run para-files learn document.pdf
-
-# With custom reference tree
-uv run para-files learn document.pdf -r my_tree.yaml
-
-# Verbose mode
-uv run para-files learn document.pdf -v
-```
-
-The learn command:
-1. Classifies the file using the current pipeline
-2. Shows the suggested route and confidence
-3. Asks for confirmation or correction
-4. Optionally adds new keywords to improve future matching
-
-### test-route
-
-Test a route's configuration and optionally match a file against it.
-
-```bash
-# Show route details
-uv run para-files test-route factures-mobilite
-
-# Test a file against a specific route
-uv run para-files test-route factures-mobilite --file invoice.pdf
-
-# Verbose mode shows more details
-uv run para-files test-route factures-mobilite -v
-```
-
-### config
-
-Show configuration values.
-
-```bash
-# Show current configuration values
-uv run para-files config --show
-
-# Show reference tree path
-uv run para-files config --path
-```
-
-### clean
-
-Clean up junk files, empty directories, and optional NFO files from a directory.
-
-```bash
-# Clean junk files from directory (default: recursive)
-uv run para-files clean ~/Downloads
-
-# Non-recursive clean
-uv run para-files clean ~/Downloads --no-recursive
-
-# Dry run (preview without deleting)
-uv run para-files clean ~/Downloads --dry-run
-
-# Also delete .nfo files
-uv run para-files clean ~/Downloads --nfo
-
-# Skip empty directory cleanup
-uv run para-files clean ~/Downloads --no-empty-dirs
-
-# Log cleanup actions to JSON file
-uv run para-files clean ~/Downloads --log cleanup.json
-
-# JSON output
-uv run para-files clean ~/Downloads --json
-
-# Verbose mode
-uv run para-files clean ~/Downloads -v
-```
-
-Cleaned file types:
-- **Apple temp files**: `.DS_Store`, `._*` (AppleDouble), `.Spotlight-V100`, `.Trashes`, `.fseventsd`
-- **Windows temp files**: `Thumbs.db`, `desktop.ini`, `$RECYCLE.BIN`
-- **Editor backup files**: `*~`, `.swp`, `.swo`
-- **Empty directories**: Removed bottom-up after junk cleanup
-
-## Configuration
-
-Configuration is loaded from (in priority order):
-1. Environment variables with `PARA_FILES_` prefix
-2. `.env` file in current directory
-3. `config:` section in reference tree YAML (`personal_file_tree.yaml`)
-4. Default values
-
-### Required Settings
-
-| Variable               | Description                                                        |
-|------------------------|--------------------------------------------------------------------|
-| `PARA_FILES_PARA_ROOT` | Root directory containing PARA folders (0_Inbox, 1_Projects, etc.) |
-
-### MLX Model Configuration
-
-The embedding model is **loaded lazily** on first classification. No manual download is needed - the model is fetched automatically from Hugging Face on first use.
-
-| Variable                         | Default                               | Description                          |
-|----------------------------------|---------------------------------------|--------------------------------------|
-| `PARA_FILES_MLX_MODEL_NAME`      | `mlx-community/nomic-embed-text-v1.5` | MLX embedding model from HuggingFace |
-| `PARA_FILES_MLX_SCORE_THRESHOLD` | `0.75`                                | Minimum similarity score (0.0-1.0)   |
-
-### LLM Fallback Configuration (Optional)
-
-| Variable                              | Default               | Description                      |
-|---------------------------------------|-----------------------|----------------------------------|
-| `PARA_FILES_LLM_ENABLED`              | `false`               | Enable LLM for ambiguous cases   |
-| `PARA_FILES_LLM_MODEL`                | `ollama/qwen2.5:1.5b` | LLM model identifier for litellm |
-| `PARA_FILES_LLM_CONFIDENCE_THRESHOLD` | `0.6`                 | Minimum LLM confidence           |
-| `PARA_FILES_LLM_API_BASE`             | `null`                | API base URL (for Ollama, etc.)  |
-
-### Other Settings
-
-| Variable                           | Default                   | Description                        |
-|------------------------------------|---------------------------|------------------------------------|
-| `PARA_FILES_REFERENCE_TREE_PATH`   | `config/personal_file_tree.yaml` | Path to PARA reference tree YAML   |
-| `PARA_FILES_VALIDATED_DB_PATH`     | `null`                    | Path to validated mappings JSON    |
-| `PARA_FILES_CONTENT_PREVIEW_CHARS` | `2000`                    | Characters to extract for matching |
-
-### Example `.env` File
-
-```bash
-# Required
-PARA_FILES_PARA_ROOT=/Users/you/Documents/PARA
-
-# Optional: Reference tree location
-PARA_FILES_REFERENCE_TREE_PATH=/Users/you/.config/para-files/personal_file_tree.yaml
-
-# Optional: Adjust similarity threshold
-PARA_FILES_MLX_SCORE_THRESHOLD=0.80
-
-# Optional: Enable LLM fallback with Ollama
-PARA_FILES_LLM_ENABLED=true
-PARA_FILES_LLM_API_BASE=http://localhost:11434
-```
-
-### Example `config:` Section in YAML
-
-Add to your `personal_file_tree.yaml`:
-
-```yaml
-# At the top of personal_file_tree.yaml
-config:
-  para_root: "~/Documents/PARA"
-  content_preview_chars: 2000
-
-  mlx:
-    model_name: "nomic-text-v1.5"
-    score_threshold: 0.75
-
-  llm:
-    enabled: false
-    # model: "ollama/qwen2.5:1.5b"
-    # api_base: "http://localhost:11434"
-
-# ... rest of your routes, issuers, etc.
-```
-
-## Model Loading
-
-The MLX embedding model is loaded **lazily** - it downloads automatically on first use:
-
-```python
-from para_files.encoders import MLXEncoder
-
-# Create encoder (model not loaded yet)
-encoder = MLXEncoder(
-    model_name="mlx-community/nomic-embed-text-v1.5",
-    score_threshold=0.75,
-)
-
-# Model loads on first call (~100MB download, cached thereafter)
-embeddings = encoder(["Hello world"])
-```
-
-The model is cached in `~/.cache/huggingface/` after first download.
-
-### Programmatic Usage
-
-```python
-from pathlib import Path
-from para_files.config import load_config
-from para_files.pipeline import ClassificationPipeline
-
-# Load config from environment
-config = load_config()
-
-# Or with explicit values
-config = load_config(
-    para_root=Path("/Users/you/PARA"),
-    reference_tree_path=Path("config/personal_file_tree.yaml"),
-)
-
-# Create pipeline (lazy initialization)
-pipeline = ClassificationPipeline(config)
-
-# Classify a file
-result = pipeline.classify_file(Path("document.pdf"))
-
-print(f"Category: {result.category}")
-print(f"Confidence: {result.confidence.value:.0%}")
-print(f"Source: {result.confidence.source.value}")
-```
-
-## Architecture
-
-### 6-Signal Classification Pipeline
-
-Files are classified using signals in priority order (first match wins):
-
-| Signal             | Confidence   | Description                                      |
-|--------------------|--------------|--------------------------------------------------|
-| 1. Validated DB    | 100%         | Manual sender/issuer → category mappings         |
-| 2. Rules Engine    | 95%          | Glob patterns on filename/path/domain            |
-| 2.5 Book Detector  | 92%          | PDF book detection via ISBN/metadata/structure   |
-| 3. Domain KB       | 90%          | Known domain/issuer to category mappings         |
-| 4. Semantic Router | 85%          | MLX embedding similarity to reference categories |
-| 5. LLM Fallback    | Configurable | Optional AI for ambiguous cases                  |
-
-### MLX Stack
-
-- **Embeddings**: `nomic-embed-text-v1.5` via `mlx-community` (~100MB, 10-15ms latency)
-- **Semantic Router**: Custom implementation with cosine similarity
-- **SLM Fallback**: Optional Qwen 2.5-1.5B-Instruct via Ollama
-- **OCR**: Vision Framework (Apple Neural Engine) for image text extraction
-- **Document Conversion**: Pandoc integration for Office/ebook formats
-
-### Reference Tree
-
-The `personal_file_tree.yaml` defines:
-- PARA folder structure with paths
-- Semantic utterances for each category (used for embedding matching)
-- Special routing rules (photos by date/location, videos, courses by platform)
-- Known issuers database (banks, insurance, utilities)
-
-### Special Features
-
-- **Photo/Video Geolocation**: Files with GPS EXIF data are organized by location (e.g., `4_Archives/photos/2024/Geneva/06/15/`)
-- **Book Detection**: Technical PDF books are automatically detected via ISBN lookup, metadata analysis, and content structure patterns
-- **Technology Categorization**: Books are routed to `3_Resources/livres/{technology}` based on detected technology (Python, Kubernetes, etc.)
+**→ [Full CLI Reference](docs/cli/overview.md)**
+
+## Documentation
+
+Quick links to common tasks:
+
+- **Getting Started** - [Installation](docs/getting-started/installation.md) • [Quick Setup](docs/getting-started/quick-setup.md) • [First File](docs/getting-started/first-file.md)
+- **How-To Guides** - [Set Up PARA](docs/tasks/set-up-para-folder.md) • [Classify](docs/tasks/classify-single-file.md) • [Move](docs/tasks/move-files.md) • [Issuers](docs/tasks/manage-issuers.md) • [Learn](docs/tasks/learn-from-files.md)
+- **Configuration** - [Overview](docs/configuration/overview.md) • [Env Variables](docs/configuration/env-file.md) • [YAML Config](docs/configuration/yaml-config.md)
+- **Understanding** - [Architecture](docs/architecture/overview.md) • [Signals](docs/architecture/overview.md) • [Semantic Matching](docs/architecture/signal-4-semantic.md)
+- **Troubleshooting** - [Inbox Issues](docs/troubleshooting/files-going-to-inbox.md) • [Low Confidence](docs/troubleshooting/confidence-too-low.md) • [Slow Model](docs/troubleshooting/model-download-slow.md)
+
+**→ [Complete Documentation Index](docs/index.md)**
+
+## All CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `classify` | Determine file category |
+| `move` | Move files to PARA folders |
+| `scan` | Preview classifications for directory |
+| `learn` | Interactive improvement |
+| `add-issuer` | Register company/bank |
+| `add-utterance` | Add matching keywords |
+| `tree`, `routes`, `issuers` | View configuration |
+| `config` | Show settings |
+| `init` | Create folder structure |
+| `clean` | Remove junk files |
+
+**→ [CLI Reference](docs/cli/overview.md)**
 
 ## Development
 
@@ -450,58 +92,14 @@ The `personal_file_tree.yaml` defines:
 # Install with dev dependencies
 uv sync --all-extras
 
-# Run linter
+# Run quality checks
 uv run ruff check src/ tests/
-
-# Run formatter
 uv run ruff format src/ tests/
-
-# Run type checker
 uv run mypy src/
-
-# Run tests
-uv run pytest -v
-
-# Run all checks
-uv run ruff check src/ tests/ && uv run ruff format --check src/ tests/ && uv run mypy src/ && uv run pytest
+uv run pytest
 ```
 
-## Project Structure
-
-```text
-para-files/
-├── src/para_files/
-│   ├── __init__.py
-│   ├── main.py              # CLI entry point
-│   ├── config.py            # Configuration management
-│   ├── pipeline.py          # 6-signal classification orchestrator
-│   ├── reference_tree.py    # YAML reference tree loader
-│   ├── types.py             # Data types and models
-│   ├── classifiers/         # Classification signals
-│   │   ├── validated_db.py  # Signal 1: Manual mappings
-│   │   ├── rules_engine.py  # Signal 2: Glob patterns
-│   │   ├── book_detector.py # Signal 2.5: Book detection
-│   │   ├── domain_kb.py     # Signal 3: Known issuers
-│   │   ├── semantic_router.py  # Signal 4: MLX embeddings
-│   │   └── llm_fallback.py  # Signal 5: LLM fallback
-│   ├── encoders/
-│   │   └── mlx_encoder.py   # MLX embedding encoder
-│   └── utils/
-│       ├── file_utils.py    # File content extraction
-│       ├── geolocation.py   # GPS reverse geocoding
-│       ├── pdf_metadata.py  # PDF metadata & ISBN extraction
-│       ├── isbn_lookup.py   # ISBN lookup service
-│       ├── ocr.py           # Vision Framework OCR
-│       ├── exiftool.py      # EXIF metadata extraction
-│       ├── pandoc.py        # Document format conversion
-│       ├── cleanup.py       # Junk file detection & deletion
-│       ├── cleanup_log.py   # Cleanup audit logging
-│       └── nfo_parser.py    # NFO file metadata parsing
-├── tests/
-├── config/
-│   └── personal_file_tree.yaml  # PARA reference tree
-└── pyproject.toml
-```
+See [CLAUDE.md](CLAUDE.md) for development guidance and [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
 
 ## License
 
