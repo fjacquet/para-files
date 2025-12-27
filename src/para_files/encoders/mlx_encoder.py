@@ -5,12 +5,16 @@ Uses mlx-embedding-models to load embedding models optimized for Apple Silicon.
 
 from __future__ import annotations
 
+import logging
 import threading
 from typing import Any, ClassVar
 
 from mlx_embedding_models.embedding import EmbeddingModel  # type: ignore[import-untyped]
 from pydantic import ConfigDict, PrivateAttr
 from semantic_router.encoders import DenseEncoder
+
+
+logger = logging.getLogger(__name__)
 
 
 class MLXEncoder(DenseEncoder):
@@ -35,8 +39,9 @@ class MLXEncoder(DenseEncoder):
     type: str = "mlx"
     # Max chars to avoid exceeding model's token limit
     # mlx-embedding-models uses buckets up to 512 tokens max
-    # Conservative: 512 * 2 = 1024 chars (accounts for multi-byte, numbers, etc.)
+    # ~2 chars per token average, with 700 fallback for edge cases
     max_chars: int = 1000
+    fallback_chars: int = 700
 
     model_config: ClassVar[ConfigDict] = ConfigDict(arbitrary_types_allowed=True)
 
@@ -78,8 +83,22 @@ class MLXEncoder(DenseEncoder):
         # Truncate texts to avoid exceeding model's token limit
         truncated_texts = [self._truncate(t) for t in texts]
 
-        # EmbeddingModel.encode returns numpy array of shape (n_texts, embedding_dim)
-        embeddings_array = self._model.encode(truncated_texts)
+        try:
+            # EmbeddingModel.encode returns numpy array of shape (n_texts, embedding_dim)
+            embeddings_array = self._model.encode(truncated_texts)
+        except IndexError as e:
+            # Token length exceeds model's maximum sequence length
+            # This can happen with texts that tokenize poorly (lots of numbers, symbols)
+            logger.warning("Text exceeds token limit, using fallback truncation: %s", e)
+            # Retry with fallback_chars (700) for safety
+            shorter_texts = [t[: self.fallback_chars] for t in texts]
+            try:
+                embeddings_array = self._model.encode(shorter_texts)
+            except IndexError:
+                # Still too long, return empty embeddings
+                logger.exception("Text still exceeds token limit after truncation")
+                # Return zero vectors of expected dimension (768 for nomic)
+                return [[0.0] * 768 for _ in texts]
 
         # Convert to list of lists
         embeddings: list[list[float]] = embeddings_array.tolist()

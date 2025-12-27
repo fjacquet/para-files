@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **MLX encoder token limit handling**: Improved error recovery for texts exceeding model's token limit
+  - Default `max_chars` increased to 1000 (from 700) for better content coverage
+  - Added `fallback_chars` (700) for automatic retry on IndexError
+  - Uses `logging.exception` for better error diagnostics
+
 ### Added
 
 - **Parallel file processing**: Configurable multi-threaded classification for faster processing

@@ -20,6 +20,40 @@ class TestMLXEncoderThreadSafety:
         assert hasattr(MLXEncoder, "_load_lock")
         assert isinstance(MLXEncoder._load_lock, type(threading.Lock()))
 
+    def test_encoder_has_fallback_chars(self) -> None:
+        """Test that MLXEncoder has fallback_chars attribute."""
+        from para_files.encoders.mlx_encoder import MLXEncoder
+
+        encoder = MLXEncoder()
+        assert encoder.max_chars == 1000  # Default
+        assert encoder.fallback_chars == 700  # Fallback for edge cases
+
+    @patch("para_files.encoders.mlx_encoder.EmbeddingModel")
+    def test_encoder_fallback_on_index_error(self, mock_model: MagicMock) -> None:
+        """Test that encoder uses fallback_chars when IndexError occurs."""
+        import numpy as np
+
+        from para_files.encoders.mlx_encoder import MLXEncoder
+
+        # First call raises IndexError, second succeeds
+        mock_encode = MagicMock()
+        mock_encode.side_effect = [
+            IndexError("list index out of range"),
+            np.array([[0.1, 0.2, 0.3]]),
+        ]
+        mock_model.from_registry.return_value.encode = mock_encode
+
+        encoder = MLXEncoder()
+        result = encoder(["test text " * 100])  # Long text
+
+        # Verify result was returned
+        assert result is not None
+        # Should have been called twice: first fails, second with fallback
+        assert mock_encode.call_count == 2
+        # Second call should use fallback truncation
+        second_call_arg = mock_encode.call_args_list[1][0][0][0]
+        assert len(second_call_arg) <= 700  # fallback_chars
+
     @patch("para_files.encoders.mlx_encoder.EmbeddingModel")
     def test_encoder_concurrent_loading(self, mock_model: MagicMock) -> None:
         """Test that concurrent calls to _ensure_loaded only load once."""
