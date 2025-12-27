@@ -10,6 +10,8 @@ import pytest
 from para_files.utils.ocr import (
     OCR_EXTENSIONS,
     OCRResult,
+    _extract_text_from_results,
+    _extract_regions_from_results,
     extract_text,
     extract_text_with_regions,
     is_vision_available,
@@ -238,3 +240,239 @@ class TestExtractTextIntegration:
     def test_extract_with_regions(self, check_vision, tmp_path: Path):
         """Test extracting text with bounding boxes."""
         pytest.skip("Requires test image with text")
+
+
+class TestExtractTextFromResults:
+    """Tests for _extract_text_from_results helper function."""
+
+    def test_empty_results(self):
+        """Test with empty results list."""
+        result = _extract_text_from_results([])
+        assert result is None
+
+    def test_results_with_text(self):
+        """Test with results containing text."""
+        mock_candidate = MagicMock()
+        mock_candidate.string.return_value = "Hello World"
+        mock_candidate.confidence.return_value = 0.95
+
+        mock_observation = MagicMock()
+        mock_observation.topCandidates_.return_value = [mock_candidate]
+
+        result = _extract_text_from_results([mock_observation])
+
+        assert result is not None
+        text, confidence = result
+        assert text == "Hello World"
+        assert confidence == 0.95
+
+    def test_results_with_low_confidence(self):
+        """Test with results below confidence threshold."""
+        mock_candidate = MagicMock()
+        mock_candidate.string.return_value = "Low conf text"
+        mock_candidate.confidence.return_value = 0.3  # Below _MIN_CONFIDENCE of 0.5
+
+        mock_observation = MagicMock()
+        mock_observation.topCandidates_.return_value = [mock_candidate]
+
+        result = _extract_text_from_results([mock_observation])
+
+        # Should return None because confidence is too low
+        assert result is None
+
+    def test_results_with_no_candidates(self):
+        """Test with observation that has no candidates."""
+        mock_observation = MagicMock()
+        mock_observation.topCandidates_.return_value = []
+
+        result = _extract_text_from_results([mock_observation])
+
+        assert result is None
+
+    def test_multiple_results_combined(self):
+        """Test with multiple observations combined."""
+        mock_candidate1 = MagicMock()
+        mock_candidate1.string.return_value = "Line 1"
+        mock_candidate1.confidence.return_value = 0.9
+
+        mock_candidate2 = MagicMock()
+        mock_candidate2.string.return_value = "Line 2"
+        mock_candidate2.confidence.return_value = 0.8
+
+        mock_observation1 = MagicMock()
+        mock_observation1.topCandidates_.return_value = [mock_candidate1]
+
+        mock_observation2 = MagicMock()
+        mock_observation2.topCandidates_.return_value = [mock_candidate2]
+
+        result = _extract_text_from_results([mock_observation1, mock_observation2])
+
+        assert result is not None
+        text, confidence = result
+        assert "Line 1" in text
+        assert "Line 2" in text
+        assert confidence == pytest.approx(0.85)  # Average of 0.9 and 0.8
+
+
+class TestExtractRegionsFromResults:
+    """Tests for _extract_regions_from_results helper function."""
+
+    def test_empty_results(self):
+        """Test with empty results list."""
+        result = _extract_regions_from_results([])
+        assert result is None
+
+    def test_results_with_regions(self):
+        """Test with results containing regions."""
+        mock_candidate = MagicMock()
+        mock_candidate.string.return_value = "Region text"
+        mock_candidate.confidence.return_value = 0.95
+
+        mock_bbox = MagicMock()
+        mock_bbox.origin.x = 0.1
+        mock_bbox.origin.y = 0.2
+        mock_bbox.size.width = 0.5
+        mock_bbox.size.height = 0.1
+
+        mock_observation = MagicMock()
+        mock_observation.topCandidates_.return_value = [mock_candidate]
+        mock_observation.boundingBox.return_value = mock_bbox
+
+        result = _extract_regions_from_results([mock_observation])
+
+        assert result is not None
+        assert len(result) == 1
+        assert result[0]["text"] == "Region text"
+        assert result[0]["confidence"] == 0.95
+        assert result[0]["bounds"]["x"] == 0.1
+        assert result[0]["bounds"]["y"] == 0.2
+        assert result[0]["bounds"]["width"] == 0.5
+        assert result[0]["bounds"]["height"] == 0.1
+
+    def test_results_with_no_candidates(self):
+        """Test with observation that has no candidates."""
+        mock_observation = MagicMock()
+        mock_observation.topCandidates_.return_value = []
+
+        result = _extract_regions_from_results([mock_observation])
+
+        assert result is None
+
+    def test_multiple_regions(self):
+        """Test with multiple regions extracted."""
+        mock_candidate1 = MagicMock()
+        mock_candidate1.string.return_value = "Region 1"
+        mock_candidate1.confidence.return_value = 0.9
+
+        mock_candidate2 = MagicMock()
+        mock_candidate2.string.return_value = "Region 2"
+        mock_candidate2.confidence.return_value = 0.85
+
+        mock_bbox = MagicMock()
+        mock_bbox.origin.x = 0.0
+        mock_bbox.origin.y = 0.0
+        mock_bbox.size.width = 1.0
+        mock_bbox.size.height = 0.1
+
+        mock_observation1 = MagicMock()
+        mock_observation1.topCandidates_.return_value = [mock_candidate1]
+        mock_observation1.boundingBox.return_value = mock_bbox
+
+        mock_observation2 = MagicMock()
+        mock_observation2.topCandidates_.return_value = [mock_candidate2]
+        mock_observation2.boundingBox.return_value = mock_bbox
+
+        result = _extract_regions_from_results([mock_observation1, mock_observation2])
+
+        assert result is not None
+        assert len(result) == 2
+        assert result[0]["text"] == "Region 1"
+        assert result[1]["text"] == "Region 2"
+
+
+class TestExtractTextWithRegionsInternal:
+    """Tests for internal extract_text_with_regions behavior."""
+
+    @patch("para_files.utils.ocr._extract_regions_from_results")
+    @patch("para_files.utils.ocr._perform_ocr_request")
+    @patch("para_files.utils.ocr._load_cg_image")
+    def test_cg_image_load_failure(
+        self,
+        mock_load: MagicMock,
+        mock_request: MagicMock,
+        mock_regions: MagicMock,
+        tmp_path: Path,
+    ):
+        """Test when CGImage loading fails."""
+        test_file = tmp_path / "test.png"
+        test_file.touch()
+
+        mock_load.return_value = None
+
+        with patch("para_files.utils.ocr.is_vision_available", return_value=True):
+            result = extract_text_with_regions(test_file)
+
+        assert result is None
+        mock_request.assert_not_called()
+        mock_regions.assert_not_called()
+
+    @patch("para_files.utils.ocr._extract_regions_from_results")
+    @patch("para_files.utils.ocr._perform_ocr_request")
+    @patch("para_files.utils.ocr._load_cg_image")
+    def test_ocr_request_failure(
+        self,
+        mock_load: MagicMock,
+        mock_request: MagicMock,
+        mock_regions: MagicMock,
+        tmp_path: Path,
+    ):
+        """Test when OCR request fails."""
+        test_file = tmp_path / "test.png"
+        test_file.touch()
+
+        mock_load.return_value = MagicMock()  # CGImage loads ok
+        mock_request.return_value = None  # But OCR fails
+
+        with patch("para_files.utils.ocr.is_vision_available", return_value=True):
+            result = extract_text_with_regions(test_file)
+
+        assert result is None
+        mock_regions.assert_not_called()
+
+    @patch("para_files.utils.ocr._extract_regions_from_results")
+    @patch("para_files.utils.ocr._perform_ocr_request")
+    @patch("para_files.utils.ocr._load_cg_image")
+    def test_successful_extraction(
+        self,
+        mock_load: MagicMock,
+        mock_request: MagicMock,
+        mock_regions: MagicMock,
+        tmp_path: Path,
+    ):
+        """Test successful region extraction."""
+        test_file = tmp_path / "test.png"
+        test_file.touch()
+
+        mock_load.return_value = MagicMock()
+        mock_request.return_value = [MagicMock()]
+        mock_regions.return_value = [{"text": "Test", "confidence": 0.9, "bounds": {}}]
+
+        with patch("para_files.utils.ocr.is_vision_available", return_value=True):
+            result = extract_text_with_regions(test_file)
+
+        assert result is not None
+        assert len(result) == 1
+        assert result[0]["text"] == "Test"
+
+    @patch("para_files.utils.ocr._load_cg_image")
+    def test_exception_handling(self, mock_load: MagicMock, tmp_path: Path):
+        """Test exception handling during extraction."""
+        test_file = tmp_path / "test.png"
+        test_file.touch()
+
+        mock_load.side_effect = Exception("Image loading error")
+
+        with patch("para_files.utils.ocr.is_vision_available", return_value=True):
+            result = extract_text_with_regions(test_file)
+
+        assert result is None

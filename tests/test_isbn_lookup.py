@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock, patch
+
+import pytest
+
 from para_files.utils.isbn_lookup import (
     BookInfo,
+    _extract_subjects_from_description,
     infer_technology_from_subjects,
     isbn_to_isbn13,
     lookup_isbn,
@@ -218,3 +223,407 @@ class TestLookupIsbn:
         result = lookup_isbn("9780596517748")
         # Just verify no exception and returns BookInfo or None
         assert result is None or isinstance(result, BookInfo)
+
+    def test_lookup_isbnlib_not_available(self):
+        """Test lookup when isbnlib is not installed."""
+        import builtins
+        import sys
+
+        # Save originals
+        isbnlib_backup = sys.modules.get("isbnlib")
+        original_import = builtins.__import__
+
+        try:
+            # Remove isbnlib from modules
+            if "isbnlib" in sys.modules:
+                del sys.modules["isbnlib"]
+
+            def mock_import(name, *args, **kwargs):
+                if name == "isbnlib":
+                    raise ImportError("No module named 'isbnlib'")
+                return original_import(name, *args, **kwargs)
+
+            builtins.__import__ = mock_import
+            result = lookup_isbn("9780596517748")
+            assert result is None
+        finally:
+            builtins.__import__ = original_import
+            if isbnlib_backup:
+                sys.modules["isbnlib"] = isbnlib_backup
+
+    @patch("isbnlib.canonical")
+    def test_lookup_invalid_canonical(self, mock_canonical: MagicMock):
+        """Test lookup when canonical returns empty string."""
+        mock_canonical.return_value = ""
+        result = lookup_isbn("9780596517748")
+        assert result is None
+
+    @patch("isbnlib.canonical")
+    @patch("isbnlib.is_isbn10")
+    @patch("isbnlib.is_isbn13")
+    def test_lookup_validation_failed(
+        self,
+        mock_is_isbn13: MagicMock,
+        mock_is_isbn10: MagicMock,
+        mock_canonical: MagicMock,
+    ):
+        """Test lookup when ISBN validation fails."""
+        mock_canonical.return_value = "1234567890"
+        mock_is_isbn10.return_value = False
+        mock_is_isbn13.return_value = False
+        result = lookup_isbn("1234567890")
+        assert result is None
+
+    @patch("isbnlib.canonical")
+    @patch("isbnlib.is_isbn10")
+    @patch("isbnlib.is_isbn13")
+    @patch("isbnlib.to_isbn13")
+    @patch("isbnlib.meta")
+    def test_lookup_no_metadata_found(
+        self,
+        mock_meta: MagicMock,
+        mock_to_isbn13: MagicMock,
+        mock_is_isbn13: MagicMock,
+        mock_is_isbn10: MagicMock,
+        mock_canonical: MagicMock,
+    ):
+        """Test lookup when no metadata is found from any service."""
+        mock_canonical.return_value = "9780596517748"
+        mock_is_isbn10.return_value = False
+        mock_is_isbn13.return_value = True
+        mock_to_isbn13.return_value = "9780596517748"
+        mock_meta.return_value = None
+        result = lookup_isbn("9780596517748")
+        assert result is None
+
+    @patch("isbnlib.canonical")
+    @patch("isbnlib.is_isbn10")
+    @patch("isbnlib.is_isbn13")
+    @patch("isbnlib.to_isbn13")
+    @patch("isbnlib.meta")
+    @patch("isbnlib.desc")
+    @patch("isbnlib.cover")
+    def test_lookup_success_with_enrichment(
+        self,
+        mock_cover: MagicMock,
+        mock_desc: MagicMock,
+        mock_meta: MagicMock,
+        mock_to_isbn13: MagicMock,
+        mock_is_isbn13: MagicMock,
+        mock_is_isbn10: MagicMock,
+        mock_canonical: MagicMock,
+    ):
+        """Test successful lookup with description and cover enrichment."""
+        mock_canonical.return_value = "9780596517748"
+        mock_is_isbn10.return_value = False
+        mock_is_isbn13.return_value = True
+        mock_to_isbn13.return_value = "9780596517748"
+        mock_meta.return_value = {
+            "Title": "Python Cookbook",
+            "Authors": ["David Beazley", "Brian K. Jones"],
+            "Publisher": "O'Reilly Media",
+            "Year": "2013",
+            "Language": "en",
+        }
+        mock_desc.return_value = "A comprehensive guide to Python programming."
+        mock_cover.return_value = {"thumbnail": "https://example.com/cover.jpg"}
+
+        result = lookup_isbn("9780596517748")
+
+        assert result is not None
+        assert result.title == "Python Cookbook"
+        assert len(result.authors) == 2
+        assert result.publishers == ["O'Reilly Media"]
+        assert result.publish_date == "2013"
+        assert result.description is not None
+        assert result.cover_url == "https://example.com/cover.jpg"
+
+    @patch("isbnlib.canonical")
+    @patch("isbnlib.is_isbn10")
+    @patch("isbnlib.is_isbn13")
+    @patch("isbnlib.to_isbn13")
+    @patch("isbnlib.to_isbn10")
+    @patch("isbnlib.meta")
+    @patch("isbnlib.desc")
+    @patch("isbnlib.cover")
+    def test_lookup_isbn10_input(
+        self,
+        mock_cover: MagicMock,
+        mock_desc: MagicMock,
+        mock_meta: MagicMock,
+        mock_to_isbn10: MagicMock,
+        mock_to_isbn13: MagicMock,
+        mock_is_isbn13: MagicMock,
+        mock_is_isbn10: MagicMock,
+        mock_canonical: MagicMock,
+    ):
+        """Test lookup with ISBN-10 input."""
+        mock_canonical.return_value = "0596517742"  # 10 chars
+        mock_is_isbn10.return_value = True
+        mock_is_isbn13.return_value = False
+        mock_to_isbn13.return_value = "9780596517748"
+        mock_to_isbn10.return_value = "0596517742"
+        mock_meta.return_value = {"Title": "Test Book"}
+        mock_desc.return_value = None
+        mock_cover.return_value = None
+
+        result = lookup_isbn("0596517742")
+
+        assert result is not None
+        assert result.isbn_10 == "0596517742"
+        assert result.isbn_13 == "9780596517748"
+
+    @patch("isbnlib.canonical")
+    @patch("isbnlib.is_isbn10")
+    @patch("isbnlib.is_isbn13")
+    @patch("isbnlib.to_isbn13")
+    @patch("isbnlib.meta")
+    @patch("isbnlib.desc")
+    @patch("isbnlib.cover")
+    def test_lookup_enrichment_failures(
+        self,
+        mock_cover: MagicMock,
+        mock_desc: MagicMock,
+        mock_meta: MagicMock,
+        mock_to_isbn13: MagicMock,
+        mock_is_isbn13: MagicMock,
+        mock_is_isbn10: MagicMock,
+        mock_canonical: MagicMock,
+    ):
+        """Test lookup when description and cover retrieval fail."""
+        mock_canonical.return_value = "9780596517748"
+        mock_is_isbn10.return_value = False
+        mock_is_isbn13.return_value = True
+        mock_to_isbn13.return_value = "9780596517748"
+        mock_meta.return_value = {"Title": "Test Book"}
+        mock_desc.side_effect = Exception("API error")
+        mock_cover.side_effect = Exception("API error")
+
+        result = lookup_isbn("9780596517748")
+
+        assert result is not None
+        assert result.title == "Test Book"
+        assert result.description is None
+        assert result.cover_url is None
+
+    @patch("isbnlib.canonical")
+    @patch("isbnlib.is_isbn10")
+    @patch("isbnlib.is_isbn13")
+    @patch("isbnlib.to_isbn13")
+    @patch("isbnlib.meta")
+    def test_lookup_specific_service(
+        self,
+        mock_meta: MagicMock,
+        mock_to_isbn13: MagicMock,
+        mock_is_isbn13: MagicMock,
+        mock_is_isbn10: MagicMock,
+        mock_canonical: MagicMock,
+    ):
+        """Test lookup with specific service parameter."""
+        mock_canonical.return_value = "9780596517748"
+        mock_is_isbn10.return_value = False
+        mock_is_isbn13.return_value = True
+        mock_to_isbn13.return_value = "9780596517748"
+        mock_meta.return_value = {"Title": "From Google"}
+
+        result = lookup_isbn("9780596517748", service="goob")
+
+        assert result is not None
+        mock_meta.assert_called_once()
+        # Verify service was passed
+        assert mock_meta.call_args.kwargs.get("service") == "goob"
+
+    @patch("isbnlib.canonical")
+    @patch("isbnlib.is_isbn10")
+    @patch("isbnlib.is_isbn13")
+    @patch("isbnlib.to_isbn13")
+    @patch("isbnlib.meta")
+    def test_lookup_service_fallback(
+        self,
+        mock_meta: MagicMock,
+        mock_to_isbn13: MagicMock,
+        mock_is_isbn13: MagicMock,
+        mock_is_isbn10: MagicMock,
+        mock_canonical: MagicMock,
+    ):
+        """Test that lookup tries multiple services when default is used."""
+        mock_canonical.return_value = "9780596517748"
+        mock_is_isbn10.return_value = False
+        mock_is_isbn13.return_value = True
+        mock_to_isbn13.return_value = "9780596517748"
+        # First service fails, second succeeds
+        mock_meta.side_effect = [
+            Exception("Google failed"),
+            {"Title": "From Open Library"},
+            None,  # Won't be reached
+        ]
+
+        result = lookup_isbn("9780596517748")
+
+        assert result is not None
+        assert result.title == "From Open Library"
+
+
+class TestExtractSubjectsFromDescription:
+    """Tests for _extract_subjects_from_description function."""
+
+    def test_extract_python_keyword(self):
+        """Test extracting Python keyword from description."""
+        desc = "A comprehensive guide to Python programming."
+        subjects = _extract_subjects_from_description(desc)
+        assert "Python" in subjects
+
+    def test_extract_multiple_keywords(self):
+        """Test extracting multiple keywords."""
+        desc = "Learn Docker and Kubernetes for modern cloud deployments."
+        subjects = _extract_subjects_from_description(desc)
+        assert "Docker" in subjects
+        assert "Kubernetes" in subjects
+        assert "Cloud" in subjects
+
+    def test_extract_no_keywords(self):
+        """Test with text containing no tech keywords."""
+        desc = "A story about adventure and friendship."
+        subjects = _extract_subjects_from_description(desc)
+        assert subjects == []
+
+    def test_extract_case_insensitive(self):
+        """Test case-insensitive matching."""
+        desc = "PYTHON and JAVASCRIPT programming fundamentals."
+        subjects = _extract_subjects_from_description(desc)
+        assert "Python" in subjects
+        assert "Javascript" in subjects
+
+    def test_extract_machine_learning(self):
+        """Test extracting machine learning keywords."""
+        desc = "Deep learning and artificial intelligence techniques."
+        subjects = _extract_subjects_from_description(desc)
+        assert "Deep Learning" in subjects
+        assert "Artificial Intelligence" in subjects
+
+    def test_extract_database_keywords(self):
+        """Test extracting database-related keywords."""
+        desc = "SQL and MongoDB database management."
+        subjects = _extract_subjects_from_description(desc)
+        assert "Sql" in subjects
+        assert "Mongodb" in subjects
+
+
+class TestValidateIsbnExceptionHandling:
+    """Tests for exception handling in validate_isbn."""
+
+    def test_validate_handles_exception(self):
+        """Test that validate_isbn handles exceptions gracefully."""
+        import builtins
+        import sys
+
+        isbnlib_backup = sys.modules.get("isbnlib")
+        original_import = builtins.__import__
+
+        try:
+            if "isbnlib" in sys.modules:
+                del sys.modules["isbnlib"]
+
+            def mock_import(name, *args, **kwargs):
+                if name == "isbnlib":
+                    raise Exception("Unexpected error")
+                return original_import(name, *args, **kwargs)
+
+            builtins.__import__ = mock_import
+            result = validate_isbn("9780596517748")
+            assert result is False
+        finally:
+            builtins.__import__ = original_import
+            if isbnlib_backup:
+                sys.modules["isbnlib"] = isbnlib_backup
+
+
+class TestNormalizeIsbnExceptionHandling:
+    """Tests for exception handling in normalize_isbn."""
+
+    def test_normalize_handles_exception(self):
+        """Test that normalize_isbn handles exceptions gracefully."""
+        import builtins
+        import sys
+
+        isbnlib_backup = sys.modules.get("isbnlib")
+        original_import = builtins.__import__
+
+        try:
+            if "isbnlib" in sys.modules:
+                del sys.modules["isbnlib"]
+
+            def mock_import(name, *args, **kwargs):
+                if name == "isbnlib":
+                    raise Exception("Unexpected error")
+                return original_import(name, *args, **kwargs)
+
+            builtins.__import__ = mock_import
+            result = normalize_isbn("9780596517748")
+            assert result is None
+        finally:
+            builtins.__import__ = original_import
+            if isbnlib_backup:
+                sys.modules["isbnlib"] = isbnlib_backup
+
+
+class TestIsbnToIsbn13ExceptionHandling:
+    """Tests for exception handling in isbn_to_isbn13."""
+
+    def test_isbn_to_isbn13_handles_exception(self):
+        """Test that isbn_to_isbn13 handles exceptions gracefully."""
+        import builtins
+        import sys
+
+        isbnlib_backup = sys.modules.get("isbnlib")
+        original_import = builtins.__import__
+
+        try:
+            if "isbnlib" in sys.modules:
+                del sys.modules["isbnlib"]
+
+            def mock_import(name, *args, **kwargs):
+                if name == "isbnlib":
+                    raise Exception("Unexpected error")
+                return original_import(name, *args, **kwargs)
+
+            builtins.__import__ = mock_import
+            result = isbn_to_isbn13("0596517742")
+            assert result is None
+        finally:
+            builtins.__import__ = original_import
+            if isbnlib_backup:
+                sys.modules["isbnlib"] = isbnlib_backup
+
+
+class TestInferTechnologyExtended:
+    """Extended tests for infer_technology_from_subjects."""
+
+    def test_subject_to_tech_mapping_cloud(self):
+        """Test cloud computing mapping."""
+        subjects = ["amazon web services", "cloud computing"]
+        known = ["Cloud", "AWS", "Azure"]
+        result = infer_technology_from_subjects(subjects, known)
+        assert result == "Cloud"
+
+    def test_subject_to_tech_mapping_security(self):
+        """Test cybersecurity mapping."""
+        subjects = ["cybersecurity", "network security"]
+        known = ["Security", "Networking"]
+        result = infer_technology_from_subjects(subjects, known)
+        assert result == "Security"
+
+    def test_subject_to_tech_mapping_databases(self):
+        """Test database management mapping."""
+        subjects = ["database management"]
+        known = ["Databases", "NoSQL"]
+        result = infer_technology_from_subjects(subjects, known)
+        assert result == "Databases"
+
+    def test_direct_match_takes_priority(self):
+        """Test that direct match is found before mapping."""
+        subjects = ["Python", "machine learning"]
+        known = ["Python", "AI"]
+        result = infer_technology_from_subjects(subjects, known)
+        # Should find Python first via direct match
+        assert result == "Python"

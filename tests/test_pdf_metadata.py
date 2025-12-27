@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
+
 from para_files.utils.pdf_metadata import (
     PdfMetadata,
     contains_book_keywords,
     extract_isbn,
+    extract_pdf_metadata,
     is_book_creator,
 )
 
@@ -218,3 +224,210 @@ class TestPdfMetadata:
         assert meta.page_count == 400
         assert meta.author is None
         assert meta.isbn is None
+
+
+class TestExtractPdfMetadata:
+    """Tests for extract_pdf_metadata function."""
+
+    def test_nonexistent_file(self, tmp_path: Path):
+        """Test extraction from nonexistent file."""
+        fake_file = tmp_path / "nonexistent.pdf"
+        result = extract_pdf_metadata(fake_file)
+        assert result is None
+
+    def test_non_pdf_file(self, tmp_path: Path):
+        """Test extraction from non-PDF file."""
+        text_file = tmp_path / "document.txt"
+        text_file.write_text("Hello, world!")
+        result = extract_pdf_metadata(text_file)
+        assert result is None
+
+    def test_pypdf_not_installed(self, tmp_path: Path):
+        """Test extraction when pypdf is not available."""
+        import builtins
+        import sys
+
+        pdf_file = tmp_path / "test.pdf"
+        pdf_file.write_bytes(b"%PDF-1.4")
+
+        # Save originals
+        pypdf_backup = sys.modules.get("pypdf")
+        original_import = builtins.__import__
+
+        try:
+            # Remove pypdf from modules
+            if "pypdf" in sys.modules:
+                del sys.modules["pypdf"]
+
+            def mock_import(name, *args, **kwargs):
+                if name == "pypdf" or name.startswith("pypdf"):
+                    raise ImportError("No module named 'pypdf'")
+                return original_import(name, *args, **kwargs)
+
+            builtins.__import__ = mock_import
+            result = extract_pdf_metadata(pdf_file)
+            assert result is None
+        finally:
+            builtins.__import__ = original_import
+            if pypdf_backup:
+                sys.modules["pypdf"] = pypdf_backup
+
+    @patch("pypdf.PdfReader")
+    def test_successful_extraction(self, mock_reader_class: MagicMock, tmp_path: Path):
+        """Test successful metadata extraction."""
+        pdf_file = tmp_path / "book.pdf"
+        pdf_file.write_bytes(b"%PDF-1.4" + b"\x00" * 1000)
+
+        mock_metadata = {
+            "/Title": "Python Guide",
+            "/Author": "John Doe",
+            "/Subject": "Programming",
+            "/Creator": "LaTeX",
+            "/Producer": "pdfTeX",
+        }
+
+        mock_page = MagicMock()
+        mock_page.extract_text.return_value = "Content without ISBN"
+
+        mock_reader = MagicMock()
+        mock_reader.metadata = mock_metadata
+        mock_reader.pages = [mock_page] * 10
+        mock_reader_class.return_value = mock_reader
+
+        result = extract_pdf_metadata(pdf_file)
+
+        assert result is not None
+        assert result.title == "Python Guide"
+        assert result.author == "John Doe"
+        assert result.subject == "Programming"
+        assert result.creator == "LaTeX"
+        assert result.producer == "pdfTeX"
+        assert result.page_count == 10
+        assert result.file_size_mb > 0
+
+    @patch("pypdf.PdfReader")
+    def test_extraction_with_isbn(self, mock_reader_class: MagicMock, tmp_path: Path):
+        """Test extraction with ISBN in content."""
+        pdf_file = tmp_path / "book.pdf"
+        pdf_file.write_bytes(b"%PDF-1.4" + b"\x00" * 1000)
+
+        mock_page = MagicMock()
+        mock_page.extract_text.return_value = "ISBN: 978-0-596-51774-8"
+
+        mock_reader = MagicMock()
+        mock_reader.metadata = {}
+        mock_reader.pages = [mock_page]
+        mock_reader_class.return_value = mock_reader
+
+        result = extract_pdf_metadata(pdf_file)
+
+        assert result is not None
+        assert result.isbn is not None
+        assert len(result.isbn) == 13
+
+    @patch("pypdf.PdfReader")
+    def test_extraction_no_metadata(self, mock_reader_class: MagicMock, tmp_path: Path):
+        """Test extraction when PDF has no metadata."""
+        pdf_file = tmp_path / "document.pdf"
+        pdf_file.write_bytes(b"%PDF-1.4" + b"\x00" * 500)
+
+        mock_page = MagicMock()
+        mock_page.extract_text.return_value = "Regular content"
+
+        mock_reader = MagicMock()
+        mock_reader.metadata = None  # No metadata
+        mock_reader.pages = [mock_page]
+        mock_reader_class.return_value = mock_reader
+
+        result = extract_pdf_metadata(pdf_file)
+
+        assert result is not None
+        assert result.title is None
+        assert result.author is None
+        assert result.page_count == 1
+
+    @patch("pypdf.PdfReader")
+    def test_extraction_page_extraction_failure(
+        self, mock_reader_class: MagicMock, tmp_path: Path
+    ):
+        """Test extraction when page text extraction fails."""
+        pdf_file = tmp_path / "corrupted.pdf"
+        pdf_file.write_bytes(b"%PDF-1.4")
+
+        mock_page = MagicMock()
+        mock_page.extract_text.side_effect = Exception("Page extraction failed")
+
+        mock_reader = MagicMock()
+        mock_reader.metadata = {"/Title": "Test Book"}
+        mock_reader.pages = [mock_page]
+        mock_reader_class.return_value = mock_reader
+
+        result = extract_pdf_metadata(pdf_file)
+
+        # Should still return metadata even if page extraction fails
+        assert result is not None
+        assert result.title == "Test Book"
+        assert result.isbn is None
+
+    @patch("pypdf.PdfReader")
+    def test_extraction_reader_failure(self, mock_reader_class: MagicMock, tmp_path: Path):
+        """Test extraction when PdfReader fails completely."""
+        pdf_file = tmp_path / "invalid.pdf"
+        pdf_file.write_bytes(b"%PDF-1.4")
+
+        mock_reader_class.side_effect = Exception("Cannot read PDF")
+
+        result = extract_pdf_metadata(pdf_file)
+
+        assert result is None
+
+    @patch("pypdf.PdfReader")
+    def test_max_pages_for_isbn(self, mock_reader_class: MagicMock, tmp_path: Path):
+        """Test that ISBN search respects max_pages limit."""
+        pdf_file = tmp_path / "book.pdf"
+        pdf_file.write_bytes(b"%PDF-1.4")
+
+        mock_page_no_isbn = MagicMock()
+        mock_page_no_isbn.extract_text.return_value = "No ISBN here"
+
+        mock_page_with_isbn = MagicMock()
+        mock_page_with_isbn.extract_text.return_value = "ISBN: 9780596517748"
+
+        # ISBN is on page 10, but we only check 3 pages
+        pages = [mock_page_no_isbn] * 9 + [mock_page_with_isbn]
+
+        mock_reader = MagicMock()
+        mock_reader.metadata = {}
+        mock_reader.pages = pages
+        mock_reader_class.return_value = mock_reader
+
+        result = extract_pdf_metadata(pdf_file, max_pages_for_isbn=3)
+
+        # ISBN should not be found since it's on page 10
+        assert result is not None
+        assert result.isbn is None
+
+    @patch("pypdf.PdfReader")
+    def test_isbn_found_on_later_page(self, mock_reader_class: MagicMock, tmp_path: Path):
+        """Test that ISBN is found when on a later page within limit."""
+        pdf_file = tmp_path / "book.pdf"
+        pdf_file.write_bytes(b"%PDF-1.4")
+
+        mock_page_no_isbn = MagicMock()
+        mock_page_no_isbn.extract_text.return_value = "Introduction"
+
+        mock_page_with_isbn = MagicMock()
+        mock_page_with_isbn.extract_text.return_value = "ISBN: 9780596517748"
+
+        # ISBN is on page 3
+        pages = [mock_page_no_isbn, mock_page_no_isbn, mock_page_with_isbn]
+
+        mock_reader = MagicMock()
+        mock_reader.metadata = {}
+        mock_reader.pages = pages
+        mock_reader_class.return_value = mock_reader
+
+        result = extract_pdf_metadata(pdf_file, max_pages_for_isbn=5)
+
+        assert result is not None
+        assert result.isbn is not None
