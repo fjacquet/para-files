@@ -333,9 +333,7 @@ class TestMemoryCachedLookup:
 
     @patch("para_files.utils.geolocation._get_cache")
     @patch("para_files.utils.geolocation._fetch_from_nominatim")
-    def test_returns_from_sqlite_cache(
-        self, mock_fetch: MagicMock, mock_get_cache: MagicMock
-    ):
+    def test_returns_from_sqlite_cache(self, mock_fetch: MagicMock, mock_get_cache: MagicMock):
         """Test that SQLite cache hit returns without API call."""
         mock_cache = MagicMock()
         mock_cache.get.return_value = {"city": "Geneva"}
@@ -349,9 +347,7 @@ class TestMemoryCachedLookup:
 
     @patch("para_files.utils.geolocation._get_cache")
     @patch("para_files.utils.geolocation._fetch_from_nominatim")
-    def test_fetches_and_caches_on_miss(
-        self, mock_fetch: MagicMock, mock_get_cache: MagicMock
-    ):
+    def test_fetches_and_caches_on_miss(self, mock_fetch: MagicMock, mock_get_cache: MagicMock):
         """Test that cache miss triggers API call and caches result."""
         mock_cache = MagicMock()
         mock_cache.get.return_value = None
@@ -448,12 +444,14 @@ class TestReverseGeocode:
         """Test extraction of complete location info."""
         import json
 
-        mock_cache.return_value = json.dumps({
-            "city": "Geneva",
-            "state": "Geneva",
-            "country": "Switzerland",
-            "country_code": "ch",
-        })
+        mock_cache.return_value = json.dumps(
+            {
+                "city": "Geneva",
+                "state": "Geneva",
+                "country": "Switzerland",
+                "country_code": "ch",
+            }
+        )
 
         result = reverse_geocode(46.2, 6.1)
 
@@ -501,9 +499,7 @@ class TestGetLocationFolder:
     @patch("para_files.utils.geolocation.reverse_geocode")
     def test_returns_country_location_format(self, mock_reverse: MagicMock):
         """Test returns country/location format when both available."""
-        mock_reverse.return_value = LocationInfo(
-            city="Geneva", country="Switzerland"
-        )
+        mock_reverse.return_value = LocationInfo(city="Geneva", country="Switzerland")
 
         result = get_location_folder(46.2, 6.1)
 

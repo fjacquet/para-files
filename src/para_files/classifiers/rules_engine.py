@@ -74,49 +74,68 @@ class RulesEngineClassifier(BaseClassifier):
         if not metadata:
             return None
 
-        filename = metadata.filename
-        extension = metadata.extension.lower()
-
         for rule_name, rule in self._rules.items():
-            # Check if extension matches (if extensions are specified)
-            extension_match = True
-            if rule.extensions:
-                matching_extensions = [e.lower() for e in rule.extensions]
-                extension_match = extension in matching_extensions
-
-            # Check if pattern matches (if patterns are specified)
-            pattern_match = False
-            if rule.patterns:
-                for pattern in rule.patterns:
-                    if fnmatch.fnmatch(filename, pattern):
-                        pattern_match = True
-                        break
-            else:
-                # No patterns specified - extension-only rules (photos, videos, etc.)
-                pattern_match = True
-
-            # Rule matches if BOTH extension and pattern conditions are met
-            # - If rule has extensions: extension must match
-            # - If rule has patterns: filename must match at least one pattern
-            # - If rule only has extensions (no patterns): extension match is sufficient
-            if extension_match and pattern_match:
-                if rule.extensions or rule.patterns:
-                    return self._create_result(rule_name, rule, metadata)
+            # Try extension/pattern matching first
+            if self._matches_extension_and_pattern(rule, metadata):
+                return self._create_result(rule_name, rule, metadata)
 
             # Check platform patterns (for courses)
-            if rule.platforms:
-                for platform, patterns in rule.platforms.items():
-                    for pattern in patterns:
-                        if fnmatch.fnmatch(filename, pattern) or fnmatch.fnmatch(
-                            str(metadata.path), pattern
-                        ):
-                            return self._create_result(
-                                rule_name,
-                                rule,
-                                metadata,
-                                platform=platform,
-                            )
+            platform = self._get_matching_platform(rule, metadata)
+            if platform:
+                return self._create_result(rule_name, rule, metadata, platform=platform)
 
+        return None
+
+    def _matches_extension_and_pattern(self, rule: RoutingRule, metadata: FileMetadata) -> bool:
+        """Check if file matches rule's extension and pattern requirements.
+
+        Args:
+            rule: Routing rule to check against.
+            metadata: File metadata with extension and filename.
+
+        Returns:
+            True if rule matches, False otherwise.
+        """
+        # Must have at least extensions or patterns defined
+        if not rule.extensions and not rule.patterns:
+            return False
+
+        extension = metadata.extension.lower()
+        filename = metadata.filename
+
+        # Check extension match (True if no extensions specified)
+        extension_match = True
+        if rule.extensions:
+            matching_extensions = [e.lower() for e in rule.extensions]
+            extension_match = extension in matching_extensions
+
+        # Check pattern match (True if no patterns specified)
+        pattern_match = not rule.patterns or any(
+            fnmatch.fnmatch(filename, pattern) for pattern in rule.patterns
+        )
+
+        return extension_match and pattern_match
+
+    def _get_matching_platform(self, rule: RoutingRule, metadata: FileMetadata) -> str | None:
+        """Find matching platform from rule's platform patterns.
+
+        Args:
+            rule: Routing rule with optional platform patterns.
+            metadata: File metadata with filename and path.
+
+        Returns:
+            Platform name if matched, None otherwise.
+        """
+        if not rule.platforms:
+            return None
+
+        filename = metadata.filename
+        path_str = str(metadata.path)
+
+        for platform, patterns in rule.platforms.items():
+            for pattern in patterns:
+                if fnmatch.fnmatch(filename, pattern) or fnmatch.fnmatch(path_str, pattern):
+                    return platform
         return None
 
     def _create_result(

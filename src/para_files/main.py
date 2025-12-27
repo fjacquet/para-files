@@ -221,9 +221,7 @@ def _expand_paths_to_files(
     for path in paths:
         resolved = path.resolve()
         if resolved.is_dir():
-            discovered = _discover_files(
-                resolved, recursive=recursive, ext_filter=ext_filter
-            )
+            discovered = _discover_files(resolved, recursive=recursive, ext_filter=ext_filter)
             expanded_files.extend(discovered)
             source_dirs.add(resolved)
         elif resolved.is_file():
@@ -523,9 +521,7 @@ def classify(
 
     # Expand directories to file lists
     ext_filter = _parse_extensions_filter(extensions)
-    expanded_files, _ = _expand_paths_to_files(
-        files, recursive=recursive, ext_filter=ext_filter
-    )
+    expanded_files, _ = _expand_paths_to_files(files, recursive=recursive, ext_filter=ext_filter)
 
     if not expanded_files:
         typer.echo("No files found matching criteria")
@@ -700,9 +696,7 @@ def _print_move_summary(
 
 @app.command()
 def move(
-    files: Annotated[
-        list[Path], typer.Argument(help="Path(s) to file(s) or directory to move")
-    ],
+    files: Annotated[list[Path], typer.Argument(help="Path(s) to file(s) or directory to move")],
     reference_tree: Annotated[
         Path | None,
         typer.Option("--reference-tree", "-r", help="Path to reference tree YAML file"),
