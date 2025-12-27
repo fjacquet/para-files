@@ -44,6 +44,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Quick size check before expensive hash computation
   - Enabled by default, can be disabled with `deduplicate=False`
   - Full dry-run support showing "would delete duplicate"
+- **Dedupe command** (`dedupe`): Cleanup suffixed duplicate files
+  - Scans for files with `_N` suffix (e.g., `file_1.pdf`, `document_2.txt`)
+  - Compares with original file by SHA256 hash
+  - Deletes suffixed duplicates if content is identical
+  - Keeps files with different content (reports them in verbose mode)
+  - Supports `--dry-run`, `--recursive`, `--json`, `--verbose` options
 - New utilities in `para_files.utils`:
   - `cleanup.py`: Junk file detection and deletion
   - `nfo_parser.py`: NFO file parsing with encoding fallback
