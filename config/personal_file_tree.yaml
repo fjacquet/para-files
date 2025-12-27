@@ -709,6 +709,8 @@ known_issuers:
       - Nespresso
       - interdiscount
       - MediaMarkt
+      - QoQa
+      - QoQa Services
 
   prevoyance:
     pattern: "4_Archives/prevoyance/{issuer}/{year}"
