@@ -38,7 +38,7 @@ routing_rules:
   # {country} et {location} sont remplacés par le pays/ville (via GPS) si disponible, sinon ignorés
   photos:
     source: "0_Inbox" # Ne cherche que dans Inbox
-    extensions: [".jpg", ".jpeg", ".png", ".heic", ".raw", ".cr2", ".nef"]
+    extensions: [".jpg", ".jpeg", ".png", ".heic", ".raw", ".cr2", ".nef", ".dng"]
     destination: "4_Archives/photos/{YYYY}/{country}/{location}/{MM}/{DD}"
     date_source: "exif"
     fallback_date: "file_modified"
@@ -128,6 +128,33 @@ routing_rules:
     patterns: ["*Dell*", "*PowerFlex*", "*PowerStore*", "*PowerScale*", "*VxRail*", "*PFMP*"]
     extensions: [".pdf", ".pptx", ".ppt", ".docx", ".doc"]
     destination: "3_Resources/documentation/Dell/{YYYY}"
+    date_source: "file_modified"
+
+  # VMware documentation
+  vmware_documentation:
+    patterns: ["*VMware*", "*vSphere*", "*vSAN*", "*NSX*", "*Tanzu*", "*VCF*"]
+    extensions: [".pdf", ".pptx", ".ppt", ".docx", ".doc"]
+    destination: "3_Resources/documentation/VMware/{YYYY}"
+    date_source: "file_modified"
+
+  # Training certificates and completion documents
+  certificates:
+    patterns: ["*[Cc]ertificate*", "*[Cc]ertificat*", "*[Cc]ompletion*", "*[Bb]adge*", "*[Cc]redential*"]
+    extensions: [".pdf", ".png", ".jpg"]
+    destination: "3_Resources/certifications/{YYYY}"
+    date_source: "file_modified"
+
+  # Software licenses
+  software_licenses:
+    extensions: [".lic", ".license", ".key"]
+    destination: "3_Resources/licences/{YYYY}"
+    date_source: "file_modified"
+
+  # Financial transactions CSV exports
+  transactions_csv:
+    patterns: ["*[Tt]ransaction*", "*[Rr]elevé*", "*[Ee]xport*", "*[Ss]tatement*"]
+    extensions: [".csv"]
+    destination: "4_Archives/banques/exports/{YYYY}"
     date_source: "file_modified"
 
 # =============================================================================
@@ -468,6 +495,23 @@ archives:
         - "avis d'imposition"
         - "bordereau fiscal"
 
+    - name: "impots-france"
+      pattern: "4_Archives/impots-france/{year}"
+      utterances:
+        - "impôt France"
+        - "déclaration fiscale française"
+        - "impots.gouv.fr"
+        - "avis d'imposition France"
+        - "fisc français"
+
+    - name: "factures-redevances"
+      pattern: "4_Archives/factures/Redevances/{issuer}/{year}"
+      utterances:
+        - "redevance TV"
+        - "Serafe"
+        - "Billag"
+        - "radio télévision"
+
     - name: "factures-logement"
       pattern: "4_Archives/factures/Logement/{issuer}/{year}"
       utterances:
@@ -703,6 +747,8 @@ known_issuers:
       - Rhätische Bahn
       - RhB
       - Travys
+      - Mobility
+      - mobility-genossenschaft
 
   sante:
     pattern: "4_Archives/factures/Santé/{issuer}/{year}"
@@ -780,3 +826,9 @@ known_issuers:
       - Médecins Sans Frontières
       - WWF
       - Caritas
+
+  redevances:
+    pattern: "4_Archives/factures/Redevances/{issuer}/{year}"
+    issuers:
+      - Serafe
+      - Billag

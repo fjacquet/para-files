@@ -91,7 +91,7 @@ def classify_files(
         str(inbox_path),
         "-r",
         str(config_path),
-        "-R",  # Recursive
+        # "-R",  # Recursive
         "--json",
     ]
 

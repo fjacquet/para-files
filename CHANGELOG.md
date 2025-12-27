@@ -47,6 +47,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New `BOOK_DETECTOR` classification source for book detection results
 - `geopy` dependency for GPS reverse geocoding
 - Comprehensive test suite for book detection (83 new tests, 621 total)
+- New routing rules based on inbox analysis:
+  - `.dng` (Adobe DNG raw) extension added to photos
+  - VMware documentation routing (`*VMware*`, `*vSphere*`, `*vSAN*`, etc.)
+  - Training certificates routing (`*Certificate*`, `*Completion*`, `*Badge*`)
+  - Software licenses routing (`.lic`, `.license`, `.key` extensions)
+  - Financial transactions CSV routing
+  - French tax documents route (`impots-france`)
+  - TV redevance route with Serafe/Billag issuers
+- New known issuers:
+  - Transport: Mobility, mobility-genossenschaft (car sharing)
+  - Redevances: Serafe, Billag (TV/radio tax)
 - **documentation-master** Claude Code skill for documentation guardianship and onboarding:
   - Developer onboarding guide with environment setup and codebase orientation
   - User onboarding guide with quick start and common workflows
