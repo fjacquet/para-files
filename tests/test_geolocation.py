@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import tempfile
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from para_files.utils.geolocation import (
+    GeolocationCache,
     LocationInfo,
-    _cached_reverse_geocode,
+    _fetch_from_nominatim,
     _get_nominatim_geolocator,
+    _memory_cached_lookup,
+    clear_cache,
+    get_cache_stats,
     get_location_folder,
     reverse_geocode,
 )
@@ -104,6 +110,96 @@ class TestLocationInfo:
         assert info.folder_name == "Unknown"
 
 
+class TestGeolocationCache:
+    """Tests for SQLite persistent cache."""
+
+    def test_cache_initialization(self):
+        """Test cache initializes correctly."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "test_cache.db"
+            cache = GeolocationCache(db_path)
+
+            assert db_path.exists()
+            cache.close()
+
+    def test_cache_set_and_get(self):
+        """Test setting and getting cached values."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "test_cache.db"
+            cache = GeolocationCache(db_path)
+
+            # Set a value
+            cache.set(46.2, 6.1, {"city": "Geneva", "country": "Switzerland"})
+
+            # Get it back
+            result = cache.get(46.2, 6.1)
+            assert result == {"city": "Geneva", "country": "Switzerland"}
+
+            cache.close()
+
+    def test_cache_miss(self):
+        """Test cache miss returns None."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "test_cache.db"
+            cache = GeolocationCache(db_path)
+
+            result = cache.get(99.9, 99.9)
+            assert result is None
+
+            cache.close()
+
+    def test_cache_stats(self):
+        """Test cache statistics."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "test_cache.db"
+            cache = GeolocationCache(db_path)
+
+            # Initially empty
+            stats = cache.get_stats()
+            assert stats["entries"] == 0
+
+            # Add some entries
+            cache.set(46.2, 6.1, {"city": "Geneva"})
+            cache.set(48.8, 2.3, {"city": "Paris"})
+
+            stats = cache.get_stats()
+            assert stats["entries"] == 2
+
+            cache.close()
+
+    def test_cache_clear(self):
+        """Test clearing the cache."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "test_cache.db"
+            cache = GeolocationCache(db_path)
+
+            cache.set(46.2, 6.1, {"city": "Geneva"})
+            cache.clear()
+
+            stats = cache.get_stats()
+            assert stats["entries"] == 0
+
+            cache.close()
+
+    def test_cache_update(self):
+        """Test updating existing cache entry."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "test_cache.db"
+            cache = GeolocationCache(db_path)
+
+            cache.set(46.2, 6.1, {"city": "Geneva"})
+            cache.set(46.2, 6.1, {"city": "Geneva", "country": "Switzerland"})
+
+            result = cache.get(46.2, 6.1)
+            assert result == {"city": "Geneva", "country": "Switzerland"}
+
+            # Should still be just 1 entry
+            stats = cache.get_stats()
+            assert stats["entries"] == 1
+
+            cache.close()
+
+
 class TestGetNominatimGeolocator:
     """Tests for _get_nominatim_geolocator function."""
 
@@ -153,19 +249,15 @@ class TestGetNominatimGeolocator:
                 sys.modules["geopy.geocoders"] = geopy_geocoders_backup
 
 
-class TestCachedReverseGeocode:
-    """Tests for _cached_reverse_geocode function."""
-
-    def setup_method(self):
-        """Clear cache before each test."""
-        _cached_reverse_geocode.cache_clear()
+class TestFetchFromNominatim:
+    """Tests for _fetch_from_nominatim function."""
 
     @patch("para_files.utils.geolocation._get_nominatim_geolocator")
     def test_returns_none_when_geolocator_unavailable(self, mock_get_geo: MagicMock):
         """Test returns None when geolocator is not available."""
         mock_get_geo.return_value = None
 
-        result = _cached_reverse_geocode(46.2, 6.1)
+        result = _fetch_from_nominatim(46.2, 6.1)
 
         assert result is None
 
@@ -179,7 +271,7 @@ class TestCachedReverseGeocode:
         mock_geolocator.reverse.return_value = mock_location
         mock_get_geo.return_value = mock_geolocator
 
-        result = _cached_reverse_geocode(46.2, 6.1)
+        result = _fetch_from_nominatim(46.2, 6.1)
 
         assert result == {"city": "Geneva", "country": "Switzerland"}
 
@@ -190,7 +282,7 @@ class TestCachedReverseGeocode:
         mock_geolocator.reverse.return_value = None
         mock_get_geo.return_value = mock_geolocator
 
-        result = _cached_reverse_geocode(0.0, 0.0)
+        result = _fetch_from_nominatim(0.0, 0.0)
 
         assert result is None
 
@@ -203,7 +295,7 @@ class TestCachedReverseGeocode:
         mock_geolocator.reverse.side_effect = GeocoderTimedOut("Timeout")
         mock_get_geo.return_value = mock_geolocator
 
-        result = _cached_reverse_geocode(46.2, 6.1)
+        result = _fetch_from_nominatim(46.2, 6.1)
 
         assert result is None
 
@@ -216,7 +308,7 @@ class TestCachedReverseGeocode:
         mock_geolocator.reverse.side_effect = GeocoderUnavailable("Service down")
         mock_get_geo.return_value = mock_geolocator
 
-        result = _cached_reverse_geocode(46.2, 6.1)
+        result = _fetch_from_nominatim(46.2, 6.1)
 
         assert result is None
 
@@ -227,27 +319,50 @@ class TestCachedReverseGeocode:
         mock_geolocator.reverse.side_effect = Exception("Unknown error")
         mock_get_geo.return_value = mock_geolocator
 
-        result = _cached_reverse_geocode(46.2, 6.1)
+        result = _fetch_from_nominatim(46.2, 6.1)
 
         assert result is None
 
-    @patch("para_files.utils.geolocation._get_nominatim_geolocator")
-    def test_caching_works(self, mock_get_geo: MagicMock):
-        """Test that results are cached."""
-        mock_location = MagicMock()
-        mock_location.raw = {"address": {"city": "Geneva"}}
 
-        mock_geolocator = MagicMock()
-        mock_geolocator.reverse.return_value = mock_location
-        mock_get_geo.return_value = mock_geolocator
+class TestMemoryCachedLookup:
+    """Tests for _memory_cached_lookup function."""
 
-        # Call twice with same coordinates
-        result1 = _cached_reverse_geocode(46.2, 6.1)
-        result2 = _cached_reverse_geocode(46.2, 6.1)
+    def setup_method(self):
+        """Clear cache before each test."""
+        _memory_cached_lookup.cache_clear()
 
-        # Should only call reverse once due to caching
-        assert mock_geolocator.reverse.call_count == 1
-        assert result1 == result2
+    @patch("para_files.utils.geolocation._get_cache")
+    @patch("para_files.utils.geolocation._fetch_from_nominatim")
+    def test_returns_from_sqlite_cache(
+        self, mock_fetch: MagicMock, mock_get_cache: MagicMock
+    ):
+        """Test that SQLite cache hit returns without API call."""
+        mock_cache = MagicMock()
+        mock_cache.get.return_value = {"city": "Geneva"}
+        mock_get_cache.return_value = mock_cache
+
+        result = _memory_cached_lookup(46.2, 6.1)
+
+        assert result is not None
+        mock_cache.get.assert_called_once()
+        mock_fetch.assert_not_called()
+
+    @patch("para_files.utils.geolocation._get_cache")
+    @patch("para_files.utils.geolocation._fetch_from_nominatim")
+    def test_fetches_and_caches_on_miss(
+        self, mock_fetch: MagicMock, mock_get_cache: MagicMock
+    ):
+        """Test that cache miss triggers API call and caches result."""
+        mock_cache = MagicMock()
+        mock_cache.get.return_value = None
+        mock_get_cache.return_value = mock_cache
+        mock_fetch.return_value = {"city": "Geneva"}
+
+        result = _memory_cached_lookup(46.2, 6.1)
+
+        assert result is not None
+        mock_fetch.assert_called_once()
+        mock_cache.set.assert_called_once()
 
 
 class TestReverseGeocode:
@@ -255,9 +370,9 @@ class TestReverseGeocode:
 
     def setup_method(self):
         """Clear cache before each test."""
-        _cached_reverse_geocode.cache_clear()
+        _memory_cached_lookup.cache_clear()
 
-    @patch("para_files.utils.geolocation._cached_reverse_geocode")
+    @patch("para_files.utils.geolocation._memory_cached_lookup")
     def test_returns_none_when_cache_returns_none(self, mock_cache: MagicMock):
         """Test returns None when cached lookup fails."""
         mock_cache.return_value = None
@@ -266,66 +381,79 @@ class TestReverseGeocode:
 
         assert result is None
 
-    @patch("para_files.utils.geolocation._cached_reverse_geocode")
+    @patch("para_files.utils.geolocation._memory_cached_lookup")
     def test_extracts_city_fields(self, mock_cache: MagicMock):
         """Test extraction of various city field types."""
-        # Test with 'city' field
-        mock_cache.return_value = {"city": "Geneva", "country": "Switzerland"}
+        import json
+
+        mock_cache.return_value = json.dumps({"city": "Geneva", "country": "Switzerland"})
         result = reverse_geocode(46.2, 6.1)
         assert result is not None
         assert result.city == "Geneva"
 
-    @patch("para_files.utils.geolocation._cached_reverse_geocode")
+    @patch("para_files.utils.geolocation._memory_cached_lookup")
     def test_extracts_town_field(self, mock_cache: MagicMock):
         """Test extraction with 'town' field."""
-        mock_cache.return_value = {"town": "Nyon", "country": "Switzerland"}
+        import json
+
+        mock_cache.return_value = json.dumps({"town": "Nyon", "country": "Switzerland"})
         result = reverse_geocode(46.38, 6.24)
         assert result is not None
         assert result.city == "Nyon"
 
-    @patch("para_files.utils.geolocation._cached_reverse_geocode")
+    @patch("para_files.utils.geolocation._memory_cached_lookup")
     def test_extracts_village_field(self, mock_cache: MagicMock):
         """Test extraction with 'village' field."""
-        mock_cache.return_value = {"village": "Tannay", "country": "Switzerland"}
+        import json
+
+        mock_cache.return_value = json.dumps({"village": "Tannay", "country": "Switzerland"})
         result = reverse_geocode(46.31, 6.19)
         assert result is not None
         assert result.city == "Tannay"
 
-    @patch("para_files.utils.geolocation._cached_reverse_geocode")
+    @patch("para_files.utils.geolocation._memory_cached_lookup")
     def test_extracts_region_fields(self, mock_cache: MagicMock):
         """Test extraction of region field types."""
-        mock_cache.return_value = {"state": "Vaud", "country": "Switzerland"}
+        import json
+
+        mock_cache.return_value = json.dumps({"state": "Vaud", "country": "Switzerland"})
         result = reverse_geocode(46.5, 6.6)
         assert result is not None
         assert result.region == "Vaud"
 
-    @patch("para_files.utils.geolocation._cached_reverse_geocode")
+    @patch("para_files.utils.geolocation._memory_cached_lookup")
     def test_extracts_country_code(self, mock_cache: MagicMock):
         """Test extraction of country code."""
-        mock_cache.return_value = {"country": "Switzerland", "country_code": "ch"}
+        import json
+
+        mock_cache.return_value = json.dumps({"country": "Switzerland", "country_code": "ch"})
         result = reverse_geocode(46.2, 6.1)
         assert result is not None
         assert result.country_code == "CH"  # Should be uppercase
 
-    @patch("para_files.utils.geolocation._cached_reverse_geocode")
+    @patch("para_files.utils.geolocation._memory_cached_lookup")
     def test_rounds_coordinates(self, mock_cache: MagicMock):
         """Test that coordinates are rounded for cache efficiency."""
-        mock_cache.return_value = {"city": "Test"}
+        import json
+
+        mock_cache.return_value = json.dumps({"city": "Test"})
 
         reverse_geocode(46.12345, 6.12345)
 
         # Should be called with rounded coordinates (3 decimal places)
         mock_cache.assert_called_once_with(46.123, 6.123)
 
-    @patch("para_files.utils.geolocation._cached_reverse_geocode")
+    @patch("para_files.utils.geolocation._memory_cached_lookup")
     def test_full_location_info(self, mock_cache: MagicMock):
         """Test extraction of complete location info."""
-        mock_cache.return_value = {
+        import json
+
+        mock_cache.return_value = json.dumps({
             "city": "Geneva",
             "state": "Geneva",
             "country": "Switzerland",
             "country_code": "ch",
-        }
+        })
 
         result = reverse_geocode(46.2, 6.1)
 
@@ -341,7 +469,7 @@ class TestGetLocationFolder:
 
     def setup_method(self):
         """Clear cache before each test."""
-        _cached_reverse_geocode.cache_clear()
+        _memory_cached_lookup.cache_clear()
 
     @patch("para_files.utils.geolocation.reverse_geocode")
     def test_returns_folder_name(self, mock_reverse: MagicMock):
@@ -380,3 +508,28 @@ class TestGetLocationFolder:
         result = get_location_folder(46.2, 6.1)
 
         assert result == "Switzerland/Geneva"
+
+
+class TestCacheUtilityFunctions:
+    """Tests for cache utility functions."""
+
+    @patch("para_files.utils.geolocation._get_cache")
+    def test_get_cache_stats(self, mock_get_cache: MagicMock):
+        """Test get_cache_stats function."""
+        mock_cache = MagicMock()
+        mock_cache.get_stats.return_value = {"entries": 42}
+        mock_get_cache.return_value = mock_cache
+
+        result = get_cache_stats()
+
+        assert result == {"entries": 42}
+
+    @patch("para_files.utils.geolocation._get_cache")
+    def test_clear_cache(self, mock_get_cache: MagicMock):
+        """Test clear_cache function."""
+        mock_cache = MagicMock()
+        mock_get_cache.return_value = mock_cache
+
+        clear_cache()
+
+        mock_cache.clear.assert_called_once()
