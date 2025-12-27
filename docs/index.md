@@ -8,12 +8,12 @@ nav_order: 1
 
 **macOS-only (Apple Silicon)** intelligent file classification system using MLX-powered semantic routing.
 
-Implements the **PARA method** (Projects, Areas, Resources, Archives) with a deterministic 5-signal classification pipeline.
+Implements the **PARA method** (Projects, Areas, Resources, Archives) with a deterministic 6-signal classification pipeline.
 
 ## Features
 
 - **MLX Embeddings**: Fast, local semantic matching using `nomic-embed-text-v1.5`
-- **5-Signal Pipeline**: Cascading classification with configurable confidence thresholds
+- **6-Signal Pipeline**: Cascading classification with configurable confidence thresholds
 - **PARA Method**: Organize files into Projects, Areas, Resources, and Archives
 - **CLI Interface**: Simple commands for classify, move, scan, and learning
 - **Extensible**: Add custom routes, issuers, and utterances via YAML
@@ -42,7 +42,9 @@ uv run para-files move *.pdf --dry-run
 
 ## Documentation
 
-- [Architecture](architecture.html) - Understand the 5-signal classification pipeline
+- [Architecture](architecture.html) - Understand the 6-signal classification pipeline
+- [Getting Started](getting-started.html) - Quick start guide for users
+- [Developer Guide](developer-guide.html) - Onboarding guide for contributors
 - [CLI Reference](cli.html) - Full command reference
 - [Configuration](configuration.html) - Configure PARA roots, models, and thresholds
 - [API Reference](api.html) - Python API documentation

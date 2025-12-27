@@ -1,0 +1,345 @@
+---
+title: Developer Guide
+layout: default
+nav_order: 4
+---
+
+# Developer Guide
+
+Complete onboarding guide for new contributors to para-files.
+
+## Prerequisites
+
+- macOS with Apple Silicon (M1/M2/M3/M4) - **Required**
+- Python 3.12+
+- [uv](https://docs.astral.sh/uv/) package manager
+- Git
+
+## Environment Setup
+
+### Step 1: Clone and Install
+
+```bash
+# Clone the repository
+git clone https://github.com/fjacquet/para-files.git
+cd para-files
+
+# Install all dependencies including dev tools
+uv sync --all-extras
+
+# Verify installation
+uv run para-files --version
+```
+
+### Step 2: Set Up Development Environment
+
+```bash
+# Create a test PARA folder structure
+mkdir -p /tmp/test-para/{0_Inbox,1_Projects,2_Areas,3_Resources,4_Archives}
+
+# Set environment variable for testing
+export PARA_FILES_PARA_ROOT="/tmp/test-para"
+
+# Install pre-commit hooks
+pre-commit install
+```
+
+### Step 3: Verify Everything Works
+
+```bash
+# Run the test suite
+uv run pytest -v
+
+# Run linter
+uv run ruff check src/ tests/
+
+# Run type checker
+uv run mypy src/
+
+# Test CLI
+uv run para-files --help
+```
+
+## Codebase Structure
+
+```
+para-files/
+├── src/para_files/           # Main source code
+│   ├── __init__.py
+│   ├── main.py               # CLI entry point (Typer app)
+│   ├── config.py             # Configuration with pydantic-settings
+│   ├── pipeline.py           # 6-signal classification orchestrator
+│   ├── reference_tree.py     # YAML reference tree loader
+│   ├── types.py              # Pydantic data models
+│   ├── mover.py              # File move/copy operations
+│   ├── classifiers/          # Classification signal implementations
+│   │   ├── validated_db.py   # Signal 1: Manual mappings
+│   │   ├── rules_engine.py   # Signal 2: Glob patterns
+│   │   ├── book_detector.py  # Signal 2.5: Book detection
+│   │   ├── domain_kb.py      # Signal 3: Known issuers
+│   │   ├── semantic_router.py # Signal 4: MLX embeddings
+│   │   └── llm_fallback.py   # Signal 5: LLM fallback
+│   ├── encoders/
+│   │   └── mlx_encoder.py    # MLX embedding encoder
+│   └── utils/                # Utility modules
+├── tests/                    # Test suite
+├── config/
+│   └── personal_file_tree.yaml  # PARA reference tree
+├── docs/                     # Documentation (Jekyll/GitHub Pages)
+├── pyproject.toml            # Project configuration
+├── README.md                 # User documentation
+├── CLAUDE.md                 # AI assistant instructions
+└── CHANGELOG.md              # Version history
+```
+
+## Key Files to Understand First
+
+### 1. `src/para_files/types.py` - Data Models
+
+Contains all Pydantic models used throughout:
+- `ClassificationResult` - Result of classifying a file
+- `ConfidenceLevel` - Confidence and source of classification
+- `Route` - A destination route in the PARA structure
+
+### 2. `src/para_files/pipeline.py` - Core Logic
+
+The `ClassificationPipeline` class orchestrates the 6-signal classification:
+
+```python
+# Simplified flow
+class ClassificationPipeline:
+    def classify_file(self, path: Path) -> ClassificationResult:
+        # Try each signal in order (first match wins)
+        for signal in [validated_db, rules_engine, book_detector,
+                       domain_kb, semantic_router, llm_fallback]:
+            result = signal.classify(path)
+            if result.matched:
+                return result
+        return ClassificationResult.unclassified()
+```
+
+### 3. `src/para_files/main.py` - CLI Commands
+
+All CLI commands are defined here using Typer:
+- `classify` - Classify files
+- `move` - Classify and move files
+- `scan` - Preview directory classifications
+- `clean` - Remove junk files
+
+## Development Workflow
+
+### Making Changes
+
+1. **Create a branch**
+   ```bash
+   git checkout -b feature/my-feature
+   ```
+
+2. **Make changes** following code style
+
+3. **Run quality checks**
+   ```bash
+   uv run ruff check src/ tests/
+   uv run ruff format src/ tests/
+   uv run mypy src/
+   uv run pytest -v
+   ```
+
+4. **Update documentation**
+   - Add entry to CHANGELOG.md under `[Unreleased]`
+   - Update README.md if CLI changes
+   - Add docstrings to new public functions
+
+5. **Commit and push**
+   ```bash
+   git add .
+   git commit -m "feat: add my feature"
+   git push -u origin feature/my-feature
+   ```
+
+### Code Style Rules
+
+| Rule | Enforcement |
+|------|-------------|
+| Line length: 100 chars | Ruff |
+| Type hints required | mypy (strict) |
+| `from __future__ import annotations` | All modules |
+| Docstrings for public functions | Convention |
+| No `print()` - use `logging` | Ruff (T201) |
+
+### Testing Guidelines
+
+- Tests go in `tests/` directory
+- Match test file names: `test_<module>.py`
+- Use pytest fixtures for common setup
+- Mock external services (MLX, filesystem)
+- Aim for 80%+ coverage
+
+```python
+# Example test
+def test_classify_pdf(tmp_path: Path, mock_encoder: MockEncoder):
+    """Test PDF classification returns correct route."""
+    pdf = tmp_path / "invoice.pdf"
+    pdf.write_bytes(b"%PDF-1.4...")
+
+    result = pipeline.classify_file(pdf)
+
+    assert result.category == "2_Areas/finances/factures"
+    assert result.confidence.value >= 0.75
+```
+
+## Architecture Deep Dive
+
+### The 6-Signal Pipeline
+
+```mermaid
+flowchart TB
+    file["Input File"] --> extract["Extract Content/Metadata"]
+
+    extract --> s1{"1. Validated DB<br/>100% confidence"}
+    s1 -->|match| done["Classification Result"]
+    s1 -->|no match| s2
+
+    s2{"2. Rules Engine<br/>95% confidence"}
+    s2 -->|match| done
+    s2 -->|no match| s3
+
+    s3{"2.5 Book Detector<br/>92% confidence"}
+    s3 -->|match| done
+    s3 -->|no match| s4
+
+    s4{"3. Domain KB<br/>90% confidence"}
+    s4 -->|match| done
+    s4 -->|no match| s5
+
+    s5{"4. Semantic Router<br/>85% confidence"}
+    s5 -->|match| done
+    s5 -->|no match| s6
+
+    s6{"5. LLM Fallback<br/>Variable confidence"}
+    s6 -->|match| done
+    s6 -->|no match| unclassified["Unclassified"]
+```
+
+### MLX Embeddings
+
+The semantic router uses MLX for fast local embeddings:
+
+```python
+from para_files.encoders import MLXEncoder
+
+# Lazy loading - model downloads on first use
+encoder = MLXEncoder(model_name="mlx-community/nomic-embed-text-v1.5")
+
+# Encode text (10-15ms latency)
+embeddings = encoder(["invoice from electric company"])
+
+# Compare with cosine similarity
+similarity = cosine_similarity(embeddings, route_embeddings)
+```
+
+## Adding a New Classifier
+
+When adding new classifiers:
+
+1. Create a new file in `src/para_files/classifiers/`
+2. Inherit from `BaseClassifier`
+3. Implement `classify()` method
+4. Define `source`, `name`, and `default_confidence` properties
+5. Add to pipeline in `ClassificationPipeline.__init__`
+6. Write comprehensive tests
+
+Example:
+
+```python
+from para_files.classifiers.base import BaseClassifier
+from para_files.types import ClassificationResult, ConfidenceLevel
+
+class MyClassifier(BaseClassifier):
+    @property
+    def source(self) -> str:
+        return "my_classifier"
+
+    @property
+    def name(self) -> str:
+        return "My Classifier"
+
+    @property
+    def default_confidence(self) -> float:
+        return 0.88
+
+    def classify(self, file_path: Path) -> ClassificationResult | None:
+        # Your classification logic here
+        pass
+```
+
+## Debugging Tips
+
+### Enable Verbose Logging
+
+```bash
+uv run para-files classify document.pdf -v
+```
+
+### Test Specific Routes
+
+```bash
+uv run para-files test-route factures-energie --file invoice.pdf -v
+```
+
+### Inspect Reference Tree
+
+```bash
+uv run para-files tree --validate
+uv run para-files routes --utterances
+uv run para-files issuers
+```
+
+### Check Configuration
+
+```bash
+uv run para-files config --show
+```
+
+## Common Issues
+
+### Issue: MLX Import Error
+
+```
+ImportError: No module named 'mlx'
+```
+
+**Solution**: Ensure you're on Apple Silicon Mac. MLX only works on M1/M2/M3/M4.
+
+### Issue: Tests Fail with Missing PARA_ROOT
+
+**Solution**: Set environment variable:
+```bash
+export PARA_FILES_PARA_ROOT="/tmp/test-para"
+```
+
+### Issue: Type Errors
+
+**Solution**: Run mypy and fix annotations:
+```bash
+uv run mypy src/ --show-error-codes
+```
+
+## Documentation Guidelines
+
+When making changes, update documentation:
+
+| Change Type | Documentation Update |
+|-------------|---------------------|
+| New feature | CHANGELOG.md, README.md |
+| Bug fix | CHANGELOG.md |
+| CLI change | README.md, CHANGELOG.md |
+| Architecture | docs/architecture.md, CHANGELOG.md |
+| Config option | README.md, CHANGELOG.md |
+
+## Getting Help
+
+- Check existing issues on GitHub
+- Read the test files for usage examples
+- Review CLAUDE.md for conventions
+- Ask in discussions/issues
