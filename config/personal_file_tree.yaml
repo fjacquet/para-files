@@ -744,6 +744,7 @@ known_issuers:
     issuers:
       - Commune de Montreux
       - Leukerbad Skischule
+      - Réseau enfance
 
   voyages:
     pattern: "4_Archives/voyages/{destination}/{year}"

@@ -78,17 +78,30 @@ class RulesEngineClassifier(BaseClassifier):
         extension = metadata.extension.lower()
 
         for rule_name, rule in self._rules.items():
-            # Check extension match
+            # Check if extension matches (if extensions are specified)
+            extension_match = True
             if rule.extensions:
                 matching_extensions = [e.lower() for e in rule.extensions]
-                if extension in matching_extensions:
-                    return self._create_result(rule_name, rule, metadata)
+                extension_match = extension in matching_extensions
 
-            # Check pattern match
+            # Check if pattern matches (if patterns are specified)
+            pattern_match = False
             if rule.patterns:
                 for pattern in rule.patterns:
                     if fnmatch.fnmatch(filename, pattern):
-                        return self._create_result(rule_name, rule, metadata)
+                        pattern_match = True
+                        break
+            else:
+                # No patterns specified - extension-only rules (photos, videos, etc.)
+                pattern_match = True
+
+            # Rule matches if BOTH extension and pattern conditions are met
+            # - If rule has extensions: extension must match
+            # - If rule has patterns: filename must match at least one pattern
+            # - If rule only has extensions (no patterns): extension match is sufficient
+            if extension_match and pattern_match:
+                if rule.extensions or rule.patterns:
+                    return self._create_result(rule_name, rule, metadata)
 
             # Check platform patterns (for courses)
             if rule.platforms:
