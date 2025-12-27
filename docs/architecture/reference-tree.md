@@ -65,6 +65,7 @@ routes:
 ```
 
 **Variables in path:**
+
 - `{year}` - Current year
 - `{month}` - Current month
 - `{day}` - Current day

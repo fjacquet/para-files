@@ -22,6 +22,7 @@ uv run para-files init /path/to/para
 ## Options
 
 ### `--subfolders`
+
 Include route-specific subfolders:
 
 ```bash
@@ -32,6 +33,7 @@ uv run para-files init --subfolders
 ```
 
 ### `--dry-run`
+
 Preview what would be created without creating:
 
 ```bash
@@ -43,6 +45,7 @@ uv run para-files init --dry-run
 ## What Gets Created
 
 Default (without `--subfolders`):
+
 ```
 PARA/
   0_Inbox/
@@ -53,6 +56,7 @@ PARA/
 ```
 
 With `--subfolders`:
+
 ```
 PARA/
   0_Inbox/
@@ -108,6 +112,7 @@ uv run para-files init /custom/location/PARA
 **The `move` command automatically creates folders as needed.**
 
 You only need `init` if you want to:
+
 - Pre-create folder structure before moving files
 - See the folder layout before using the system
 - Organize folders manually

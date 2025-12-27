@@ -22,6 +22,7 @@ uv run para-files config --path
 ## Options
 
 ### `--show`
+
 Display all current settings:
 
 ```bash
@@ -37,6 +38,7 @@ uv run para-files config --show
 ```
 
 ### `--path`
+
 Show where configuration is coming from:
 
 ```bash
@@ -77,6 +79,7 @@ uv run para-files config --path
 ## Common Settings
 
 See [Configuration Guide](../configuration/overview.md) for:
+
 - `PARA_FILES_PARA_ROOT` - Where to store PARA folders
 - `PARA_FILES_MLX_MODEL_NAME` - Embedding model
 - `PARA_FILES_MLX_SCORE_THRESHOLD` - Confidence threshold
@@ -85,6 +88,7 @@ See [Configuration Guide](../configuration/overview.md) for:
 ## Troubleshooting
 
 **"PARA_ROOT not set" error?**
+
 ```bash
 uv run para-files config --show
 
@@ -93,6 +97,7 @@ uv run para-files config --show
 ```
 
 **Wrong configuration being used?**
+
 ```bash
 uv run para-files config --path
 

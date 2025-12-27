@@ -33,6 +33,7 @@ Utterances:
 ## With Options
 
 ### `--file PATH`
+
 Test a specific file against the route:
 
 ```bash
@@ -45,6 +46,7 @@ uv run para-files test-route factures-utilities --file invoice.pdf
 ```
 
 ### `-v, --verbose`
+
 Show detailed matching information:
 
 ```bash
@@ -84,6 +86,7 @@ uv run para-files test-route factures-utilities --file problematic_file.pdf -v
 ## When to Use
 
 **Use test-route when:**
+
 - A file isn't matching any route
 - Multiple routes seem to match
 - You want to debug routing issues

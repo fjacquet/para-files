@@ -36,6 +36,7 @@ config:
 ### When to Customize
 
 Use when:
+
 - You have multiple reference trees
 - You store config elsewhere
 - You want to share between projects
@@ -107,6 +108,7 @@ JSON file with mappings:
 ### When to Use
 
 Use Validated DB when:
+
 - You want 100% reliable mappings
 - You're doing enterprise classification
 - You want audit trail of approvals

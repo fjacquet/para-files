@@ -25,6 +25,7 @@ uv run para-files move ~/Downloads/*.pdf
 ## Essential Options
 
 ### `--dry-run`
+
 Preview where files will go WITHOUT moving them:
 
 ```bash
@@ -35,6 +36,7 @@ uv run para-files move *.pdf --dry-run
 Output shows destination but doesn't move files.
 
 ### `--copy`
+
 Copy files instead of moving:
 
 ```bash
@@ -43,7 +45,9 @@ uv run para-files move document.pdf --copy
 ```
 
 ### `--conflict`
+
 Handle duplicate filenames. Options:
+
 - `skip` - Don't move if file exists at destination
 - `overwrite` - Replace existing file
 - `rename` - Add number suffix (file.pdf → file_1.pdf)
@@ -58,6 +62,7 @@ uv run para-files move *.pdf --conflict rename
 ```
 
 ### `--skip-unclassifiable`
+
 Don't warn about files that go to Inbox (0_Inbox):
 
 ```bash
@@ -67,6 +72,7 @@ uv run para-files move *.pdf --skip-unclassifiable
 ## Advanced Options
 
 ### `--date-prefix`
+
 Add date prefix to moved files:
 
 ```bash
@@ -75,6 +81,7 @@ uv run para-files move *.pdf --date-prefix
 ```
 
 ### `--cleanup-empty`
+
 Remove empty directories after moving:
 
 ```bash
@@ -84,18 +91,21 @@ uv run para-files move ~/Downloads/*.pdf --cleanup-empty
 ## Output Formats
 
 ### Text Output (Default)
+
 ```bash
 uv run para-files move *.pdf
 # Shows: File → Destination (Status)
 ```
 
 ### JSON Output
+
 ```bash
 uv run para-files move *.pdf --json
 # Structured results for scripting
 ```
 
 ### Verbose
+
 ```bash
 uv run para-files move *.pdf -v
 # Shows detailed info including confidence, source signal, etc.

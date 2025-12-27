@@ -51,6 +51,7 @@ cloud (Cloud Services):
 An "issuer" is a known company or bank that sends you documents.
 
 When para-files finds a document from a known issuer, it uses the **Domain KB signal** (90% confidence):
+
 - Email sender domain: `invoice@ubs.com` → UBS
 - Company name in filename: `Invoice_from_Swisscom.pdf`
 - Subject line matches: "Your Swisscom bill"

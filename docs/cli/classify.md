@@ -31,6 +31,7 @@ Confidence: 90% (Domain KB)
 ```
 
 Shows:
+
 - **File**: Input filename
 - **Category**: Suggested PARA path
 - **Confidence**: How sure (90%) and which signal matched (Domain KB)
@@ -38,6 +39,7 @@ Shows:
 ## Options
 
 ### `-v, --verbose`
+
 Show detailed matching information:
 
 ```bash
@@ -47,6 +49,7 @@ uv run para-files classify document.pdf -v
 ```
 
 ### `--json`
+
 Output as JSON (useful for scripts):
 
 ```bash
@@ -64,6 +67,7 @@ uv run para-files classify document.pdf --json
 ```
 
 ### `-r, --reference-tree PATH`
+
 Use a custom YAML reference tree:
 
 ```bash

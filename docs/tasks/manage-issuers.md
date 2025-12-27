@@ -12,6 +12,7 @@ Register companies and banks to improve classification accuracy.
 ## What Is an Issuer?
 
 An issuer is a known sender of documents:
+
 - Banks (UBS, Credit Suisse)
 - Telecom companies (Swisscom, Sunrise)
 - Utilities (electricity, water, gas)
@@ -52,6 +53,7 @@ uv run para-files issuers
 ## How It Works
 
 After registering an issuer, para-files matches via:
+
 - Email sender domain: `invoice@mybank.com` → Your Bank
 - Company name in filename: `Invoice_MyBank.pdf`
 - Subject line: "Your Bank statement"
@@ -107,11 +109,13 @@ uv run para-files classify document_from_new_issuer.pdf
 ## When to Add Issuers
 
 **Add issuer when:**
+
 - You get regular documents from this sender
 - You want reliable, fast matching
 - You want consistency
 
 **Don't need to add when:**
+
 - One-time document
 - Very generic name
 - Already have good utterances

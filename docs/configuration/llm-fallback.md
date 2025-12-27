@@ -32,6 +32,7 @@ config:
 ```
 
 LLM fallback is optional and disabled by default because it requires:
+
 - A running LLM server (e.g., Ollama)
 - Extra processing time
 - Internet connectivity (for online models)
@@ -99,6 +100,7 @@ export PARA_FILES_LLM_MODEL=ollama/qwen2.5:1.5b
 Default: `ollama/qwen2.5:1.5b`
 
 Other options:
+
 - `ollama/mistral` - Faster, less accurate
 - `ollama/neural-chat` - Good balance
 - `openai/gpt-4` - Online (requires API key)
@@ -115,6 +117,7 @@ export PARA_FILES_LLM_API_BASE=http://localhost:11434
 Default: `null` (disabled)
 
 Examples:
+
 - `http://localhost:11434` - Local Ollama
 - `http://192.168.1.100:11434` - Remote machine
 - `https://api.openai.com` - OpenAI (requires API key)
@@ -145,9 +148,11 @@ config:
 ## Performance Impact
 
 **Without LLM:** Fast (uses embeddings)
+
 - Embedding matching: 10-15ms
 
 **With LLM:** Slower (only for unmatched files)
+
 - Local model (Ollama): +500ms-2s per file
 - Online model (OpenAI): +1-3s per file
 
@@ -156,11 +161,13 @@ LLM only runs when other signals don't match, so impact varies.
 ## When to Use LLM Fallback
 
 **Good for:**
+
 - Ambiguous documents that don't fit patterns
 - Learning what documents are about
 - Complex classification rules
 
 **Not needed when:**
+
 - You have good utterances and issuers
 - You're willing to manually fix misclassifications
 - Speed is critical

@@ -12,6 +12,7 @@ A step-by-step walkthrough of your first classification.
 ## Prerequisites
 
 You've already:
+
 1. [Installed para-files](installation.md)
 2. [Set up quick configuration](quick-setup.md) with `PARA_FILES_PARA_ROOT` set
 
@@ -20,6 +21,7 @@ You've already:
 ### 1. Find a Test File
 
 Use any document you have:
+
 ```bash
 # Example files to try
 ~/Downloads/invoice.pdf
@@ -34,6 +36,7 @@ uv run para-files classify ~/Downloads/invoice.pdf
 ```
 
 Output shows:
+
 ```
 File: invoice.pdf
 Category: 4_Archives/factures/2024
@@ -41,6 +44,7 @@ Confidence: 85% (Semantic Router)
 ```
 
 This means:
+
 - **Category**: Where the file would be moved
 - **Confidence**: How sure para-files is (85%)
 - **Source**: Which signal made the decision (Semantic Router = MLX embedding match)
@@ -99,6 +103,7 @@ ls -la ~/Documents/PARA/4_Archives/factures/2024/
 ## What Happened?
 
 Para-files:
+
 1. **Analyzed** the file (name, type, content preview)
 2. **Ran through 6 signals** in order, stopping at the first match
 3. **Found a match** at signal 4 (Semantic Router) with 85% confidence
@@ -121,6 +126,7 @@ See [Low Confidence Scores](../troubleshooting/confidence-too-low.md).
 
 **Wrong category?**
 You can improve matching by:
+
 - Adding the issuer: `uv run para-files add-issuer "Company Name" -c category`
 - Adding utterances: `uv run para-files add-utterance route "describe what this file is about"`
 - Using [Interactive Learning](../tasks/learn-from-files.md)

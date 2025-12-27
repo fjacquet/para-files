@@ -20,6 +20,7 @@ mlx-community/nomic-embed-text-v1.5
 ```
 
 **Why this model?**
+
 - Optimized for Apple Neural Engine
 - 768-dimensional embeddings
 - 8192 token context window
@@ -56,6 +57,7 @@ Minimum confidence score (0.0 to 1.0) for semantic matching to be accepted.
 ### How It Works
 
 Para-files compares document embeddings to route utterances:
+
 - Score 0.95 = Very similar
 - Score 0.75 = Moderately similar (default minimum)
 - Score 0.50 = Somewhat similar
@@ -87,14 +89,17 @@ export PARA_FILES_MLX_SCORE_THRESHOLD=0.65
 ```
 
 **Pros:**
+
 - More matches (fewer files to Inbox)
 - Faster classification
 
 **Cons:**
+
 - More false positives (wrong category)
 - May need more learning/correction
 
 **When to use:**
+
 - You have good utterances
 - You prefer action over precision
 
@@ -105,14 +110,17 @@ export PARA_FILES_MLX_SCORE_THRESHOLD=0.85
 ```
 
 **Pros:**
+
 - More accurate (fewer misclassifications)
 - High confidence matches only
 
 **Cons:**
+
 - More files go to Inbox
 - Requires fallback signals (rules, issuers)
 
 **When to use:**
+
 - You need high accuracy
 - You have other signals (issuers, rules)
 

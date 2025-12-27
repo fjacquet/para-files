@@ -97,6 +97,7 @@ para-files/
 ### 1. `src/para_files/types.py` - Data Models
 
 Contains all Pydantic models used throughout:
+
 - `ClassificationResult` - Result of classifying a file
 - `ConfidenceLevel` - Confidence and source of classification
 - `Route` - A destination route in the PARA structure
@@ -121,6 +122,7 @@ class ClassificationPipeline:
 ### 3. `src/para_files/main.py` - CLI Commands
 
 All CLI commands are defined here using Typer:
+
 - `classify` - Classify files
 - `move` - Classify and move files
 - `scan` - Preview directory classifications
@@ -131,6 +133,7 @@ All CLI commands are defined here using Typer:
 ### Making Changes
 
 1. **Create a branch**
+
    ```bash
    git checkout -b feature/my-feature
    ```
@@ -138,6 +141,7 @@ All CLI commands are defined here using Typer:
 2. **Make changes** following code style
 
 3. **Run quality checks**
+
    ```bash
    uv run ruff check src/ tests/
    uv run ruff format src/ tests/
@@ -151,6 +155,7 @@ All CLI commands are defined here using Typer:
    - Add docstrings to new public functions
 
 5. **Commit and push**
+
    ```bash
    git add .
    git commit -m "feat: add my feature"
@@ -314,6 +319,7 @@ ImportError: No module named 'mlx'
 ### Issue: Tests Fail with Missing PARA_ROOT
 
 **Solution**: Set environment variable:
+
 ```bash
 export PARA_FILES_PARA_ROOT="/tmp/test-para"
 ```
@@ -321,6 +327,7 @@ export PARA_FILES_PARA_ROOT="/tmp/test-para"
 ### Issue: Type Errors
 
 **Solution**: Run mypy and fix annotations:
+
 ```bash
 uv run mypy src/ --show-error-codes
 ```

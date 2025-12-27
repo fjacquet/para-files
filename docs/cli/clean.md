@@ -22,6 +22,7 @@ uv run para-files clean ~/Downloads --no-recursive
 ## What Gets Cleaned
 
 **Apple temp files:**
+
 - `.DS_Store`
 - `._*` (AppleDouble shadow files)
 - `.Spotlight-V100`
@@ -29,11 +30,13 @@ uv run para-files clean ~/Downloads --no-recursive
 - `.fseventsd`
 
 **Windows temp files:**
+
 - `Thumbs.db`
 - `desktop.ini`
 - `$RECYCLE.BIN`
 
 **Editor backup files:**
+
 - `*~` (Vim/Emacs)
 - `.swp` (Vim swap)
 - `.swo` (Vim swap)
@@ -43,6 +46,7 @@ uv run para-files clean ~/Downloads --no-recursive
 ## Options
 
 ### `--dry-run`
+
 Preview what would be deleted:
 
 ```bash
@@ -51,6 +55,7 @@ uv run para-files clean ~/Downloads --dry-run
 ```
 
 ### `--nfo`
+
 Also delete `.nfo` files (video metadata):
 
 ```bash
@@ -58,6 +63,7 @@ uv run para-files clean ~/Downloads --nfo
 ```
 
 ### `--no-empty-dirs`
+
 Skip empty directory cleanup:
 
 ```bash
@@ -66,6 +72,7 @@ uv run para-files clean ~/Downloads --no-empty-dirs
 ```
 
 ### `--log PATH`
+
 Save cleanup log to JSON file:
 
 ```bash
@@ -76,6 +83,7 @@ cat cleanup.json
 ```
 
 ### `--json`
+
 Output as JSON:
 
 ```bash
@@ -83,6 +91,7 @@ uv run para-files clean ~/Downloads --json
 ```
 
 ### `-v, --verbose`
+
 Show detailed output:
 
 ```bash

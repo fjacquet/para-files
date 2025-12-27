@@ -47,12 +47,15 @@ uv run para-files --help
 ## Troubleshooting
 
 ### "command not found: uv"
-Install uv from https://docs.astral.sh/uv/getting-started/installation/
+
+Install uv from <https://docs.astral.sh/uv/getting-started/installation/>
 
 ### "M1 chip required" error
+
 This is expected if you're not on Apple Silicon. para-files only works on macOS with M1/M2/M3/M4.
 
 ### Python 3.12+ required
+
 ```bash
 # Check your Python version
 python3 --version
@@ -62,6 +65,7 @@ uv python install 3.12
 ```
 
 ### Module not found errors
+
 ```bash
 # Reinstall dependencies
 uv sync --all-extras

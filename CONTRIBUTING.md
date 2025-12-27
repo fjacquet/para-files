@@ -99,6 +99,7 @@ Add entries under `## [Unreleased]` section.
 ### README.md
 
 Update when:
+
 - Adding new CLI commands
 - Changing configuration options
 - Modifying installation steps
@@ -106,6 +107,7 @@ Update when:
 ### docs/ (GitHub Pages)
 
 Update `docs/architecture.md` when:
+
 - Adding new classifiers or signals
 - Changing the pipeline flow
 - Modifying major components

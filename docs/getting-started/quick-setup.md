@@ -22,6 +22,7 @@ uv run para-files init ~/Documents/PARA
 ```
 
 This creates:
+
 - `0_Inbox/` - Unclassified files
 - `1_Projects/` - Active projects
 - `2_Areas/` - Ongoing responsibilities
@@ -83,6 +84,7 @@ uv run para-files move ~/Downloads/some-document.pdf
 ## Common Issues
 
 **"PARA_FILES_PARA_ROOT not set"?**
+
 ```bash
 # Check it's exported
 echo $PARA_FILES_PARA_ROOT
@@ -92,6 +94,7 @@ export PARA_FILES_PARA_ROOT=~/Documents/PARA
 ```
 
 **Wrong Python version?**
+
 ```bash
 # Check Python version
 python3 --version  # Should be 3.12+

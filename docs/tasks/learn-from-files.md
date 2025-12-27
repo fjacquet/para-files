@@ -51,6 +51,7 @@ uv run para-files learn wrong_file.pdf
 ```
 
 Para-files now learns:
+
 - This file goes to `factures-cloud`
 - Files matching "AWS billing monthly statement" go to that category
 
@@ -68,18 +69,21 @@ done
 ## When to Learn
 
 **Learn when:**
+
 - File went to wrong category
 - Classification confidence is low
 - You're training the system
 - You want to improve accuracy
 
 **Don't need to learn when:**
+
 - Classification is correct
 - Confidence is high
 
 ## Benefits
 
 As you learn from files:
+
 - **Validated DB grows** - 100% confidence for approved mappings
 - **Utterances improve** - Better semantic matching
 - **Issuers register** - Fast Domain KB matching

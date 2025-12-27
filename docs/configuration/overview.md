@@ -23,6 +23,7 @@ This means you can override settings at any level.
 ## Essential Settings
 
 You **must** set:
+
 - `PARA_FILES_PARA_ROOT` - Where your PARA folders are
 
 ```bash
@@ -32,6 +33,7 @@ export PARA_FILES_PARA_ROOT=~/Documents/PARA
 ## Optional Settings
 
 Common options:
+
 - `PARA_FILES_MLX_SCORE_THRESHOLD` - Sensitivity (0.0-1.0)
 - `PARA_FILES_REFERENCE_TREE_PATH` - Custom tree location
 - `PARA_FILES_LLM_ENABLED` - Use AI fallback
@@ -72,21 +74,25 @@ config:
 ## Available Settings
 
 ### Core
+
 - **`PARA_ROOT`** - Required. PARA folder location
 - **`REFERENCE_TREE_PATH`** - Path to YAML tree (default: config/personal_file_tree.yaml)
 - **`VALIDATED_DB_PATH`** - Path to validated mappings JSON
 
 ### MLX Model
+
 - **`MLX_MODEL_NAME`** - Model to use (default: mlx-community/nomic-embed-text-v1.5)
 - **`MLX_SCORE_THRESHOLD`** - Minimum confidence (0.0-1.0, default: 0.75)
 
 ### LLM Fallback (Optional)
+
 - **`LLM_ENABLED`** - Enable AI fallback (default: false)
 - **`LLM_MODEL`** - Which model (default: ollama/qwen2.5:1.5b)
-- **`LLM_API_BASE`** - API endpoint (e.g., http://localhost:11434)
+- **`LLM_API_BASE`** - API endpoint (e.g., <http://localhost:11434>)
 - **`LLM_CONFIDENCE_THRESHOLD`** - Min LLM confidence (default: 0.6)
 
 ### Other
+
 - **`CONTENT_PREVIEW_CHARS`** - How much of file to read (default: 2000)
 
 ## Check Current Config

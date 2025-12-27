@@ -82,6 +82,7 @@ For detailed architecture, see [docs/architecture/overview.md](docs/architecture
 ## Platform Constraint
 
 This project is **macOS only** (Apple Silicon required) because:
+
 - MLX requires Apple Neural Engine
 - Vision Framework for OCR is macOS-only
 
@@ -97,6 +98,7 @@ All user-facing documentation is in the `docs/` directory:
 - **[Troubleshooting](docs/troubleshooting/)** - Common issues and solutions
 
 **Important**: Keep documentation in sync with code changes. Update `docs/` when making changes, especially for:
+
 - New CLI commands
 - Configuration changes
 - Architecture modifications
@@ -115,6 +117,7 @@ All user-facing documentation is in the `docs/` directory:
 | Breaking change | `CHANGELOG.md` with migration notes |
 
 Before committing:
+
 1. Update `CHANGELOG.md` under `[Unreleased]`
 2. Update relevant doc pages in `docs/`
 3. Add docstrings for new public functions
@@ -197,22 +200,26 @@ uv run pytest tests/test_classifiers.py::test_semantic_router
 ## Troubleshooting Development
 
 **Type errors after changes?**
+
 ```bash
 uv run mypy src/ --show-error-codes
 ```
 
 **Formatting issues?**
+
 ```bash
 uv run ruff format src/ tests/
 ```
 
 **Import errors?**
+
 ```bash
 # Reinstall in dev mode
 uv sync --all-extras
 ```
 
 **Tests failing?**
+
 ```bash
 # Run with verbose output
 uv run pytest -vv tests/

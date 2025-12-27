@@ -31,6 +31,7 @@ Document: "electricity invoice from EDF"
 **Model**: `nomic-embed-text-v1.5` (default)
 
 **Why this model?**
+
 - Optimized for Apple Neural Engine (MLX)
 - Small (~100MB)
 - Fast (10-15ms)

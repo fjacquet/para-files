@@ -22,6 +22,7 @@ uv run para-files tree --validate
 ## Options
 
 ### `--validate`
+
 Check reference tree for errors:
 
 ```bash
@@ -35,6 +36,7 @@ uv run para-files tree --validate
 ```
 
 ### `--issuers`
+
 List all known issuers (banks, companies):
 
 ```bash
@@ -44,6 +46,7 @@ uv run para-files tree --issuers
 ```
 
 ### `--rules`
+
 Show all routing rules:
 
 ```bash
@@ -53,6 +56,7 @@ uv run para-files tree --rules
 ```
 
 ### `-v, --verbose`
+
 Show detailed information:
 
 ```bash
@@ -69,6 +73,7 @@ uv run para-files tree
 ```
 
 Output:
+
 ```
 PARA Structure:
   0_Inbox
@@ -115,6 +120,7 @@ uv run para-files tree --rules
 ## What tree Does
 
 Shows your reference tree configuration:
+
 - PARA folder structure
 - All routes (categories)
 - All issuers (companies/banks/etc)
@@ -122,6 +128,7 @@ Shows your reference tree configuration:
 - Configuration
 
 Useful for:
+
 - Understanding your current setup
 - Validating before big operations
 - Finding issues

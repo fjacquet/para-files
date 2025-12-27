@@ -12,17 +12,20 @@ para-files commands organize around what you want to do.
 ## Command Groups
 
 ### Classification & Movement
+
 - **[classify](classify.md)** - Determine category for files
 - **[move](move.md)** - Classify and move to PARA folders
 - **[scan](scan.md)** - Preview classifications for a directory
 - **[learn](learn.md)** - Interactive learning from files
 
 ### Configuration & System
+
 - **[config](config.md)** - Show current configuration
 - **[init](init.md)** - Pre-create PARA folder structure
 - **[clean](clean.md)** - Remove junk files
 
 ### Reference Tree Management
+
 - **[tree](tree.md)** - Display/validate reference tree
 - **[routes](routes.md)** - List available categories
 - **[issuers](issuers.md)** - List known companies/banks
@@ -33,27 +36,35 @@ para-files commands organize around what you want to do.
 ## Common Patterns
 
 ### File Input
+
 Most commands accept multiple files:
+
 ```bash
 uv run para-files classify file1.pdf file2.docx file3.txt
 uv run para-files move *.pdf
 ```
 
 ### Output Formats
+
 Get results as text or JSON:
+
 ```bash
 uv run para-files classify file.pdf          # Human readable
 uv run para-files classify file.pdf --json   # Machine readable
 ```
 
 ### Verbosity
+
 Add `-v` for detailed output:
+
 ```bash
 uv run para-files classify file.pdf -v
 ```
 
 ### Reference Tree
+
 All commands can use a custom reference tree:
+
 ```bash
 uv run para-files classify file.pdf -r custom_tree.yaml
 ```
@@ -61,12 +72,14 @@ uv run para-files classify file.pdf -r custom_tree.yaml
 ## Essential Commands
 
 **First time?**
+
 ```bash
 # Set up folder structure
 uv run para-files init ~/Documents/PARA
 ```
 
 **Classify files:**
+
 ```bash
 # Single file
 uv run para-files classify document.pdf
@@ -79,6 +92,7 @@ uv run para-files classify *.pdf --json
 ```
 
 **Move files:**
+
 ```bash
 # Preview first
 uv run para-files move *.pdf --dry-run
@@ -88,6 +102,7 @@ uv run para-files move *.pdf
 ```
 
 **Manage your categories:**
+
 ```bash
 # See all categories
 uv run para-files routes
@@ -100,6 +115,7 @@ uv run para-files add-utterance factures-utilities "electricity bill"
 ```
 
 **Learn interactively:**
+
 ```bash
 # Improve matching for a file
 uv run para-files learn misclassified_file.pdf
@@ -108,6 +124,7 @@ uv run para-files learn misclassified_file.pdf
 ## Global Options
 
 All commands support:
+
 - `-r, --reference-tree PATH` - Use custom YAML reference tree
 - `-v` - Verbose output
 - `--json` - JSON output format

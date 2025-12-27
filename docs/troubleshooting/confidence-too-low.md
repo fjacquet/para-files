@@ -14,6 +14,7 @@ Files match but confidence is below threshold (default 0.75).
 Files are being classified but with <75% confidence.
 
 Example:
+
 ```
 Category: 4_Archives/factures/utilities
 Confidence: 65% (Semantic Router)

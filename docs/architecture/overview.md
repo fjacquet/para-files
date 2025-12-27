@@ -93,6 +93,7 @@ Action (classify, move, learn, etc.)
 ## Next Steps
 
 Learn about each signal:
+
 - **[Signal 1: Validated DB](signal-1-validated-db.md)** - Manual mappings
 - **[Signal 2: Rules Engine](signal-2-rules.md)** - Pattern matching
 - **[Signal 3: Domain KB](signal-3-domain-kb.md)** - Known issuers

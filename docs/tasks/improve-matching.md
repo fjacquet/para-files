@@ -14,6 +14,7 @@ Add keywords to improve how para-files matches documents.
 Utterances are phrases that describe what a document is about. They help with **semantic matching** (Signal 4).
 
 Example:
+
 - Route `factures-utilities`
 - Utterance: `"electricity bill"`
 - Matches: Documents about electricity
@@ -60,12 +61,14 @@ uv run para-files routes --utterances
 ### Use Descriptive Phrases
 
 Good:
+
 ```bash
 uv run para-files add-utterance route "electricity monthly bill"
 uv run para-files add-utterance route "power consumption statement"
 ```
 
 Avoid:
+
 ```bash
 uv run para-files add-utterance route "bill"  # Too generic
 uv run para-files add-utterance route "electricity"  # Single word
@@ -95,6 +98,7 @@ uv run para-files learn unclear_document.pdf
 ## When Utterances Help
 
 Use utterances when:
+
 - Documents are from unknown companies
 - Filenames are generic (`invoice.pdf`)
 - You need content-based matching

@@ -11,7 +11,7 @@ Set up optional AI-powered classification for ambiguous files.
 
 ## Prerequisites
 
-- Ollama installed (https://ollama.ai)
+- Ollama installed (<https://ollama.ai>)
 - Model downloaded: `ollama run qwen2.5:1.5b`
 
 ## Step 1: Start LLM Server
@@ -105,17 +105,20 @@ export PARA_FILES_LLM_MODEL=ollama/mistral
 ```
 
 Slower models (more accurate):
+
 - `llama2` - Large, accurate, slow
 - `neural-chat` - Good balance
 
 ## When to Use LLM
 
 **Good for:**
+
 - Truly ambiguous documents
 - Learning what files are about
 - Complex classification
 
 **Not needed for:**
+
 - Most daily use
 - If you have good utterances/issuers
 - Time-sensitive classification

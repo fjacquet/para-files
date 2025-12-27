@@ -22,6 +22,7 @@ uv run para-files routes --utterances
 ## Options
 
 ### `--utterances`
+
 Show semantic matching keywords for each route:
 
 ```bash
@@ -69,6 +70,7 @@ uv run para-files routes --utterances
 A "route" is a category that files can be classified into.
 
 Each route has:
+
 - **Name**: How you reference it (e.g., `factures-utilities`)
 - **Path**: Where files go in PARA (e.g., `4_Archives/factures/{year}/_Utilities`)
 - **Utterances**: Keywords that match it semantically
@@ -76,6 +78,7 @@ Each route has:
 ## Using Routes
 
 Routes are used by:
+
 - `classify` - Shows which route matches
 - `move` - Determines destination folder
 - `learn` - Asks you which route is correct

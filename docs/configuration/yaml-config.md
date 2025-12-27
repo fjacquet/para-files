@@ -74,6 +74,7 @@ config:
 ```
 
 Adjust `score_threshold`:
+
 - Lower (0.65) = more matches, more false positives
 - Higher (0.85) = fewer matches, more misses
 - Default (0.75) = balanced
@@ -131,6 +132,7 @@ uv run para-files config --path
 ## When to Use YAML Config
 
 **Good for:**
+
 - Keeping all PARA settings in one file
 - Sharing config via version control
 - Complex setups with multiple settings

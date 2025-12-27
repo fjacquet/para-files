@@ -61,6 +61,7 @@ uv run para-files init --subfolders
 ```
 
 This creates:
+
 ```
 PARA/
   0_Inbox/           - Unclassified files

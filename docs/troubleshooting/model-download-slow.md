@@ -65,6 +65,7 @@ uv run para-files classify test.pdf
 ## After First Time
 
 Once downloaded and cached:
+
 - **Classification**: <1 second
 - **Batch of 100 files**: ~2-3 minutes
 - **Model size**: ~100MB (one-time)

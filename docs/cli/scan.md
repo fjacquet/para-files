@@ -22,6 +22,7 @@ uv run para-files scan ~/Downloads --recursive
 ## Options
 
 ### `--recursive`
+
 Scan subdirectories too:
 
 ```bash
@@ -30,6 +31,7 @@ uv run para-files scan ~/Downloads --recursive
 ```
 
 ### `--ext`
+
 Filter by file extensions:
 
 ```bash
@@ -41,6 +43,7 @@ uv run para-files scan ~/Downloads --ext ".pdf,.docx,.xlsx"
 ```
 
 ### `--json`
+
 Output as JSON with statistics:
 
 ```bash
@@ -59,6 +62,7 @@ uv run para-files scan ~/Downloads --recursive --json
 ```
 
 Output shows:
+
 - How many files would go to each category
 - Average confidence score
 - Any unclassifiable files
@@ -93,6 +97,7 @@ uv run para-files scan ~/Downloads --recursive -v
 4. **Does NOT move** anything
 
 Perfect for:
+
 - Previewing before batch moves
 - Finding unclassifiable files
 - Checking classification confidence

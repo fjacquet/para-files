@@ -25,6 +25,7 @@ uv run para-files add-utterance factures-telecom "mobile phone invoice"
 Utterances are keywords and phrases that help para-files match documents via **semantic matching** (MLX embeddings).
 
 When you add an utterance:
+
 - `"electricity bill"` → factures-utilities
 - `"water consumption invoice"` → factures-utilities
 - `"mobile plan"` → factures-telecom
@@ -63,11 +64,13 @@ uv run para-files add-utterance factures-cloud "cloud storage"
 ### Use Descriptive Phrases
 
 Good:
+
 - `"electricity invoice"` ✓
 - `"power consumption bill"` ✓
 - `"water usage statement"` ✓
 
 Avoid:
+
 - Too generic: `"bill"` ✗
 - Too specific: `"Invoice from EDF Energy dated 2024-01-15"` ✗
 - Single words: `"electricity"` (usually okay but phrases better) ✓
@@ -92,6 +95,7 @@ uv run para-files learn document.pdf
 ## When Utterances Help
 
 Utterances work best when:
+
 - Document filenames are generic (`invoice.pdf`)
 - No known issuer registered yet
 - Content-based matching is needed

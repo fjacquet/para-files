@@ -53,6 +53,7 @@ uv run para-files classify invoice.pdf
 ```
 
 Output:
+
 ```
 invoice.pdf
   Category: 2_Areas/finances/factures

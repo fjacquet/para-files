@@ -35,6 +35,7 @@ uv run para-files learn invoice.pdf
 ```
 
 Output:
+
 ```
 File: invoice.pdf
 Suggested: 4_Archives/factures/2024/utilities
@@ -44,21 +45,25 @@ Is this correct? (y/n): _
 ```
 
 **If you answer `y` (yes):**
+
 - Nothing changes (system learns to accept this)
 
 **If you answer `n` (no):**
+
 ```
 What should it be categorized as?
 Type route name (e.g., factures-utilities): factures-electricity
 ```
 
 Then system asks:
+
 ```
 Add any keywords to improve future matching?
 (e.g., "electricity bill", "power consumption"):
 ```
 
 You can add:
+
 - Issuer name: "EDF Energy"
 - File type: "electricity invoice"
 - Anything that helps future matching
@@ -66,6 +71,7 @@ You can add:
 ## Options
 
 ### `-v, --verbose`
+
 Show detailed matching information:
 
 ```bash
@@ -73,6 +79,7 @@ uv run para-files learn document.pdf -v
 ```
 
 ### `-r, --reference-tree`
+
 Use custom reference tree:
 
 ```bash
@@ -114,6 +121,7 @@ When you correct a classification, para-files:
 3. **Learns** new keywords (utterances) for semantic matching
 
 Over time, learning improves accuracy for:
+
 - Your specific issuers (banks, companies)
 - Your specific document types
 - Your specific preferences
@@ -121,6 +129,7 @@ Over time, learning improves accuracy for:
 ## Best Practices
 
 ### Learn from Misclassifications
+
 If a file goes to the wrong category, use learn to correct it:
 
 ```bash
@@ -131,6 +140,7 @@ uv run para-files learn wrong_file.pdf
 ```
 
 ### Add Issuers While Learning
+
 If you don't have an issuer registered:
 
 ```bash
@@ -142,7 +152,9 @@ uv run para-files add-issuer "My Bank" -c banques
 ```
 
 ### Regular Improvement
+
 Learn from 10-20 files regularly to:
+
 - Build up your validated database
 - Improve semantic matching
 - Handle your specific document types

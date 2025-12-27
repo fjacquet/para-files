@@ -107,4 +107,3 @@ uv run para-files scan ~/Downloads --recursive
 - **[Move Multiple Files](move-files.md)** - Actually move them
 - **[Scan Directory](../cli/scan.md)** - Preview a whole directory
 - **[Classify Command](../cli/classify.md)** - Full reference
-

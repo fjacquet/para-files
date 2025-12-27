@@ -25,6 +25,7 @@ uv run para-files add-issuer "Mobile Provider" -c telecom
 ## Options
 
 ### `-c, --category CATEGORY` (Required)
+
 Which category does this issuer belong to:
 
 ```bash
@@ -83,11 +84,13 @@ Next time para-files sees a document from that issuer (via email sender, filenam
 ## When to Use
 
 **Add an issuer when:**
+
 - You get regular documents from a company
 - You want faster classification (90% vs 85%)
 - You want reliable, consistent routing
 
 **Don't add when:**
+
 - It's a one-time document
 - The company name is very generic
 
