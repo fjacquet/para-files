@@ -20,8 +20,8 @@ jobs:
       - name: Set up Python
         run: uv python install 3.12
 
-      - name: Install pandoc
-        run: brew install pandoc
+      - name: Install CLI dependencies
+        run: brew install pandoc exiftool
 
       - name: Install dependencies
         run: uv sync --all-extras
