@@ -5,6 +5,7 @@ Handles moving/copying files to their PARA destinations with conflict resolution
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import shutil
 from datetime import UTC, datetime
@@ -22,8 +23,45 @@ if TYPE_CHECKING:
 # Maximum number of rename attempts before failing
 _MAX_RENAME_ATTEMPTS = 1000
 
+# Buffer size for file hashing (64KB)
+_HASH_BUFFER_SIZE = 65536
+
 
 logger = logging.getLogger(__name__)
+
+
+def _compute_file_hash(file_path: Path) -> str:
+    """Compute SHA256 hash of a file.
+
+    Args:
+        file_path: Path to the file to hash.
+
+    Returns:
+        Hexadecimal hash string.
+    """
+    sha256 = hashlib.sha256()
+    with file_path.open("rb") as f:
+        while chunk := f.read(_HASH_BUFFER_SIZE):
+            sha256.update(chunk)
+    return sha256.hexdigest()
+
+
+def files_are_identical(file1: Path, file2: Path) -> bool:
+    """Check if two files are identical by comparing size then hash.
+
+    Args:
+        file1: First file path.
+        file2: Second file path.
+
+    Returns:
+        True if files have identical content.
+    """
+    # Quick check: different sizes means different files
+    if file1.stat().st_size != file2.stat().st_size:
+        return False
+
+    # Same size: compare hashes
+    return _compute_file_hash(file1) == _compute_file_hash(file2)
 
 
 class ConflictStrategy(str, Enum):
@@ -69,6 +107,7 @@ class FileMover:
         conflict_strategy: ConflictStrategy = ConflictStrategy.RENAME,
         add_date_prefix: bool = False,
         smart_rename: bool = False,
+        deduplicate: bool = True,
     ) -> None:
         """Initialize the file mover.
 
@@ -78,12 +117,14 @@ class FileMover:
             conflict_strategy: How to handle existing files at destination.
             add_date_prefix: If True, add date prefix to filename (YYYY-MM-DD_).
             smart_rename: If True, use suggested name from classification (e.g., book title).
+            deduplicate: If True, delete source when destination has identical content.
         """
         self.dry_run = dry_run
         self.copy_mode = copy_mode
         self.conflict_strategy = conflict_strategy
         self.add_date_prefix = add_date_prefix
         self.smart_rename = smart_rename
+        self.deduplicate = deduplicate
 
     def move(
         self,
@@ -122,6 +163,14 @@ class FileMover:
         # Build destination filename
         filename = self._build_filename(source, classification)
         initial_destination = destination_dir / filename
+
+        # Check for duplicate before applying conflict strategy
+        if (
+            initial_destination.exists()
+            and self.deduplicate
+            and files_are_identical(source, initial_destination)
+        ):
+            return self._handle_duplicate(source, initial_destination)
 
         # Handle conflicts
         resolved_destination = self._resolve_conflict(initial_destination)
@@ -230,6 +279,45 @@ class FileMover:
                 msg = f"Too many conflicts for {destination}"
                 raise RuntimeError(msg)
 
+    def _handle_duplicate(self, source: Path, destination: Path) -> MoveResult:
+        """Handle duplicate file by deleting source.
+
+        Args:
+            source: Source file path (duplicate to delete).
+            destination: Destination file path (existing file to keep).
+
+        Returns:
+            MoveResult indicating duplicate was removed.
+        """
+        if self.dry_run:
+            return MoveResult(
+                source=source,
+                destination=destination,
+                success=True,
+                action="would delete duplicate",
+                message=f"Dry run: {source} is identical to {destination}, would delete source",
+            )
+
+        try:
+            source.unlink()
+            logger.info("Deleted duplicate: %s (identical to %s)", source, destination)
+            return MoveResult(
+                source=source,
+                destination=destination,
+                success=True,
+                action="deleted duplicate",
+                message=f"Identical file already exists at {destination}",
+            )
+        except OSError as e:
+            logger.exception("Failed to delete duplicate: %s", source)
+            return MoveResult(
+                source=source,
+                destination=destination,
+                success=False,
+                action="error",
+                message=f"Failed to delete duplicate: {e}",
+            )
+
     def _execute_move(self, source: Path, destination: Path) -> MoveResult:
         """Execute the actual move or copy operation.
 
@@ -287,6 +375,7 @@ def move_classified_file(  # noqa: PLR0913
     conflict_strategy: ConflictStrategy = ConflictStrategy.RENAME,
     add_date_prefix: bool = False,
     smart_rename: bool = False,
+    deduplicate: bool = True,
     classification: ClassificationResult | None = None,
 ) -> MoveResult:
     """Convenience function to move a single classified file.
@@ -299,6 +388,7 @@ def move_classified_file(  # noqa: PLR0913
         conflict_strategy: How to handle existing files.
         add_date_prefix: Add date prefix to filename.
         smart_rename: Use suggested name from classification (e.g., book title).
+        deduplicate: Delete source if destination has identical content.
         classification: Optional classification result for smart renaming.
 
     Returns:
@@ -310,5 +400,6 @@ def move_classified_file(  # noqa: PLR0913
         conflict_strategy=conflict_strategy,
         add_date_prefix=add_date_prefix,
         smart_rename=smart_rename,
+        deduplicate=deduplicate,
     )
     return mover.move(source, target_dir, classification)

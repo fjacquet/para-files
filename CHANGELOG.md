@@ -38,6 +38,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Move command enhancements**:
   - `--skip-unclassifiable`: Skip files that cannot be classified instead of warning
   - `--cleanup-empty`: Remove empty directories after moving files
+- **Automatic duplicate detection**: Smart deduplication when moving files
+  - Compares files with same name by SHA256 hash before moving
+  - Deletes source file if identical to destination (avoids creating `file_1.txt`, `file_2.txt`)
+  - Quick size check before expensive hash computation
+  - Enabled by default, can be disabled with `deduplicate=False`
+  - Full dry-run support showing "would delete duplicate"
 - New utilities in `para_files.utils`:
   - `cleanup.py`: Junk file detection and deletion
   - `nfo_parser.py`: NFO file parsing with encoding fallback
