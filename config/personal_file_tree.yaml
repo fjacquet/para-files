@@ -233,7 +233,13 @@ routing_rules:
 
   # Health reimbursement documents (justificatifs de remboursement)
   sante_remboursement:
-    patterns: ["*[Jj]ustificatif*[Rr]emboursement*", "*[Rr]emboursement*[Ss]anté*"]
+    patterns: [
+      "*[Jj]ustificatif*[Rr]emboursement*",
+      "*[Rr]emboursement*[Ss]anté*",
+      "*[Rr]emboursement*invoice*",
+      "*[Rr]emboursement*[Tt]hérapie*",
+      "*M-Thérapies*"
+    ]
     extensions: [".pdf"]
     destination: "4_Archives/sante/{YYYY}"
     date_source: "file_modified"
@@ -868,6 +874,12 @@ known_issuers:
       - Selma
       - Selma Finance
       - Saxo Bank
+      - American Express
+      - Caisse d'epargne
+      - Credit Agricole
+      - SwissQuote
+      - TradeDirect
+      - Neon
 
   energie:
     pattern: "4_Archives/factures/Energie/{issuer}/{year}"
@@ -875,6 +887,10 @@ known_issuers:
       - Romande Energie
       - SIG
       - Holdigaz
+      - EDF
+      - ERDF
+      - GDF
+      - Engie
 
   telephonie:
     pattern: "4_Archives/factures/Telephonie/{issuer}/{year}"
@@ -882,6 +898,13 @@ known_issuers:
       - Swisscom
       - Salt
       - Sunrise
+      - UPC
+      - Bouygues Telecom
+      - Cegetel
+      - FT
+      - France Telecom
+      - Orange
+      - SFR
 
   cloud:
     pattern: "4_Archives/factures/Cloud/{issuer}/{year}"
@@ -917,6 +940,13 @@ known_issuers:
       - Mobility
       - mobility-genossenschaft
       - EasyPark
+      - AirFrance
+      - ByJuno
+      - Cofiroute
+      - Hertz
+      - europcar
+      - VeloSpot
+      - SAN
 
   sante:
     pattern: "4_Archives/factures/Santé/{issuer}/{year}"
@@ -935,6 +965,9 @@ known_issuers:
       - Ostéopathie
       - Masseur
       - Synlab
+      - M-Thérapies
+      - Silhouette
+      - Ostheopathe
 
   materiels:
     pattern: "4_Archives/factures/Materiels/{issuer}/{year}"
@@ -955,6 +988,26 @@ known_issuers:
       - La Poste
       - DHL
       - UPS
+      - 5aSec
+      - Apple
+      - Boulanger
+      - Brack
+      - Conrad
+      - Cumulus
+      - Hornbach
+      - Interio
+      - Momax
+      - Netatmo
+      - PCTOP
+      - Paragon
+      - Rotho
+      - Yubico
+      - amadeus
+      - irobot
+      - steg
+      - thermomix
+      - withings
+      - Glowing Sky
 
   prevoyance:
     pattern: "4_Archives/prevoyance/{issuer}/{year}"
@@ -1001,14 +1054,34 @@ known_issuers:
       - Microsoft 365
       - 1Password
       - Parallels
+      - Abbyy
+      - Apple
+      - Commvault
+      - Crashplan
+      - Mobatek
+      - Next Inpact
+      - OpsView
+      - Paragon
+      - PearsonVue
+      - ifolor
 
   dons:
     pattern: "4_Archives/dons/{organization}/{year}"
     organizations:
       - Croix-Rouge
+      - Croix Rouge
       - Médecins Sans Frontières
       - WWF
       - Caritas
+      - Amis du Leman
+      - Amnesty
+      - Fondation suisse pour les paraplegiques
+      - Ligue Vaudoise
+      - Rega
+      - Restos du coeur
+      - SwissRando
+      - Unicef
+      - Wikimedia
 
   redevances:
     pattern: "4_Archives/factures/Redevances/{issuer}/{year}"
