@@ -370,7 +370,7 @@
             {"name": "Swiss Life", "patterns": ["Swiss Life", "swisslife.ch"]},
             {"name": "Retraites Populaires", "patterns": ["Retraites Populaires", "retraitespopulaires.ch"]},
             {"name": "Allianz", "patterns": ["Allianz", "allianz.ch"]},
-            {"name": "BCV", "patterns": ["BCV", "bcv.ch"]},
+            {"name": "BCV", "patterns": ["BCV", "bcv.ch", "Banque Cantonale Vaudoise"]},
             {"name": "PUBLICA", "patterns": ["PUBLICA", "publica.ch"]},
             {"name": "Axa", "patterns": ["Axa", "axa.ch"]}
           ]
@@ -405,7 +405,7 @@
             {"name": "UBS", "patterns": ["UBS", "ubs.com"]},
             {"name": "Raiffeisen", "patterns": ["Raiffeisen", "raiffeisen.ch"]},
             {"name": "Credit Suisse", "patterns": ["Credit Suisse", "credit-suisse.com"]},
-            {"name": "BCV", "patterns": ["BCV", "bcv.ch"]},
+            {"name": "BCV", "patterns": ["BCV", "bcv.ch", "Banque Cantonale Vaudoise"]},
             {"name": "BCGE", "patterns": ["BCGE", "bcge.ch"]},
             {"name": "BCN", "patterns": ["BCN", "bcn.ch"]},
             {"name": "Viseca", "patterns": ["Viseca", "viseca.ch"]},
