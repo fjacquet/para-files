@@ -13,14 +13,8 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import TYPE_CHECKING
 
 from para_files.classifiers.base import BaseClassifier
-
-
-if TYPE_CHECKING:
-    from para_files.encoders import MLXEncoder
-
 from para_files.types import (
     ClassificationResult,
     ClassificationSource,
@@ -34,6 +28,7 @@ from para_files.utils.pdf_metadata import (
     extract_pdf_metadata,
     is_book_creator,
 )
+from para_files.utils.technology_extractor import TechnologyExtractor
 
 
 logger = logging.getLogger(__name__)
@@ -57,7 +52,6 @@ BOOK_STRUCTURE_PATTERNS = [
 MIN_PAGES_FOR_BOOK = 50
 MIN_SIZE_MB_FOR_BOOK = 5.0
 DETECTION_THRESHOLD = 0.7  # Strict threshold
-TECHNOLOGY_MATCH_THRESHOLD = 0.5  # Minimum similarity for technology detection
 SMART_RENAME_THRESHOLD = 0.9  # Minimum confidence to suggest renaming with title
 
 
@@ -126,7 +120,7 @@ class BookDetector(BaseClassifier):
         self._technologies = technologies or []
         self._enable_isbn_lookup = enable_isbn_lookup
         self._base_pattern = base_pattern
-        self._encoder: MLXEncoder | None = None  # Lazy-loaded MLX encoder
+        self._tech_extractor = TechnologyExtractor(technologies=self._technologies)
 
     @property
     def name(self) -> str:
@@ -143,59 +137,12 @@ class BookDetector(BaseClassifier):
         """Return default confidence (92%)."""
         return 0.92
 
-    def _get_encoder(self) -> MLXEncoder | None:
-        """Lazy-load the MLX encoder for technology detection."""
-        if self._encoder is None:
-            try:
-                from para_files.encoders import MLXEncoder
-
-                self._encoder = MLXEncoder()
-            except ImportError:
-                logger.warning("MLX encoder not available for technology detection")
-        return self._encoder
-
-    def _detect_technology_semantic(self, content: str) -> str | None:
-        """Detect technology using semantic matching.
-
-        Args:
-            content: Book content to match.
-
-        Returns:
-            Best matching technology or None.
-        """
-        if not self._technologies:
-            return None
-
-        encoder = self._get_encoder()
-        if encoder is None:
-            return None
-
-        try:
-            import numpy as np
-
-            # Get embeddings
-            tech_embeddings = encoder(self._technologies)
-            content_embedding = encoder([content[:2000]])[0]
-
-            # Calculate cosine similarities
-            similarities = np.dot(tech_embeddings, content_embedding) / (
-                np.linalg.norm(tech_embeddings, axis=1) * np.linalg.norm(content_embedding)
-            )
-
-            best_idx = int(np.argmax(similarities))
-            if similarities[best_idx] >= TECHNOLOGY_MATCH_THRESHOLD:
-                return self._technologies[best_idx]
-
-        except Exception as e:  # noqa: BLE001
-            logger.debug("Technology detection failed: %s", e)
-
-        return None
-
     def _detect_technology(
         self,
         content: str,
         book_info: BookInfo | None,
         pdf_meta: PdfMetadata | None,
+        filename: str = "",
     ) -> str | None:
         """Detect technology category from available information.
 
@@ -205,11 +152,19 @@ class BookDetector(BaseClassifier):
             content: Book content.
             book_info: ISBN lookup result if available.
             pdf_meta: PDF metadata if available.
+            filename: Filename for pattern-based detection.
 
         Returns:
             Technology category or None.
         """
-        # Try ISBN subjects first (most reliable)
+        # Try filename pattern matching first (fast path)
+        if filename:
+            tech = self._tech_extractor.extract_from_filename(filename)
+            if tech:
+                logger.debug("Detected technology from filename: %s", tech)
+                return tech
+
+        # Try ISBN subjects (most reliable for content)
         if book_info and book_info.subjects:
             tech = infer_technology_from_subjects(book_info.subjects, self._technologies)
             if tech:
@@ -223,11 +178,12 @@ class BookDetector(BaseClassifier):
                     logger.debug("Detected technology from PDF subject: %s", tech)
                     return tech
 
-        # Try semantic matching on content
-        tech = self._detect_technology_semantic(content)
-        if tech:
-            logger.debug("Detected technology via semantic matching: %s", tech)
-            return tech
+        # Try semantic matching on content using TechnologyExtractor
+        if content:
+            tech, score = self._tech_extractor.extract_from_content(content)
+            if tech:
+                logger.debug("Detected technology via semantic matching: %s (%.2f)", tech, score)
+                return tech
 
         return None
 
@@ -322,7 +278,9 @@ class BookDetector(BaseClassifier):
             return None
 
         # Detect technology category
-        technology = self._detect_technology(content, book_info, pdf_meta)
+        technology = self._detect_technology(
+            content, book_info, pdf_meta, filename=metadata.filename
+        )
         if technology:
             signals.append(f"technology={technology}")
         else:

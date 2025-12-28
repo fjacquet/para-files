@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Content-based MLX semantic similarity for accurate detection
   - Supports 25+ technologies: MariaDB, PostgreSQL, Kubernetes, VMware, Docker, etc.
   - Used for `{technology}` placeholder in routing destinations
+  - BookDetector refactored to use TechnologyExtractor (removes code duplication)
 - **Dell-EMC documentation routing**: Automatic classification with technology subfolders
   - Patterns for PowerFlex, PowerStore, VxRail, Unity, Isilon docs
   - Dell document prefix `H[0-9]*_*` detection
