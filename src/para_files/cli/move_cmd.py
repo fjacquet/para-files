@@ -312,7 +312,7 @@ def move(
     ] = False,
     cleanup_empty: Annotated[
         bool,
-        typer.Option("--cleanup-empty/--no-cleanup-empty", help="Remove empty directories after moving"),
+        typer.Option("--cleanup-empty/--no-cleanup-empty", help="Remove empty dirs after move"),
     ] = True,
     output_json: Annotated[
         bool, typer.Option("--json", "-j", help="Output result as JSON")

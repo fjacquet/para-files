@@ -201,6 +201,17 @@ routing_rules:
     date_source: "filename"
     date_pattern: "(\\d{4})-(\\d{2})-(\\d{2})"  # Format: YYYY-MM-DD in filename
 
+  # French real estate / land documents (SAFER, notaire, cadastre)
+  immobilier_france:
+    patterns: [
+      "*[Ss]afer*", "*SAFER*",
+      "*[Nn]otaire*", "*acte*vente*",
+      "*[Cc]adastre*", "*foncier*"
+    ]
+    extensions: [".pdf"]
+    destination: "4_Archives/immobilier-france/{YYYY}"
+    date_source: "file_modified"
+
   # French tax documents (impots.gouv.fr)
   impots_france:
     patterns: [
