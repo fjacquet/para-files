@@ -42,6 +42,9 @@ uv run para-files add-issuer "Energy Company" -c utilities
 -c utilities    # Electricity, water, gas
 -c assurances   # Insurance
 -c cloud        # Cloud services (AWS, Google, etc.)
+-c materiels    # Retail/hardware stores
+-c sante        # Health providers
+-c dons         # Charities and donations
 ```
 
 See your actual categories:
@@ -49,6 +52,21 @@ See your actual categories:
 ```bash
 uv run para-files issuers
 ```
+
+## Pre-configured Issuers
+
+para-files includes **70+ known issuers** out of the box:
+
+| Category | Examples |
+|----------|----------|
+| Banques | UBS, Credit Suisse, PostFinance, Neon, SwissQuote, American Express |
+| Telecom | Swisscom, Sunrise, Salt, UPC, Orange, SFR, Bouygues |
+| Energie | EDF, ERDF, GDF, Engie, Romande Energie |
+| Assurances | CSS, Visana, Swica, Helsana, Generali, Allianz |
+| Cloud | AWS, Azure, Google Cloud, Infomaniak, OVH |
+| Matériels | digitec, Galaxus, Brack, Conrad, Apple, Nespresso |
+| Santé | M-Thérapies, CHUV, HUG, pharmacies |
+| Dons | Unicef, Amnesty, Croix Rouge, Rega, Wikimedia |
 
 ## How It Works
 

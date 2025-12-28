@@ -80,12 +80,16 @@ Add date prefix to moved files:
 uv run para-files move *.pdf --date-prefix
 ```
 
-### `--cleanup-empty`
+### `--cleanup-empty` / `--no-cleanup-empty`
 
-Remove empty directories after moving:
+Remove empty directories after moving files. **Enabled by default.**
 
 ```bash
-uv run para-files move ~/Downloads/*.pdf --cleanup-empty
+# Default behavior: cleanup enabled
+uv run para-files move ~/Downloads/*.pdf
+
+# Disable cleanup if needed
+uv run para-files move ~/Downloads/*.pdf --no-cleanup-empty
 ```
 
 ## Output Formats
@@ -128,10 +132,10 @@ uv run para-files move ~/Downloads/*.pdf
 ### Batch Move with Options
 
 ```bash
-# Move, rename duplicates, clean up empty dirs
-uv run para-files move ~/Downloads/*.pdf --conflict rename --cleanup-empty
+# Move with duplicate renaming (cleanup is automatic)
+uv run para-files move ~/Downloads/*.pdf --conflict rename
 
-# Copy instead of move (keeps original)
+# Copy instead of move (keeps original, no cleanup)
 uv run para-files move ~/Downloads/*.pdf --copy
 ```
 
