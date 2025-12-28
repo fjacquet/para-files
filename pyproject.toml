@@ -167,6 +167,10 @@ ignore = [
     "FBT002",   # Boolean default positional arguments are standard for Typer CLI
     "PLR0913",  # CLI commands naturally have many parameters
 ]
+"src/para_files/cli/**/*.py" = [
+    "FBT002",   # Boolean default positional arguments are standard for Typer CLI
+    "PLR0913",  # CLI commands naturally have many parameters
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["para_files"]

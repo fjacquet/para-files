@@ -74,6 +74,10 @@ from para_files.utils.pdf_metadata import (
     extract_pdf_metadata,
     is_book_creator,
 )
+from para_files.utils.validation import (
+    validate_directory_exists,
+    validate_file_exists,
+)
 
 
 __all__ = [
@@ -128,5 +132,7 @@ __all__ = [
     "read_content_preview",
     "reverse_geocode",
     "scan_for_junk",
+    "validate_directory_exists",
+    "validate_file_exists",
     "validate_isbn",
 ]
