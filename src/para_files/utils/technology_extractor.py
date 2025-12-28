@@ -221,7 +221,10 @@ class TechnologyExtractor:
         }
 
         for keyword, tech in keyword_to_tech.items():
-            if keyword in name_lower:
+            # Use word boundary matching to avoid false positives
+            # e.g., "rac" should not match "Practices"
+            pattern = rf"\b{re.escape(keyword)}\b"
+            if re.search(pattern, name_lower):
                 return tech
 
         return None

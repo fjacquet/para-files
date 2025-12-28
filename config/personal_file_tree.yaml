@@ -153,6 +153,22 @@ routing_rules:
       - Tanzu
       - Containers
 
+  # Security policies, standards, and best practices
+  security_documentation:
+    patterns: [
+      "*[Pp]olic*",
+      "*[Ss]ecur*",
+      "*[Cc]ompliance*",
+      "*[Ss]tandard*",
+      "*[Bb]est*[Pp]ractic*",
+      "*[Gg]uideline*",
+      "*[Ff]ramework*",
+      "*NIST*", "*ISO*27001*", "*SOC*2*", "*GDPR*", "*PCI*DSS*"
+    ]
+    extensions: [".pdf", ".docx", ".doc", ".pptx"]
+    destination: "3_Resources/docs/Security"
+    date_source: "file_modified"
+
   # VMware documentation
   vmware_documentation:
     patterns: ["*VMware*", "*vSphere*", "*vSAN*", "*NSX*", "*Tanzu*", "*VCF*"]
