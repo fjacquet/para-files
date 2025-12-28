@@ -486,26 +486,174 @@ routing_rules:
     patterns:
       [
         "*[Ll]ettre*motivation*",
+        "*[Mm]otivation*[Ll]etter*",
         "*[Cc]over*[Ll]etter*",
         "*[Cc]andidature*",
-        "*CV*",
+        "CV_*",
+        "cv_*",
+        "*_CV.*",
+        "*_cv.*",
+        "CV-*",
+        "cv-*",
         "*[Rr]esume*",
         "*[Bb]ewerbung*",
       ]
-    extensions: [".pdf", ".docx", ".doc"]
+    extensions: [".pdf", ".docx", ".doc", ".odg"]
     destination: "4_Archives/carriere/candidatures/{YYYY}"
+    date_source: "file_modified"
+
+  # Career - IT certifications
+  carriere_certifications:
+    patterns:
+      [
+        "*[Cc]ertificat*VCP*",
+        "*[Cc]ertificat*VTSP*",
+        "*[Cc]ertificate*VCP*",
+        "*[Cc]ertificate*VTSP*",
+        "*VCP*-*DCV*",
+        "*VTSP*",
+        "vcp*.pdf",
+        "vtsp*.pdf",
+        "*NetApp*Accredited*",
+        "*NetApp*NASEP*",
+        "*Oracle*Solaris*",
+        "*OCA*Solaris*",
+        "*Solaris*Administrator*",
+        "*Novell*NC*",
+        "*NCLA*",
+        "*DCTS*",
+        "*EMC*certificate*",
+        "*EMCIE*certificate*",
+        "*EMCISA*certificate*",
+        "*Symantec*scs*",
+        "*Red*Hat*certificate*",
+        "*[Kk]nowledge*[Mm]aintenance*",
+        "*KM *certificate*",
+        "*XtremIO*certificate*",
+        "*SACP*",
+        "*sacp*",
+        "*VNX*Solutions*Expert*",
+        "*VSPEX*certificate*",
+        "*SE*-*certificate*",
+        "*Sales*-*certificate*",
+        "*VCE*-*",
+        "asc_*.pdf",
+        "*ipv6*certificate*",
+      ]
+    extensions: [".pdf", ".zip"]
+    destination: "4_Archives/carriere/certifications/{YYYY}"
+    date_source: "file_modified"
+
+  # Career - work certificates
+  carriere_certificats_travail:
+    patterns:
+      [
+        "*[Cc]ertificat*travail*",
+        "*[Ww]ork*[Cc]ertificate*",
+        "*[Aa]rbeitszeugnis*",
+        "*[Rr]ecommandation*",
+      ]
+    extensions: [".pdf", ".docx", ".doc"]
+    destination: "4_Archives/carriere/certificats-travail/{YYYY}"
     date_source: "file_modified"
 
   # Hobbies - game manuals
   loisirs_jeux:
     patterns:
       [
-        "*[Nn]otice*",
+        "*[Nn]otice*jeu*",
         "*[Mm]anuel*jeu*",
         "*[Rr]ègles*jeu*",
         "*[Gg]ame*[Mm]anual*",
-        "*[Ii]nstructions*",
       ]
     extensions: [".pdf"]
     destination: "4_Archives/loisirs/jeux-manuels"
+    date_source: "file_modified"
+
+  # Hobbies - sailing/voile
+  loisirs_voile:
+    patterns:
+      [
+        "*[Vv]oile*",
+        "*[Ss]ailing*",
+        "*[Rr]egate*",
+        "*[Rr]égate*",
+        "*[Bb]ateau*",
+        "*[Yy]acht*",
+      ]
+    extensions: [".pdf", ".jpg", ".png"]
+    destination: "4_Archives/loisirs/voile/{YYYY}"
+    date_source: "file_modified"
+
+  # Hobbies - recipes
+  loisirs_recettes:
+    patterns:
+      [
+        "*[Rr]ecette*",
+        "*[Rr]ecipe*",
+        "*[Rr]epas*",
+        "*swissmilk*",
+        "*marmiton*",
+        "*cuisine*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/cuisine/recettes"
+    date_source: "file_modified"
+
+  # Family - genealogy
+  famille_genealogie:
+    patterns:
+      [
+        "*[Gg]edcom*",
+        "*[Hh]eredis*",
+        "*[Gg]enealog*",
+        "*[Gg]énéalog*",
+        "*[Aa]rbre*familial*",
+        "*[Ff]amily*[Tt]ree*",
+      ]
+    extensions: [".heredis", ".gedcom", ".log", ".bak"]
+    destination: "2_Areas/famille/genealogie"
+    date_source: "file_modified"
+
+  # IT Documentation - VMware
+  vmware_documentation:
+    patterns:
+      [
+        "*[Vv]mware*cloud*foundation*",
+        "*[Vv]mware*vsphere*",
+        "*[Vv]mware*vsan*",
+        "*[Vv]mware*nsx*",
+        "*[Vv]mware*horizon*",
+        "*VMW_*",
+        "*VSP-*",
+      ]
+    extensions: [".pdf", ".eps", ".psd"]
+    destination: "3_Resources/docs/VMware/{YYYY}"
+    date_source: "file_modified"
+
+  # IT Documentation - Unitrends/Backup
+  backup_documentation:
+    patterns:
+      [
+        "*[Uu]nitrends*",
+        "*[Bb]ackup*",
+        "*[Ss]auvegarde*",
+        "*[Aa]nssi*sauvegarde*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/Backup/{YYYY}"
+    date_source: "file_modified"
+
+  # IT Documentation - AI/ML Training
+  ai_ml_documentation:
+    patterns:
+      [
+        "*Unit*-*AI*",
+        "*[Aa]rtificial*[Ii]ntelligence*",
+        "*[Mm]achine*[Ll]earning*",
+        "*[Nn]eural*[Nn]etwork*",
+        "*[Dd]eep*[Ll]earning*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/AI-ML/{YYYY}"
     date_source: "file_modified"
