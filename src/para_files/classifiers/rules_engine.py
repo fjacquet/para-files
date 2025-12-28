@@ -20,6 +20,7 @@ from para_files.types import (
     RoutingRule,
 )
 from para_files.utils.geolocation import LocationInfo, reverse_geocode
+from para_files.utils.technology_extractor import TechnologyExtractor
 
 
 logger = logging.getLogger(__name__)
@@ -180,6 +181,20 @@ class RulesEngineClassifier(BaseClassifier):
             # Set country separately
             if location_info.country:
                 params["country"] = location_info.country.replace(" ", "_")
+
+        # Try to extract technology from filename if {technology} in destination
+        if "{technology}" in rule.destination:
+            tech_extractor = TechnologyExtractor(
+                technologies=getattr(rule, "known_technologies", None)
+            )
+            tech = tech_extractor.extract_from_filename(metadata.filename)
+            if tech:
+                params["technology"] = tech
+                logger.debug("Technology from filename: %s", tech)
+            else:
+                # Default to misc if no technology detected
+                params["technology"] = "misc"
+                logger.debug("No technology detected, using 'misc'")
 
         # Resolve destination pattern
         category = rule.destination

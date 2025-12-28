@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **CLI refactoring**: Split `main.py` (1818 lines) into modular `cli/` package
+  - One file per command (~400 lines max each)
+  - Shared utilities in `cli/shared.py`
+  - Backward compatibility maintained via re-exports
+  - All 656 tests pass without modification
+- **Move command**: `--cleanup-empty` now enabled by default (use `--no-cleanup-empty` to disable)
+
+### Added
+
+- **New routing rule**: `immobilier_france` for French real estate documents (SAFER, notaire, cadastre)
+- **70+ new known issuers** from pre-classified invoice folders:
+  - Banques: American Express, SwissQuote, Neon, TradeDirect, Credit Agricole...
+  - Téléphonie: UPC, Orange, SFR, Bouygues Telecom, Cegetel...
+  - Energie: EDF, ERDF, GDF, Engie
+  - Matériels: digitec, Brack, Conrad, Hornbach, Apple, Nespresso...
+  - Santé: M-Thérapies, Silhouette, Ostheopathe
+  - Transport: AirFrance, Hertz, europcar, ByJuno...
+  - Licences: Abbyy, Commvault, Crashplan, PearsonVue...
+  - Dons: Unicef, Amnesty, Wikimedia, Croix Rouge, Rega...
+- **Health reimbursement routing**: Extended patterns for `*Remboursement*invoice*`, `*M-Thérapies*`
+- **Technology extraction for documents**: MLX-based semantic matching for technology categorization
+  - New `TechnologyExtractor` utility class with dual-strategy detection
+  - Filename pattern matching for fast detection (95% confidence)
+  - Content-based MLX semantic similarity for accurate detection
+  - Supports 25+ technologies: MariaDB, PostgreSQL, Kubernetes, VMware, Docker, etc.
+  - Used for `{technology}` placeholder in routing destinations
+- **Dell-EMC documentation routing**: Automatic classification with technology subfolders
+  - Patterns for PowerFlex, PowerStore, VxRail, Unity, Isilon docs
+  - Dell document prefix `H[0-9]*_*` detection
+  - Technology extraction routes to `3_Resources/docs/Dell-EMC/{technology}`
+
 ### Fixed
 
 - **MLX encoder token limit handling**: Improved error recovery for texts exceeding model's token limit

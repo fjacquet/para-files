@@ -123,12 +123,35 @@ routing_rules:
     destination: "3_Resources/livres/{YYYY}"
     date_source: "file_modified"
 
-  # Dell technical documentation (presentations, guides, etc.)
-  dell_documentation:
-    patterns: ["*Dell*", "*PowerFlex*", "*PowerStore*", "*PowerScale*", "*VxRail*", "*PFMP*"]
+  # Dell-EMC technical documentation (presentations, guides, white papers)
+  # H* prefix = Dell document numbering (H19xxx, H18xxx, etc.)
+  dell_emc_documentation:
+    patterns: [
+      # Dell-EMC document numbers
+      "H[0-9]*_*",
+      # Product names (case-insensitive)
+      "*[Dd]ell*", "*[Pp]ower[Ff]lex*", "*[Pp]ower[Ss]tore*", "*[Pp]ower[Ss]cale*",
+      "*[Vv]x[Rr]ail*", "*PFMP*", "*[Ii]silon*", "*[Uu]nity*", "*[Dd]ata[Dd]omain*",
+      "*[Ee][Mm][Cc]*[Dd]oc*", "*[Rr]eference*[Aa]rchitecture*"
+    ]
     extensions: [".pdf", ".pptx", ".ppt", ".docx", ".doc"]
-    destination: "3_Resources/documentation/Dell/{YYYY}"
+    destination: "3_Resources/docs/Dell-EMC/{technology}"
     date_source: "file_modified"
+    # Technologies for subfolder organization (used for {technology} placeholder)
+    known_technologies:
+      - MariaDB
+      - MySQL
+      - Oracle
+      - PostgreSQL
+      - Kubernetes
+      - OpenShift
+      - EKS
+      - VMware
+      - vSphere
+      - GPU
+      - NVIDIA
+      - Tanzu
+      - Containers
 
   # VMware documentation
   vmware_documentation:
