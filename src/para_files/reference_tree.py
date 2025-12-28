@@ -21,6 +21,7 @@ from para_files.types import (
     KnownIssuers,
     Route,
     RoutingRule,
+    RuleIssuer,
 )
 
 
@@ -67,6 +68,17 @@ class ReferenceTree:
             if not isinstance(rule_config, dict):
                 continue
 
+            # Parse issuers if present (list of dicts with name and patterns)
+            issuers_data = rule_config.get("issuers", [])
+            issuers = [
+                RuleIssuer(
+                    name=issuer.get("name", ""),
+                    patterns=issuer.get("patterns", []),
+                )
+                for issuer in issuers_data
+                if isinstance(issuer, dict)
+            ]
+
             self._routing_rules[rule_name] = RoutingRule(
                 source=rule_config.get("source"),
                 extensions=rule_config.get("extensions", []),
@@ -76,6 +88,8 @@ class ReferenceTree:
                 fallback_date=rule_config.get("fallback_date"),
                 action=rule_config.get("action"),
                 platforms=rule_config.get("platforms"),
+                issuers=issuers,
+                known_technologies=rule_config.get("known_technologies", []),
             )
 
     def _parse_categories(self) -> None:

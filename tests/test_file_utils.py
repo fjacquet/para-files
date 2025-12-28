@@ -245,7 +245,8 @@ class TestReadPdfFile:
 
         content = _read_pdf_file(test_file, max_chars=1000)
 
-        assert content == ""
+        # When pypdf returns empty and OCR fails, we return filename fallback
+        assert content == "Filename: test.pdf"
 
     def test_read_pdf_import_error(self, tmp_path: Path):
         """Test PDF reading when pypdf is not installed."""

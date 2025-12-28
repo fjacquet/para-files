@@ -8,16 +8,12 @@ from pathlib import Path
 import pytest
 
 from para_files.classifiers.base import BaseClassifier
-from para_files.classifiers.domain_kb import DomainKBClassifier
 from para_files.classifiers.rules_engine import RulesEngineClassifier
-from para_files.classifiers.validated_db import ValidatedDBClassifier
 from para_files.types import (
     ClassificationResult,
     ClassificationSource,
     Confidence,
     FileMetadata,
-    IssuerCategory,
-    KnownIssuers,
     RoutingRule,
 )
 
@@ -79,70 +75,8 @@ class TestBaseClassifier:
         assert result is None
 
 
-class TestValidatedDBClassifier:
-    """Tests for ValidatedDBClassifier (Signal 1)."""
-
-    def test_init_empty(self):
-        """Test initialization without database."""
-        classifier = ValidatedDBClassifier()
-        assert classifier.name == "validated_db"
-        assert classifier.source == ClassificationSource.VALIDATED_DB
-        assert classifier.default_confidence == 1.0
-
-    def test_add_mapping(self):
-        """Test adding a mapping programmatically."""
-        classifier = ValidatedDBClassifier()
-        classifier.add_mapping("test@example.com", "4_Archives/test")
-
-        result = classifier.classify("Email from test@example.com")
-        assert result is not None
-        assert result.category == "4_Archives/test"
-        assert result.confidence.value == 1.0
-
-    def test_case_insensitive_matching(self):
-        """Test that matching is case-insensitive."""
-        classifier = ValidatedDBClassifier()
-        classifier.add_mapping("SWICA", "4_Archives/assurances/Swica")
-
-        result = classifier.classify("Invoice from swica insurance")
-        assert result is not None
-        assert "swica" in result.extracted_params.get("validated_sender", "")
-
-    def test_no_match(self):
-        """Test when no mapping matches."""
-        classifier = ValidatedDBClassifier()
-        classifier.add_mapping("known@example.com", "4_Archives/known")
-
-        result = classifier.classify("Email from unknown@other.com")
-        assert result is None
-
-    def test_load_from_file(self, tmp_path: Path):
-        """Test loading mappings from JSON file."""
-        db_file = tmp_path / "validated.json"
-        db_file.write_text('{"mappings": {"test@mail.com": "4_Archives/test"}}')
-
-        classifier = ValidatedDBClassifier(db_path=db_file)
-        result = classifier.classify("From test@mail.com")
-        assert result is not None
-        assert result.category == "4_Archives/test"
-
-    def test_save_db(self, tmp_path: Path):
-        """Test saving mappings to JSON file."""
-        db_file = tmp_path / "validated.json"
-        classifier = ValidatedDBClassifier(db_path=db_file)
-        classifier.add_mapping("new@example.com", "4_Archives/new")
-        classifier.save_db()
-
-        # Verify file was written
-        assert db_file.exists()
-        import json
-
-        data = json.loads(db_file.read_text())
-        assert "new@example.com" in data["mappings"]
-
-
 class TestRulesEngineClassifier:
-    """Tests for RulesEngineClassifier (Signal 2)."""
+    """Tests for RulesEngineClassifier (Signal 1 in v2.0)."""
 
     @pytest.fixture
     def photo_rules(self) -> dict[str, RoutingRule]:
@@ -215,133 +149,3 @@ class TestRulesEngineClassifier:
 
         result = classifier.classify("", metadata)
         assert result is None
-
-
-class TestDomainKBClassifier:
-    """Tests for DomainKBClassifier (Signal 3)."""
-
-    @pytest.fixture
-    def known_issuers(self) -> KnownIssuers:
-        """Create sample known issuers with dynamic categories."""
-        return KnownIssuers(
-            categories={
-                "assurances": IssuerCategory(
-                    pattern="4_Archives/factures/{year}/Assurances/{issuer}",
-                    issuers=["Swica", "CSS", "Helsana"],
-                ),
-                "banques": IssuerCategory(
-                    pattern="4_Archives/factures/{year}/Banques/{issuer}",
-                    issuers=["UBS", "Credit Suisse"],
-                ),
-                "energie": IssuerCategory(
-                    pattern="4_Archives/factures/{year}/Energie/{issuer}",
-                    issuers=["SIG"],
-                ),
-                "telephonie": IssuerCategory(
-                    pattern="4_Archives/factures/{year}/Telephonie/{issuer}",
-                    issuers=["Swisscom"],
-                ),
-                "cloud": IssuerCategory(
-                    pattern="4_Archives/factures/{year}/Cloud/{issuer}",
-                    issuers=["AWS", "Azure"],
-                ),
-            }
-        )
-
-    def test_init(self, known_issuers: KnownIssuers):
-        """Test initialization."""
-        classifier = DomainKBClassifier(known_issuers)
-        assert classifier.name == "domain_kb"
-        assert classifier.source == ClassificationSource.DOMAIN_KB
-        assert classifier.default_confidence == 0.90
-
-    def test_match_assurance(self, known_issuers: KnownIssuers):
-        """Test matching insurance issuer."""
-        classifier = DomainKBClassifier(known_issuers)
-        result = classifier.classify("FACTURE - Swica Assurance Maladie SA")
-        assert result is not None
-        assert "Assurances" in result.category
-        assert "Swica" in result.category
-        assert result.extracted_params["issuer"] == "Swica"
-
-    def test_match_banque(self, known_issuers: KnownIssuers):
-        """Test matching bank issuer."""
-        classifier = DomainKBClassifier(known_issuers)
-        result = classifier.classify("Relevé de compte UBS Switzerland")
-        assert result is not None
-        assert "Banques" in result.category
-        assert "UBS" in result.category
-
-    def test_match_energie(self, known_issuers: KnownIssuers):
-        """Test matching energy issuer."""
-        classifier = DomainKBClassifier(known_issuers)
-        result = classifier.classify("Facture électricité SIG Genève")
-        assert result is not None
-        assert "Energie" in result.category
-        assert "SIG" in result.category
-
-    def test_case_insensitive(self, known_issuers: KnownIssuers):
-        """Test case-insensitive matching."""
-        classifier = DomainKBClassifier(known_issuers)
-        result = classifier.classify("Invoice from AWS cloud services")
-        assert result is not None
-        assert "Cloud" in result.category
-        assert result.extracted_params["issuer"] == "AWS"
-
-    def test_word_boundary_matching(self, known_issuers: KnownIssuers):
-        """Test that partial matches don't trigger."""
-        classifier = DomainKBClassifier(known_issuers)
-        # "AWSOME" should not match "AWS"
-        result = classifier.classify("AWSOME product invoice")
-        assert result is None
-
-    def test_no_match(self, known_issuers: KnownIssuers):
-        """Test when no issuer matches."""
-        classifier = DomainKBClassifier(known_issuers)
-        result = classifier.classify("Invoice from Unknown Company SA")
-        assert result is None
-
-    def test_uses_file_date(self, known_issuers: KnownIssuers):
-        """Test that file date is used for year in path."""
-        classifier = DomainKBClassifier(known_issuers)
-        metadata = FileMetadata(
-            path=Path("/tmp/invoice.pdf"),
-            filename="invoice.pdf",
-            extension=".pdf",
-            size_bytes=1000,
-            modified_at=datetime(2024, 3, 15),
-        )
-
-        result = classifier.classify("Facture Swisscom mobile", metadata)
-        assert result is not None
-        assert "2024" in result.category
-
-    def test_filename_priority_over_content(self, known_issuers: KnownIssuers):
-        """Test that issuer in filename takes priority over issuer in content.
-
-        This prevents false matches like "Zurich" (address) matching when
-        the actual issuer (e.g., Viseca) is in the filename.
-        """
-        # Add Viseca to the known issuers for this test
-        from para_files.types import IssuerCategory
-
-        known_issuers.categories["cartes"] = IssuerCategory(
-            pattern="4_Archives/factures/{year}/Cartes/{issuer}",
-            issuers=["Viseca"],
-        )
-        classifier = DomainKBClassifier(known_issuers)
-
-        # Filename contains "Viseca", content contains "Zurich" (from assurances)
-        metadata = FileMetadata(
-            path=Path("/tmp/viseca-payment-services-2025.pdf"),
-            filename="viseca-payment-services-2025.pdf",
-            extension=".pdf",
-            size_bytes=1000,
-        )
-        content = "Invoice from Viseca Payment Services AG, Zurich, Switzerland"
-
-        result = classifier.classify(content, metadata)
-        assert result is not None
-        # Should match Viseca from filename, not Zurich from content
-        assert result.extracted_params["issuer"] == "Viseca"
-        assert "Cartes" in result.category

@@ -18,12 +18,20 @@ from para_files.types import (
     Confidence,
     FileMetadata,
     RoutingRule,
+    RuleIssuer,
 )
 from para_files.utils.geolocation import LocationInfo, reverse_geocode
 from para_files.utils.technology_extractor import TechnologyExtractor
 
 
 logger = logging.getLogger(__name__)
+
+# Date validation constants
+MIN_YEAR = 1990
+MAX_YEAR = 2099
+MIN_MODERN_YEAR = 2000  # For content extraction (avoid historical dates)
+MAX_MONTH = 12
+MAX_DAY = 31
 
 
 class RulesEngineClassifier(BaseClassifier):
@@ -60,13 +68,13 @@ class RulesEngineClassifier(BaseClassifier):
 
     def classify(
         self,
-        _content: str,
+        content: str,
         metadata: FileMetadata | None = None,
     ) -> ClassificationResult | None:
         """Match content against routing rules.
 
         Args:
-            _content: Text content (unused - rules use metadata).
+            content: Text content for date extraction (if date_source is content).
             metadata: File metadata with extension and path info.
 
         Returns:
@@ -78,12 +86,14 @@ class RulesEngineClassifier(BaseClassifier):
         for rule_name, rule in self._rules.items():
             # Try extension/pattern matching first
             if self._matches_extension_and_pattern(rule, metadata):
-                return self._create_result(rule_name, rule, metadata)
+                return self._create_result(rule_name, rule, metadata, content=content)
 
             # Check platform patterns (for courses)
             platform = self._get_matching_platform(rule, metadata)
             if platform:
-                return self._create_result(rule_name, rule, metadata, platform=platform)
+                return self._create_result(
+                    rule_name, rule, metadata, platform=platform, content=content
+                )
 
         return None
 
@@ -145,6 +155,7 @@ class RulesEngineClassifier(BaseClassifier):
         rule: RoutingRule,
         metadata: FileMetadata,
         platform: str | None = None,
+        content: str | None = None,
     ) -> ClassificationResult:
         """Create classification result from matched rule.
 
@@ -153,12 +164,13 @@ class RulesEngineClassifier(BaseClassifier):
             rule: The RoutingRule that matched.
             metadata: File metadata for parameter extraction.
             platform: Platform name for course rules.
+            content: Optional text content for date extraction.
 
         Returns:
             ClassificationResult with resolved category path.
         """
         # Extract date for path resolution
-        date = self._get_date(rule, metadata)
+        date = self._get_date(rule, metadata, content)
 
         # Build parameters
         params: dict[str, str] = {}
@@ -182,27 +194,49 @@ class RulesEngineClassifier(BaseClassifier):
             if location_info.country:
                 params["country"] = location_info.country.replace(" ", "_")
 
-        # Try to extract technology from filename if {technology} in destination
+        # Try to extract technology from filename, then content if {technology} in destination
         if "{technology}" in rule.destination:
             tech_extractor = TechnologyExtractor(
-                technologies=getattr(rule, "known_technologies", None)
+                technologies=rule.known_technologies if rule.known_technologies else None
             )
             tech = tech_extractor.extract_from_filename(metadata.filename)
             if tech:
                 params["technology"] = tech
                 logger.debug("Technology from filename: %s", tech)
+            elif content:
+                # Fallback: try to extract from content (first 1000 chars)
+                tech, score = tech_extractor.extract_from_content(content[:1000])
+                if tech:
+                    params["technology"] = tech
+                    logger.debug("Technology from content: %s (score=%.2f)", tech, score)
+                else:
+                    params["technology"] = "misc"
+                    logger.debug("No technology detected, using 'misc'")
             else:
                 # Default to misc if no technology detected
                 params["technology"] = "misc"
                 logger.debug("No technology detected, using 'misc'")
+
+        # Try to extract issuer from content if {issuer} in destination
+        if "{issuer}" in rule.destination and rule.issuers:
+            issuer = self._extract_issuer(content or "", rule.issuers)
+            if issuer:
+                # Sanitize issuer name for folder (replace spaces with underscores)
+                params["issuer"] = issuer.name.replace(" ", "_")
+                logger.debug("Issuer from content: %s", issuer.name)
+            else:
+                # Default to 'unknown' if no issuer detected
+                params["issuer"] = "unknown"
+                logger.debug("No issuer detected, using 'unknown'")
 
         # Resolve destination pattern
         category = rule.destination
         for key, value in params.items():
             category = category.replace(f"{{{key}}}", value)
 
-        # Clean up unreplaced {location} placeholder if no GPS data
+        # Clean up unreplaced placeholders
         category = self._clean_unreplaced_location(category)
+        category = self._clean_unreplaced_date(category)
 
         return ClassificationResult(
             category=category,
@@ -258,42 +292,86 @@ class RulesEngineClassifier(BaseClassifier):
         # Remove trailing slash
         return category.rstrip("/")
 
+    def _clean_unreplaced_date(self, category: str) -> str:
+        """Remove unreplaced date placeholders and clean up path.
+
+        Handles patterns like:
+        - "path/{YYYY}/more" → "path/more"
+        - "path/{year}" → "path"
+
+        Args:
+            category: Category path possibly containing {YYYY}, {year}, {MM}, {DD}.
+
+        Returns:
+            Cleaned category path without empty segments.
+        """
+        # Remove date placeholders if still present
+        category = category.replace("{YYYY}", "")
+        category = category.replace("{year}", "")
+        category = category.replace("{MM}", "")
+        category = category.replace("{DD}", "")
+        # Clean up double slashes
+        category = re.sub(r"/+", "/", category)
+        # Remove trailing slash
+        return category.rstrip("/")
+
     def _get_date(
         self,
         rule: RoutingRule,
         metadata: FileMetadata,
+        content: str | None = None,
     ) -> datetime | None:
         """Extract date from file based on rule configuration.
 
         Supports date_source values:
         - "exif": Use EXIF date from exiftool
-        - "filename": Extract year from filename (YYYY pattern)
+        - "filename": Extract year from filename (YYYY pattern), no fallback
+        - "content": Extract year from file content, fallback to filename
         - "file_modified": Use file modification date
         - None/default: Use best_date (EXIF > modified > created)
 
         Args:
             rule: Routing rule with date_source configuration.
             metadata: File metadata (may contain EXIF date from exiftool).
+            content: Optional file content for content-based extraction.
 
         Returns:
-            datetime if available, None otherwise.
+            datetime if available, None if date_source is filename/content and not found.
         """
+        result: datetime | None = None
+
         # If rule specifically requests EXIF date
         if rule.date_source == "exif" and metadata.exif_date:
-            return metadata.exif_date
+            result = metadata.exif_date
+        # If rule requests filename-based date extraction (no fallback)
+        elif rule.date_source == "filename":
+            result = self._extract_date_from_filename(metadata.filename)
+        # If rule requests content-based date extraction
+        elif rule.date_source == "content":
+            # Try content first, then filename
+            if content:
+                result = self._extract_date_from_content(content)
+            if not result:
+                result = self._extract_date_from_filename(metadata.filename)
+            # No fallback to file_modified - keep None
+        else:
+            # Use best_date property which prioritizes: EXIF > modified > created
+            result = metadata.best_date or datetime.now(tz=UTC)
 
-        # If rule requests filename-based date extraction
-        if rule.date_source == "filename":
-            filename_date = self._extract_date_from_filename(metadata.filename)
-            if filename_date:
-                return filename_date
+        return result
 
-        # Use best_date property which prioritizes: EXIF > modified > created
-        best = metadata.best_date
-        if best:
-            return best
+    def _is_valid_date(self, year: int, month: int, day: int) -> bool:
+        """Check if date components are valid.
 
-        return datetime.now(tz=UTC)
+        Args:
+            year: Year value.
+            month: Month value.
+            day: Day value.
+
+        Returns:
+            True if valid date within expected range.
+        """
+        return MIN_YEAR <= year <= MAX_YEAR and 1 <= month <= MAX_MONTH and 1 <= day <= MAX_DAY
 
     def _extract_date_from_filename(self, filename: str) -> datetime | None:
         """Extract date from filename patterns.
@@ -309,26 +387,169 @@ class RulesEngineClassifier(BaseClassifier):
         Returns:
             datetime if a date pattern found, None otherwise.
         """
-        # Try full date patterns first
-        patterns = [
+        # Try full date patterns first (YMD format)
+        ymd_patterns = [
             r"(\d{4})-(\d{2})-(\d{2})",  # YYYY-MM-DD
-            r"(\d{4})(\d{2})(\d{2})",     # YYYYMMDD
+            r"(\d{4})(\d{2})(\d{2})",  # YYYYMMDD
         ]
-        for pattern in patterns:
+        for pattern in ymd_patterns:
             match = re.search(pattern, filename)
             if match:
                 try:
-                    year, month, day = int(match.group(1)), int(match.group(2)), int(match.group(3))
-                    if 1990 <= year <= 2099 and 1 <= month <= 12 and 1 <= day <= 31:
+                    year = int(match.group(1))
+                    month = int(match.group(2))
+                    day = int(match.group(3))
+                    if self._is_valid_date(year, month, day):
+                        return datetime(year, month, day, tzinfo=UTC)
+                except ValueError:
+                    continue
+
+        # Try European date formats (DMY format)
+        dmy_patterns = [
+            r"(\d{2})_(\d{2})_(\d{4})",  # DD_MM_YYYY
+            r"(\d{2})-(\d{2})-(\d{4})",  # DD-MM-YYYY
+            r"(\d{2})\.(\d{2})\.(\d{4})",  # DD.MM.YYYY
+        ]
+        for pattern in dmy_patterns:
+            match = re.search(pattern, filename)
+            if match:
+                try:
+                    day = int(match.group(1))
+                    month = int(match.group(2))
+                    year = int(match.group(3))
+                    if self._is_valid_date(year, month, day):
                         return datetime(year, month, day, tzinfo=UTC)
                 except ValueError:
                     continue
 
         # Try year-only pattern (at start or after separator)
-        year_match = re.search(r"(?:^|[_\-\s])(\d{4})(?:[_\-\s]|$|\.)", filename)
+        # Accept any non-digit as separator (space, dash, underscore, parenthesis, etc.)
+        year_match = re.search(r"(?:^|[_\-\s\(\)])(\d{4})(?:[_\-\s\(\)\.]|$)", filename)
         if year_match:
             year = int(year_match.group(1))
-            if 1990 <= year <= 2099:
+            if MIN_YEAR <= year <= MAX_YEAR:
                 return datetime(year, 1, 1, tzinfo=UTC)
+
+        return None
+
+    def _extract_date_from_content(self, content: str) -> datetime | None:
+        """Extract date/year from document content.
+
+        Prioritizes fiscal year patterns (e.g., "Année fiscale 2023") over
+        general year mentions to avoid extracting birth years.
+
+        Args:
+            content: Text content to search.
+
+        Returns:
+            datetime if a year found, None otherwise.
+        """
+        # Priority 1: Fiscal year patterns (most reliable for documents)
+        fiscal_patterns = [
+            # French fiscal patterns (specific first)
+            r"[Aa]nnée\s+fiscale\s+(\d{4})",
+            r"[Ee]xercice\s+(\d{4})",
+            r"[Rr]evenus?\s+de\s+l[''']année\s+(\d{4})",
+            r"[Rr]evenus?\s+de\s+(\d{4})",
+            r"[Rr]evenus?\s+(\d{4})",
+            r"réalisée?s?\s+en\s+(\d{4})",  # "réalisées en 2023"
+            r"perçue?s?\s+en\s+(\d{4})",  # "perçus en 2023"
+            r"versée?s?\s+en\s+(\d{4})",  # "versés en 2023"
+            r"payée?s?\s+en\s+(\d{4})",  # "payés en 2023"
+            r"[Aa]u\s+titre\s+de\s+(\d{4})",
+            r"[Pp]our\s+l[''']année\s+(\d{4})",
+            r"[Aa]nnée\s+(\d{4})",
+            r"[Pp]ériode\s+(\d{4})",
+            r"[Dd]éclaration\s+(\d{4})",
+            r"IFU\s+(\d{4})",
+            r"[Ii]mprimé\s+[Ff]iscal\s+[Uu]nique\s+(\d{4})",
+            r"[Aa]ttestation\s+(\d{4})",
+            r"[Cc]ertificat\s+(\d{4})",
+            # English fiscal patterns
+            r"[Ff]iscal\s+[Yy]ear\s+(\d{4})",
+            r"[Yy]ear\s+(\d{4})",
+            r"(\d{4})\s+[Tt]ax\s+[Rr]eturn",
+            r"[Tt]ax\s+[Yy]ear\s+(\d{4})",
+        ]
+        for pattern in fiscal_patterns:
+            match = re.search(pattern, content)
+            if match:
+                year = int(match.group(1))
+                if MIN_YEAR <= year <= MAX_YEAR:
+                    logger.debug("Fiscal year from content: %d", year)
+                    return datetime(year, 1, 1, tzinfo=UTC)
+
+        # Priority 2: Full date patterns (YYYY-MM-DD or DD/MM/YYYY)
+        date_patterns = [
+            (r"(\d{4})-(\d{2})-(\d{2})", "ymd"),  # YYYY-MM-DD
+            (r"(\d{2})/(\d{2})/(\d{4})", "dmy"),  # DD/MM/YYYY
+            (r"(\d{2})\.(\d{2})\.(\d{4})", "dmy"),  # DD.MM.YYYY
+        ]
+        for pattern, fmt in date_patterns:
+            match = re.search(pattern, content)
+            if match:
+                try:
+                    if fmt == "ymd":
+                        year = int(match.group(1))
+                        month = int(match.group(2))
+                        day = int(match.group(3))
+                    else:  # dmy
+                        day = int(match.group(1))
+                        month = int(match.group(2))
+                        year = int(match.group(3))
+                    if self._is_valid_date(year, month, day):
+                        logger.debug("Full date from content: %d-%02d-%02d", year, month, day)
+                        return datetime(year, month, day, tzinfo=UTC)
+                except ValueError:
+                    continue
+
+        # Priority 3: Standalone year in first 2000 chars (document header)
+        header = content[:2000]
+        year_match = re.search(r"\b(20[0-9]{2})\b", header)
+        if year_match:
+            year = int(year_match.group(1))
+            if MIN_MODERN_YEAR <= year <= MAX_YEAR:
+                logger.debug("Year from content header: %d", year)
+                return datetime(year, 1, 1, tzinfo=UTC)
+
+        return None
+
+    def _extract_issuer(
+        self,
+        content: str,
+        issuers: list[RuleIssuer],
+    ) -> RuleIssuer | None:
+        """Extract issuer from content by pattern matching.
+
+        Searches content for each issuer's patterns. Uses word boundary at start
+        to avoid false positives, but allows prefix matching at end (e.g., BIC codes
+        like 'BCVLCH2L' matching 'BCVLCH2LXXX').
+
+        Args:
+            content: Text content to search.
+            issuers: List of RuleIssuer with name and patterns.
+
+        Returns:
+            RuleIssuer if found, None otherwise.
+        """
+        if not content:
+            return None
+
+        content_lower = content.lower()
+        for issuer in issuers:
+            for pattern in issuer.patterns:
+                pattern_lower = pattern.lower()
+                # Use word boundary at start, allow prefix matching at end
+                # This matches "BCVLCH2L" in "BCVLCH2LXXX" while avoiding
+                # false positives like "UBS" matching inside "CLUBS"
+                escaped_pattern = re.escape(pattern_lower)
+                regex = rf"(?:^|[^a-z0-9]){escaped_pattern}"
+                if re.search(regex, content_lower):
+                    logger.debug(
+                        "Issuer '%s' matched pattern '%s'",
+                        issuer.name,
+                        pattern,
+                    )
+                    return issuer
 
         return None

@@ -53,6 +53,176 @@ MIN_PAGES_FOR_BOOK = 50
 MIN_SIZE_MB_FOR_BOOK = 5.0
 DETECTION_THRESHOLD = 0.7  # Strict threshold
 SMART_RENAME_THRESHOLD = 0.9  # Minimum confidence to suggest renaming with title
+MIN_FINANCIAL_PATTERN_MATCHES = 2  # Minimum pattern matches to identify financial document
+
+# Patterns that indicate NON-book financial/bank documents
+# These documents often contain number sequences that look like ISBNs but are account numbers
+FINANCIAL_EXCLUSION_PATTERNS = [
+    re.compile(r"\bIBAN\b", re.IGNORECASE),
+    re.compile(r"\bBIC\b|\bSWIFT\b", re.IGNORECASE),
+    re.compile(r"\b(BANQUE|BANK)\b", re.IGNORECASE),
+    re.compile(r"\bRELEV[EÉ]\b", re.IGNORECASE),  # Relevé (bank statement)
+    re.compile(r"\bAVIS\s+D.?[EÉ]CRITURES?\b", re.IGNORECASE),  # AVIS D'ECRITURES
+    re.compile(r"\bDEBIT\s+NOTICE\b", re.IGNORECASE),
+    re.compile(r"\bBANK\s+STATEMENT\b", re.IGNORECASE),
+    re.compile(r"\bFACTURE\b", re.IGNORECASE),  # Invoice
+    re.compile(r"\bSOLDE\s+(A\s+NOUVEAU|EN\s+CHF|EN\s+EUR)\b", re.IGNORECASE),
+    re.compile(r"CH\d{2}\s*\d{4}\s*\d{4}", re.IGNORECASE),  # Swiss IBAN pattern
+    re.compile(r"\bCLEARING\s*:\s*\d+\b", re.IGNORECASE),  # Bank clearing number
+]
+
+# Patterns that indicate transport/travel documents (tickets with ID numbers that look like ISBNs)
+TRANSPORT_EXCLUSION_PATTERNS = [
+    re.compile(r"\bTicket-ID\b", re.IGNORECASE),
+    re.compile(r"\bBillet\s+de\s+parcours\b", re.IGNORECASE),  # Swiss train ticket
+    re.compile(r"\bSchweizerische\s+Bundesbahnen\b", re.IGNORECASE),  # SBB
+    re.compile(r"\b(CFF|SBB|FFS)\b"),  # Swiss Federal Railways
+    re.compile(r"\bBoarding\s+Pass\b", re.IGNORECASE),
+    re.compile(r"\bE-?Ticket\b", re.IGNORECASE),
+    re.compile(r"\bItinerary\b", re.IGNORECASE),
+    re.compile(r"\bFlight\s+(Number|No\.?|#)\b", re.IGNORECASE),
+    re.compile(r"\bTrain\s+(Number|No\.?|#)\b", re.IGNORECASE),
+    re.compile(r"\bReservation\s+(Number|No\.?|#|Code)\b", re.IGNORECASE),
+    re.compile(r"\bConfirmation\s+(Number|No\.?|#|Code)\b", re.IGNORECASE),
+    re.compile(r"\bPNR\b", re.IGNORECASE),  # Passenger Name Record
+    re.compile(r"\bvon/de/da/from\b", re.IGNORECASE),  # Multilingual from/to on Swiss tickets
+    re.compile(r"\bnach/a/a/to\b", re.IGNORECASE),
+    # French train patterns (SNCF, TER, etc.)
+    re.compile(r"\bMON\s+BILLET\b", re.IGNORECASE),
+    re.compile(r"\bBILLET\s+REMI\b", re.IGNORECASE),
+    re.compile(r"\bTER\s+\d+\b", re.IGNORECASE),  # TER train number
+    re.compile(r"\bTGV\s+\d+\b", re.IGNORECASE),  # TGV train number
+    re.compile(r"\bSNCF\b", re.IGNORECASE),
+    re.compile(r"\bITIN[ÉE]RAIRE\s+(ALLER|RETOUR)\b", re.IGNORECASE),
+    re.compile(r"\bAller\s+Simple\b", re.IGNORECASE),
+    re.compile(r"\bAller[\s-]Retour\b", re.IGNORECASE),
+    # Italian transport patterns
+    re.compile(r"\bbiglietto\b", re.IGNORECASE),  # Italian: ticket
+    re.compile(r"\bTrenitalia\b", re.IGNORECASE),
+    # Museum/cultural event tickets (also have ticket IDs)
+    re.compile(r"\bmuseo\b", re.IGNORECASE),  # Italian: museum
+    re.compile(r"\bmus[ée]e\b", re.IGNORECASE),  # French: museum
+    re.compile(r"\bvisit[ea]\b", re.IGNORECASE),  # Visit
+    re.compile(r"\bsottomarino\b", re.IGNORECASE),  # Italian: submarine
+]
+
+# Patterns that indicate telecom/contract documents (IDs look like ISBNs)
+TELECOM_EXCLUSION_PATTERNS = [
+    re.compile(r"\bDocID\b", re.IGNORECASE),
+    re.compile(r"\bContractID\b", re.IGNORECASE),
+    re.compile(r"\bPortabilit[ée]\b", re.IGNORECASE),  # Phone number portability
+    re.compile(r"\btransfert\s+du.*num[ée]ro\b", re.IGNORECASE),
+    re.compile(r"\b(Sunrise|Swisscom|Salt|Wingo|UPC|Quickline)\b", re.IGNORECASE),
+    re.compile(r"\babonnement\b", re.IGNORECASE),
+    re.compile(r"\bop[ée]rateur\b", re.IGNORECASE),
+    re.compile(r"\bcarte\s+pr[ée]pay[ée]e\b", re.IGNORECASE),
+    re.compile(r"\bnum[ée]ro\s+de\s+t[ée]l[ée]phone\b", re.IGNORECASE),
+    re.compile(r"\b07\d{8}\b"),  # Swiss mobile number format
+]
+
+
+def is_financial_document(content: str, filename: str) -> bool:
+    """Check if document is a financial/bank document that should be excluded from book detection.
+
+    Args:
+        content: Text content to analyze.
+        filename: Filename to check.
+
+    Returns:
+        True if the document appears to be a financial document.
+    """
+    # Check filename patterns
+    filename_lower = filename.lower()
+    financial_filename_patterns = [
+        "facture",
+        "invoice",
+        "relevé",
+        "releve",
+        "statement",
+        "debit",
+        "credit",
+        "banque",
+        "bank",
+        "bcv",
+        "ubs",
+        "postfinance",
+        "raiffeisen",
+    ]
+    if any(pattern in filename_lower for pattern in financial_filename_patterns):
+        return True
+
+    # Check content for financial patterns (need multiple matches to be sure)
+    matches = sum(1 for pattern in FINANCIAL_EXCLUSION_PATTERNS if pattern.search(content))
+    return matches >= MIN_FINANCIAL_PATTERN_MATCHES
+
+
+def is_transport_document(content: str, filename: str) -> bool:
+    """Check if document is a transport/travel document that should be excluded from book detection.
+
+    Transport documents (train tickets, boarding passes) often have ticket IDs that
+    look like ISBNs but are not books.
+
+    Args:
+        content: Text content to analyze.
+        filename: Filename to check.
+
+    Returns:
+        True if the document appears to be a transport document.
+    """
+    # Check filename patterns
+    filename_lower = filename.lower()
+    transport_filename_patterns = [
+        "ticket",
+        "billet",
+        "boarding",
+        "flight",
+        "train",
+        "reservation",
+        "itinerary",
+        "voyage",
+        "sbb",
+        "cff",
+        "sncf",
+    ]
+    if any(pattern in filename_lower for pattern in transport_filename_patterns):
+        return True
+
+    # Check content for transport patterns (single match is enough - these are specific)
+    return any(pattern.search(content) for pattern in TRANSPORT_EXCLUSION_PATTERNS)
+
+
+def is_telecom_document(content: str, filename: str) -> bool:
+    """Check if document is a telecom/contract document that should be excluded from book detection.
+
+    Telecom documents (portability forms, contracts) have DocIDs/ContractIDs that
+    look like ISBNs but are not books.
+
+    Args:
+        content: Text content to analyze.
+        filename: Filename to check.
+
+    Returns:
+        True if the document appears to be a telecom document.
+    """
+    # Check filename patterns
+    filename_lower = filename.lower()
+    telecom_filename_patterns = [
+        "portability",
+        "portabilite",
+        "contrat",
+        "contract",
+        "abonnement",
+        "subscription",
+        "sunrise",
+        "swisscom",
+        "salt",
+        "wingo",
+    ]
+    if any(pattern in filename_lower for pattern in telecom_filename_patterns):
+        return True
+
+    # Check content for telecom patterns (single match is enough - these are specific)
+    return any(pattern.search(content) for pattern in TELECOM_EXCLUSION_PATTERNS)
 
 
 def sanitize_title(title: str, max_length: int = 80) -> str:
@@ -187,7 +357,7 @@ class BookDetector(BaseClassifier):
 
         return None
 
-    def classify(  # noqa: C901, PLR0912, PLR0915
+    def classify(  # noqa: C901, PLR0911, PLR0912, PLR0915
         self,
         content: str,
         metadata: FileMetadata | None = None,
@@ -207,6 +377,28 @@ class BookDetector(BaseClassifier):
 
         file_path = metadata.path
         if not file_path or not file_path.exists():
+            return None
+
+        # IMPORTANT: Exclude financial/bank documents to avoid false ISBN matches
+        # Bank account numbers and other financial identifiers can look like ISBNs
+        if is_financial_document(content, metadata.filename):
+            logger.debug(
+                "Skipping book detection for financial document: %s", file_path.name
+            )
+            return None
+
+        # Exclude transport/travel documents (ticket IDs look like ISBNs)
+        if is_transport_document(content, metadata.filename):
+            logger.debug(
+                "Skipping book detection for transport document: %s", file_path.name
+            )
+            return None
+
+        # Exclude telecom/contract documents (DocIDs/ContractIDs look like ISBNs)
+        if is_telecom_document(content, metadata.filename):
+            logger.debug(
+                "Skipping book detection for telecom document: %s", file_path.name
+            )
             return None
 
         # Extract PDF metadata

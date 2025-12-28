@@ -194,10 +194,14 @@ def _read_text_file(file_path: Path, max_chars: int) -> str:
         return f"Filename: {file_path.name}"
 
 
+# Minimum chars to consider PDF as having extractable text (vs scanned)
+_PDF_MIN_TEXT_THRESHOLD = 50
+
+
 def _read_pdf_file(file_path: Path, max_chars: int) -> str:
     """Extract text from PDF file.
 
-    Uses pypdf if available, otherwise returns filename.
+    Uses pypdf first, falls back to OCR for scanned PDFs.
 
     Args:
         file_path: Path to PDF file.
@@ -206,6 +210,25 @@ def _read_pdf_file(file_path: Path, max_chars: int) -> str:
     Returns:
         Extracted text or filename fallback.
     """
+    # 1. Try pypdf first (fast, works for text-based PDFs)
+    text = _extract_pdf_with_pypdf(file_path, max_chars)
+
+    # 2. If text is too short, PDF is likely scanned - try OCR
+    if len(text.strip()) < _PDF_MIN_TEXT_THRESHOLD:
+        logger.info(
+            "PDF appears scanned (<%d chars), trying OCR: %s",
+            _PDF_MIN_TEXT_THRESHOLD,
+            file_path,
+        )
+        ocr_text = _ocr_pdf_first_page(file_path, max_chars)
+        if ocr_text and len(ocr_text.strip()) > len(text.strip()):
+            return ocr_text
+
+    return text if text.strip() else f"Filename: {file_path.name}"
+
+
+def _extract_pdf_with_pypdf(file_path: Path, max_chars: int) -> str:
+    """Extract text from PDF using pypdf."""
     try:
         from pypdf import PdfReader
 
@@ -224,11 +247,66 @@ def _read_pdf_file(file_path: Path, max_chars: int) -> str:
         return "".join(text_parts)
 
     except ImportError:
-        logger.debug("pypdf not installed, using filename for PDF: %s", file_path)
-        return f"Filename: {file_path.name}"
+        logger.debug("pypdf not installed: %s", file_path)
+        return ""
     except (OSError, ValueError):
-        logger.warning("Failed to extract PDF text: %s", file_path)
-        return f"Filename: {file_path.name}"
+        logger.warning("Failed to extract PDF text with pypdf: %s", file_path)
+        return ""
+
+
+def _ocr_pdf_first_page(file_path: Path, max_chars: int) -> str:
+    """OCR the first page of a PDF using pymupdf + Vision framework.
+
+    Args:
+        file_path: Path to PDF file.
+        max_chars: Maximum characters to extract.
+
+    Returns:
+        OCR text or empty string on failure.
+    """
+    import tempfile
+
+    try:
+        import fitz  # pymupdf
+
+        from para_files.utils.ocr import extract_text as ocr_extract
+    except ImportError as e:
+        logger.debug("pymupdf or OCR not available: %s", e)
+        return ""
+
+    try:
+        # Open PDF and render first page to image
+        doc = fitz.open(file_path)
+        if len(doc) == 0:
+            return ""
+
+        page = doc[0]
+        # Render at 2x resolution for better OCR
+        mat = fitz.Matrix(2.0, 2.0)
+        pix = page.get_pixmap(matrix=mat)
+
+        # Convert to PNG bytes for Vision OCR
+        png_bytes = pix.tobytes("png")
+
+        # Create temp file for OCR (Vision needs a file path)
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            tmp.write(png_bytes)
+            tmp_path = Path(tmp.name)
+
+        try:
+            result = ocr_extract(tmp_path, max_chars)
+        finally:
+            tmp_path.unlink(missing_ok=True)
+
+    except Exception:
+        logger.exception("OCR failed for PDF: %s", file_path)
+        return ""
+
+    if result and result.text:
+        logger.info("OCR extracted %d chars from PDF: %s", len(result.text), file_path)
+        return result.text[:max_chars]
+
+    return ""
 
 
 def _read_document_file(

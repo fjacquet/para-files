@@ -15,14 +15,17 @@ from pydantic import BaseModel, Field
 
 
 class ClassificationSource(str, Enum):
-    """Source of a classification decision in the 5-signal pipeline."""
+    """Source of a classification decision in the 4-signal pipeline."""
 
-    VALIDATED_DB = "validated_db"  # Signal 1: 100% confidence
-    RULES_ENGINE = "rules_engine"  # Signal 2: 95% confidence
-    BOOK_DETECTOR = "book_detector"  # Signal 2.5: 92% confidence (100% if ISBN found)
-    DOMAIN_KB = "domain_kb"  # Signal 3: 90% confidence
-    SEMANTIC_ROUTER = "semantic_router"  # Signal 4: 85% confidence
-    LLM_FALLBACK = "llm_fallback"  # Signal 5: configurable confidence
+    VALIDATED_DB = "validated_db"  # Signal 1: 100% confidence (deprecated)
+    RULES_ENGINE = "rules_engine"  # Signal 1: 95% confidence
+    BOOK_DETECTOR = "book_detector"  # Signal 2: 92% confidence (100% if ISBN found)
+    DOMAIN_KB = "domain_kb"  # Signal 3: 90% confidence (deprecated)
+    SEMANTIC_ROUTER = "semantic_router"  # Signal 4: 85% confidence (deprecated)
+    TAXONOMY_CLASSIFIER = (
+        "taxonomy_classifier"  # Signal 3: 90% confidence (replaces domain_kb + semantic_router)
+    )
+    LLM_FALLBACK = "llm_fallback"  # Signal 4: configurable confidence
     DEFAULT = "default"  # Fallback to inbox
 
 
@@ -54,6 +57,16 @@ class Route(BaseModel):
     )
 
 
+class RuleIssuer(BaseModel):
+    """Issuer definition for routing rules with pattern matching."""
+
+    name: str = Field(description="Canonical issuer name for folder, e.g., 'Credit Agricole'")
+    patterns: list[str] = Field(
+        default_factory=list,
+        description="Patterns to match in content, e.g., ['Credit Agricole', 'Crédit Agricole']",
+    )
+
+
 class RoutingRule(BaseModel):
     """Special routing rule for specific file types (photos, videos, courses)."""
 
@@ -72,11 +85,15 @@ class RoutingRule(BaseModel):
     destination: str = Field(description="Destination pattern with placeholders")
     date_source: str | None = Field(
         default=None,
-        description="Where to get date from: 'exif' or 'file_modified'",
+        description="Where to get date from: 'exif', 'filename', 'content', or 'file_modified'",
     )
     fallback_date: str | None = Field(
         default=None,
         description="Fallback date source if primary fails",
+    )
+    date_pattern: str | None = Field(
+        default=None,
+        description="Regex pattern for extracting date from filename",
     )
     action: str | None = Field(
         default=None,
@@ -85,6 +102,14 @@ class RoutingRule(BaseModel):
     platforms: dict[str, list[str]] | None = Field(
         default=None,
         description="Platform-specific patterns for courses",
+    )
+    issuers: list[RuleIssuer] = Field(
+        default_factory=list,
+        description="List of issuers for {issuer} placeholder resolution",
+    )
+    known_technologies: list[str] = Field(
+        default_factory=list,
+        description="Known technologies for {technology} placeholder resolution",
     )
 
 

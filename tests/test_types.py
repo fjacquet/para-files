@@ -24,18 +24,21 @@ class TestClassificationSource:
     """Tests for ClassificationSource enum."""
 
     def test_all_sources_defined(self):
-        """Verify all expected sources exist."""
-        assert ClassificationSource.VALIDATED_DB == "validated_db"
+        """Verify all expected sources exist (v2.0 pipeline)."""
+        # Active sources in v2.0
         assert ClassificationSource.RULES_ENGINE == "rules_engine"
         assert ClassificationSource.BOOK_DETECTOR == "book_detector"
-        assert ClassificationSource.DOMAIN_KB == "domain_kb"
-        assert ClassificationSource.SEMANTIC_ROUTER == "semantic_router"
+        assert ClassificationSource.TAXONOMY_CLASSIFIER == "taxonomy_classifier"
         assert ClassificationSource.LLM_FALLBACK == "llm_fallback"
         assert ClassificationSource.DEFAULT == "default"
+        # Deprecated sources (kept for backward compatibility)
+        assert ClassificationSource.VALIDATED_DB == "validated_db"
+        assert ClassificationSource.DOMAIN_KB == "domain_kb"
+        assert ClassificationSource.SEMANTIC_ROUTER == "semantic_router"
 
     def test_source_count(self):
-        """Verify we have exactly 7 sources (including BOOK_DETECTOR)."""
-        assert len(ClassificationSource) == 7
+        """Verify we have exactly 8 sources (v2.0 pipeline with TAXONOMY_CLASSIFIER)."""
+        assert len(ClassificationSource) == 8
 
 
 class TestConfidence:

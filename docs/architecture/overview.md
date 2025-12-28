@@ -9,47 +9,50 @@ nav_order: 1
 
 Understanding how para-files classifies documents.
 
-## The 6-Signal Pipeline
+## The 4-Signal Pipeline (v2.0)
 
-Para-files tries 6 classification signals in order. The first confident match wins.
+Para-files tries 4 classification signals in order. The first confident match wins.
 
 ```mermaid
 flowchart TD
-    A[Input File] --> B{Signal 1: Validated DB<br/>100% confidence}
+    A[Input File] --> B{Signal 1: Rules Engine<br/>95% confidence}
     B -->|Match| Z[Classification Result]
-    B -->|No Match| C{Signal 2: Rules Engine<br/>95% confidence}
+    B -->|No Match| C{Signal 2: Book Detector<br/>92% confidence}
     C -->|Match| Z
-    C -->|No Match| C2{Signal 2.5: Book Detector<br/>92% confidence}
-    C2 -->|Match| Z
-    C2 -->|No Match| D{Signal 3: Domain KB<br/>90% confidence}
+    C -->|No Match| D{Signal 3: Taxonomy Classifier<br/>90% confidence}
     D -->|Match| Z
-    D -->|No Match| E{Signal 4: Semantic Router<br/>85% confidence}
+    D -->|No Match| E{Signal 4: MLX-LLM Fallback<br/>60% confidence}
     E -->|Match| Z
-    E -->|No Match| F{Signal 5: LLM Fallback<br/>Configurable}
-    F -->|Match| Z
-    F -->|No Match| G[Inbox Fallback<br/>0_Inbox/]
+    E -->|No Match| G[Inbox Fallback<br/>0_Inbox/]
     G --> Z
 ```
 
-## Signal Details
+## Signal Details (v2.0)
 
-| Signal | Confidence | What It Does | When to Use |
-|--------|-----------|-------------|------------|
-| **1. Validated DB** | 100% | Uses manually approved mappings | After you've learned patterns |
-| **2. Rules Engine** | 95% | Matches filename/path glob patterns | For filename-based routing |
-| **2.5 Book Detector** | 92% | Detects technical books via ISBN/metadata | Automatic for PDFs |
-| **3. Domain KB** | 90% | Matches known company/issuer | When you register issuers |
-| **4. Semantic Router** | 85% | Embeddings match to utterances | Content-based matching |
-| **5. LLM Fallback** | Variable | Asks AI model (optional) | When other signals unsure |
+| Signal | Confidence | What It Does | Data Source |
+|--------|-----------|-------------|-------------|
+| **1. Rules Engine** | 95% | Matches extensions/patterns | `personal_file_tree.yaml` |
+| **2. Book Detector** | 92% | Detects books via ISBN + Thema | `thema.json` hierarchy |
+| **3. Taxonomy Classifier** | 90% | Matches keywords + issuers | `documents.json` |
+| **4. MLX-LLM Fallback** | 60% | Native MLX-LM inference | In-process (no Ollama) |
+
+### Removed in v2.0
+
+| Signal | Replaced By |
+|--------|-------------|
+| Validated DB | Taxonomy Classifier (issuers) |
+| Domain KB | Taxonomy Classifier (issuers) |
+| Semantic Router | Taxonomy Classifier (keywords) |
+| LLM Fallback (Ollama) | MLX-LLM Fallback (native) |
 
 ## How to Improve Matching
 
 Choose based on your situation:
 
-- **Low confidence matches** → Add utterances (Signal 4)
-- **From known companies** → Register issuer (Signal 3)
-- **Need highest accuracy** → Use learning (Signal 1)
-- **Generic filenames** → Better content analysis needed
+- **Photo/video routing** → Add extension patterns to `personal_file_tree.yaml`
+- **From known companies** → Add issuer to `documents.json`
+- **Document type detection** → Add keywords to `documents.json`
+- **Technical books** → Automatic via ISBN lookup + Thema classification
 
 ## Component Architecture
 
@@ -57,11 +60,11 @@ Choose based on your situation:
 graph LR
     A["CLI<br/>main.py"]
     B["ClassificationPipeline<br/>Orchestrator"]
-    
-    C["6 Signals<br/>Classifiers"]
-    D["Encoders<br/>MLX Embeddings"]
+
+    C["4 Signals<br/>Classifiers"]
+    D["Taxonomies<br/>JSON Loaders"]
     E["Reference Tree<br/>YAML Config"]
-    
+
     A --> B
     B --> C
     B --> D
@@ -76,26 +79,25 @@ File Input
     ↓
 Extract Metadata (filename, content, dates)
     ↓
-Try Signal 1 → 2 → 2.5 → 3 → 4 → 5
+Try Signal 1 → 2 → 3 → 4
     ↓
 Return Result (category + confidence + source)
     ↓
-Action (classify, move, learn, etc.)
+Action (classify, move, etc.)
 ```
 
 ## Key Technologies
 
-- **MLX Embeddings** - Local semantic matching on Apple Neural Engine
-- **YAML Reference Tree** - Configuration of routes and utterances
-- **Cosine Similarity** - Semantic matching algorithm
-- **Optional LLM** - Qwen 2.5 via Ollama
+- **MLX-LM** - Native LLM inference on Apple Silicon (replaces Ollama)
+- **JSON Taxonomies** - `documents.json` (issuers + keywords), `thema.json` (books)
+- **YAML Reference Tree** - Routing rules by extension/pattern
+- **Pydantic** - Type-safe taxonomy models
 
 ## Next Steps
 
 Learn about each signal:
 
-- **[Signal 1: Validated DB](signal-1-validated-db.md)** - Manual mappings
-- **[Signal 2: Rules Engine](signal-2-rules.md)** - Pattern matching
-- **[Signal 3: Domain KB](signal-3-domain-kb.md)** - Known issuers
-- **[Signal 4: Semantic Router](signal-4-semantic.md)** - ML embeddings
-- **[Signal 5: LLM Fallback](signal-5-llm.md)** - Optional AI
+- **[Signal 1: Rules Engine](signal-1-rules.md)** - Extension/pattern matching
+- **[Signal 2: Book Detector](signal-2-book-detector.md)** - ISBN + Thema classification
+- **[Signal 3: Taxonomy Classifier](signal-3-taxonomy.md)** - Keywords + issuers
+- **[Signal 4: MLX-LLM Fallback](signal-4-mlx-llm.md)** - Native AI inference

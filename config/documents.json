@@ -103,7 +103,8 @@
           "name": "Dons et contributions",
           "para_pattern": "4_Archives/dons/{issuer}/{year}",
           "examples": ["Reçu de don", "Attestation fiscale pour don"],
-          "keywords": ["Don", "Contribution", "Attestation fiscale", "Déductible"],
+          "keywords": ["Reçu de don", "Confirmation de don", "Merci pour votre don", "Attestation de don"],
+          "required_context": ["reçu", "attestation", "déductible", "merci", "générosité", "soutien", "contribution"],
           "retention": "10_years",
           "paper_required": false,
           "issuers": [
@@ -114,7 +115,7 @@
             {"name": "Amnesty", "patterns": ["Amnesty", "amnesty.ch"]},
             {"name": "Rega", "patterns": ["Rega", "rega.ch"]},
             {"name": "Unicef", "patterns": ["Unicef", "unicef.ch"]},
-            {"name": "Wikimedia", "patterns": ["Wikimedia", "Wikipedia", "wikimedia.org"]},
+            {"name": "Wikimedia", "patterns": ["Wikimedia Foundation", "wikimediafoundation.org", "donate.wikimedia.org"]},
             {"name": "Fondation Paraplegiques", "patterns": ["Fondation suisse pour les paraplegiques", "paraplegie.ch"]},
             {"name": "Ligue Vaudoise", "patterns": ["Ligue Vaudoise", "liguevaudoise.ch"]},
             {"name": "SwissRando", "patterns": ["SwissRando", "suisse-rando.ch"]},
@@ -181,7 +182,7 @@
           "paper_required": false,
           "issuers": [
             {"name": "Romande Energie", "patterns": ["Romande Energie", "romande-energie.ch"]},
-            {"name": "SIG", "patterns": ["SIG", "sig-ge.ch"]},
+            {"name": "SIG", "patterns": ["Services Industriels de Genève", "sig-ge.ch", "SIG Genève"]},
             {"name": "Holdigaz", "patterns": ["Holdigaz", "holdigaz.ch"]},
             {"name": "EDF", "patterns": ["EDF", "edf.fr"]},
             {"name": "ERDF", "patterns": ["ERDF", "Enedis"]},
@@ -199,11 +200,11 @@
           "paper_required": false,
           "issuers": [
             {"name": "Swisscom", "patterns": ["Swisscom", "swisscom.ch"]},
-            {"name": "Salt", "patterns": ["Salt", "salt.ch"]},
+            {"name": "Salt", "patterns": ["Salt Mobile", "salt.ch", "Salt SA"]},
             {"name": "Sunrise", "patterns": ["Sunrise", "sunrise.ch"]},
             {"name": "UPC", "patterns": ["UPC", "upc.ch"]},
             {"name": "Bouygues Telecom", "patterns": ["Bouygues Telecom", "bouyguestelecom.fr"]},
-            {"name": "Orange", "patterns": ["Orange", "orange.fr"]},
+            {"name": "Orange", "patterns": ["Orange France", "Orange SA", "orange.fr", "Facture Orange", "Orange Mobile"]},
             {"name": "SFR", "patterns": ["SFR", "sfr.fr"]},
             {"name": "France Telecom", "patterns": ["France Telecom", "FT"]}
           ]
@@ -252,7 +253,7 @@
           "issuers": [
             {"name": "Swica", "patterns": ["Swica", "swica.ch"]},
             {"name": "Groupe Mutuel", "patterns": ["Groupe Mutuel", "groupemutuel.ch"]},
-            {"name": "Vaudoise", "patterns": ["Vaudoise Assurances", "Vaudoise", "vaudoise.ch"]},
+            {"name": "Vaudoise", "patterns": ["Vaudoise Assurances", "Vaudoise Générale", "vaudoise.ch"]},
             {"name": "Axa", "patterns": ["Axa-Winterthur", "Axa", "axa.ch"]},
             {"name": "Zurich", "patterns": ["Zurich Versicherung", "Zurich Insurance", "Zurich Assurance", "zurich.ch"]},
             {"name": "Baloise", "patterns": ["Baloise", "baloise.ch"]},
@@ -325,7 +326,7 @@
           "name": "Fiches de Salaire",
           "para_pattern": "4_Archives/travail/salaires/{year}",
           "examples": ["Fiches mensuelles", "Fiche cumulée Décembre", "Certificat de salaire annuel"],
-          "keywords": ["Salaire", "Déductions", "Allocation familiale", "Net à payer"],
+          "keywords": ["Décompte de salaire", "Fiche de paie", "Payslip", "Net à payer", "Salaire brut", "Cotisations sociales"],
           "retention": "10_years",
           "paper_required": false
         },
@@ -351,7 +352,7 @@
           "name": "1er Pilier (AVS/AI)",
           "para_pattern": "3_Resources/prevoyance/avs",
           "examples": ["Certificat d'assurance AVS", "Extrait de Compte Individuel", "Décision de rente"],
-          "keywords": ["AVS", "Compte Individuel", "CI", "Rente"],
+          "keywords": ["Extrait AVS", "Compte Individuel AVS", "Caisse AVS", "Rente AVS", "AI-Rente"],
           "retention": "retirement",
           "paper_required": false
         },
@@ -365,7 +366,7 @@
           "paper_required": false,
           "issuers": [
             {"name": "Generali", "patterns": ["Generali", "generali.ch"]},
-            {"name": "Vaudoise", "patterns": ["Vaudoise", "vaudoise.ch"]},
+            {"name": "Vaudoise", "patterns": ["Vaudoise Assurances", "Vaudoise Vie", "vaudoise.ch"]},
             {"name": "Swiss Life", "patterns": ["Swiss Life", "swisslife.ch"]},
             {"name": "Retraites Populaires", "patterns": ["Retraites Populaires", "retraitespopulaires.ch"]},
             {"name": "Allianz", "patterns": ["Allianz", "allianz.ch"]},
@@ -453,11 +454,11 @@
           "name": "Papiers du Véhicule",
           "para_pattern": "3_Resources/vehicules/papiers",
           "examples": ["Permis de circulation", "Fiche technique", "Certificat de conformité"],
-          "keywords": ["SAN", "Service des automobiles", "Permis de circulation", "Châssis"],
+          "keywords": ["Service des automobiles", "Permis de circulation", "Châssis", "Immatriculation"],
           "retention": "permanent",
           "paper_required": true,
           "issuers": [
-            {"name": "SAN", "patterns": ["SAN", "Service des automobiles", "san.vd.ch"]}
+            {"name": "SAN", "patterns": ["Service des automobiles", "san.vd.ch", "SAN Vaud"]}
           ]
         },
         {
@@ -474,7 +475,8 @@
           "name": "Entretien & Amendes",
           "para_pattern": "4_Archives/mobilite/entretien/{year}",
           "examples": ["Factures garage", "Achat pneus", "Amendes d'ordre", "Vignette autoroutière"],
-          "keywords": ["Service", "Garage", "Pneus", "Amende"],
+          "keywords": ["Garage automobile", "Service auto", "Révision véhicule", "Pneus", "Amende", "Vidange"],
+          "required_context": ["véhicule", "voiture", "auto", "moto", "km", "kilométrage"],
           "retention": "5_years",
           "paper_required": false
         },
@@ -482,12 +484,14 @@
           "sub_id": "transports_publics",
           "name": "Transports Publics",
           "para_pattern": "4_Archives/factures/Mobilité/{issuer}/{year}",
-          "examples": ["Carte SwissPass", "Factures AG/Demi-tarif", "Abonnement Mobilis"],
-          "keywords": ["CFF", "SBB", "Mobilis", "SwissPass"],
+          "examples": ["Carte SwissPass", "Factures AG/Demi-tarif", "Abonnement Mobilis", "Billet SNCF", "Billet TER"],
+          "keywords": ["CFF", "SBB", "Mobilis", "SwissPass", "SNCF", "TER", "TGV", "Billet", "MON BILLET", "BILLET REMI", "Aller Simple", "Aller-Retour", "Trenitalia", "biglietto"],
           "retention": "5_years",
           "paper_required": false,
           "issuers": [
-            {"name": "CFF", "patterns": ["CFF", "SBB", "cff.ch", "sbb.ch"]},
+            {"name": "CFF", "patterns": ["CFF", "SBB", "cff.ch", "sbb.ch", "Schweizerische Bundesbahnen"]},
+            {"name": "SNCF", "patterns": ["SNCF", "sncf.com", "oui.sncf", "TER", "TGV", "BILLET REMI", "MON BILLET"]},
+            {"name": "Trenitalia", "patterns": ["Trenitalia", "trenitalia.com", "Ferrovie dello Stato"]},
             {"name": "TL", "patterns": ["TL", "t-l.ch", "Transports Lausannois"]},
             {"name": "TPG", "patterns": ["TPG", "tpg.ch"]},
             {"name": "VMCV", "patterns": ["VMCV", "vmcv.ch"]},
@@ -517,7 +521,8 @@
           "name": "Scolarité & Formation",
           "para_pattern": "3_Resources/formation/diplomes",
           "examples": ["Bulletins scolaires", "Contrats d'apprentissage", "Attestations de cours"],
-          "keywords": ["Ecole", "Semestre", "Apprentissage", "Note"],
+          "keywords": ["Bulletin scolaire", "Relevé de notes", "Contrat d'apprentissage", "Diplôme", "Certificat de scolarité", "Attestation scolaire", "Livret scolaire"],
+          "required_context": ["école", "ecole", "scolaire", "élève", "eleve", "étudiant", "etudiant", "établissement", "etablissement", "cursus", "formation", "apprenti", "CFC", "maturité", "baccalauréat", "lycée", "collège", "université", "faculté"],
           "retention": "permanent",
           "paper_required": false
         },
@@ -540,7 +545,8 @@
           "name": "Animaux de Compagnie",
           "para_pattern": "3_Resources/animaux",
           "examples": ["Passeport pour animaux", "Enregistrement puce", "Carnet de vaccination"],
-          "keywords": ["Amicus", "Vétérinaire", "Chien", "Chat", "Puce"],
+          "keywords": ["Amicus", "Vétérinaire", "Chien", "Chat", "Puce", "animal", "animaux"],
+          "required_context": ["animal", "animaux", "pet", "vétérinaire", "veterinaire", "vaccination", "vaccin", "passeport animal", "micropuce", "compagnie", "clinique", "vermifuge", "antiparasitaire", "ANIS", "chiot", "chaton", "race"],
           "retention": "permanent",
           "paper_required": true
         },
@@ -645,12 +651,22 @@
         {
           "sub_id": "voyages",
           "name": "Voyages & Vacances",
-          "para_pattern": "4_Archives/voyages/{year}",
-          "examples": ["Réservations hôtel", "Location voiture"],
-          "keywords": ["Réservation hôtel", "Location vacances", "Check-in", "Check-out"],
-          "required_context": ["hôtel", "hotel", "vacances", "séjour", "appartement", "chambre"],
+          "para_pattern": "4_Archives/voyages/hotels/{issuer}/{year}",
+          "examples": ["Réservations hôtel", "Location voiture", "Facture hôtel"],
+          "keywords": ["Réservation", "Check-in", "Check-out", "Chambre", "Room", "Nuitée"],
+          "required_context": ["hôtel", "hotel", "room", "chambre", "nuit", "night", "séjour", "stay"],
           "retention": "5_years",
-          "paper_required": false
+          "paper_required": false,
+          "issuers": [
+            {"name": "Radisson", "patterns": ["Radisson", "radisson.com", "Radisson Blu"]},
+            {"name": "Hilton", "patterns": ["Hilton", "hilton.com", "DoubleTree", "Hampton Inn"]},
+            {"name": "Marriott", "patterns": ["Marriott", "marriott.com", "Sheraton", "Westin"]},
+            {"name": "Accor", "patterns": ["Accor", "accor.com", "Novotel", "Ibis", "Mercure", "Sofitel"]},
+            {"name": "IHG", "patterns": ["IHG", "ihg.com", "Holiday Inn", "InterContinental", "Crowne Plaza"]},
+            {"name": "Booking", "patterns": ["Booking.com", "booking.com"]},
+            {"name": "Hotels.com", "patterns": ["Hotels.com", "hotels.com"]},
+            {"name": "Expedia", "patterns": ["Expedia", "expedia.com"]}
+          ]
         },
         {
           "sub_id": "billets_avion",
@@ -662,7 +678,7 @@
           "retention": "5_years",
           "paper_required": false,
           "issuers": [
-            {"name": "Swiss", "patterns": ["Swiss International", "SWISS", "swiss.com"]},
+            {"name": "Swiss", "patterns": ["Swiss International", "SWISS Air", "swiss.com", "Swiss Airlines"]},
             {"name": "Lufthansa", "patterns": ["Lufthansa", "lufthansa.com"]},
             {"name": "Air France", "patterns": ["Air France", "airfrance.com"]},
             {"name": "EasyJet", "patterns": ["EasyJet", "easyjet.com"]},
@@ -686,9 +702,9 @@
           "sub_id": "spectacles_evenements",
           "name": "Spectacles & Événements",
           "para_pattern": "4_Archives/loisirs/spectacles/{year}",
-          "examples": ["Billets de concert", "Entrées cinéma", "Tickets événements"],
-          "keywords": ["Billet", "Ticket", "Place", "Entrée", "Concert", "Spectacle"],
-          "required_context": ["concert", "spectacle", "cinéma", "théâtre", "festival", "événement", "ouverture des portes"],
+          "examples": ["Billets de concert", "Entrées cinéma", "Tickets événements", "Entrées musée", "Visites guidées"],
+          "keywords": ["Billet", "Ticket", "Place", "Entrée", "Concert", "Spectacle", "Musée", "Museum", "Museo", "biglietto", "visita", "visite"],
+          "required_context": ["concert", "spectacle", "cinéma", "théâtre", "festival", "événement", "ouverture des portes", "museo", "musée", "exposition", "visite"],
           "retention": "warranty_2_years",
           "paper_required": false
         },
@@ -697,7 +713,8 @@
           "name": "Services Divers",
           "para_pattern": "4_Archives/factures/Services/{issuer}/{year}",
           "examples": ["Pressing", "Nettoyage", "Autres services"],
-          "keywords": ["Service", "Pressing", "Nettoyage"],
+          "keywords": ["Pressing", "Nettoyage", "Service à domicile", "Prestation de service"],
+          "required_context": ["facture", "devis", "tarif", "prix", "montant"],
           "retention": "warranty_2_years",
           "paper_required": false,
           "issuers": [

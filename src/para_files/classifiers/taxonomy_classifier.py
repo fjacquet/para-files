@@ -1,0 +1,460 @@
+"""Taxonomy-based classifier using documents.json.
+
+Replaces DomainKB + SemanticRouter with a unified classifier that matches:
+1. Issuers - Known entities with patterns (90% confidence)
+2. Keywords - Document type keywords (85% confidence)
+"""
+
+from __future__ import annotations
+
+import re
+from datetime import UTC, datetime
+from functools import lru_cache
+from typing import TYPE_CHECKING
+
+from para_files.classifiers.base import BaseClassifier
+from para_files.taxonomies.loader import TaxonomyLoader, get_taxonomy_loader
+from para_files.types import (
+    ClassificationResult,
+    ClassificationSource,
+    Confidence,
+    FileMetadata,
+)
+
+
+if TYPE_CHECKING:
+    from para_files.taxonomies.models import DocumentCategory, DocumentType, Issuer
+
+
+
+
+def normalize_ocr_text(text: str) -> str:
+    """Normalize OCR-corrupted text by collapsing isolated single characters.
+
+    Handles common OCR issues like "bi gl i etto" → "biglietto".
+    This occurs when OCR inserts spaces between characters.
+
+    Args:
+        text: Input text potentially with OCR corruption
+
+    Returns:
+        Normalized text with collapsed single-char sequences
+    """
+    # Pattern: single letter followed by space followed by single letter
+    # Replace iteratively until no more matches
+    result = text
+    prev_result = None
+
+    while prev_result != result:
+        prev_result = result
+        # Collapse: "a b" → "ab" when both are single lowercase letters
+        result = re.sub(r"\b([a-z])\s+([a-z])\b", r"\1\2", result)
+        # Also handle uppercase
+        result = re.sub(r"\b([A-Z])\s+([A-Z])\b", r"\1\2", result)
+
+    return result
+
+
+@lru_cache(maxsize=128)
+def _normalize_cached(text: str) -> str:
+    """Cached version of normalize_ocr_text for performance."""
+    return normalize_ocr_text(text)
+
+class TaxonomyClassifier(BaseClassifier):
+    """Classifier using documents.json taxonomy for issuers and keywords.
+
+    Matching priority:
+    1. Issuer patterns (90% confidence) - Most specific
+    2. Keyword matching (85% confidence) - Semantic match
+
+    Path resolution uses para_pattern from category/document with placeholders:
+    - {year} - Extracted from content or file date
+    - {issuer} - Matched issuer name
+    - {month}, {day} - From file date
+    """
+
+    # Confidence levels
+    ISSUER_CONFIDENCE = 0.90
+    KEYWORD_CONFIDENCE = 0.85
+
+    # Header length for priority matching
+    HEADER_LENGTH = 1000
+    # Keyword header boost threshold (shorter than issuer matching)
+    KEYWORD_HEADER_THRESHOLD = 500
+    # Length normalization factor for keyword scoring
+    KEYWORD_LENGTH_FACTOR = 50
+
+    def __init__(
+        self,
+        loader: TaxonomyLoader | None = None,
+    ) -> None:
+        """Initialize with taxonomy loader.
+
+        Args:
+            loader: TaxonomyLoader instance (uses global cached if None)
+        """
+        self._loader = loader or get_taxonomy_loader()
+        self._issuer_cache: dict[str, tuple[Issuer, DocumentType, DocumentCategory]] | None = None
+        self._keyword_cache: (
+            dict[str, tuple[DocumentType, DocumentCategory, list[str]]] | None
+        ) = None
+
+    @property
+    def name(self) -> str:
+        """Return classifier name."""
+        return "TaxonomyClassifier"
+
+    @property
+    def source(self) -> ClassificationSource:
+        """Return classification source."""
+        return ClassificationSource.TAXONOMY_CLASSIFIER
+
+    @property
+    def default_confidence(self) -> float:
+        """Return default confidence (issuer match)."""
+        return self.ISSUER_CONFIDENCE
+
+    def _build_issuer_cache(self) -> dict[str, tuple[Issuer, DocumentType, DocumentCategory]]:
+        """Build cache of issuer patterns to issuer/doc/category tuples."""
+        if self._issuer_cache is not None:
+            return self._issuer_cache
+
+        taxonomy = self._loader.load_documents()
+        cache: dict[str, tuple[Issuer, DocumentType, DocumentCategory]] = {}
+
+        for issuer, doc_type, category in taxonomy.get_all_issuers():
+            for pattern in issuer.patterns:
+                # Store with lowercase pattern as key
+                cache[pattern.lower()] = (issuer, doc_type, category)
+
+        self._issuer_cache = cache
+        return cache
+
+    def _build_keyword_cache(
+        self,
+    ) -> dict[str, tuple[DocumentType, DocumentCategory, list[str]]]:
+        """Build cache of keywords to doc/category/required_context tuples."""
+        if self._keyword_cache is not None:
+            return self._keyword_cache
+
+        taxonomy = self._loader.load_documents()
+        self._keyword_cache = taxonomy.get_all_keywords()
+        return self._keyword_cache
+
+    def _match_issuer(
+        self,
+        content: str,
+        filename: str | None = None,
+    ) -> tuple[Issuer, DocumentType, DocumentCategory] | None:
+        """Match content against known issuer patterns.
+
+        Priority: filename > header (first 1000 chars) > full content
+        Within each area, the issuer appearing earliest (by position) wins.
+
+        Args:
+            content: Text content to search
+            filename: Optional filename for priority matching
+
+        Returns:
+            Tuple of (Issuer, DocumentType, DocumentCategory) if matched, None otherwise
+        """
+        cache = self._build_issuer_cache()
+        if not cache:
+            return None
+
+        # Search priority: filename first, then header, then full content
+        search_areas: list[tuple[str, str]] = []
+        if filename:
+            search_areas.append(("filename", filename.lower()))
+        if content:
+            header = content[: self.HEADER_LENGTH].lower()
+            search_areas.append(("header", header))
+            if len(content) > self.HEADER_LENGTH:
+                search_areas.append(("content", content.lower()))
+
+        # Try each search area in priority order
+        for _area_name, text in search_areas:
+            # Find ALL matches with their positions, then return the earliest
+            matches: list[tuple[int, Issuer, DocumentType, DocumentCategory]] = []
+
+            for pattern, (issuer, doc_type, category) in cache.items():
+                # Use word boundary matching for accuracy
+                pattern_regex = r"\b" + re.escape(pattern) + r"\b"
+                match = re.search(pattern_regex, text, re.IGNORECASE)
+                if match:
+                    matches.append((match.start(), issuer, doc_type, category))
+
+            if matches:
+                # Return the match with the earliest position
+                matches.sort(key=lambda x: x[0])
+                _, issuer, doc_type, category = matches[0]
+                return (issuer, doc_type, category)
+
+        return None
+
+    def _has_required_context(self, content_lower: str, required_context: list[str]) -> bool:
+        """Check if at least one required context word is present.
+
+        Args:
+            content_lower: Lowercase content to search
+            required_context: List of context words (at least one must match)
+
+        Returns:
+            True if no context required OR at least one context word found
+        """
+        if not required_context:
+            return True  # No context required
+
+        for context_word in required_context:
+            pattern = r"\b" + re.escape(context_word.lower()) + r"\b"
+            if re.search(pattern, content_lower, re.IGNORECASE):
+                return True
+
+        return False
+
+    def _match_keywords(
+        self,
+        content: str,
+    ) -> tuple[DocumentType, DocumentCategory, str] | None:
+        """Match content against document type keywords with position weighting and AND logic.
+
+        Keywords found in the header (first 500 chars) are weighted higher.
+        Longer keywords are weighted higher (more specific).
+        If required_context is specified, at least one context word must also be present.
+        Also tries matching against OCR-normalized text for corrupted PDFs.
+
+        Args:
+            content: Text content to search
+
+        Returns:
+            Tuple of (DocumentType, DocumentCategory, matched_keyword) if matched, None otherwise
+        """
+        cache = self._build_keyword_cache()
+        if not cache:
+            return None
+
+        content_lower = content.lower()
+        content_length = len(content_lower)
+
+        # Also prepare normalized version for OCR-corrupted text
+        # Only normalize if we detect potential OCR corruption (single letters with spaces)
+        normalized_content = None
+        if re.search(r"\b[a-z]\s+[a-z]\s+[a-z]\b", content_lower):
+            normalized_content = _normalize_cached(content_lower)
+
+        # Find all matches with scores
+        matches: list[tuple[float, str, DocumentType, DocumentCategory]] = []
+
+        for keyword, (doc_type, category, required_context) in cache.items():
+            # Check AND logic: required_context must be present
+            # Check in both original and normalized content
+            has_context = self._has_required_context(content_lower, required_context)
+            if not has_context and normalized_content:
+                has_context = self._has_required_context(normalized_content, required_context)
+            if not has_context:
+                continue
+
+            pattern = r"\b" + re.escape(keyword) + r"\b"
+
+            # Try original content first
+            match = re.search(pattern, content_lower, re.IGNORECASE)
+            match_in_normalized = False
+
+            # If no match, try normalized content
+            if not match and normalized_content:
+                match = re.search(pattern, normalized_content, re.IGNORECASE)
+                match_in_normalized = True
+
+            if match:
+                # Score based on position (earlier = better)
+                # Use original content length for scoring
+                position = match.start()
+                position_score = 1.0 - (position / content_length) if content_length > 0 else 0.5
+
+                # Boost for header matches
+                header_boost = 1.5 if position < self.KEYWORD_HEADER_THRESHOLD else 1.0
+
+                # Boost for longer keywords (more specific)
+                length_boost = 1.0 + (len(keyword) / self.KEYWORD_LENGTH_FACTOR)
+
+                # Slight penalty for matches only in normalized content (less certain)
+                ocr_penalty = 0.95 if match_in_normalized else 1.0
+
+                # Final score
+                score = position_score * header_boost * length_boost * ocr_penalty
+                matches.append((score, keyword, doc_type, category))
+
+        if not matches:
+            return None
+
+        # Return best match (highest score)
+        matches.sort(key=lambda x: x[0], reverse=True)
+        _, keyword, doc_type, category = matches[0]
+        return (doc_type, category, keyword)
+
+    def _extract_year(self, content: str, metadata: FileMetadata | None = None) -> str:
+        """Extract year from content or metadata.
+
+        Priority: Content patterns > file date
+
+        Args:
+            content: Text content to search
+            metadata: Optional file metadata
+
+        Returns:
+            Year string (YYYY) or current year as fallback
+        """
+        # Try common date patterns in content
+        year_patterns = [
+            r"\b(20[0-9]{2})\b",  # 2000-2099
+            r"\b(19[0-9]{2})\b",  # 1900-1999
+        ]
+
+        for pattern in year_patterns:
+            match = re.search(pattern, content)
+            if match:
+                return match.group(1)
+
+        # Fall back to file date
+        if metadata and metadata.best_date:
+            return str(metadata.best_date.year)
+
+        # Default to current year
+        return str(datetime.now(UTC).year)
+
+    def _resolve_pattern(
+        self,
+        pattern: str,
+        issuer_name: str | None = None,
+        year: str | None = None,
+        metadata: FileMetadata | None = None,
+    ) -> str:
+        """Resolve placeholders in para_pattern.
+
+        Placeholders:
+        - {year} - Year from content or file
+        - {issuer} - Issuer name
+        - {month} - Month (MM)
+        - {day} - Day (DD)
+        - {YYYY}, {MM}, {DD} - Alternative format
+
+        Args:
+            pattern: Path pattern with placeholders
+            issuer_name: Matched issuer name
+            year: Extracted year
+            metadata: File metadata for dates
+
+        Returns:
+            Resolved path string
+        """
+        result = pattern
+
+        # Year placeholder
+        if year:
+            result = result.replace("{year}", year)
+            result = result.replace("{YYYY}", year)
+
+        # Issuer placeholder
+        if issuer_name:
+            result = result.replace("{issuer}", issuer_name)
+
+        # Date placeholders from metadata
+        if metadata and metadata.best_date:
+            date = metadata.best_date
+            result = result.replace("{month}", f"{date.month:02d}")
+            result = result.replace("{MM}", f"{date.month:02d}")
+            result = result.replace("{day}", f"{date.day:02d}")
+            result = result.replace("{DD}", f"{date.day:02d}")
+
+        # Remove any unresolved placeholders
+        result = re.sub(r"\{[^}]+\}", "", result)
+
+        # Clean up double slashes and trailing slashes
+        result = re.sub(r"/+", "/", result)
+        return result.rstrip("/")
+
+    def classify(
+        self,
+        content: str,
+        metadata: FileMetadata | None = None,
+    ) -> ClassificationResult | None:
+        """Classify content using taxonomy.
+
+        Args:
+            content: Text content to classify
+            metadata: Optional file metadata
+
+        Returns:
+            ClassificationResult if matched, None otherwise
+        """
+        filename = metadata.filename if metadata else None
+
+        # Priority 1: Issuer matching (90% confidence)
+        issuer_match = self._match_issuer(content, filename)
+        if issuer_match:
+            issuer, doc_type, category = issuer_match
+
+            # Use document-level pattern if set, else category pattern
+            pattern = doc_type.para_pattern or category.para_pattern
+
+            year = self._extract_year(content, metadata)
+            resolved_path = self._resolve_pattern(
+                pattern,
+                issuer_name=issuer.name,
+                year=year,
+                metadata=metadata,
+            )
+
+            return ClassificationResult(
+                category=resolved_path,
+                confidence=Confidence(
+                    value=self.ISSUER_CONFIDENCE,
+                    source=self.source,
+                ),
+                route_name=f"{category.id}/{doc_type.sub_id}/{issuer.name}",
+                extracted_params={
+                    "issuer": issuer.name,
+                    "year": year,
+                    "category_id": category.id,
+                    "doc_type": doc_type.sub_id,
+                },
+            )
+
+        # Priority 2: Keyword matching (85% confidence)
+        keyword_match = self._match_keywords(content)
+        if keyword_match:
+            doc_type, category, matched_keyword = keyword_match
+
+            # Use document-level pattern if set, else category pattern
+            pattern = doc_type.para_pattern or category.para_pattern
+
+            year = self._extract_year(content, metadata)
+            resolved_path = self._resolve_pattern(
+                pattern,
+                year=year,
+                metadata=metadata,
+            )
+
+            return ClassificationResult(
+                category=resolved_path,
+                confidence=Confidence(
+                    value=self.KEYWORD_CONFIDENCE,
+                    source=self.source,
+                ),
+                route_name=f"{category.id}/{doc_type.sub_id}",
+                extracted_params={
+                    "keyword": matched_keyword,
+                    "year": year,
+                    "category_id": category.id,
+                    "doc_type": doc_type.sub_id,
+                },
+            )
+
+        return None
+
+
+# Global cached instance
+@lru_cache(maxsize=1)
+def get_taxonomy_classifier() -> TaxonomyClassifier:
+    """Get or create the global taxonomy classifier instance."""
+    return TaxonomyClassifier()

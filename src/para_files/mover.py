@@ -164,6 +164,29 @@ class FileMover:
         filename = self._build_filename(source, classification)
         initial_destination = destination_dir / filename
 
+        # CRITICAL: Never delete if source and destination are the same file
+        # This can happen when re-classifying files already in their correct location
+        try:
+            if source.resolve() == initial_destination.resolve():
+                logger.debug("Source and destination are the same file, skipping: %s", source)
+                return MoveResult(
+                    source=source,
+                    destination=initial_destination,
+                    success=True,
+                    action="skipped",
+                    message="File already in correct location",
+                )
+        except OSError:
+            # If we can't resolve paths, check string equality as fallback
+            if str(source.absolute()) == str(initial_destination.absolute()):
+                return MoveResult(
+                    source=source,
+                    destination=initial_destination,
+                    success=True,
+                    action="skipped",
+                    message="File already in correct location",
+                )
+
         # Check for duplicate before applying conflict strategy
         if (
             initial_destination.exists()
@@ -289,6 +312,22 @@ class FileMover:
         Returns:
             MoveResult indicating duplicate was removed.
         """
+        # CRITICAL SAFETY: Never delete if source and destination are the same file
+        try:
+            if source.resolve() == destination.resolve():
+                logger.warning(
+                    "SAFETY: Prevented deletion of source=destination: %s", source
+                )
+                return MoveResult(
+                    source=source,
+                    destination=destination,
+                    success=True,
+                    action="skipped",
+                    message="File already in correct location (same file)",
+                )
+        except OSError:
+            pass  # If resolve fails, proceed with caution below
+
         if self.dry_run:
             return MoveResult(
                 source=source,

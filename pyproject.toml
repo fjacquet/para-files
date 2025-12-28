@@ -38,6 +38,8 @@ dependencies = [
     "isbnlib>=3.10.14",
     "geopy>=2.4.1",
     "faker>=39.0.0",
+    "pymupdf>=1.26.7",
+    "cryptography>=46.0.3",
 ]
 
 [project.optional-dependencies]
@@ -159,6 +161,10 @@ ignore = [
 ]
 "src/para_files/classifiers/rules_engine.py" = [
     "C901",    # classify() intentionally handles multiple rule types
+    "PLR0912", # _create_result() handles multiple placeholder types
+]
+"src/para_files/mover.py" = [
+    "PLR0911", # move() has extra returns for critical safety checks
 ]
 "src/para_files/utils/ocr.py" = [
     "ANN401",  # PyObjC objects require Any type annotations
@@ -215,7 +221,7 @@ show_column_numbers = true
 pretty = true
 
 [[tool.mypy.overrides]]
-module = ["mlx.*", "mlx_lm.*", "pypdf", "pypdf.*", "semantic_router.*", "litellm.*", "transformers.*", "Vision", "Cocoa", "Quartz"]
+module = ["mlx.*", "mlx_lm.*", "pypdf", "pypdf.*", "semantic_router.*", "litellm.*", "transformers.*", "Vision", "Cocoa", "Quartz", "fitz"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

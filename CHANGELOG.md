@@ -13,12 +13,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `billets_avion` - Flight tickets with airline issuers (Swiss, Lufthansa, etc.)
   - `documents_voyage` - Travel documents (ESTA, Visa applications)
   - `conferences` - Professional conference registrations
+  - `voyages` (hotels) - Hotel invoices with issuers (Radisson, Hilton, Marriott, Accor, etc.)
 - **Filename date extraction**: New `date_source: "filename"` option extracts year from filenames
   - Supports patterns: `YYYY-MM-DD`, `YYYYMMDD`, and standalone `YYYY`
-  - Used for certificates and conferences to avoid incorrect file modification dates
+  - Used for conferences to avoid incorrect file modification dates
+- **Content date extraction**: New `date_source: "content"` option extracts year from PDF content
+  - Prioritizes fiscal year patterns (`Année fiscale`, `Exercice`, `Fiscal Year`)
+  - Falls back to filename patterns, then removes `{YYYY}` from path if not found
+  - Used for certificates where year is in document content
+- **SONiC networking documentation routing**: Dell SONiC documents now route to Dell-EMC docs
+  - Added `*[Ss]onic*` and `*SONiC*` patterns to dell_emc_documentation rule
+  - Added `SONiC` and `Networking` to known_technologies
+- **Issuer-based routing for IFU documents**: Bank documents now route by bank name
+  - New `{issuer}` placeholder in routing rules for dynamic issuer extraction
+  - Added `RuleIssuer` model in types.py for pattern-based issuer matching
+  - Word boundary matching for accurate issuer detection (avoids "UBS" in "CLUBS")
+  - IFU documents route to `4_Archives/banques/{issuer}/{YYYY}` (e.g., `Credit_Agricole/2023`)
+  - Supported banks: Credit Agricole, BNP Paribas, Société Générale, LCL, Boursorama, Fortuneo
+- **CAMT.053 bank statement routing**: ISO 20022 XML bank statements now route by bank
+  - New `camt_statements` rule for CAMT.053 files
+  - BIC code detection (BCVLCH2L, POFICHBE, UBSWCHZH, etc.)
+  - Routes to `4_Archives/banques/{issuer}/{YYYY}` (e.g., `BCV/2025`)
+- **Red Hat documentation routing**: Red Hat technical documents now route with technology subfolder
+  - Patterns: `*[Rr]ed*[Hh]at*`, `*RH-*`, `*RHEL*`, `*[Oo]pen[Ss]hift*`, `*[Aa]nsible*`, `*AAP*`, etc.
+  - Routes to `3_Resources/docs/Red_Hat/{technology}`
+  - Known technologies: RHEL, OpenShift, Ansible, AAP, Satellite, JBoss, Ceph, Quay, ACM
 
 ### Fixed
 
+- **Bug: `required_context` not loaded**: TaxonomyLoader was not loading `required_context` from documents.json
+  - This caused false positives like hotel invoices matching "spectacles" due to "ticket" keyword
 - **False positive "Zurich"**: Insurance issuer patterns now require "Zurich Versicherung/Insurance/Assurance"
   - Previously matched airport/city name in flight documents
 - **False positive "Visa"**: Credit card keyword changed from "Visa" to "Carte Visa"
@@ -26,8 +50,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **False positive "certificat"**: Certificate patterns refined to exclude 3e pilier attestations
   - Removed generic `*[Cc]ertificat*` pattern
   - Added vendor-specific patterns: `EMC *[Cc]ertif*`, `VMware *[Cc]ertif*`, etc.
+- **False positive "chat"**: Animaux category now requires animal-related context
+  - Previously matched networking documents (SONiC) containing "chat" word
+  - Added `required_context` with animal-specific terms (animal, vétérinaire, vaccination, etc.)
 - **Year extraction 1976**: Previously extracted birth year from 3e pilier documents
   - TaxonomyClassifier now prioritizes fiscal year patterns in content
+- **Year extraction with parentheses**: Filenames like `E-IFU - 2023(...)` now extract year correctly
+  - Extended regex separators to include `(` and `)` characters
+  - Previously failed for files like `E-IFU - 2023(31_12_2023).pdf`
+- **European date formats in filenames**: Added support for DD_MM_YYYY, DD-MM-YYYY, DD.MM.YYYY
+  - Previously only supported YYYY-MM-DD and YYYYMMDD formats
+- **Enhanced fiscal year extraction from content**: Added many French fiscal patterns
+  - Now matches: "réalisées en 2023", "perçus en 2023", "versés en 2023", "payés en 2023"
+  - Also: "année 2023", "période 2023", "déclaration 2023", "IFU 2023"
+  - Changed `ifu_documents` rule (formerly `banques_france`) to use `date_source: "content"` for accurate fiscal year
+- **Bug: issuers not loaded from YAML**: `ReferenceTree._parse_routing_rules()` wasn't loading `issuers` field
+  - Added parsing of `issuers` and `known_technologies` fields from routing rules
+  - BIC codes like `BCVLCH2LXXX` now match patterns like `BCVLCH2L` (prefix matching)
+- **False positive "Don"**: English "don't" was matching French "Don" keyword for donations
+  - Changed keywords from generic "Don" to specific phrases: "Reçu de don", "Confirmation de don", etc.
+  - Added `required_context` with French donation terms (reçu, attestation, déductible, merci, etc.)
+- **CRITICAL: Prevented file deletion when source=destination**: Files already in correct location were being deleted as "duplicates"
+  - Added safety check in `FileMover.move()` to skip when source.resolve() == destination.resolve()
+  - Added defense-in-depth check in `_handle_duplicate()` with warning log
+  - Files now return "skipped" with message "File already in correct location"
+- **False positive "Orange"**: Color "orange" in product descriptions was matching Orange telecom
+  - Changed pattern from generic `"Orange"` to specific: `"Orange France"`, `"Orange SA"`, `"orange.fr"`, etc.
 
 ### Changed
 

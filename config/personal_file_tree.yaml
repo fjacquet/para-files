@@ -152,6 +152,10 @@ routing_rules:
         "*[Ii]silon*",
         "*[Uu]nity*",
         "*[Dd]ata[Dd]omain*",
+        "*[Ss]onic*",
+        "*SONiC*",
+        "flex-*",
+        "ddl-*",
       ]
     extensions: [".pdf", ".pptx", ".ppt", ".docx", ".doc"]
     destination: "3_Resources/docs/Dell-EMC/{technology}"
@@ -171,6 +175,9 @@ routing_rules:
         NVIDIA,
         Tanzu,
         Containers,
+        SONiC,
+        Networking,
+        PowerFlex,
       ]
 
   # Security documentation
@@ -197,6 +204,41 @@ routing_rules:
     extensions: [".pdf", ".pptx", ".ppt", ".docx", ".doc"]
     destination: "3_Resources/documentation/VMware/{YYYY}"
     date_source: "file_modified"
+
+  # Red Hat documentation
+  redhat_documentation:
+    patterns:
+      [
+        "*[Rr]ed*[Hh]at*",
+        "*RH-*",
+        "*RHEL*",
+        "*[Oo]pen[Ss]hift*",
+        "*[Aa]nsible*",
+        "*AAP*",
+        "*[Ss]atellite*",
+        "*[Jj][Bb]oss*",
+        "*[Cc]eph*",
+        "*[Qq]uay*",
+        "*ACM*",
+      ]
+    extensions: [".pdf", ".pptx", ".ppt", ".docx", ".doc"]
+    destination: "3_Resources/docs/Red_Hat/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        RHEL,
+        OpenShift,
+        Ansible,
+        AAP,
+        Satellite,
+        JBoss,
+        Ceph,
+        Quay,
+        ACM,
+        Kubernetes,
+        Containers,
+        Linux,
+      ]
 
   # Training certificates (professional/IT certifications only)
   certificates:
@@ -225,7 +267,7 @@ routing_rules:
       ]
     extensions: [".pdf", ".png", ".jpg"]
     destination: "3_Resources/certifications/{YYYY}"
-    date_source: "filename"
+    date_source: "content"
 
   # Professional conferences and events
   conferences:
@@ -268,13 +310,31 @@ routing_rules:
     date_source: "filename"
     date_pattern: "du (\\d{2})_(\\d{2})_(\\d{4})"
 
-  # BCV bank documents
+  # BCV bank documents (PDF)
   bcv_avis:
     patterns: ["5429324*_*", "*_E310_*", "*_E100_*", "*_E204_*"]
     extensions: [".pdf"]
     destination: "4_Archives/banques/BCV/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})-(\\d{2})-(\\d{2})"
+
+  # Bank statements CAMT.053 (ISO 20022 XML format)
+  camt_statements:
+    patterns: ["CAMT.053_*", "camt053_*", "*camt.053*"]
+    extensions: [".xml"]
+    destination: "4_Archives/banques/{issuer}/{YYYY}"
+    date_source: "filename"
+    issuers:
+      - name: "BCV"
+        patterns: ["BCVLCH2L", "53153547", "CH6000767"]
+      - name: "PostFinance"
+        patterns: ["POFICHBE", "PostFinance"]
+      - name: "UBS"
+        patterns: ["UBSWCHZH", "UBS Switzerland"]
+      - name: "Credit Suisse"
+        patterns: ["CRESCHZZ", "Credit Suisse"]
+      - name: "Raiffeisen"
+        patterns: ["RAIFCH22", "Raiffeisen"]
 
   # Romande Energie invoices
   romande_energie:
@@ -314,13 +374,25 @@ routing_rules:
     date_source: "filename"
     date_pattern: "(\\d{4})_sur_les_revenus"
 
-  # French bank documents (IFU)
-  banques_france:
+  # French bank documents (IFU) - routed by bank issuer
+  ifu_documents:
     patterns: ["*E-IFU*", "*IFU*", "*revenus mobiliers*"]
     extensions: [".pdf"]
-    destination: "4_Archives/banques-france/{YYYY}"
-    date_source: "filename"
-    date_pattern: "(\\d{4})"
+    destination: "4_Archives/banques/{issuer}/{YYYY}"
+    date_source: "content"
+    issuers:
+      - name: "Credit Agricole"
+        patterns: ["Credit Agricole", "Crédit Agricole", "CA Centre Loire"]
+      - name: "BNP Paribas"
+        patterns: ["BNP", "BNP Paribas"]
+      - name: "Societe Generale"
+        patterns: ["Société Générale", "Societe Generale", "SG"]
+      - name: "LCL"
+        patterns: ["LCL", "Le Credit Lyonnais"]
+      - name: "Boursorama"
+        patterns: ["Boursorama", "boursorama.com"]
+      - name: "Fortuneo"
+        patterns: ["Fortuneo"]
 
   # Insurance claims
   assurances_sinistres:

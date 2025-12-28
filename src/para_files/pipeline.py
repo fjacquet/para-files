@@ -1,4 +1,10 @@
-"""Classification pipeline orchestrating 5-signal cascade.
+"""Classification pipeline orchestrating 4-signal cascade.
+
+Pipeline v2.0 - Simplified with taxonomy-based classification:
+1. RulesEngine (95%) - Extension/pattern based routing
+2. BookDetector (92%) - ISBN detection + Thema classification
+3. TaxonomyClassifier (90%) - Issuers + keywords from documents.json
+4. MLXLLMClassifier (60%) - Optional LLM fallback via mlx-lm
 
 Chains classifiers in priority order: first match wins.
 """
@@ -10,14 +16,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from para_files.classifiers.book_detector import BookDetector
-from para_files.classifiers.domain_kb import DomainKBClassifier
-from para_files.classifiers.llm_fallback import LLMFallbackClassifier
+from para_files.classifiers.mlx_llm_classifier import MLXLLMClassifier
 from para_files.classifiers.rules_engine import RulesEngineClassifier
-from para_files.classifiers.semantic_router import SemanticRouterClassifier
-from para_files.classifiers.validated_db import ValidatedDBClassifier
+from para_files.classifiers.taxonomy_classifier import TaxonomyClassifier
 from para_files.config import Config
-from para_files.encoders.mlx_encoder import MLXEncoder
 from para_files.reference_tree import ReferenceTree
+from para_files.taxonomies.loader import get_taxonomy_loader
 from para_files.types import (
     ClassificationResult,
     ClassificationSource,
@@ -33,17 +37,20 @@ logger = logging.getLogger(__name__)
 
 
 class ClassificationPipeline:
-    """Orchestrates 6-signal classification cascade.
+    """Orchestrates 4-signal classification cascade (v2.0).
 
-    Classifiers are tried in priority order (highest confidence first):
-    1. Validated DB (100%) - Manual mappings
-    2. Rules Engine (95%) - Glob patterns
-    2.5. Book Detector (92%, 100% with ISBN) - Technical books detection
-    3. Domain KB (90%) - Known issuers
-    4. Semantic Router (85%) - MLX embeddings
-    5. LLM Fallback (configurable) - Optional AI
+    Simplified pipeline using JSON taxonomies:
+    1. Rules Engine (95%) - Extension/pattern based routing
+    2. Book Detector (92%, 100% with ISBN) - ISBN + Thema classification
+    3. Taxonomy Classifier (90%) - Issuers + keywords from documents.json
+    4. MLX-LLM Fallback (60%) - Optional native Apple Silicon LLM
 
     First match wins. If nothing matches, returns default 0_Inbox.
+
+    Key changes from v1.0:
+    - Removed: ValidatedDB, DomainKB, SemanticRouter
+    - Added: TaxonomyClassifier (unified issuer + keyword matching)
+    - Replaced: LLMFallback (Ollama) with MLXLLMClassifier (native MLX)
     """
 
     def __init__(self, config: Config) -> None:
@@ -55,7 +62,6 @@ class ClassificationPipeline:
         self._config = config
         self._classifiers: list[BaseClassifier] = []
         self._reference_tree: ReferenceTree | None = None
-        self._encoder: MLXEncoder | None = None
         self._initialized = False
 
     def _ensure_initialized(self) -> None:
@@ -63,46 +69,25 @@ class ClassificationPipeline:
         if self._initialized:
             return
 
-        # Load reference tree
+        # Load reference tree (for routing_rules only in v2.0)
         self._reference_tree = ReferenceTree(self._config.reference_tree_path)
         self._reference_tree.load()
+
+        # Load taxonomy for TaxonomyClassifier
+        taxonomy_loader = get_taxonomy_loader()
 
         # Initialize classifiers in priority order
         self._classifiers = []
 
-        # Signal 1: Validated DB (100%)
-        validated_db = ValidatedDBClassifier(self._config.validated_db_path)
-        self._classifiers.append(validated_db)
-
-        # Signal 2: Rules Engine (95%)
+        # Signal 1: Rules Engine (95%) - Extension/pattern based routing
         routing_rules = self._reference_tree.get_routing_rules()
         if routing_rules:
             rules_engine = RulesEngineClassifier(routing_rules)
             self._classifiers.append(rules_engine)
 
-        # Signal 2.5: Book Detector (92%, 100% with ISBN)
-        # Known technologies for livres classification
-        technologies = [
-            "Ansible",
-            "C++",
-            "Cloud",
-            "Containers",
-            "DevOps",
-            "Go",
-            "Java",
-            "JavaScript",
-            "Kubernetes",
-            "Linux",
-            "Network",
-            "Node.js",
-            "Python",
-            "React",
-            "Rust",
-            "Security",
-            "Shell",
-            "Terraform",
-            "TypeScript",
-        ]
+        # Signal 2: Book Detector (92%, 100% with ISBN)
+        # Technologies from routing_rules or defaults
+        technologies = self._get_known_technologies()
         book_detector = BookDetector(
             technologies=technologies,
             enable_isbn_lookup=True,
@@ -110,44 +95,67 @@ class ClassificationPipeline:
         )
         self._classifiers.append(book_detector)
 
-        # Signal 3: Domain KB (90%)
-        known_issuers = self._reference_tree.get_known_issuers()
-        if known_issuers:
-            domain_kb = DomainKBClassifier(known_issuers)
-            self._classifiers.append(domain_kb)
+        # Signal 3: Taxonomy Classifier (90%) - Issuers + keywords from documents.json
+        taxonomy_classifier = TaxonomyClassifier(loader=taxonomy_loader)
+        self._classifiers.append(taxonomy_classifier)
 
-        # Signal 4: Semantic Router (85%)
-        routes = self._reference_tree.get_all_routes()
-        routes_with_utterances = [r for r in routes if r.utterances]
-        if routes_with_utterances:
-            self._encoder = MLXEncoder(
-                name=self._config.mlx.model_name,
-                score_threshold=self._config.mlx.score_threshold,
-            )
-            semantic_router = SemanticRouterClassifier(
-                encoder=self._encoder,
-                routes=routes_with_utterances,
-                score_threshold=self._config.mlx.score_threshold,
-            )
-            self._classifiers.append(semantic_router)
-
-        # Signal 5: LLM Fallback (configurable)
-        if self._config.llm.enabled:
-            llm_fallback = LLMFallbackClassifier(
+        # Signal 4: MLX-LLM Fallback (configurable via mlx.llm_* settings)
+        if self._config.mlx.llm_enabled:
+            mlx_llm = MLXLLMClassifier(
                 enabled=True,
-                model=self._config.llm.model,
-                confidence_threshold=self._config.llm.confidence_threshold,
-                api_base=self._config.llm.api_base,
-                available_routes=routes,
+                model=self._config.mlx.llm_model,
+                confidence_threshold=self._config.mlx.llm_confidence,
+                content_preview_chars=self._config.content_preview_chars,
             )
-            self._classifiers.append(llm_fallback)
+            self._classifiers.append(mlx_llm)
 
         self._initialized = True
         logger.info(
-            "Pipeline initialized with %d classifiers: %s",
+            "Pipeline v2.0 initialized with %d classifiers: %s",
             len(self._classifiers),
             [c.name for c in self._classifiers],
         )
+
+    def _get_known_technologies(self) -> list[str]:
+        """Get known technologies for book/document classification.
+
+        Returns:
+            List of technology names for book detection.
+        """
+        # Default technologies (used for both book detection and Dell-EMC docs)
+        return [
+            "Ansible",
+            "C++",
+            "Cloud",
+            "Containers",
+            "DevOps",
+            "Docker",
+            "EKS",
+            "Go",
+            "GPU",
+            "Java",
+            "JavaScript",
+            "Kubernetes",
+            "Linux",
+            "MariaDB",
+            "MySQL",
+            "Network",
+            "Node.js",
+            "NVIDIA",
+            "OpenShift",
+            "Oracle",
+            "PostgreSQL",
+            "Python",
+            "React",
+            "Rust",
+            "Security",
+            "Shell",
+            "Tanzu",
+            "Terraform",
+            "TypeScript",
+            "VMware",
+            "vSphere",
+        ]
 
     def classify(
         self,

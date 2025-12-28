@@ -68,12 +68,21 @@ def _load_yaml_config(yaml_path: Path | None = None) -> dict[str, Any]:
 
 
 class MLXConfig(BaseSettings):
-    """MLX embedding model configuration."""
+    """MLX embedding and LLM configuration (unified in v2.0).
 
-    model_config = SettingsConfigDict(env_prefix="PARA_FILES_MLX_")
+    In v2.0, MLX handles both embeddings and optional LLM fallback.
+    """
 
+    model_config = SettingsConfigDict(
+        env_prefix="PARA_FILES_MLX_",
+        extra="ignore",  # Allow extra fields for backward compatibility
+        populate_by_name=True,  # Accept both field name and alias
+    )
+
+    # Embedding model configuration
     model_name: str = Field(
         default=DEFAULT_MLX_MODEL,
+        alias="embedding_model",
         description="MLX embedding model from mlx-embedding-models registry",
     )
     score_threshold: float = Field(
@@ -81,6 +90,22 @@ class MLXConfig(BaseSettings):
         ge=0.0,
         le=1.0,
         description="Minimum similarity score for semantic matching",
+    )
+
+    # LLM fallback configuration (v2.0 - optional native MLX-LM)
+    llm_enabled: bool = Field(
+        default=False,
+        description="Enable native MLX-LM fallback for unclassified files",
+    )
+    llm_model: str = Field(
+        default="mlx-community/Qwen2.5-1.5B-Instruct-4bit",
+        description="MLX-LM model for LLM fallback",
+    )
+    llm_confidence: float = Field(
+        default=0.6,
+        ge=0.0,
+        le=1.0,
+        description="Minimum confidence threshold for LLM results",
     )
 
 
