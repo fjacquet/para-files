@@ -344,19 +344,47 @@ routing_rules:
     date_source: "filename"
     date_pattern: "(\\d{4})-(\\d{2})-(\\d{2})"
 
-  # French real estate documents
-  immobilier_france:
+  # Real estate documents - unified structure by document type
+  immobilier_bornage:
     patterns:
       [
-        "*[Ss]afer*",
-        "*SAFER*",
-        "*[Nn]otaire*",
-        "*acte*vente*",
+        "*[Bb]ornage*",
+        "*[Pp]rocuration*bornage*",
+        "*[Gg]eometre*",
+        "*[Gg]éomètre*",
         "*[Cc]adastre*",
-        "*foncier*",
+        "*SAFER*",
+        "*[Ss]afer*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/immobilier-france/{YYYY}"
+    destination: "4_Archives/immobilier/bornage/{YYYY}"
+    date_source: "file_modified"
+
+  immobilier_notaire:
+    patterns:
+      [
+        "*[Nn]otaire*",
+        "*[Aa]cte*vente*",
+        "*[Aa]cte*achat*",
+        "*[Aa]cte*authentique*",
+        "*[Cc]ompromis*",
+        "*[Pp]romesse*vente*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/immobilier/notaire/{YYYY}"
+    date_source: "file_modified"
+
+  immobilier_taxes:
+    patterns:
+      [
+        "*foncier*",
+        "*[Ii]mpôt*foncier*",
+        "*[Tt]axe*foncière*",
+        "*[Ee]stimation*fiscale*",
+        "*[Vv]aleur*locative*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/immobilier/taxes/{YYYY}"
     date_source: "file_modified"
 
   # French tax documents

@@ -326,7 +326,7 @@
           "name": "Fiches de Salaire",
           "para_pattern": "4_Archives/travail/salaires/{year}",
           "examples": ["Fiches mensuelles", "Fiche cumulée Décembre", "Certificat de salaire annuel"],
-          "keywords": ["Décompte de salaire", "Fiche de paie", "Payslip", "Net à payer", "Salaire brut", "Cotisations sociales"],
+          "keywords": ["Décompte de salaire", "Fiche de paie", "Payslip", "Net à payer", "Salaire brut", "Cotisations sociales", "Certificat de salaire", "Lohnausweis"],
           "retention": "10_years",
           "paper_required": false
         },
