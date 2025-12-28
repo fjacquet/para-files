@@ -7,8 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **New routing categories**:
+  - `billets_avion` - Flight tickets with airline issuers (Swiss, Lufthansa, etc.)
+  - `documents_voyage` - Travel documents (ESTA, Visa applications)
+  - `conferences` - Professional conference registrations
+- **Filename date extraction**: New `date_source: "filename"` option extracts year from filenames
+  - Supports patterns: `YYYY-MM-DD`, `YYYYMMDD`, and standalone `YYYY`
+  - Used for certificates and conferences to avoid incorrect file modification dates
+
+### Fixed
+
+- **False positive "Zurich"**: Insurance issuer patterns now require "Zurich Versicherung/Insurance/Assurance"
+  - Previously matched airport/city name in flight documents
+- **False positive "Visa"**: Credit card keyword changed from "Visa" to "Carte Visa"
+  - Added `required_context` for banking terms to prevent ESTA matches
+- **False positive "certificat"**: Certificate patterns refined to exclude 3e pilier attestations
+  - Removed generic `*[Cc]ertificat*` pattern
+  - Added vendor-specific patterns: `EMC *[Cc]ertif*`, `VMware *[Cc]ertif*`, etc.
+- **Year extraction 1976**: Previously extracted birth year from 3e pilier documents
+  - TaxonomyClassifier now prioritizes fiscal year patterns in content
+
 ### Changed
 
+- **Pipeline v2.0**: Simplified from 6 signals to 4 signals for classification
+  - Removed: ValidatedDB, DomainKB, SemanticRouter, LLMFallback (Ollama)
+  - Added: TaxonomyClassifier, MLXLLMClassifier (native MLX-LM)
+  - New signal order: RulesEngine (95%) → BookDetector (92%) → TaxonomyClassifier (90%) → MLX-LLM (60%)
+- **Taxonomy-based classification**: Unified issuer + keyword matching via `documents.json`
+  - Replaced separate DomainKB and SemanticRouter classifiers
+  - All issuers migrated from YAML to JSON taxonomy
+  - Word boundary matching for accurate issuer detection
+- **MLX-LM native inference**: Replaced Ollama server with in-process MLX-LM
+  - No external server required
+  - Lazy model loading for fast startup
+  - Supports mlx-community models (Qwen, Phi, Llama)
 - **CLI refactoring**: Split `main.py` (1818 lines) into modular `cli/` package
   - One file per command (~400 lines max each)
   - Shared utilities in `cli/shared.py`

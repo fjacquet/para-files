@@ -1,11 +1,11 @@
 # personal_file_tree.yaml
-# Structure PARA cible pour OneDrive Personnel
-# Utilisé par MLX Semantic Router pour classification automatique
+# Configuration technique pour para-files
+# Classification sémantique déléguée à config/documents.json et config/thema.json
 #
-# Source: Analyse 142,218 fichiers OneDrive (2025-12-25)
+# Version 2.0 - Simplified (2025-12-28)
 
-version: "1.0"
-generated: "2025-12-25"
+version: "2.0"
+generated: "2025-12-28"
 
 # =============================================================================
 # CONFIGURATION
@@ -13,50 +13,65 @@ generated: "2025-12-25"
 # =============================================================================
 config:
   # Root directory for PARA folders (0_Inbox, 1_Projects, etc.)
-  para_root: "~/OneDrive\ -\ Home/PARA"
+  para_root: "~/OneDrive - Home/PARA"
 
   # Number of characters to extract for semantic matching
   content_preview_chars: 2000
 
-  # MLX embedding model settings
+  # Taxonomy sources (new in v2.0)
+  taxonomy:
+    documents_path: "config/documents.json"
+    thema_path: "config/thema.json"
+
+  # MLX settings (all models via mlx-lm, no external server needed)
   mlx:
-    model_name: "nomic-text-v1.5"
+    # Embedding model for semantic matching
+    embedding_model: "nomic-text-v1.5"
     score_threshold: 0.75
 
-  # LLM fallback settings (optional)
-  llm:
-    enabled: false
-    model: "ollama/qwen2.5:1.5b"
-    confidence_threshold: 0.6
-    # api_base: "http://localhost:11434"
+    # LLM fallback (native MLX, no Ollama required)
+    llm_enabled: false
+    llm_model: "mlx-community/Qwen2.5-1.5B-Instruct-4bit"
+    llm_confidence: 0.6
+
+# mlx-community/phi-4-4bit (Très bon modèle généraliste, mais moins performant que les suivants)
+# mlx-community/Qwen2.5-1.5B-Instruct-4bit" (Bon modèle généraliste, léger et rapide)
+# mlx-community/Llama-3.1-8B-Instruct-4bit (Le plus populaire, excellent partout)
+# mlx-community/Mistral-7B-Instruct-v0.3-4bit (Très fiable, une valeur sûre)
+# mlx-community/gemma-2-9b-it-4bit (Le modèle de Google, excellent en français et rédaction)
+# mlx-community/Qwen2.5-Coder-7B-Instruct-4bit (Actuellement le roi du code en petite taille)
+# mlx-community/DeepSeek-Coder-V2-Lite-Instruct-4bit (Excellent pour le Python et le Web)
 
 # =============================================================================
-# RÈGLES DE ROUTAGE SPÉCIALES
+# ROUTING RULES - Technical patterns by extension/filename
+# Documents classification is now in config/documents.json
 # =============================================================================
 routing_rules:
-  # Photos et vidéos - UNIQUEMENT depuis Inbox
-  # {country} et {location} sont remplacés par le pays/ville (via GPS) si disponible, sinon ignorés
+  # Photos - Route by EXIF date and GPS location
   photos:
-    source: "0_Inbox" # Ne cherche que dans Inbox
-    extensions: [".jpg", ".jpeg", ".png", ".heic", ".raw", ".cr2", ".nef", ".dng"]
+    source: "0_Inbox"
+    extensions:
+      [".jpg", ".jpeg", ".png", ".heic", ".raw", ".cr2", ".nef", ".dng"]
     destination: "4_Archives/photos/{YYYY}/{country}/{location}/{MM}/{DD}"
     date_source: "exif"
     fallback_date: "file_modified"
 
+  # Videos - Route by EXIF date and GPS location
   videos:
-    source: "0_Inbox" # Ne cherche que dans Inbox
+    source: "0_Inbox"
     extensions: [".mp4", ".mov", ".avi", ".mkv"]
     destination: "4_Archives/videos/{YYYY}/{country}/{location}/{MM}/{DD}"
     date_source: "exif"
     fallback_date: "file_modified"
 
+  # Screenshots - Route by file date
   screenshots:
     source: "0_Inbox"
     patterns: ["Screenshot*", "Capture*", "Screen Shot*"]
     destination: "4_Archives/photos/{YYYY}/{MM}/{DD}"
     date_source: "file_modified"
 
-  # Formations → Archive, structure interne préservée
+  # Online courses - Preserve platform structure
   courses:
     action: "preserve_structure"
     destination: "4_Archives/courses-completed/{platform}"
@@ -68,12 +83,12 @@ routing_rules:
       pluralsight: ["*[Pp]luralsight*"]
       datacamp: ["*[Dd]atacamp*"]
 
-  # Dossiers génériques → Retour Inbox (contenu aplati)
+  # Generic folders - Flatten to inbox
   generic_folders:
     patterns: ["New Folder*", "Untitled*", "Sans titre*"]
     action: "flatten_to_inbox"
 
-  # Programmes et installeurs
+  # Programs and installers
   programmes:
     extensions:
       [
@@ -94,7 +109,7 @@ routing_rules:
       ]
     destination: "4_Archives/programmes"
 
-  # Images disque ISO
+  # Disk images
   isos:
     extensions:
       [
@@ -111,60 +126,67 @@ routing_rules:
       ]
     destination: "4_Archives/isos"
 
-  # Presentations - not invoices!
+  # Presentations (not invoices)
   presentations:
     extensions: [".pptx", ".ppt", ".key", ".odp"]
     destination: "3_Resources/documentation/presentations/{YYYY}"
     date_source: "file_modified"
 
-  # Ebooks - route to livres
+  # Ebooks - Route to livres (Thema classification via thema.json)
   ebooks:
     extensions: [".epub", ".mobi", ".azw", ".azw3"]
     destination: "3_Resources/livres/{YYYY}"
     date_source: "file_modified"
 
-  # Dell-EMC technical documentation (presentations, guides, white papers)
-  # H* prefix = Dell document numbering (H19xxx, H18xxx, etc.)
+  # Dell-EMC technical documentation
   dell_emc_documentation:
-    patterns: [
-      # Dell-EMC document numbers
-      "H[0-9]*_*",
-      # Product names (case-insensitive)
-      "*[Dd]ell*", "*[Pp]ower[Ff]lex*", "*[Pp]ower[Ss]tore*", "*[Pp]ower[Ss]cale*",
-      "*[Vv]x[Rr]ail*", "*PFMP*", "*[Ii]silon*", "*[Uu]nity*", "*[Dd]ata[Dd]omain*",
-      "*[Ee][Mm][Cc]*[Dd]oc*", "*[Rr]eference*[Aa]rchitecture*"
-    ]
+    patterns:
+      [
+        "H[0-9]*_*",
+        "*[Dd]ell*",
+        "*[Pp]ower[Ff]lex*",
+        "*[Pp]ower[Ss]tore*",
+        "*[Pp]ower[Ss]cale*",
+        "*[Vv]x[Rr]ail*",
+        "*PFMP*",
+        "*[Ii]silon*",
+        "*[Uu]nity*",
+        "*[Dd]ata[Dd]omain*",
+      ]
     extensions: [".pdf", ".pptx", ".ppt", ".docx", ".doc"]
     destination: "3_Resources/docs/Dell-EMC/{technology}"
     date_source: "file_modified"
-    # Technologies for subfolder organization (used for {technology} placeholder)
     known_technologies:
-      - MariaDB
-      - MySQL
-      - Oracle
-      - PostgreSQL
-      - Kubernetes
-      - OpenShift
-      - EKS
-      - VMware
-      - vSphere
-      - GPU
-      - NVIDIA
-      - Tanzu
-      - Containers
+      [
+        MariaDB,
+        MySQL,
+        Oracle,
+        PostgreSQL,
+        Kubernetes,
+        OpenShift,
+        EKS,
+        VMware,
+        vSphere,
+        GPU,
+        NVIDIA,
+        Tanzu,
+        Containers,
+      ]
 
-  # Security policies, standards, and best practices
+  # Security documentation
   security_documentation:
-    patterns: [
-      "*[Pp]olic*",
-      "*[Ss]ecur*",
-      "*[Cc]ompliance*",
-      "*[Ss]tandard*",
-      "*[Bb]est*[Pp]ractic*",
-      "*[Gg]uideline*",
-      "*[Ff]ramework*",
-      "*NIST*", "*ISO*27001*", "*SOC*2*", "*GDPR*", "*PCI*DSS*"
-    ]
+    patterns:
+      [
+        "*[Pp]olic*",
+        "*[Ss]ecur*",
+        "*[Cc]ompliance*",
+        "*[Ss]tandard*",
+        "*NIST*",
+        "*ISO*27001*",
+        "*SOC*2*",
+        "*GDPR*",
+        "*PCI*DSS*",
+      ]
     extensions: [".pdf", ".docx", ".doc", ".pptx"]
     destination: "3_Resources/docs/Security"
     date_source: "file_modified"
@@ -176,32 +198,53 @@ routing_rules:
     destination: "3_Resources/documentation/VMware/{YYYY}"
     date_source: "file_modified"
 
-  # Training certificates and completion documents
+  # Training certificates (professional/IT certifications only)
   certificates:
-    patterns: [
-      "*[Cc]ertificate*", "*[Cc]ertificat*", "*[Cc]ompletion*", "*[Bb]adge*", "*[Cc]redential*",
-      "*[Ss]pecialist*", "*[Aa]ccredited*", "*[Cc]ertified*",
-      "EMC *", "EMC_*", "emc_*",
-      "*velocity*partner*",
-      "*knowledge_maintenance*",
-      "Oracle *",
-      "NetApp *",
-      "Novell *", "*NCLA*", "*NASEP*",
-      "VMware *", "Cisco *", "Microsoft *", "AWS *", "Google *",
-      "sacp_*", "*SACP*", "Symantec *", "asc_*",
-      "VTSP*", "VCP*", "VCAP*", "VCDX*",
-      "OCA *", "OCP *", "OCM *", "OCE *",
-      "FalconStor *", "*FalconStor*training*", "*FalconStor*CDP*", "*FalconStor*NSS*"
-    ]
+    patterns:
+      [
+        "*[Cc]ertificate*of*",
+        "*[Cc]ompletion*",
+        "*[Bb]adge*",
+        "*[Cc]redential*",
+        "*[Ss]pecialist*",
+        "*[Cc]ertified*",
+        "EMC *[Cc]ertif*",
+        "EMC *[Tt]rain*",
+        "Oracle *[Cc]ertif*",
+        "VMware *[Cc]ertif*",
+        "Cisco *[Cc]ertif*",
+        "Microsoft *[Cc]ertif*",
+        "AWS *[Cc]ertif*",
+        "VTSP*",
+        "VCP*",
+        "VCA*",
+        "VCIX*",
+        "FalconStor *[Tt]rain*",
+        "*_training*",
+        "*formation*professionnelle*",
+      ]
     extensions: [".pdf", ".png", ".jpg"]
     destination: "3_Resources/certifications/{YYYY}"
-    date_source: "file_modified"
+    date_source: "filename"
 
-  # Exam preparation files (VCE, exam dumps)
+  # Professional conferences and events
+  conferences:
+    patterns:
+      [
+        "*[Ww]orld*[Rr]egistration*",
+        "*[Ww]orld*[Cc]onfirmation*",
+        "*[Cc]onference*[Rr]egistration*",
+        "*[Ss]ummit*[Rr]egistration*",
+        "*[Ee]vent*[Rr]egistration*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/formations/conferences/{YYYY}"
+    date_source: "filename"
+
+  # Exam preparation files
   exam_prep:
     extensions: [".vce", ".exam"]
     destination: "3_Resources/certifications/exam-prep"
-    date_source: "file_modified"
 
   # Software licenses
   software_licenses:
@@ -209,9 +252,10 @@ routing_rules:
     destination: "3_Resources/licences/{YYYY}"
     date_source: "file_modified"
 
-  # Financial transactions CSV exports
+  # Financial transactions CSV
   transactions_csv:
-    patterns: ["*[Tt]ransaction*", "*[Rr]elevé*", "*[Ee]xport*", "*[Ss]tatement*"]
+    patterns:
+      ["*[Tt]ransaction*", "*[Rr]elevé*", "*[Ee]xport*", "*[Ss]tatement*"]
     extensions: [".csv"]
     destination: "4_Archives/banques/exports/{YYYY}"
     date_source: "file_modified"
@@ -222,48 +266,55 @@ routing_rules:
     extensions: [".pdf"]
     destination: "4_Archives/banques/Credit Agricole/{YYYY}"
     date_source: "filename"
-    date_pattern: "du (\\d{2})_(\\d{2})_(\\d{4})"  # Format: du DD_MM_YYYY
+    date_pattern: "du (\\d{2})_(\\d{2})_(\\d{4})"
 
-  # BCV bank documents (avis, relevés)
+  # BCV bank documents
   bcv_avis:
     patterns: ["5429324*_*", "*_E310_*", "*_E100_*", "*_E204_*"]
     extensions: [".pdf"]
     destination: "4_Archives/banques/BCV/{YYYY}"
     date_source: "filename"
-    date_pattern: "(\\d{4})-(\\d{2})-(\\d{2})"  # Format: YYYY-MM-DD in filename
+    date_pattern: "(\\d{4})-(\\d{2})-(\\d{2})"
 
-  # Romande Energie utility invoices
+  # Romande Energie invoices
   romande_energie:
     patterns: ["*romande-energie*", "*Romande*Energie*"]
     extensions: [".pdf"]
     destination: "4_Archives/factures/Energie/Romande Energie/{YYYY}"
     date_source: "filename"
-    date_pattern: "(\\d{4})-(\\d{2})-(\\d{2})"  # Format: YYYY-MM-DD in filename
+    date_pattern: "(\\d{4})-(\\d{2})-(\\d{2})"
 
-  # French real estate / land documents (SAFER, notaire, cadastre)
+  # French real estate documents
   immobilier_france:
-    patterns: [
-      "*[Ss]afer*", "*SAFER*",
-      "*[Nn]otaire*", "*acte*vente*",
-      "*[Cc]adastre*", "*foncier*"
-    ]
+    patterns:
+      [
+        "*[Ss]afer*",
+        "*SAFER*",
+        "*[Nn]otaire*",
+        "*acte*vente*",
+        "*[Cc]adastre*",
+        "*foncier*",
+      ]
     extensions: [".pdf"]
     destination: "4_Archives/immobilier-france/{YYYY}"
     date_source: "file_modified"
 
-  # French tax documents (impots.gouv.fr)
+  # French tax documents
   impots_france:
-    patterns: [
-      "Avis_d_impot_*", "Avis*impot*", "*impots.gouv*",
-      "*impôts fonciers*", "*impots fonciers*", "*6704*",
-      "*IMPÔTS LOCAUX*", "*impots locaux*"
-    ]
+    patterns:
+      [
+        "Avis_d_impot_*",
+        "Avis*impot*",
+        "*impots.gouv*",
+        "*impôts fonciers*",
+        "*IMPÔTS LOCAUX*",
+      ]
     extensions: [".pdf"]
     destination: "4_Archives/impots-france/{YYYY}"
     date_source: "filename"
-    date_pattern: "(\\d{4})_sur_les_revenus"  # Format: YYYY_sur_les_revenus
+    date_pattern: "(\\d{4})_sur_les_revenus"
 
-  # French bank documents (IFU, revenus mobiliers)
+  # French bank documents (IFU)
   banques_france:
     patterns: ["*E-IFU*", "*IFU*", "*revenus mobiliers*"]
     extensions: [".pdf"]
@@ -271,870 +322,27 @@ routing_rules:
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
-  # Insurance claims and accident declarations
+  # Insurance claims
   assurances_sinistres:
-    patterns: [
-      "*[Dd]éclaration*accident*", "*[Dd]eclaration*accident*",
-      "*sinistre*", "*[Cc]laim*", "*[Ss]chadenfall*"
-    ]
+    patterns:
+      [
+        "*[Dd]éclaration*accident*",
+        "*[Dd]eclaration*accident*",
+        "*sinistre*",
+        "*[Cc]laim*",
+      ]
     extensions: [".pdf"]
     destination: "4_Archives/assurances-sinistres/{YYYY}"
     date_source: "file_modified"
 
-  # Health reimbursement documents (justificatifs de remboursement)
+  # Health reimbursements
   sante_remboursement:
-    patterns: [
-      "*[Jj]ustificatif*[Rr]emboursement*",
-      "*[Rr]emboursement*[Ss]anté*",
-      "*[Rr]emboursement*invoice*",
-      "*[Rr]emboursement*[Tt]hérapie*",
-      "*M-Thérapies*"
-    ]
+    patterns:
+      [
+        "*[Jj]ustificatif*[Rr]emboursement*",
+        "*[Rr]emboursement*[Ss]anté*",
+        "*M-Thérapies*",
+      ]
     extensions: [".pdf"]
     destination: "4_Archives/sante/{YYYY}"
     date_source: "file_modified"
-
-# =============================================================================
-# 0_INBOX - Point d'entrée PLAT
-# =============================================================================
-inbox:
-  path: "0_Inbox"
-  behavior: "flat"
-  description: "Point d'entrée temporaire - AUCUN sous-dossier"
-  utterances:
-    - "nouveau fichier"
-    - "téléchargement"
-    - "à trier"
-    - "temporary"
-
-# =============================================================================
-# 1_PROJECTS - Projets actifs avec deadline
-# =============================================================================
-projects:
-  path: "1_Projects"
-
-  routes:
-    - name: "dell-customer-project"
-      pattern: "1_Projects/dell-{customer}-{project}"
-      utterances:
-        - "projet client Dell"
-        - "delivery"
-        - "implementation"
-        - "POC client"
-        - "migration projet"
-        - "RFP réponse"
-        - "proposal"
-
-    - name: "home-improvement"
-      pattern: "1_Projects/renovation-{room}"
-      utterances:
-        - "rénovation"
-        - "travaux maison"
-        - "devis artisan"
-        - "matériaux construction"
-
-    - name: "tech-lab"
-      pattern: "1_Projects/{name}"
-      utterances:
-        - "homelab"
-        - "lab setup"
-        - "configuration test"
-        - "development project"
-
-# =============================================================================
-# 2_AREAS - Responsabilités continues (suivi actif)
-# =============================================================================
-areas:
-  path: "2_Areas"
-
-  routes:
-    # --- Dell Work ---
-    - name: "dell-customers"
-      pattern: "2_Areas/dell/customers/{sector}/{customer}"
-      utterances:
-        - "suivi client"
-        - "account management"
-        - "relationship ongoing"
-
-    - name: "dell-competitive"
-      pattern: "2_Areas/dell/competitive"
-      utterances:
-        - "battlecard"
-        - "analyse concurrence"
-        - "HPE vs Dell"
-        - "NetApp comparaison"
-
-    - name: "dell-team"
-      pattern: "2_Areas/dell/team"
-      utterances:
-        - "équipe"
-        - "management"
-        - "1on1"
-        - "performance review"
-
-    # --- Finances courantes (pas les factures archivées) ---
-    - name: "finances-banques"
-      pattern: "2_Areas/finances/banques/{bank}"
-      utterances:
-        - "compte courant"
-        - "gestion compte"
-        - "IBAN actif"
-
-    - name: "finances-investissements"
-      pattern: "2_Areas/finances/investissements"
-      utterances:
-        - "portfolio actif"
-        - "trading"
-        - "ETF suivi"
-
-    # --- Photography (pratique active) ---
-    - name: "photography"
-      pattern: "2_Areas/photography"
-      utterances:
-        - "lightroom preset"
-        - "workflow photo"
-        - "matériel actuel"
-
-    # --- Perso (collections personnelles actives) ---
-    - name: "perso-photos"
-      pattern: "2_Areas/perso/photos"
-      utterances:
-        - "collection photos"
-        - "album photo"
-        - "photos personnelles"
-
-    - name: "perso-notebooks"
-      pattern: "2_Areas/perso/notebooks"
-      utterances:
-        - "notes personnelles"
-        - "carnet"
-        - "journal"
-        - "OneNote"
-
-    - name: "perso-mindmaps"
-      pattern: "2_Areas/perso/mindmaps"
-      utterances:
-        - "xmind"
-        - "mindmap"
-        - "carte mentale"
-        - "brainstorming"
-
-    - name: "perso-wallpapers"
-      pattern: "2_Areas/perso/fonds-ecran"
-      utterances:
-        - "fond d'écran"
-        - "wallpaper"
-        - "desktop background"
-
-# =============================================================================
-# 3_RESOURCES - Références stables
-# =============================================================================
-resources:
-  path: "3_Resources"
-
-  routes:
-    # --- Livres techniques par technologie ---
-    - name: "livres"
-      pattern: "3_Resources/livres/{technology}"
-      utterances:
-        - "livre"
-        - "ebook"
-        - "lecture"
-        - "kindle"
-        - "epub"
-        - "mobi"
-        - "O'Reilly"
-        - "Packt"
-        - "Manning"
-        - "Apress"
-      technologies:
-        - Ansible
-        - C++
-        - Cloud
-        - Containers
-        - Databases
-        - DevOps
-        - Elastic
-        - Go
-        - Java
-        - JavaScript
-        - Kubernetes
-        - Linux
-        - Microsoft
-        - Networking
-        - Python
-        - Security
-        - Storage
-        - TypeScript
-        - VMware
-
-    # --- Cours et formations par topic ---
-    - name: "cours"
-      pattern: "3_Resources/cours/{topic}"
-      utterances:
-        - "cours"
-        - "formation"
-        - "training"
-        - "tutorial"
-        - "certification prep"
-        - "learning path"
-        - "video course"
-        - "Udemy"
-        - "Coursera"
-        - "LinkedIn Learning"
-        - "Pluralsight"
-      topics:
-        - AI
-        - Automation
-        - Cloud
-        - Containers
-        - Data-Center
-        - Data-Protection
-        - Databases
-        - Dell
-        - Development
-        - Hardware
-        - Identity-Management
-        - Networking
-        - Observability
-        - Operating-Systems
-        - Photo
-        - Project-Management
-        - Security
-        - Storage
-        - VMware
-
-    - name: "certifications"
-      pattern: "3_Resources/certifications/{vendor}/{year}"
-      utterances:
-        - "certification"
-        - "badge"
-        - "credential"
-        - "exam"
-
-    - name: "dell-products"
-      pattern: "3_Resources/dell-docs/products/{family}"
-      utterances:
-        - "product datasheet"
-        - "spec sheet"
-        - "technical specs"
-
-    - name: "dell-designs"
-      pattern: "3_Resources/dell-docs/validated-designs"
-      utterances:
-        - "reference architecture"
-        - "validated design"
-
-    - name: "dell-whitepapers"
-      pattern: "3_Resources/dell-docs/whitepapers"
-      utterances:
-        - "whitepaper"
-        - "technical paper"
-
-    - name: "legal-edocuments"
-      pattern: "3_Resources/legal/e-documents"
-      utterances:
-        - "passeport"
-        - "carte identité"
-        - "permis"
-        - "AVS"
-        - "document officiel"
-
-    - name: "legal-contrats"
-      pattern: "3_Resources/legal/contrats"
-      utterances:
-        - "contrat actif"
-        - "bail"
-        - "assurance vie"
-
-    - name: "recettes"
-      pattern: "3_Resources/recettes/{category}"
-      utterances:
-        - "recette"
-        - "cuisine"
-        - "thermomix"
-
-    - name: "tech-guides"
-      pattern: "3_Resources/tech/{topic}"
-      utterances:
-        - "howto"
-        - "guide technique"
-        - "documentation"
-
-# =============================================================================
-# 4_ARCHIVES - Contenu terminé/historique
-# =============================================================================
-archives:
-  path: "4_Archives"
-
-  routes:
-    # --- Photos par date EXIF ---
-    - name: "photos"
-      pattern: "4_Archives/photos/{YYYY}/{MM}/{DD}"
-      date_format: "YYYY/MM/DD"
-      utterances:
-        - "photo"
-        - "image"
-        - "camera"
-        - "screenshot"
-
-    # --- Formations terminées (structure préservée) ---
-    - name: "courses-completed"
-      pattern: "4_Archives/courses-completed/{platform}"
-      preserve_structure: true
-      utterances:
-        - "cours"
-        - "formation"
-        - "learning"
-        - "tutorial"
-
-    # --- Factures par catégorie/émetteur/année ---
-    - name: "factures-assurances"
-      pattern: "4_Archives/factures/Assurances/{issuer}/{year}"
-      utterances:
-        - "facture assurance"
-        - "prime assurance"
-        - "police"
-        - "Swica"
-        - "Groupe Mutuel"
-        - "Vaudoise"
-        - "Generali"
-        - "attestation prévoyance"
-        - "cotisations prévoyance"
-
-    - name: "banques"
-      pattern: "4_Archives/banques/{issuer}/{year}"
-      utterances:
-        - "relevé bancaire"
-        - "relevé de compte"
-        - "extrait de compte"
-        - "frais bancaires"
-        - "Credit Agricole"
-        - "UBS"
-        - "PostFinance"
-
-    - name: "factures-energie"
-      pattern: "4_Archives/factures/Energie/{issuer}/{year}"
-      utterances:
-        - "facture électricité"
-        - "facture gaz"
-        - "Romande Energie"
-        - "SIG"
-
-    - name: "factures-telephonie"
-      pattern: "4_Archives/factures/Telephonie/{issuer}/{year}"
-      utterances:
-        - "facture téléphone"
-        - "facture mobile"
-        - "Swisscom"
-        - "Salt"
-
-    - name: "impots"
-      pattern: "4_Archives/impots/{year}"
-      utterances:
-        - "déclaration fiscale"
-        - "impôt"
-        - "taxation"
-        - "avis d'imposition"
-        - "bordereau fiscal"
-
-    - name: "impots-france"
-      pattern: "4_Archives/impots-france/{year}"
-      utterances:
-        - "impôt France"
-        - "déclaration fiscale française"
-        - "impots.gouv.fr"
-        - "avis d'imposition France"
-        - "fisc français"
-        - "impôts fonciers"
-        - "impôts locaux"
-        - "taxe foncière"
-        - "formulaire 6704"
-
-    - name: "banques-france"
-      pattern: "4_Archives/banques-france/{issuer}/{year}"
-      utterances:
-        - "IFU imprimé fiscal unique"
-        - "revenus mobiliers France"
-        - "Crédit Agricole France"
-        - "déclaration revenus capitaux"
-        - "banque française"
-        - "E-IFU"
-
-    - name: "assurances-sinistres"
-      pattern: "4_Archives/assurances-sinistres/{year}"
-      utterances:
-        - "déclaration accident"
-        - "déclaration de sinistre"
-        - "accident travail LAA"
-        - "assurance accident"
-        - "Zurich sinistre"
-        - "claim declaration"
-        - "Schadenfall Meldung"
-
-    - name: "factures-redevances"
-      pattern: "4_Archives/factures/Redevances/{issuer}/{year}"
-      utterances:
-        - "redevance TV"
-        - "Serafe"
-        - "Billag"
-        - "radio télévision"
-
-    - name: "factures-logement"
-      pattern: "4_Archives/factures/Logement/{issuer}/{year}"
-      utterances:
-        - "facture loyer"
-        - "charges"
-        - "régie"
-
-    - name: "factures-sante"
-      pattern: "4_Archives/factures/Santé/{issuer}/{year}"
-      utterances:
-        - "facture médecin"
-        - "facture pharmacie"
-        - "facture dentiste"
-        - "résultats laboratoire"
-        - "analyse médicale"
-        - "laboratoire médical"
-        - "centre de soins"
-        - "physiothérapie"
-        - "ostéopathie"
-        - "massage thérapeutique"
-
-    - name: "sante-remboursement"
-      pattern: "4_Archives/sante/{year}"
-      utterances:
-        - "justificatif de remboursement"
-        - "remboursement assurance maladie"
-        - "décompte prestations"
-        - "relevé remboursement"
-        - "attestation remboursement santé"
-
-    - name: "factures-divers"
-      pattern: "4_Archives/factures/Divers/{year}"
-      utterances:
-        - "facture achat"
-        - "frais de douane"
-        - "frais de port"
-        - "livraison colis"
-        - "commande en ligne"
-        - "achat internet"
-        - "facture luminaire"
-        - "faire-part"
-
-    - name: "factures-mobilite"
-      pattern: "4_Archives/factures/Mobilité/{issuer}/{year}"
-      utterances:
-        - "facture garage"
-        - "facture essence"
-        - "facture CFF"
-        - "facture transport"
-        - "transports publics"
-        - "MOB facture"
-        - "Golden Pass Line"
-        - "abonnement transport"
-        - "billet de parcours"
-        - "billet train"
-        - "Chemin de fer"
-        - "Montreux Oberland bernois"
-        - "parking receipt"
-        - "EasyPark"
-        - "facture parking"
-        - "stationnement"
-
-    - name: "factures-cloud"
-      pattern: "4_Archives/factures/Cloud/{issuer}/{year}"
-      utterances:
-        - "facture cloud"
-        - "facture Netflix"
-        - "facture Spotify"
-        - "facture Adobe"
-        - "facture AWS"
-        - "facture Azure"
-        - "facture Infomaniak"
-        - "hébergement web"
-        - "domaine internet"
-
-    - name: "factures-materiels"
-      pattern: "4_Archives/factures/Materiels/{issuer}/{year}"
-      utterances:
-        - "facture achat"
-        - "facture magasin"
-        - "facture électronique"
-        - "facture Fnac"
-        - "facture Migros"
-        - "facture Manor"
-        - "facture digitec"
-        - "facture Galaxus"
-        - "facture Nespresso"
-        - "achat matériel"
-        - "commande en ligne"
-
-    - name: "prevoyance"
-      pattern: "4_Archives/prevoyance/{issuer}/{year}"
-      utterances:
-        - "2e pilier"
-        - "3e pilier"
-        - "libre passage"
-        - "LPP"
-        - "prévoyance professionnelle"
-        - "attestation pilier"
-        - "caisse de pension"
-        - "retraite"
-
-    - name: "factures-enfant"
-      pattern: "4_Archives/factures/Enfant/{issuer}/{year}"
-      utterances:
-        - "facture crèche"
-        - "facture garderie"
-        - "accueil parascolaire"
-        - "frais enfant"
-        - "école"
-        - "activités enfants"
-
-    - name: "voyages"
-      pattern: "4_Archives/voyages/{destination}/{year}"
-      utterances:
-        - "voyage"
-        - "billet avion"
-        - "réservation hôtel"
-        - "location vacances"
-        - "ESTA"
-        - "visa voyage"
-        - "boarding pass"
-        - "confirmation réservation"
-
-    - name: "salaires"
-      pattern: "4_Archives/salaires/{employer}/{year}"
-      utterances:
-        - "fiche de paie"
-        - "bulletin de salaire"
-        - "certificat de salaire"
-        - "salaire mensuel"
-        - "rémunération"
-
-    - name: "factures-licences"
-      pattern: "4_Archives/factures/Licences/{issuer}/{year}"
-      utterances:
-        - "facture licence"
-        - "subscription software"
-
-    - name: "dons"
-      pattern: "4_Archives/dons/{organization}/{year}"
-      utterances:
-        - "reçu don"
-        - "attestation donation"
-        - "attestation fiscale don"
-        - "Croix-Rouge"
-
-    # --- Santé par praticien/année ---
-    - name: "sante"
-      pattern: "4_Archives/sante/{practitioner}/{year}"
-      utterances:
-        - "consultation médicale"
-        - "ordonnance"
-        - "analyse"
-        - "radiographie"
-        - "prescription"
-        - "résultats analyses"
-        - "analyse sanguine"
-        - "bilan sanguin"
-        - "laboratoire"
-        - "prise de sang"
-        - "IRM"
-        - "scanner"
-        - "échographie"
-        - "justificatif de remboursement"
-        - "remboursement santé"
-        - "physiothérapie"
-        - "physiotherapeute"
-        - "ostéopathe"
-        - "chiropracteur"
-
-    # --- Maison par année ---
-    - name: "maison"
-      pattern: "4_Archives/maison/{year}"
-      utterances:
-        - "entretien maison"
-        - "réparation"
-        - "travaux terminés"
-        - "électroménager"
-        - "sèche-linge"
-        - "lave-linge"
-        - "lave-vaisselle"
-        - "réfrigérateur"
-        - "SAV appareil"
-        - "blocage courrier"
-        - "faire-part mariage"
-        - "faire-part naissance"
-
-    # --- Dell projets clos : customer/year ---
-    - name: "dell-projects-closed"
-      pattern: "4_Archives/dell-projects-closed/{customer}/{year}"
-      utterances:
-        - "projet Dell terminé"
-        - "closed project"
-        - "delivery completed"
-
-    # --- Archives personnelles ---
-    - name: "personal-old"
-      pattern: "4_Archives/personal-old/{category}"
-      utterances:
-        - "ancien"
-        - "old backup"
-        - "legacy"
-        - "historique"
-
-# =============================================================================
-# ÉMETTEURS CONNUS
-# Each category has a pattern (with {year} and {issuer} placeholders) and issuers list
-# =============================================================================
-known_issuers:
-  assurances:
-    pattern: "4_Archives/factures/Assurances/{issuer}/{year}"
-    issuers:
-      - Swica
-      - Groupe Mutuel
-      - Vaudoise Assurances
-      - Axa-Winterthur
-      - Zurich
-      - TCS
-      - Rega
-      - Baloise
-      - Generali
-      - SwissCaution
-      - Swiss Life
-      - Maif
-      - Allianz
-      - ECA
-
-  banques:
-    pattern: "4_Archives/banques/{issuer}/{year}"
-    issuers:
-      - PostFinance
-      - UBS
-      - Raiffeisen
-      - Credit Suisse
-      - Viseca
-      - Cornèrcard
-      - Cembra
-      - BCV
-      - BCGE
-      - BCN
-      - Selma
-      - Selma Finance
-      - Saxo Bank
-      - American Express
-      - Caisse d'epargne
-      - Credit Agricole
-      - SwissQuote
-      - TradeDirect
-      - Neon
-
-  energie:
-    pattern: "4_Archives/factures/Energie/{issuer}/{year}"
-    issuers:
-      - Romande Energie
-      - SIG
-      - Holdigaz
-      - EDF
-      - ERDF
-      - GDF
-      - Engie
-
-  telephonie:
-    pattern: "4_Archives/factures/Telephonie/{issuer}/{year}"
-    issuers:
-      - Swisscom
-      - Salt
-      - Sunrise
-      - UPC
-      - Bouygues Telecom
-      - Cegetel
-      - FT
-      - France Telecom
-      - Orange
-      - SFR
-
-  cloud:
-    pattern: "4_Archives/factures/Cloud/{issuer}/{year}"
-    issuers:
-      - Apple
-      - Microsoft
-      - Google
-      - Dropbox
-      - Netflix
-      - Spotify
-      - Adobe
-      - SwitchPlus
-      - Azure
-      - Infomaniak
-      - AWS
-      - OVH
-      - Hetzner
-
-  transport:
-    pattern: "4_Archives/factures/Mobilité/{issuer}/{year}"
-    issuers:
-      - MOB
-      - Montreux Oberland bernois
-      - CFF
-      - SBB
-      - TL
-      - TPG
-      - VMCV
-      - Fart
-      - Rhätische Bahn
-      - RhB
-      - Travys
-      - Mobility
-      - mobility-genossenschaft
-      - EasyPark
-      - AirFrance
-      - ByJuno
-      - Cofiroute
-      - Hertz
-      - europcar
-      - VeloSpot
-      - SAN
-
-  sante:
-    pattern: "4_Archives/factures/Santé/{issuer}/{year}"
-    issuers:
-      - Médecine Chinoise HAN
-      - CHUV
-      - HUG
-      - Pharmacie
-      - Laboratoires CDL
-      - laboratoirescdl
-      - CDL
-      - Unilabs
-      - Centre de soins
-      - Centre de soins LES ALPES
-      - Physiothérapie
-      - Ostéopathie
-      - Masseur
-      - Synlab
-      - M-Thérapies
-      - Silhouette
-      - Ostheopathe
-
-  materiels:
-    pattern: "4_Archives/factures/Materiels/{issuer}/{year}"
-    issuers:
-      - fnac
-      - Migros
-      - Manor
-      - coop@home
-      - digitec
-      - Galaxus
-      - Nespresso
-      - interdiscount
-      - MediaMarkt
-      - QoQa
-      - QoQa Services
-      - Fust
-      - FedEx
-      - La Poste
-      - DHL
-      - UPS
-      - 5aSec
-      - Apple
-      - Boulanger
-      - Brack
-      - Conrad
-      - Cumulus
-      - Hornbach
-      - Interio
-      - Momax
-      - Netatmo
-      - PCTOP
-      - Paragon
-      - Rotho
-      - Yubico
-      - amadeus
-      - irobot
-      - steg
-      - thermomix
-      - withings
-      - Glowing Sky
-
-  prevoyance:
-    pattern: "4_Archives/prevoyance/{issuer}/{year}"
-    issuers:
-      - Generali
-      - Vaudoise
-      - Swiss Life
-      - Retraites Populaires
-      - Allianz
-      - BCV
-      - PUBLICA
-      - Axa
-
-  enfant:
-    pattern: "4_Archives/factures/Enfant/{issuer}/{year}"
-    issuers:
-      - Commune de Montreux
-      - Leukerbad Skischule
-      - Réseau enfance
-
-  voyages:
-    pattern: "4_Archives/voyages/{destination}/{year}"
-    destinations:
-      - Islande
-      - Las Vegas
-      - Dublin
-      - Rome
-      - Ireland
-      - St Moritz
-      - Miami
-
-  logement:
-    pattern: "4_Archives/factures/Logement/{issuer}/{year}"
-    issuers:
-      - Régie du Rhône
-      - Naef
-      - Foncia
-      - Gérance Privée
-
-  licences:
-    pattern: "4_Archives/factures/Licences/{issuer}/{year}"
-    issuers:
-      - JetBrains
-      - Microsoft 365
-      - 1Password
-      - Parallels
-      - Abbyy
-      - Apple
-      - Commvault
-      - Crashplan
-      - Mobatek
-      - Next Inpact
-      - OpsView
-      - Paragon
-      - PearsonVue
-      - ifolor
-
-  dons:
-    pattern: "4_Archives/dons/{organization}/{year}"
-    organizations:
-      - Croix-Rouge
-      - Croix Rouge
-      - Médecins Sans Frontières
-      - WWF
-      - Caritas
-      - Amis du Leman
-      - Amnesty
-      - Fondation suisse pour les paraplegiques
-      - Ligue Vaudoise
-      - Rega
-      - Restos du coeur
-      - SwissRando
-      - Unicef
-      - Wikimedia
-
-  redevances:
-    pattern: "4_Archives/factures/Redevances/{issuer}/{year}"
-    issuers:
-      - Serafe
-      - Billag

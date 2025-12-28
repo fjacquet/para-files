@@ -265,7 +265,11 @@ class RulesEngineClassifier(BaseClassifier):
     ) -> datetime | None:
         """Extract date from file based on rule configuration.
 
-        Uses EXIF date when available, falling back to file modified date.
+        Supports date_source values:
+        - "exif": Use EXIF date from exiftool
+        - "filename": Extract year from filename (YYYY pattern)
+        - "file_modified": Use file modification date
+        - None/default: Use best_date (EXIF > modified > created)
 
         Args:
             rule: Routing rule with date_source configuration.
@@ -278,9 +282,53 @@ class RulesEngineClassifier(BaseClassifier):
         if rule.date_source == "exif" and metadata.exif_date:
             return metadata.exif_date
 
+        # If rule requests filename-based date extraction
+        if rule.date_source == "filename":
+            filename_date = self._extract_date_from_filename(metadata.filename)
+            if filename_date:
+                return filename_date
+
         # Use best_date property which prioritizes: EXIF > modified > created
         best = metadata.best_date
         if best:
             return best
 
         return datetime.now(tz=UTC)
+
+    def _extract_date_from_filename(self, filename: str) -> datetime | None:
+        """Extract date from filename patterns.
+
+        Supports patterns:
+        - YYYY-MM-DD or YYYYMMDD at start/in filename
+        - YYYY at start of filename (e.g., "2013-certificat.pdf")
+        - Year in filename (e.g., "certificat-2013.pdf")
+
+        Args:
+            filename: Filename to extract date from.
+
+        Returns:
+            datetime if a date pattern found, None otherwise.
+        """
+        # Try full date patterns first
+        patterns = [
+            r"(\d{4})-(\d{2})-(\d{2})",  # YYYY-MM-DD
+            r"(\d{4})(\d{2})(\d{2})",     # YYYYMMDD
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, filename)
+            if match:
+                try:
+                    year, month, day = int(match.group(1)), int(match.group(2)), int(match.group(3))
+                    if 1990 <= year <= 2099 and 1 <= month <= 12 and 1 <= day <= 31:
+                        return datetime(year, month, day, tzinfo=UTC)
+                except ValueError:
+                    continue
+
+        # Try year-only pattern (at start or after separator)
+        year_match = re.search(r"(?:^|[_\-\s])(\d{4})(?:[_\-\s]|$|\.)", filename)
+        if year_match:
+            year = int(year_match.group(1))
+            if 1990 <= year <= 2099:
+                return datetime(year, 1, 1, tzinfo=UTC)
+
+        return None
