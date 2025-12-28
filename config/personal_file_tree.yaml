@@ -147,6 +147,8 @@ routing_rules:
         "*[Pp]ower[Ff]lex*",
         "*[Pp]ower[Ss]tore*",
         "*[Pp]ower[Ss]cale*",
+        "*[Pp]ower[Ee]dge*",
+        "*[Pp]ower[Pp]rotect*",
         "*[Vv]x[Rr]ail*",
         "*PFMP*",
         "*[Ii]silon*",
@@ -154,8 +156,10 @@ routing_rules:
         "*[Dd]ata[Dd]omain*",
         "*[Ss]onic*",
         "*SONiC*",
+        "*[Ee][Mm][Cc]*",
         "flex-*",
         "ddl-*",
+        "SLD*_*",
       ]
     extensions: [".pdf", ".pptx", ".ppt", ".docx", ".doc"]
     destination: "3_Resources/docs/Dell-EMC/{technology}"
@@ -203,6 +207,21 @@ routing_rules:
     patterns: ["*VMware*", "*vSphere*", "*vSAN*", "*NSX*", "*Tanzu*", "*VCF*"]
     extensions: [".pdf", ".pptx", ".ppt", ".docx", ".doc"]
     destination: "3_Resources/documentation/VMware/{YYYY}"
+    date_source: "file_modified"
+
+  # Nutanix documentation
+  nutanix_documentation:
+    patterns:
+      [
+        "*[Nn]utanix*",
+        "*[Pp]rism*",
+        "*[Aa]cropolis*",
+        "*[Xx]i*[Ll]eap*",
+        "*[Nn]utanix*[Mm]ine*",
+        "*[Nn]utanix*[Ee]ra*",
+      ]
+    extensions: [".pdf", ".pptx", ".ppt", ".docx", ".doc"]
+    destination: "3_Resources/docs/Nutanix/{YYYY}"
     date_source: "file_modified"
 
   # Red Hat documentation
@@ -445,4 +464,48 @@ routing_rules:
       ]
     extensions: [".pdf"]
     destination: "4_Archives/sante/{YYYY}"
+    date_source: "file_modified"
+
+  # Real estate - urbanism and maps
+  immobilier_urbanisme:
+    patterns:
+      [
+        "*[Zz]one*inondable*",
+        "*[Pp]lan*local*urbanisme*",
+        "*PLU*",
+        "*[Cc]arte*cadastrale*",
+        "*[Rr]isques*naturels*",
+        "*[Ss]ervitude*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/immobilier/urbanisme/{YYYY}"
+    date_source: "file_modified"
+
+  # Career - job applications
+  carriere_candidatures:
+    patterns:
+      [
+        "*[Ll]ettre*motivation*",
+        "*[Cc]over*[Ll]etter*",
+        "*[Cc]andidature*",
+        "*CV*",
+        "*[Rr]esume*",
+        "*[Bb]ewerbung*",
+      ]
+    extensions: [".pdf", ".docx", ".doc"]
+    destination: "4_Archives/carriere/candidatures/{YYYY}"
+    date_source: "file_modified"
+
+  # Hobbies - game manuals
+  loisirs_jeux:
+    patterns:
+      [
+        "*[Nn]otice*",
+        "*[Mm]anuel*jeu*",
+        "*[Rr]ègles*jeu*",
+        "*[Gg]ame*[Mm]anual*",
+        "*[Ii]nstructions*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/loisirs/jeux-manuels"
     date_source: "file_modified"
