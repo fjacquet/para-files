@@ -657,3 +657,10 @@ routing_rules:
     extensions: [".pdf"]
     destination: "3_Resources/docs/AI-ML/{YYYY}"
     date_source: "file_modified"
+
+  # Crypto - SSL certificates, GPG keys
+  crypto_keys:
+    patterns: ["*"]
+    extensions: [".pem", ".gpg", ".key", ".crt", ".p12", ".pfx"]
+    destination: "4_Archives/crypto/{YYYY}"
+    date_source: "file_modified"
