@@ -81,10 +81,18 @@ para-files/
 │   │   └── llm_fallback.py   # Signal 5: LLM fallback
 │   ├── encoders/
 │   │   └── mlx_encoder.py    # MLX embedding encoder
-│   └── utils/                # Utility modules
+│   ├── taxonomies/
+│   │   ├── models.py         # Thema/document taxonomy models
+│   │   └── loader.py         # JSON taxonomy loaders
+│   └── utils/
+│       ├── filename_sanitizer.py  # Centralized filename sanitization
+│       ├── thema_lookup.py   # Thema code lookup service
+│       └── ...               # Other utilities
 ├── tests/                    # Test suite
 ├── config/
-│   └── personal_file_tree.yaml  # PARA reference tree
+│   ├── personal_file_tree.yaml  # PARA reference tree (routing rules)
+│   ├── documents.json        # Document taxonomy (issuers + keywords)
+│   └── thema.json            # Thema v1.6 book classification (9,187 codes)
 ├── docs/                     # Documentation (Jekyll/GitHub Pages)
 ├── pyproject.toml            # Project configuration
 ├── README.md                 # User documentation

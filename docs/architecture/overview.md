@@ -54,6 +54,29 @@ Choose based on your situation:
 - **Document type detection** → Add keywords to `documents.json`
 - **Technical books** → Automatic via ISBN lookup + Thema classification
 
+### Book Path Format (Thema Hybrid Naming)
+
+Books use the **THEMA v1.6** international classification with hybrid naming:
+
+```
+3_Resources/livres/{L1_Code}_{ShortName}/{L2_Code}_{ShortName}
+```
+
+Example: `3_Resources/livres/U_Informatique/UB_Programmation`
+
+| Raw Thema Description | Hybrid Folder Name |
+|-----------------------|-------------------|
+| `Informatique et traitement de l'information` | `U_Informatique` |
+| `Informatique : logiciels et programmation` | `UB_Programmation` |
+| `Arts : généralités` | `AB_Generalites` |
+
+**Rules applied:**
+- Max 2 hierarchy levels after `livres/`
+- Accents removed (é→e, ç→c)
+- Colons: take part after (`:` → specific term)
+- Slashes: take first part (`/` → general term)
+- Invalid filesystem chars replaced with `_`
+
 ## Component Architecture
 
 ```mermaid
