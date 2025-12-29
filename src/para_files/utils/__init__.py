@@ -74,6 +74,13 @@ from para_files.utils.pdf_metadata import (
     extract_pdf_metadata,
     is_book_creator,
 )
+from para_files.utils.filename_sanitizer import (
+    INVALID_FILENAME_CHARS,
+    get_invalid_chars,
+    is_valid_filename,
+    sanitize_filename,
+    sanitize_path_component,
+)
 from para_files.utils.validation import (
     validate_directory_exists,
     validate_file_exists,
@@ -83,6 +90,12 @@ from para_files.utils.validation import (
 __all__ = [
     # Original exports
     "EXIF_EXTENSIONS",
+    # Filename sanitization
+    "INVALID_FILENAME_CHARS",
+    "get_invalid_chars",
+    "is_valid_filename",
+    "sanitize_filename",
+    "sanitize_path_component",
     # Cleanup
     "JUNK_DIRECTORIES",
     "JUNK_PATTERNS",

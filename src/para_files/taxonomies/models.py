@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from para_files.utils.filename_sanitizer import sanitize_path_component
+
 
 # =============================================================================
 # Document Taxonomy Models (documents.json)
@@ -177,9 +179,8 @@ class ThemaTaxonomy(BaseModel):
         # Use top 2 levels for path
         parts = ["3_Resources", "livres"]
         for code in hierarchy[:2]:
-            # Clean description for filesystem
-            desc = code.CodeDescription
-            desc = desc.replace("/", "-").replace(":", "-").replace("&", "et")
+            # Clean description for filesystem using centralized sanitizer
+            desc = sanitize_path_component(code.CodeDescription)
             parts.append(desc)
 
         return "/".join(parts)

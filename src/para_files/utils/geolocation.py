@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 import sqlite3
 import threading
 from functools import lru_cache
@@ -17,6 +16,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
+
+from para_files.utils.filename_sanitizer import sanitize_path_component
 
 
 if TYPE_CHECKING:
@@ -60,10 +61,9 @@ class LocationInfo(BaseModel):
         """
 
         def sanitize(name: str) -> str:
-            """Make a name filesystem-safe."""
-            safe = re.sub(r'[<>:"/\\|?*]', "_", name)
-            safe = re.sub(r"\s+", "_", safe)
-            return safe.strip("_") or "Unknown"
+            """Make a name filesystem-safe using centralized sanitizer."""
+            result = sanitize_path_component(name, replacement="_", replace_spaces=True)
+            return result or "Unknown"
 
         # Get the most specific location
         location = self.city or self.region

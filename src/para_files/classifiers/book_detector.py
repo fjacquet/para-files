@@ -21,6 +21,7 @@ from para_files.types import (
     Confidence,
     FileMetadata,
 )
+from para_files.utils.filename_sanitizer import sanitize_filename
 from para_files.utils.isbn_lookup import BookInfo, lookup_isbn
 from para_files.utils.pdf_metadata import (
     PdfMetadata,
@@ -228,6 +229,8 @@ def is_telecom_document(content: str, filename: str) -> bool:
 def sanitize_title(title: str, max_length: int = 80) -> str:
     """Convert a book title to a valid filename.
 
+    Uses the centralized filename sanitizer to handle all invalid characters.
+
     Args:
         title: Original title from PDF or ISBN lookup.
         max_length: Maximum filename length.
@@ -235,16 +238,7 @@ def sanitize_title(title: str, max_length: int = 80) -> str:
     Returns:
         Sanitized filename-safe string.
     """
-    # Replace forbidden characters
-    safe = re.sub(r'[<>:"/\\|?*]', "_", title)
-    # Replace multiple spaces/underscores with single underscore
-    safe = re.sub(r"[\s_]+", "_", safe)
-    # Remove leading/trailing underscores
-    safe = safe.strip("_")
-    # Limit length (try to break at word boundary)
-    if len(safe) > max_length:
-        safe = safe[:max_length].rsplit("_", 1)[0]
-    return safe
+    return sanitize_filename(title, replacement="_", max_length=max_length)
 
 
 def score_book_structure(content: str) -> float:
