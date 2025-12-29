@@ -53,8 +53,44 @@ pre-commit run --all-files         # Run manually
 | `src/para_files/reference_tree.py` | YAML reference tree loader |
 | `src/para_files/classifiers/` | Classification signal implementations |
 | `src/para_files/encoders/mlx_encoder.py` | MLX embedding encoder with lazy loading |
+| `src/para_files/utils/filename_sanitizer.py` | Centralized filename sanitization |
+| `src/para_files/taxonomies/models.py` | Thema/document taxonomy models and path builders |
 | `tests/` | Test suite |
 | `config/personal_file_tree.yaml` | PARA reference tree (example) |
+| `config/thema.json` | Thema v1.6 book classification (9,187 codes) |
+
+## Filename Sanitization
+
+**All paths and filenames must be filesystem-safe.** Use centralized utilities:
+
+```python
+from para_files.utils.filename_sanitizer import sanitize_filename, sanitize_path_component
+
+# For filenames (replaces invalid chars with _)
+sanitize_filename("Hello: World#1")  # → "Hello_World_1"
+
+# For path components (preserves spaces, replaces & with 'et')
+sanitize_path_component("Arts : généralités")  # → "Arts - généralités"
+```
+
+**Invalid characters handled:** `, # " * : < > ? / \ |`
+
+## Thema Book Classification
+
+Books use **hybrid naming**: `{CodeValue}_{ShortName}`
+
+```python
+from para_files.taxonomies.models import ThemaTaxonomy
+
+taxonomy.build_para_path("UB")
+# → "3_Resources/livres/U_Informatique/UB_Programmation"
+```
+
+**Path format:** `3_Resources/livres/{L1_Code_ShortName}/{L2_Code_ShortName}`
+
+- Max 2 hierarchy levels after `livres/`
+- Accents removed (é→e, ç→c)
+- Descriptions shortened and sanitized
 
 ## Architecture
 

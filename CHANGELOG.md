@@ -11,7 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **THEMA book classification**: Book detector now uses official THEMA v1.6 international book classification
   - Replaces custom technology categories with standardized THEMA codes
-  - PARA paths now use THEMA hierarchy (e.g., `3_Resources/livres/Informatique/Génie logiciel`)
+  - PARA paths now use hybrid naming: `{CodeValue}_{ShortName}` (e.g., `3_Resources/livres/U_Informatique/UB_Programmation`)
+  - Max 2 hierarchy levels for cleaner paths
+  - Accents removed for filesystem compatibility (é→e, ç→c)
+- **Centralized filename sanitization**: New `filename_sanitizer.py` utility for all filename/path operations
+  - Handles all invalid characters: `, # " * : < > ? / \ |`
+  - Used by book detector, geolocation, and Thema path building
   - New `thema_lookup.py` service for subject-to-THEMA code mapping
   - Supports computing, business, and science subject mappings
   - Result includes `thema_code` in extracted_params for traceability

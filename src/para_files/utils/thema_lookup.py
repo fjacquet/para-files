@@ -23,9 +23,6 @@ logger = logging.getLogger(__name__)
 # Subject to THEMA Code Mappings
 # =============================================================================
 
-# Maximum description length for filesystem paths
-MAX_THEMA_DESC_LENGTH = 50
-
 COMPUTING_SUBJECT_MAP: dict[str, str] = {
     # General computing
     "computer science": "UY",
@@ -285,35 +282,13 @@ class ThemaLookup:
     def build_para_path(self, code: str) -> str:
         """Build PARA path from THEMA code.
 
-        Uses the code hierarchy to build a meaningful path.
-
         Args:
             code: THEMA code value.
 
         Returns:
-            PARA path like "3_Resources/livres/Informatique/Génie logiciel"
+            PARA path like "3_Resources/livres/U_Informatique/UB_Programmation"
         """
-        hierarchy = self.get_hierarchy(code)
-        if not hierarchy:
-            return "3_Resources/livres"
-
-        # Build path from hierarchy (use first 2-3 levels)
-        parts = ["3_Resources", "livres"]
-
-        for thema_code in hierarchy[:3]:
-            # Clean description for filesystem
-            desc = thema_code.CodeDescription
-            # Remove problematic characters
-            desc = desc.replace("/", "-").replace(":", "-").replace("&", "et")
-            desc = desc.replace("'", "").replace('"', "")
-            # Normalize spaces
-            desc = " ".join(desc.split())
-            # Truncate if too long
-            if len(desc) > MAX_THEMA_DESC_LENGTH:
-                desc = desc[: MAX_THEMA_DESC_LENGTH - 3] + "..."
-            parts.append(desc)
-
-        return "/".join(parts)
+        return self.taxonomy.build_para_path(code)
 
 
 # =============================================================================

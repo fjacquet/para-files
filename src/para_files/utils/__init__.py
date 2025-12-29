@@ -24,6 +24,13 @@ from para_files.utils.exiftool import (
     is_exiftool_available,
 )
 from para_files.utils.file_utils import extract_file_metadata, read_content_preview
+from para_files.utils.filename_sanitizer import (
+    INVALID_FILENAME_CHARS,
+    get_invalid_chars,
+    is_valid_filename,
+    sanitize_filename,
+    sanitize_path_component,
+)
 from para_files.utils.geolocation import (
     LocationInfo,
     get_location_folder,
@@ -74,13 +81,6 @@ from para_files.utils.pdf_metadata import (
     extract_pdf_metadata,
     is_book_creator,
 )
-from para_files.utils.filename_sanitizer import (
-    INVALID_FILENAME_CHARS,
-    get_invalid_chars,
-    is_valid_filename,
-    sanitize_filename,
-    sanitize_path_component,
-)
 from para_files.utils.validation import (
     validate_directory_exists,
     validate_file_exists,
@@ -92,10 +92,6 @@ __all__ = [
     "EXIF_EXTENSIONS",
     # Filename sanitization
     "INVALID_FILENAME_CHARS",
-    "get_invalid_chars",
-    "is_valid_filename",
-    "sanitize_filename",
-    "sanitize_path_component",
     # Cleanup
     "JUNK_DIRECTORIES",
     "JUNK_PATTERNS",
@@ -128,6 +124,7 @@ __all__ = [
     "extract_pdf_metadata",
     "find_associated_nfo",
     "get_default_log_path",
+    "get_invalid_chars",
     "get_location_folder",
     "get_nfo_hints_for_file",
     "get_pandoc_format",
@@ -137,6 +134,7 @@ __all__ = [
     "is_junk_directory",
     "is_junk_file",
     "is_pandoc_available",
+    "is_valid_filename",
     "is_vision_available",
     "isbn_to_isbn13",
     "lookup_isbn",
@@ -144,6 +142,8 @@ __all__ = [
     "parse_nfo",
     "read_content_preview",
     "reverse_geocode",
+    "sanitize_filename",
+    "sanitize_path_component",
     "scan_for_junk",
     "validate_directory_exists",
     "validate_file_exists",
