@@ -454,6 +454,24 @@ routing_rules:
     destination: "4_Archives/assurances-sinistres/{YYYY}"
     date_source: "file_modified"
 
+  # Dental invoices and appointments
+  # NOTE: Uses OCR content matching for scanned PDFs
+  factures_dentaires:
+    patterns:
+      [
+        "*[Dd]entaire*",
+        "*[Dd]entiste*",
+        "*[Cc]linident*",
+        "*[Pp]ermanence*[Dd]entaire*",
+        "*[Hh]onoraires*[Dd]ent*",
+        "*[Ss]oins*[Dd]entaires*",
+        "*[Oo]rthodont*",
+      ]
+    extensions: [".pdf", ".jpg", ".png"]
+    destination: "4_Archives/sante/dentaire/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
+
   # Health reimbursements
   sante_remboursement:
     patterns:
