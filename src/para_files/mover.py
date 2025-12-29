@@ -315,9 +315,7 @@ class FileMover:
         # CRITICAL SAFETY: Never delete if source and destination are the same file
         try:
             if source.resolve() == destination.resolve():
-                logger.warning(
-                    "SAFETY: Prevented deletion of source=destination: %s", source
-                )
+                logger.warning("SAFETY: Prevented deletion of source=destination: %s", source)
                 return MoveResult(
                     source=source,
                     destination=destination,

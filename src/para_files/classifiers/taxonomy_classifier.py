@@ -26,8 +26,6 @@ if TYPE_CHECKING:
     from para_files.taxonomies.models import DocumentCategory, DocumentType, Issuer
 
 
-
-
 def normalize_ocr_text(text: str) -> str:
     """Normalize OCR-corrupted text by collapsing isolated single characters.
 
@@ -59,6 +57,7 @@ def normalize_ocr_text(text: str) -> str:
 def _normalize_cached(text: str) -> str:
     """Cached version of normalize_ocr_text for performance."""
     return normalize_ocr_text(text)
+
 
 class TaxonomyClassifier(BaseClassifier):
     """Classifier using documents.json taxonomy for issuers and keywords.
@@ -95,9 +94,9 @@ class TaxonomyClassifier(BaseClassifier):
         """
         self._loader = loader or get_taxonomy_loader()
         self._issuer_cache: dict[str, tuple[Issuer, DocumentType, DocumentCategory]] | None = None
-        self._keyword_cache: (
-            dict[str, tuple[DocumentType, DocumentCategory, list[str]]] | None
-        ) = None
+        self._keyword_cache: dict[str, tuple[DocumentType, DocumentCategory, list[str]]] | None = (
+            None
+        )
 
     @property
     def name(self) -> str:

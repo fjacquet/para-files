@@ -168,7 +168,7 @@ class TestThemaTaxonomyBuildParaPath:
             }
         )
         result = taxonomy.build_para_path("X")
-        invalid_chars = [':', '/', '\\', '<', '>', '"', '|', '?', '*', '#', ',']
+        invalid_chars = [":", "/", "\\", "<", ">", '"', "|", "?", "*", "#", ","]
         # Skip the path separator /
         path_without_sep = result.replace("3_Resources/livres/", "")
         for char in invalid_chars:
