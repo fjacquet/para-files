@@ -2368,8 +2368,104 @@ routing_rules:
     destination: "4_Archives/documents/rapports/{YYYY}"
     date_source: "file_modified"
 
+  # =============================================================================
+  # ADMINISTRATIVE DOCUMENTS - Added 2025-12-29
+  # =============================================================================
+
+  # AVS (Swiss social security)
+  avs_documents:
+    patterns:
+      [
+        "*[Aa][Vv][Ss]*",
+        "*assurance*vieillesse*",
+        "*social*security*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/administratif/AVS/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # CAF (Family allowances - France)
+  caf_documents:
+    patterns:
+      [
+        "*[Cc][Aa][Ff]*",
+        "*allocations*familiales*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/administratif/CAF/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # =============================================================================
+  # TRAVEL AGENCIES - Added 2025-12-29
+  # =============================================================================
+
+  # Kuoni travel agency
+  kuoni_voyages:
+    patterns:
+      [
+        "*[Kk]uoni*",
+        "*DER*Touristik*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/voyages/Kuoni/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # =============================================================================
+  # INSURANCE PROVIDERS - Added 2025-12-29
+  # =============================================================================
+
+  # Pacifica Insurance (Crédit Agricole group)
+  pacifica_assurance:
+    patterns:
+      [
+        "*[Pp]acifica*",
+        "611[0-9]*_*.PDF",
+        "611[0-9]*_*.pdf",
+        "*AVIS*RENOUVELLEMENT*PACIFICA*",
+      ]
+    extensions: [".pdf", ".PDF"]
+    destination: "4_Archives/factures/Assurances/Pacifica/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Orion Legal Protection Insurance (protection juridique)
+  orion_assurance:
+    patterns:
+      [
+        "*[Oo]rion*[Pp]rivate*",
+        "*[Oo]rion*AVB*",
+        "*[Oo]rion*[Pp]rotection*",
+        "*[Pp]rotection*[Jj]uridique*[Oo]rion*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/Assurances/Orion/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # =============================================================================
+  # UTILITIES - Added 2025-12-29
+  # =============================================================================
+
+  # Water bills (Eau/Services des Eaux)
+  eau_factures:
+    patterns:
+      [
+        "*[Ee]au*[Ff]acture*",
+        "*[Ff]acture*[Ee]au*",
+        "*[Ss]ervices*[Ee]aux*",
+        "*[Ww]ater*[Bb]ill*",
+        "Eau SMA*",
+        "Eau*SIG*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/Energie/Eau/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
   # Numeric 8-digit bank refs
-  bank_numeric_refs:
     patterns:
       [
         "[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]_*.PDF",
@@ -2411,3 +2507,123 @@ routing_rules:
     destination: "4_Archives/scans/divers/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
+
+  # =============================================================================
+  # SERVICES - Added 2025-12-29
+  # =============================================================================
+
+  # 5àSec dry cleaning service
+  cinq_a_sec:
+    patterns:
+      [
+        "*5[àa][Ss]ec*",
+        "*ticket*5asec*",
+        "[Tt]icket [0-9]*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/Services/5aSec/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # DFi Service (IT hosting - Zimbra)
+  dfi_service:
+    patterns:
+      [
+        "*DFi*Service*",
+        "*zimbra*",
+        "HB20*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/Materiels/Informatique/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # =============================================================================
+  # TRAVEL COMPANIES - Added 2025-12-29
+  # =============================================================================
+
+  # Corsica Ferries
+  corsica_ferries:
+    patterns:
+      [
+        "*[Cc]orsica*[Ff]erries*",
+        "*[Cc]orsica*[Ss]ardinia*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/voyages/Corsica-Ferries/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # American Airlines
+  american_airlines:
+    patterns:
+      [
+        "*[Aa]merican*[Aa]irlines*",
+        "*AA*flight*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/voyages/American-Airlines/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # =============================================================================
+  # HOME & REAL ESTATE - Added 2025-12-29
+  # =============================================================================
+
+  # Tryba windows/doors warranty
+  tryba_garantie:
+    patterns:
+      [
+        "*[Tt]ryba*",
+        "*TRYBA*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/immobilier/Tryba/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Bleu Marine Immobilier (rental management)
+  bleu_marine_immobilier:
+    patterns:
+      [
+        "*[Bb]leu*[Mm]arine*",
+        "*CRG*DU*AU*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/immobilier/Bleu-Marine/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # =============================================================================
+  # PUBLICATIONS & MAGAZINES - Added 2025-12-29
+  # =============================================================================
+
+  # Editions Diamond (Linux Magazine, etc.)
+  editions_diamond:
+    patterns:
+      [
+        "*[Dd]iamond*",
+        "*[Ll]inux*[Mm]agazine*",
+        "*GNU*Linux*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/loisirs/magazines/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # =============================================================================
+  # KITCHEN APPLIANCES - Added 2025-12-29
+  # =============================================================================
+
+  # Ninja Kitchen appliances
+  ninja_kitchen:
+    patterns:
+      [
+        "*[Nn]inja*",
+        "*SharkNinja*",
+        "*Speedi*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/Materiels/Maison/Cuisine/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
