@@ -82,22 +82,29 @@ These folders contain files by year but should be organized by issuer:
 - Files like `GENEVE_CFF-BOURGES_*.pdf` or `PARIS_GARE_LYON-GENEVE_CFF_*.pdf`
 - **Decision needed**: Keep in SNCF (origin) or move to CFF?
 
-#### EasyPark folder contains Mobility file (1 file)
-- `Receipt_BI_1022743311.pdf` is a Mobility receipt
+#### EasyPark folder - VERIFIED CORRECT
+- `Receipt_BI_1022743311.pdf` is correctly an **EasyPark receipt**
+- Mentions "Mobility Hub Parkservice GmbH" as parking operator (NOT Mobility car-sharing)
 
-#### MOB folder contains CFF file (1 file)
-- `3100015203-1787806.pdf` is a CFF document
+#### MOB folder - CLEANED
+- `3100015203-1787806.pdf` is correctly a **MOB train ticket** (Montreux-Schönried)
+- Removed 3 CV files (CV.pdf, CV UK LAN.pdf, CV UK EMC.pdf) → moved to `2_Areas/carriere/CV/`
 
-### Energie Issues
+### Energie Issues - CORRECTED
 
-#### EDF folder contains GDF/ERDF files (3 files)
-- `Compte_23316454000_*` is GDF
-- `facture*` files are ERDF
+#### EDF folder contained misclassified bank statements (4 files)
+- `Compte_23316454000_*` files were **Crédit Agricole bank statements**, not GDF
+- Moved to `banques/Credit Agricole/{YYYY}`
+- `facture*` files are correctly EDF invoices
 
-### Assurances Issues
+#### GDF folder contained bank statement (1 file)
+- `Compte_23316454000_*` was Crédit Agricole, moved to `banques/Credit Agricole/2011`
 
-#### Maif folder contains Pacifica file (1 file)
-- `Compte_23316454000_*` should be in Pacifica
+### Assurances Issues - CORRECTED
+
+#### Maif folder contained bank statement (1 file)
+- `Compte_23316454000_*` was **Crédit Agricole bank statement**, not Pacifica
+- Moved to `banques/Credit Agricole/2013`
 
 ## Recommended Route Fixes
 
@@ -132,12 +139,12 @@ Current rules rely on filename patterns. Files with generic names like `Invoice_
 
 ## Action Items
 
-### Immediate Fixes (Move Files)
-1. [ ] Move 17 ByJuno files to CFF
-2. [ ] Move 1 EasyPark file to Mobility
-3. [ ] Move 1 MOB file to CFF
-4. [ ] Move 3 EDF files to correct folders (GDF, ERDF)
-5. [ ] Move 1 Maif file to Pacifica
+### Immediate Fixes (Move Files) - COMPLETED 2025-12-29
+1. [x] Move 17 ByJuno files to CFF ✓ (C00*_1_*.pdf → CFF/{YYYY})
+2. [x] EasyPark file verified ✓ (Receipt_BI_1022743311.pdf is correctly EasyPark, mentions "Mobility Hub" as parking operator)
+3. [x] MOB file verified ✓ (3100015203-1787806.pdf is correct MOB train ticket Montreux-Schönried)
+4. [x] Move 6 Crédit Agricole statements ✓ (Compte_23316454000_* files moved from EDF, GDF, Maif to banques/Credit Agricole/{YYYY})
+5. [x] Maif file corrected ✓ (was Crédit Agricole bank statement, not Pacifica)
 
 ### Route Updates Needed
 
