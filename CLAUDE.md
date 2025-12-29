@@ -281,3 +281,53 @@ uv run pytest -vv tests/
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
 - **[CHANGELOG.md](CHANGELOG.md)** - Version history
 - **[docs/](docs/)** - Complete user documentation
+
+## Claude Code Best Practices
+
+### Context is Everything
+
+Provide maximum context for best results:
+
+- Use **planning mode** before complex tasks
+- Reference sub-folder CLAUDE.md files for detailed context
+- Use `/add-dir` to include relevant directories
+- Keep context fresh with sub-agents for summarization
+
+### Available MCPs
+
+| MCP | Purpose |
+|-----|---------|
+| **Context7** | Documentation lookup for libraries |
+| **Serena** | Semantic code navigation and analysis |
+| **GitHub** | Repository operations via `gh` CLI |
+
+### When to Use Claude Code
+
+**Best for:**
+- Multi-step processes and complex refactors
+- Exploring/ramping up on codebases
+- Generating files requiring info from many sources
+- Running tests with feedback loops
+
+**Less ideal for:**
+- Single-line fixes (use direct editing)
+- One-step tasks in specific files
+
+### Effective Prompting
+
+1. **Plan first** - Use `/plan` or think through steps
+2. **Be specific** - Include file paths, function names, expected behavior
+3. **Provide examples** - Show good/bad outputs when relevant
+4. **Set acceptance criteria** - Define what "done" looks like
+
+### Sub-agents and Parallel Work
+
+- Use `git worktree` for parallel Claude Code instances on different branches
+- Spawn sub-agents for independent tasks
+- Let sub-agents summarize large contexts
+
+### Resources
+
+- [Claude Code Best Practices](https://www.anthropic.com/engineering/claude-code-best-practices)
+- [Mastering Claude Code (Video)](https://www.youtube.com/watch?v=6eBSHbLKuN0)
+- [Claude Code Commands Directory](https://claudecodecommands.directory)
