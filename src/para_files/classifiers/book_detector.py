@@ -70,6 +70,40 @@ FINANCIAL_EXCLUSION_PATTERNS = [
     re.compile(r"\bSOLDE\s+(A\s+NOUVEAU|EN\s+CHF|EN\s+EUR)\b", re.IGNORECASE),
     re.compile(r"CH\d{2}\s*\d{4}\s*\d{4}", re.IGNORECASE),  # Swiss IBAN pattern
     re.compile(r"\bCLEARING\s*:\s*\d+\b", re.IGNORECASE),  # Bank clearing number
+    # Visa/credit card statements
+    re.compile(r"\bVISA\b", re.IGNORECASE),
+    re.compile(r"\bMASTERCARD\b", re.IGNORECASE),
+    re.compile(r"\bCARTE\s+(DE\s+)?CR[EÉ]DIT\b", re.IGNORECASE),
+    # UBS specific patterns
+    re.compile(r"\bUBS\b", re.IGNORECASE),
+    re.compile(r"\bEXTRAIT\s+DE\s+COMPTE\b", re.IGNORECASE),
+]
+
+# Patterns that indicate tax/government documents (often have ISBN-like reference numbers)
+TAX_EXCLUSION_PATTERNS = [
+    re.compile(r"\bD[EÉ]CLARATION\s+(EN\s+LIGNE\s+)?(DE\s+|DES\s+)?REVENUS?\b", re.IGNORECASE),
+    re.compile(r"\bIMPOTS?\s+(SUR\s+)?(LE\s+)?REVENU\b", re.IGNORECASE),
+    re.compile(r"\bFORMULAIRE\s+2042\b", re.IGNORECASE),
+    re.compile(r"\bIR-Form-2042\b", re.IGNORECASE),
+    re.compile(r"\bAVIS\s+D.?IMPOSITION\b", re.IGNORECASE),
+    re.compile(r"\bimpots\.gouv\b", re.IGNORECASE),
+    re.compile(r"\bREVENU\s+FISCAL\b", re.IGNORECASE),
+    re.compile(r"\bTR[EÉ]SOR\s+PUBLIC\b", re.IGNORECASE),
+    re.compile(r"\bDGFIP\b", re.IGNORECASE),  # Direction Générale des Finances Publiques
+]
+
+# Patterns that indicate insurance documents
+INSURANCE_EXCLUSION_PATTERNS = [
+    re.compile(r"\bGROUPE\s+MUTUEL\b", re.IGNORECASE),
+    re.compile(r"\bGMA\b"),  # Case sensitive - GMA is specific
+    re.compile(r"\bASSURANCE\s+(MALADIE|SANT[EÉ])\b", re.IGNORECASE),
+    re.compile(r"\bREMBOURSEMENT\b", re.IGNORECASE),
+    re.compile(r"\bD[EÉ]COMPTE\s+(DE\s+)?PRESTATIONS?\b", re.IGNORECASE),
+    re.compile(r"\bZURICH\s+(ASSURANCE|INSURANCE)\b", re.IGNORECASE),
+    re.compile(r"\bAXA\s+(ASSURANCE|WINTERTHUR)?\b", re.IGNORECASE),
+    re.compile(r"\bSWICA\b", re.IGNORECASE),
+    re.compile(r"\bCSS\s+(ASSURANCE)?\b", re.IGNORECASE),
+    re.compile(r"\bHELSANA\b", re.IGNORECASE),
 ]
 
 # Patterns that indicate transport/travel documents (tickets with ID numbers that look like ISBNs)
@@ -148,6 +182,14 @@ def is_financial_document(content: str, filename: str) -> bool:
         "ubs",
         "postfinance",
         "raiffeisen",
+        "visa-",  # Visa card statements
+        "visa_",
+        "visebpp",
+        "extrait",
+        "décompte",
+        "decompte",
+        "avis-",
+        "0264",  # UBS account number prefix
     ]
     if any(pattern in filename_lower for pattern in financial_filename_patterns):
         return True
@@ -155,6 +197,74 @@ def is_financial_document(content: str, filename: str) -> bool:
     # Check content for financial patterns (need multiple matches to be sure)
     matches = sum(1 for pattern in FINANCIAL_EXCLUSION_PATTERNS if pattern.search(content))
     return matches >= MIN_FINANCIAL_PATTERN_MATCHES
+
+
+def is_tax_document(content: str, filename: str) -> bool:
+    """Check if document is a tax/government document that should be excluded from book detection.
+
+    Tax documents often contain reference numbers that look like ISBNs.
+
+    Args:
+        content: Text content to analyze.
+        filename: Filename to check.
+
+    Returns:
+        True if the document appears to be a tax document.
+    """
+    # Check filename patterns
+    filename_lower = filename.lower()
+    tax_filename_patterns = [
+        "declaration_en_ligne",
+        "déclaration_en_ligne",
+        "declaration_des_revenus",
+        "déclaration_des_revenus",
+        "ir-form",
+        "ir_form",
+        "2042",
+        "impot",
+        "impôt",
+        "avis_d_impot",
+        "avis_impot",
+    ]
+    if any(pattern in filename_lower for pattern in tax_filename_patterns):
+        return True
+
+    # Check content for tax patterns (single match is enough - these are specific)
+    return any(pattern.search(content) for pattern in TAX_EXCLUSION_PATTERNS)
+
+
+def is_insurance_document(content: str, filename: str) -> bool:
+    """Check if document is an insurance document that should be excluded from book detection.
+
+    Insurance documents (GMA, health insurance) often have reference numbers that look like ISBNs.
+
+    Args:
+        content: Text content to analyze.
+        filename: Filename to check.
+
+    Returns:
+        True if the document appears to be an insurance document.
+    """
+    # Check filename patterns
+    filename_lower = filename.lower()
+    insurance_filename_patterns = [
+        "gma-",
+        "gma_",
+        "groupe_mutuel",
+        "groupe-mutuel",
+        "assurance",
+        "remboursement",
+        "zurich",
+        "axa",
+        "swica",
+        "css",
+        "helsana",
+    ]
+    if any(pattern in filename_lower for pattern in insurance_filename_patterns):
+        return True
+
+    # Check content for insurance patterns (single match is enough - these are specific)
+    return any(pattern.search(content) for pattern in INSURANCE_EXCLUSION_PATTERNS)
 
 
 def is_transport_document(content: str, filename: str) -> bool:
@@ -396,6 +506,20 @@ class BookDetector(BaseClassifier):
         if is_financial_document(content, metadata.filename):
             logger.debug(
                 "Skipping book detection for financial document: %s", file_path.name
+            )
+            return None
+
+        # Exclude tax/government documents (reference numbers look like ISBNs)
+        if is_tax_document(content, metadata.filename):
+            logger.debug(
+                "Skipping book detection for tax document: %s", file_path.name
+            )
+            return None
+
+        # Exclude insurance documents (policy/claim numbers look like ISBNs)
+        if is_insurance_document(content, metadata.filename):
+            logger.debug(
+                "Skipping book detection for insurance document: %s", file_path.name
             )
             return None
 

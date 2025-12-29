@@ -173,6 +173,21 @@
           "paper_required": false
         },
         {
+          "sub_id": "dpe_diagnostics",
+          "name": "Diagnostics Immobiliers",
+          "para_pattern": "4_Archives/immobilier/diagnostics/{year}",
+          "examples": ["DPE", "Diagnostic de Performance Énergétique", "Diagnostic amiante", "Diagnostic plomb"],
+          "keywords": ["DPE", "Diagnostic de Performance Énergétique", "Diagnostic immobilier", "Performance énergétique", "Classe énergie", "Diagnostic amiante", "Diagnostic plomb", "Diagnostic électrique"],
+          "required_context": ["diagnostic", "immobilier", "énergie", "performance", "classe", "kWh/m²"],
+          "retention": "10_years",
+          "paper_required": false,
+          "issuers": [
+            {"name": "Diagamter", "patterns": ["Diagamter", "diagamter.com"]},
+            {"name": "DEKRA", "patterns": ["DEKRA", "dekra.fr"]},
+            {"name": "Qualiconsult", "patterns": ["Qualiconsult", "qualiconsult.com"]}
+          ]
+        },
+        {
           "sub_id": "energie_fluides",
           "name": "Énergie & Déchets",
           "para_pattern": "4_Archives/factures/Energie/{issuer}/{year}",
@@ -337,6 +352,16 @@
           "examples": ["Inscription ORP", "Décomptes indemnités", "Preuves de recherches d'emploi"],
           "keywords": ["Caisse de chômage", "ORP", "Indemnité", "Timbre"],
           "retention": "10_years",
+          "paper_required": false
+        },
+        {
+          "sub_id": "feuilles_heures",
+          "name": "Feuilles d'heures employés",
+          "para_pattern": "4_Archives/administratif/employes/heures/{year}",
+          "examples": ["Feuille d'heures mensuelle", "Timesheet", "Relevé d'heures travaillées"],
+          "keywords": ["Feuille d'heures", "Heures travaillées", "Timesheet", "Relevé heures", "Total heures"],
+          "required_context": ["heures", "travail", "employé", "travaillées", "mensuel", "semaine"],
+          "retention": "5_years",
           "paper_required": false
         }
       ]
@@ -719,6 +744,38 @@
           "paper_required": false,
           "issuers": [
             {"name": "5aSec", "patterns": ["5aSec", "5asec.ch"]}
+          ]
+        },
+        {
+          "sub_id": "formation_professionnelle",
+          "name": "Formations Professionnelles IT",
+          "para_pattern": "4_Archives/formations/certifications/{issuer}/{year}",
+          "examples": ["Certificate of Completion", "Training Badge", "Professional Certification"],
+          "keywords": ["Certificate of Completion", "Badge", "Credential", "Training", "Certified", "Professional Development"],
+          "required_context": ["training", "certification", "completed", "awarded", "credential", "badge"],
+          "retention": "permanent",
+          "paper_required": false,
+          "issuers": [
+            {"name": "Coursera", "patterns": ["Coursera", "coursera.org"]},
+            {"name": "LinkedIn Learning", "patterns": ["LinkedIn Learning", "linkedin.com/learning"]},
+            {"name": "Udemy", "patterns": ["Udemy", "udemy.com"]},
+            {"name": "Pluralsight", "patterns": ["Pluralsight", "pluralsight.com"]},
+            {"name": "O'Reilly", "patterns": ["O'Reilly", "oreilly.com"]},
+            {"name": "DataCamp", "patterns": ["DataCamp", "datacamp.com"]},
+            {"name": "Dell EMC", "patterns": ["Dell EMC", "Dell Technologies", "dell.com", "EMC Corporation"]},
+            {"name": "VMware", "patterns": ["VMware", "vmware.com", "Broadcom VMware"]},
+            {"name": "Red Hat", "patterns": ["Red Hat", "redhat.com"]},
+            {"name": "Microsoft", "patterns": ["Microsoft", "microsoft.com", "Microsoft Learn"]},
+            {"name": "AWS", "patterns": ["AWS", "Amazon Web Services", "aws.amazon.com", "AWS Training"]},
+            {"name": "Google Cloud", "patterns": ["Google Cloud", "cloud.google.com", "Google Cloud Skills Boost"]},
+            {"name": "Cisco", "patterns": ["Cisco", "cisco.com", "Cisco Networking Academy"]},
+            {"name": "Oracle", "patterns": ["Oracle", "oracle.com", "Oracle University"]},
+            {"name": "FalconStor", "patterns": ["FalconStor", "falconstor.com"]},
+            {"name": "Nutanix", "patterns": ["Nutanix", "nutanix.com", "Nutanix University"]},
+            {"name": "NetApp", "patterns": ["NetApp", "netapp.com"]},
+            {"name": "Pure Storage", "patterns": ["Pure Storage", "purestorage.com"]},
+            {"name": "Veeam", "patterns": ["Veeam", "veeam.com"]},
+            {"name": "Commvault", "patterns": ["Commvault", "commvault.com"]}
           ]
         }
       ]

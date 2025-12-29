@@ -664,3 +664,1648 @@ routing_rules:
     extensions: [".pem", ".gpg", ".key", ".crt", ".p12", ".pfx"]
     destination: "4_Archives/crypto/{YYYY}"
     date_source: "file_modified"
+
+  # Azure/Microsoft Cloud documentation
+  azure_documentation:
+    patterns:
+      [
+        "*[Aa]zure*",
+        "*[Mm]icrosoft*[Cc]loud*",
+        "*AVD*",
+        "*Azure*Virtual*Desktop*",
+        "*Azure*Stack*",
+        "*[Ee]ntra*",
+        "*[Ii]ntune*",
+        "*[Mm]365*",
+        "*Microsoft*365*",
+      ]
+    extensions: [".pdf", ".pptx", ".ppt", ".docx", ".doc", ".mp4", ".mov"]
+    destination: "3_Resources/docs/Microsoft-Azure/{YYYY}"
+    date_source: "file_modified"
+
+  # DevOps and Automation documentation
+  devops_documentation:
+    patterns:
+      [
+        "*[Dd]ev[Oo]ps*",
+        "*CI/CD*",
+        "*[Pp]ipeline*",
+        "*[Gg]it[Ll]ab*",
+        "*[Gg]it[Hh]ub*[Aa]ctions*",
+        "*[Jj]enkins*",
+        "*[Aa]rgo[Cc][Dd]*",
+        "*[Tt]erraform*",
+        "*[Pp]ulumi*",
+        "*[Aa]utomation*in*",
+        "*ENTERPRISE_DEVOPS*",
+      ]
+    extensions: [".pdf", ".pptx", ".ppt", ".docx", ".doc"]
+    destination: "3_Resources/docs/DevOps/{YYYY}"
+    date_source: "file_modified"
+
+  # Kubernetes and Containers documentation
+  kubernetes_documentation:
+    patterns:
+      [
+        "*[Kk]ubernetes*",
+        "*[Kk]8s*",
+        "*[Cc]ontainer*[Oo]rchestration*",
+        "*[Hh]elm*",
+        "*[Ii]stio*",
+        "*[Ss]ervice*[Mm]esh*",
+        "*[Pp]odman*",
+        "*[Dd]ocker*",
+        "*EKS*[Aa]nywhere*",
+        "*AKS*",
+        "*GKE*",
+      ]
+    extensions: [".pdf", ".pptx", ".ppt", ".docx", ".doc"]
+    destination: "3_Resources/docs/Kubernetes/{YYYY}"
+    date_source: "file_modified"
+
+  # CAMT.053 backup archives
+  camt_backups:
+    patterns:
+      [
+        "*CAMT053*",
+        "*camt.053*",
+        "*CAMT_files*",
+        "*camt053*",
+      ]
+    extensions: [".zip"]
+    destination: "4_Archives/banques/exports/camt-backups/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})-(\\d{2})-(\\d{2})"
+
+  # Risk Management documentation
+  risk_management:
+    patterns:
+      [
+        "*[Rr]isk*[Mm]anagement*",
+        "*[Rr]isk*[Aa]ssessment*",
+        "*[Gg]estion*[Rr]isques*",
+        "*riskmanagement*",
+      ]
+    extensions: [".pdf", ".pptx", ".ppt", ".key", ".docx"]
+    destination: "3_Resources/documentation/risk-management"
+    date_source: "file_modified"
+
+  # Infrastructure and Datacenter documentation
+  infrastructure_documentation:
+    patterns:
+      [
+        "*[Ii]nfrastructure*[Aa]s*[Cc]ode*",
+        "*[Dd]atacenter*",
+        "*[Dd]ata*[Cc]enter*",
+        "*[Ll]oad*[Bb]alancing*",
+        "*[Hh]igh*[Aa]vailability*",
+        "*[Dd]isaster*[Rr]ecovery*",
+        "*[Bb]right*[Cc]luster*",
+      ]
+    extensions: [".pdf", ".pptx", ".ppt", ".docx", ".doc"]
+    destination: "3_Resources/docs/Infrastructure/{YYYY}"
+    date_source: "file_modified"
+
+  # Feuilles d'heures employées (Patricia, Esther, Btisane)
+  feuilles_heures:
+    patterns:
+      [
+        "*[Ff]euille*[Hh]eures*",
+        "*[Ff]euille*d'heures*",
+        "*[Tt]imesheet*",
+        "*heures*Patricia*",
+        "*heures*Esther*",
+        "*heures*Btisane*",
+      ]
+    extensions: [".xlsx", ".xls", ".pdf", ".doc", ".docx"]
+    destination: "4_Archives/administratif/employes/heures/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})|(jan|fev|mar|avr|mai|juin|juil|aout|sept|oct|nov|dec)"
+
+  # CRG loyers Saint-Martin
+  crg_loyers:
+    patterns:
+      [
+        "CRG*DU*",
+        "*loyer*Saint*Martin*",
+        "*fermage*",
+        "*CRG*loyer*",
+      ]
+    extensions: [".pdf", ".doc", ".docx"]
+    destination: "4_Archives/immobilier/saint-martin/loyers/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{2})\\.(\\d{2})\\.(\\d{4})"
+
+  # DPE - Diagnostics de Performance Énergétique
+  dpe_diagnostics:
+    patterns:
+      [
+        "*[Dd]pe*",
+        "*[Dd]iagnostic*[Pp]erformance*",
+        "*[Dd]iagnostic*[Ee]nerg*",
+        "*[Dd]iagnostic*[Ii]mmobilier*",
+        "*-Pb-*",
+      ]
+    extensions: [".pdf", ".doc", ".docx"]
+    destination: "4_Archives/immobilier/diagnostics/{YYYY}"
+    date_source: "file_modified"
+
+  # Swisscom invoices (pattern Invoice_41010*)
+  swisscom_invoices:
+    patterns:
+      [
+        "Invoice_41010*",
+        "*Swisscom*[Ff]acture*",
+        "*Swisscom*[Ii]nvoice*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/Telephonie/Swisscom/{YYYY}"
+    date_source: "file_modified"
+
+  # Crédit Agricole bank statements (also Credit Suisse with Compte_ prefix)
+  credit_agricole:
+    patterns:
+      [
+        "Compte_*Relevé*",
+        "Compte_*Releve*",
+        "Compte_*Avis*",
+        "*Credit*Agricole*",
+        "*Crédit*Agricole*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/banques/Credit-Agricole/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # =============================================================================
+  # ADDITIONAL RULES - Added 2025-12-29 to fix resort folder misclassifications
+  # =============================================================================
+
+  # French tax declarations (impôts sur le revenu)
+  impots_declaration_revenus:
+    patterns:
+      [
+        "Declaration_en_ligne*",
+        "*Declaration*revenus*",
+        "*Déclaration*revenus*",
+        "IR-Form-2042*",
+        "IR-Form-*",
+        "*2042*impots*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/impots-france/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # GMA (Groupe Mutuel Assurances) - Swiss health insurance
+  gma_assurance:
+    patterns:
+      [
+        "gma-*",
+        "GMA-*",
+        "*Groupe*Mutuel*",
+        "*groupemutuel*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/assurances/Groupe-Mutuel/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
+
+  # Visa card statements
+  visa_statements:
+    patterns:
+      [
+        "visa-*",
+        "Visa-*",
+        "VISA-*",
+        "*visa*statement*",
+        "visebpp_*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/banques/Visa/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})(\\d{2})"
+
+  # URL-encoded bank statements (from email downloads)
+  # Matches: Relev_%20de%20Facturation, Relev_%20n_XXX
+  bank_statements_urlencoded:
+    patterns:
+      [
+        "Relev_%*",
+        "*%20Facturation%20*",
+        "*%20Avis%20*",
+        "*%20Décompte*",
+        "*E-Information%*",
+        "*E-Invitation%*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/banques/extraits/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # UBS fund/account documents (pattern: 0264* or similar account prefixes)
+  ubs_documents:
+    patterns:
+      [
+        "0264*",
+        "*UBS*",
+        "*Extrait*compte*fonds*",
+        "*Avis*Décompte*",
+        "*Décompte*transaction*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/banques/UBS/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Old OCR scan archives (personal scan archives)
+  ocr_scan_archives:
+    patterns:
+      [
+        "*-ocr.pdf",
+        "*_ocr.pdf",
+        "*.ocr.pdf",
+        "*-ocr copy.pdf",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/scans/archives"
+    date_source: "file_modified"
+
+  # Apple Store email receipts
+  apple_receipts:
+    patterns:
+      [
+        "emailreceipt_*",
+        "*Apple*receipt*",
+        "*apple*store*receipt*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/Apple/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
+
+  # Brack.ch invoices (Swiss electronics retailer)
+  brack_invoices:
+    patterns:
+      [
+        "brack-ch-*",
+        "*brack.ch*",
+        "*Brack*facture*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/Brack/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})-(\\d{2})-(\\d{2})"
+
+  # IT whitepapers and technical guides (NOT books)
+  it_whitepapers:
+    patterns:
+      [
+        "wp-guide-*",
+        "whitepaper-*",
+        "*-whitepaper.*",
+        "*best*practices*guide*",
+        "*-spec-sheet.*",
+        "*theory-of-ops*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/IT-Whitepapers"
+    date_source: "file_modified"
+
+  # Software purchase receipts (MobaXterm, etc.)
+  software_receipts:
+    patterns:
+      [
+        "*mobaxterm*",
+        "*Mobatek*",
+        "*-cable*apple*",
+        "*Quiet*Confort*",
+        "*Bose*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/Software/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Car maintenance documents
+  voiture_entretien:
+    patterns:
+      [
+        "*entretien*skoda*",
+        "*entretien*voiture*",
+        "*car*maintenance*",
+        "*pneus*",
+        "*garage*facture*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/vehicules/entretien/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Bleu Marine - agence immobilière
+  # NOTE: Must come BEFORE dated_receipts to match specific patterns first
+  bleu_marine_immobilier:
+    patterns:
+      [
+        "*[Bb]leu*[Mm]arine*",
+        "*[Bb]lue*[Mm]arine*",
+      ]
+    extensions: [".pdf", ".doc", ".docx", ".jpg", ".png"]
+    destination: "4_Archives/immobilier/Bleu-Marine/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
+
+  # Nautical/sailing documents (boats, marina)
+  loisirs_nautique:
+    patterns:
+      [
+        "*[Bb]ateau*",
+        "*[Vv]oilier*",
+        "*[Nn]autique*",
+        "*[Pp]ort*[Aa]marrage*",
+        "*[Mm]arina*",
+      ]
+    extensions: [".pdf", ".doc", ".docx", ".jpg", ".png"]
+    destination: "4_Archives/loisirs/nautisme/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
+
+  # French tax notices (IR = Income Tax, TF = Property Tax)
+  impots_avis:
+    patterns:
+      [
+        "IR-Avis-*",
+        "TF-Avis-*",
+        "*-acompte*impot*",
+        "*acompte*provision*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/impots-france/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Generic dated receipts (YYYYMMDD-description.pdf)
+  # NOTE: This is a catch-all rule - more specific patterns should come BEFORE this
+  dated_receipts:
+    patterns:
+      [
+        "20[0-2][0-9][0-1][0-9][0-3][0-9]-*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/divers/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
+
+  # Parking/event tickets
+  tickets_divers:
+    patterns:
+      [
+        "ticket *",
+        "Ticket *",
+        "ticket_*",
+        "Ticket_*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/tickets/{YYYY}"
+    date_source: "file_modified"
+
+  # Farm/agricultural business documents (EARL = Exploitation Agricole)
+  agriculture_earl:
+    patterns:
+      [
+        "EARL*",
+        "*-EARL*",
+        "*Fendt*",
+        "*Autochargeuse*",
+        "*[Tt]racteur*",
+        "*[Mm]oissonneuse*",
+        "*[Aa]gricole*",
+      ]
+    extensions: [".pdf", ".xlsx", ".xls", ".doc", ".docx"]
+    destination: "4_Archives/agriculture/contrats"
+    date_source: "file_modified"
+
+  # Course and certification tracking files
+  formations_tracking:
+    patterns:
+      [
+        "*[Cc]ours*[Cc]ertif*",
+        "*FJ-Cours*",
+        "*formation*tracking*",
+        "*training*log*",
+      ]
+    extensions: [".xlsx", ".xls", ".csv"]
+    destination: "3_Resources/certifications/tracking"
+    date_source: "file_modified"
+
+  # License keys and software licenses
+  license_keys_files:
+    patterns:
+      [
+        "*license*key*",
+        "*licence*key*",
+        "*License*Key*",
+        "License_Keys_*",
+        "*-license.*",
+        "*-licence.*",
+        "*.license",
+        "*.licence",
+      ]
+    extensions: [".csv", ".txt", ".rtf"]
+    destination: "3_Resources/licences/{YYYY}"
+    date_source: "file_modified"
+
+  # Year-month dated files (YYYYMM.pdf) - typically bank/salary statements
+  dated_monthly:
+    patterns:
+      [
+        "20[0-2][0-9][0-1][0-9].pdf",
+        "19[89][0-9][0-1][0-9].pdf",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/documents/mensuels/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})(\\d{2})"
+
+  # Generic document scans dated YYYYMMDD without description
+  dated_scans:
+    patterns:
+      [
+        "20[0-2][0-9][0-1][0-9][0-3][0-9].pdf",
+        "20[0-2][0-9][0-1][0-9][0-3][0-9].doc",
+      ]
+    extensions: [".pdf", ".doc"]
+    destination: "4_Archives/scans/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
+
+  # Unit AI/ML training modules (Dell/EMC training)
+  unit_training:
+    patterns:
+      [
+        "Unit*-*Summary*",
+        "Unit*-*Module*",
+        "*training*unit*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/formations/dell-emc/{YYYY}"
+    date_source: "file_modified"
+
+  # VMware customer/partner files (spreadsheets)
+  vmware_customers:
+    patterns:
+      [
+        "vmware*",
+        "VMware*",
+        "*vmware*.xlsx",
+      ]
+    extensions: [".xlsx", ".xls"]
+    destination: "4_Archives/travail/vmware/{YYYY}"
+    date_source: "file_modified"
+
+  # Acknowledgment receipts (accusé de réception)
+  accuse_reception:
+    patterns:
+      [
+        "*accusé*réception*",
+        "*accuse*reception*",
+        "*AR-*",
+        "AR *",
+        "AR_*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/correspondance/accuses/{YYYY}"
+    date_source: "file_modified"
+
+  # ZIP archives with personal backups
+  archives_personnelles:
+    patterns:
+      [
+        "*fredjacquet*",
+        "*e-documents*",
+        "*backup*",
+        "*sauvegarde*",
+      ]
+    extensions: [".zip", ".tar", ".gz", ".7z"]
+    destination: "4_Archives/sauvegardes/{YYYY}"
+    date_source: "file_modified"
+
+  # Professional recommendation letters (lettres accompagnatrices)
+  lettres_accompagnement:
+    patterns:
+      [
+        "*[Ll]ettre*[Aa]ccomp*",
+        "*[Ll]ettre*[Mm]otiv*",
+        "*[Cc]over*[Ll]etter*",
+        "*LettreAcc*",
+      ]
+    extensions: [".pdf", ".doc", ".docx"]
+    destination: "4_Archives/carriere/lettres/{YYYY}"
+    date_source: "file_modified"
+
+  # Virement/bank transfer documents
+  virements:
+    patterns:
+      [
+        "*virement*",
+        "*versement*",
+        "*transfer*bancaire*",
+      ]
+    extensions: [".pdf", ".odt", ".doc"]
+    destination: "4_Archives/banques/virements/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Travel/ferry bookings
+  voyage_reservations:
+    patterns:
+      [
+        "*[Tt]raghetti*",
+        "*[Ff]erry*",
+        "*[Rr]eservation*",
+        "*[Bb]ooking*",
+        "*[Ee]lba*",
+      ]
+    extensions: [".pdf", ".eml"]
+    destination: "4_Archives/voyages/reservations/{YYYY}"
+    date_source: "file_modified"
+
+  # House/property work documents
+  travaux_maison:
+    patterns:
+      [
+        "*travaux*maison*",
+        "*travaux*",
+        "*[Rr]enovation*",
+        "*[Cc]hantier*",
+        "*devis*travaux*",
+      ]
+    extensions: [".xlsx", ".xls", ".pdf", ".doc", ".odt"]
+    destination: "4_Archives/immobilier/travaux/{YYYY}"
+    date_source: "file_modified"
+
+  # Generic invoices (facture acquittée)
+  factures_acquittees:
+    patterns:
+      [
+        "*facture*acquittée*",
+        "*facture*acquitte*",
+        "*paid*invoice*",
+        "*invoice*paid*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/divers/{YYYY}"
+    date_source: "file_modified"
+
+  # Unigestion (bank/fund)
+  unigestion:
+    patterns:
+      [
+        "*[Uu]nigestion*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/banques/Unigestion/{YYYY}"
+    date_source: "file_modified"
+
+  # WordPress documentation
+  wordpress_docs:
+    patterns:
+      [
+        "*[Ww]ordpress*",
+        "*[Ww]p-*",
+      ]
+    extensions: [".pdf", ".doc"]
+    destination: "3_Resources/docs/WordPress"
+    date_source: "file_modified"
+
+  # NVIDIA GPU documentation
+  nvidia_documentation:
+    patterns:
+      [
+        "*[Nn]vidia*",
+        "*[Vv]gpu*",
+        "*[Gg]pu*packaging*",
+        "*[Gg]pu*licensing*",
+        "*[Cc]uda*",
+        "*[Tt]ensor*",
+      ]
+    extensions: [".pdf", ".pptx", ".psd"]
+    destination: "3_Resources/docs/NVIDIA/{YYYY}"
+    date_source: "file_modified"
+
+  # AI confirmation/disability documents
+  ai_confirmation:
+    patterns:
+      [
+        "*ai*confirmation*",
+        "*AI*confirmation*",
+        "*assurance*invalidité*",
+      ]
+    extensions: [".pdf", ".odt", ".doc"]
+    destination: "4_Archives/administratif/assurances-sociales/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # AVS/social security reimbursements
+  avs_remboursement:
+    patterns:
+      [
+        "*avs*remboursement*",
+        "*AVS*remboursement*",
+        "*caisse*compensation*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/administratif/assurances-sociales/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Pet-related documents (chien = dog)
+  animaux_documents:
+    patterns:
+      [
+        "*chien*",
+        "*dog*",
+        "*chat*",
+        "*cat*",
+        "*vétérinaire*",
+        "*veterinaire*",
+      ]
+    extensions: [".pdf", ".doc"]
+    destination: "4_Archives/animaux/{YYYY}"
+    date_source: "file_modified"
+
+  # Water/utilities cessation documents
+  resiliation_services:
+    patterns:
+      [
+        "*cessation*eau*",
+        "*résiliation*",
+        "*resiliation*",
+        "*fermeture*compte*",
+      ]
+    extensions: [".pdf", ".doc"]
+    destination: "4_Archives/administratif/resiliations/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Credit Suisse bank statements
+  credit_suisse_statements:
+    patterns:
+      [
+        "Compte_*_Relevé_*",
+        "Compte_*_Releve_*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/banques/Credit-Suisse/{YYYY}"
+    date_source: "filename"
+    date_pattern: "du_(\\d{2})_(\\d{2})_(\\d{4})"
+
+  # URL-encoded bank notifications
+  bank_notifications_encoded:
+    patterns:
+      [
+        "E-Information%20*",
+        "E-Invitation%20*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/banques/notifications/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
+
+  # Contracts and agreements
+  contrats_documents:
+    patterns:
+      [
+        "Contrat *",
+        "Contrat_*",
+        "*contrat*",
+        "Accord*",
+        "accord*",
+      ]
+    extensions: [".pdf", ".doc", ".docx"]
+    destination: "4_Archives/administratif/contrats/{YYYY}"
+    date_source: "file_modified"
+
+  # Acknowledgment receipts (AR- prefix)
+  ar_receipts:
+    patterns:
+      [
+        "AR-*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/administratif/accuses-reception/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
+
+  # Travel calendar events
+  travel_calendar:
+    patterns:
+      [
+        "*Genève*",
+        "*Geneva*",
+        "*reservation*train*",
+        "*train*reservation*",
+      ]
+    extensions: [".ics"]
+    destination: "4_Archives/voyages/calendrier/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})-(\\d{2})-(\\d{2})"
+
+  # Agricultural equipment (tractors)
+  materiel_agricole:
+    patterns:
+      [
+        "*[Ff]endt*",
+        "*[Mm]assey*[Ff]erguson*",
+        "*MF[0-9]*",
+        "*tracteur*",
+        "*[Aa]utochargeuse*",
+      ]
+    extensions: [".pdf", ".xlsx", ".doc"]
+    destination: "3_Resources/agriculture/materiel"
+
+  # Factures diverses (catch-all for FACTURE prefix)
+  factures_diverses:
+    patterns:
+      [
+        "FACTURE*",
+        "FACTURE_*",
+      ]
+    extensions: [".pdf", ".PDF"]
+    destination: "4_Archives/factures/divers/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Tax documents with year patterns
+  impots_divers:
+    patterns:
+      [
+        "*-impot*",
+        "*-impots*",
+        "*impot*.pdf",
+        "*impots*.pdf",
+        "*tiers*impot*",
+        "*tiers*.pdf",
+        "*remboursement*impots*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/impots-france/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Training materials and certifications
+  formations_certifications:
+    patterns:
+      [
+        "*[Cc]ertificat*",
+        "*[Cc]ertification*",
+        "*cours_*",
+        "*[Tt]raining*",
+        "ReviewerCertificate*",
+      ]
+    extensions: [".pdf", ".zip"]
+    destination: "3_Resources/formations/{YYYY}"
+    date_source: "file_modified"
+
+  # Data Science and Analytics documentation
+  data_science_docs:
+    patterns:
+      [
+        "*[Dd]ata*[Ss]cience*",
+        "*[Bb]ig*[Dd]ata*",
+        "*[Aa]nalytics*",
+        "*[Mm]achine*[Ll]earning*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/Data-Science"
+
+  # EARL farm documents (agriculture)
+  earl_documents:
+    patterns:
+      [
+        "EARL*",
+        "*EARL*",
+      ]
+    extensions: [".pdf", ".xlsx", ".doc", ".docx"]
+    destination: "3_Resources/agriculture/exploitations"
+
+  # Asbestos and property documents
+  amiante_documents:
+    patterns:
+      [
+        "*[Aa]miante*",
+        "*[Dd]iagnostic*[Ii]mmobilier*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/immobilier/diagnostics"
+
+  # Insurance attestations
+  attestation_assurance:
+    patterns:
+      [
+        "Attestation_*",
+        "*[Aa]ttestation*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/assurances/attestations/{YYYY}"
+    date_source: "file_modified"
+
+  # Catalog/product documentation
+  catalog_docs:
+    patterns:
+      [
+        "*[Cc]atalog*",
+        "*[Cc]atalogue*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/catalogues"
+
+  # FAQ and guides
+  faq_guides:
+    patterns:
+      [
+        "FAQ*",
+        "*FAQ*",
+        "*[Gg]uide*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/guides"
+
+  # Sales/marketing documents
+  sales_documents:
+    patterns:
+      [
+        "*[Ss]ales*[Gg]uide*",
+        "*[Ss]urvival*[Gg]uide*",
+        "*[Pp]resentation*",
+        "*[Ww]ebinar*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/sales"
+
+  # Conditions générales
+  conditions_generales:
+    patterns:
+      [
+        "*[Cc]onditions*[Gg][eé]n[eé]rales*",
+        "*CGV*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/legal"
+
+  # Courrier/letters
+  courrier_documents:
+    patterns:
+      [
+        "Courrier*",
+        "courrier*",
+        "*[Ll]ettre*",
+      ]
+    extensions: [".pdf", ".doc", ".docx"]
+    destination: "4_Archives/administratif/courriers/{YYYY}"
+    date_source: "file_modified"
+
+  # Activities and events
+  activites_evenements:
+    patterns:
+      [
+        "Activites_*",
+        "Activités_*",
+        "*[Pp]rintemps*",
+        "*[Ee]te*",
+        "*[Aa]utomne*",
+        "*[Hh]iver*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/loisirs/activites/{YYYY}"
+    date_source: "file_modified"
+
+  # VMware/ESXi documentation
+  vmware_documentation:
+    patterns:
+      [
+        "*[Ee][Ss][Xx]i*",
+        "*[Vv][Mm]ware*",
+        "*[Vv][Ss]phere*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/VMware"
+
+  # Bordeaux travel documents
+  bordeaux_travel:
+    patterns:
+      [
+        "*[Bb]ordeaux*",
+      ]
+    extensions: [".pdf", ".doc"]
+    destination: "4_Archives/voyages/France/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # DDEA/administrative documents
+  ddea_documents:
+    patterns:
+      [
+        "DDEA*",
+        "*[Dd]eclaration*[Aa]gricole*",
+      ]
+    extensions: [".pdf", ".doc", ".docx"]
+    destination: "4_Archives/administratif/agriculture"
+
+  # Single-page misc scans (W1, W2, W3, etc.)
+  misc_scans_numbered:
+    patterns:
+      [
+        "W[0-9].pdf",
+        "W[0-9][0-9].pdf",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/scans/divers"
+
+  # Year-only PDF scans (####.pdf)
+  year_only_scans:
+    patterns:
+      [
+        "[12][09][0-9][0-9].pdf",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/scans/archives/{YYYY}"
+    date_source: "filename"
+    date_pattern: "^(\\d{4})\\.pdf$"
+
+  # Dok_ prefix documents (German?)
+  dok_documents:
+    patterns:
+      [
+        "Dok_*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/documents/divers/{YYYY}"
+    date_source: "file_modified"
+
+  # OCR scan variants (copies, numbered)
+  ocr_scans_variants:
+    patterns:
+      [
+        "*-ocr_*.pdf",
+        "*-ocr copie.pdf",
+        "*-ocr copie*.pdf",
+        "*.ocr copy.pdf",
+        "*_2-ocr.pdf",
+        "*_2.pdf",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/scans/archives/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Generic numeric scans (YYYYMMDDHHMMSS pattern)
+  numeric_scans:
+    patterns:
+      [
+        "[12][09][0-9][0-9][01][0-9][0-3][0-9][0-9][0-9][0-9][0-9][0-9][0-9]*.pdf",
+        "[12][09][0-9][0-9][01][0-9][0-3][0-9][0-9][0-9][0-9][0-9][0-9][0-9]*.doc",
+      ]
+    extensions: [".pdf", ".doc"]
+    destination: "4_Archives/scans/divers/{YYYY}"
+    date_source: "filename"
+    date_pattern: "^(\\d{4})"
+
+  # Remboursements (reimbursements)
+  remboursements_divers:
+    patterns:
+      [
+        "*remboursement*",
+        "*rembours*",
+      ]
+    extensions: [".pdf", ""]
+    destination: "4_Archives/administratif/remboursements/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
+
+  # ETI and middleware docs
+  middleware_docs:
+    patterns:
+      [
+        "*-eti*",
+        "*middleware*",
+        "*-iac*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/IT-Technical"
+
+  # Transaction/reference numbers (long numeric IDs)
+  transaction_refs:
+    patterns:
+      [
+        "[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-*",
+        "*[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].pdf",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/documents/transactions/{YYYY}"
+    date_source: "file_modified"
+
+  # SIEAPAC and utility documents
+  sieapac_docs:
+    patterns:
+      [
+        "*SIEAPAC*",
+        "*Controle*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/administratif/services-publics/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})(\\d{2})"
+
+  # Reka travel vouchers
+  reka_docs:
+    patterns:
+      [
+        "*[Rr]eka*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/voyages/reka/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})(\\d{2})"
+
+  # Professional licenses/certifications
+  professional_licenses:
+    patterns:
+      [
+        "*_professional_license*",
+        "*_license*",
+        "*LRT[0-9]*license*",
+      ]
+    extensions: [".zip", ".pdf"]
+    destination: "3_Resources/formations/licenses/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})-(\\d{2})-(\\d{2})"
+
+  # Software orders
+  software_orders:
+    patterns:
+      [
+        "*Order*Information*",
+        "*order*software*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/logiciels/{YYYY}"
+    date_source: "file_modified"
+
+  # HP/tech reference docs
+  hp_technical_docs:
+    patterns:
+      [
+        "[0-9A-Z][0-9A-Z][0-9A-Z][0-9]-*",
+        "4AA*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/HP-Technical"
+
+  # Accusé de réception with numbers (handles NFD encoding - use ASCII only)
+  accuse_reception_variants:
+    patterns:
+      [
+        "Accuse*de*reception*",
+        "Accuse*reception*",
+        "AR*reception*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/administratif/accuses-reception/{YYYY}"
+    date_source: "file_modified"
+
+  # Programming/algorithm books
+  programming_books:
+    patterns:
+      [
+        "*[Aa]lgorithm*",
+        "*[Pp]rogramming*",
+        "*[Pp]rogrammation*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/livres/informatique"
+
+  # Travel ICS calendar files
+  travel_ics_files:
+    patterns:
+      [
+        "* - [0-9][0-9][0-9][0-9]-*",
+        "*Cornavin*",
+        "*[Gg]enève*",
+        "*[Gg]eneva*",
+      ]
+    extensions: [".ics"]
+    destination: "4_Archives/voyages/calendrier/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})-(\\d{2})-(\\d{2})"
+
+  # Git/tech cheat sheets
+  cheat_sheets:
+    patterns:
+      [
+        "*[Cc]heat*[Ss]heet*",
+        "*[Rr]eference*[Cc]ard*",
+        "*[Qq]uick*[Rr]eference*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/cheat-sheets"
+
+  # Gaec farm cooperatives
+  gaec_documents:
+    patterns:
+      [
+        "Gaec*",
+        "GAEC*",
+      ]
+    extensions: [".pdf", ".xlsx"]
+    destination: "3_Resources/agriculture/exploitations"
+
+  # Gartner reports
+  gartner_reports:
+    patterns:
+      [
+        "*[Gg]artner*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/analyst-reports/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Invoice patterns
+  invoice_generic:
+    patterns:
+      [
+        "Invoice-*",
+        "invoice_*",
+        "Invoice_*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/divers/{YYYY}"
+    date_source: "file_modified"
+
+  # CV/resume documents
+  cv_documents:
+    patterns:
+      [
+        "*JACQUET*Frederic*",
+        "*Jacquet*Frederic*",
+        "*_FR_DC*",
+        "*_FR_FC*",
+      ]
+    extensions: [".doc", ".docx", ".pdf"]
+    destination: "2_Areas/carriere/CV"
+
+  # Marriage documents
+  mariage_documents:
+    patterns:
+      [
+        "*[Mm]ariage*",
+        "*[Ww]edding*",
+      ]
+    extensions: [".pdf", ".doc"]
+    destination: "4_Archives/famille/mariage"
+
+  # Note de frais (expense reports)
+  notes_frais:
+    patterns:
+      [
+        "*[Nn]ote*[Ff]rais*",
+        "*[Ee]xpense*",
+      ]
+    extensions: [".xls", ".xlsx", ".pdf"]
+    destination: "4_Archives/administratif/notes-frais/{YYYY}"
+    date_source: "file_modified"
+
+  # Destination travel documents (city names)
+  travel_destinations:
+    patterns:
+      [
+        "*[Cc]aire*",
+        "*[Ll]ucca*",
+        "*[Ff]lorence*",
+        "*[Rr]ome*",
+        "*[Pp]aris*",
+        "*[Ll]ondon*",
+        "*[Nn]ew*[Zz]ealand*",
+        "*NZ[0-9]*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/voyages/international/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # KM test documents
+  km_documents:
+    patterns:
+      [
+        "KM*TEST*",
+        "KM*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/vehicules/kilometrage/{YYYY}"
+    date_source: "file_modified"
+
+  # Email store files
+  email_files:
+    patterns:
+      [
+        "*Kolor*Store*",
+        "*.eml",
+      ]
+    extensions: [".eml"]
+    destination: "4_Archives/emails/{YYYY}"
+    date_source: "file_modified"
+
+  # Loi/legal documents
+  legal_documents:
+    patterns:
+      [
+        "*[Ll]oi*",
+        "*[Pp]rotection*[Dd]onn[eé]es*",
+        "*[Mm]odalit[eé]s*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/legal"
+
+  # Manager evaluation
+  evaluation_documents:
+    patterns:
+      [
+        "*[Ee]valuation*",
+        "*[Aa]ssessment*",
+      ]
+    extensions: [".pdf", ".doc", ".xlsx"]
+    destination: "2_Areas/carriere/evaluations/{YYYY}"
+    date_source: "file_modified"
+
+  # Mandat/mandate documents
+  mandat_documents:
+    patterns:
+      [
+        "*[Mm]andat*",
+        "*[Pp]rocuration*",
+      ]
+    extensions: [".pdf", ".doc", ".docx"]
+    destination: "4_Archives/administratif/mandats/{YYYY}"
+    date_source: "file_modified"
+
+  # LIBRE documents
+  libre_documents:
+    patterns:
+      [
+        "LIBRE*",
+        "*courrier*libre*",
+      ]
+    extensions: [".pdf", ".doc"]
+    destination: "4_Archives/administratif/courriers/{YYYY}"
+    date_source: "file_modified"
+
+  # La martinoise farm
+  martinoise_documents:
+    patterns:
+      [
+        "*[Mm]artinoise*",
+      ]
+    extensions: [".pdf", ".xlsx"]
+    destination: "3_Resources/agriculture/exploitations"
+
+  # Marie documents (family)
+  marie_family:
+    patterns:
+      [
+        "Marie*",
+      ]
+    extensions: [".pdf", ".xlsx"]
+    destination: "4_Archives/famille/famille"
+
+  # Plan documents
+  plan_documents:
+    patterns:
+      [
+        "Plan*",
+        "*[Pp]lan*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/immobilier/plans"
+
+  # Partner GTMK documents
+  partner_gtmk:
+    patterns:
+      [
+        "*Partner*GTMK*",
+        "*GTMK*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/partner-materials"
+
+  # InfiniBand documentation
+  infiniband_docs:
+    patterns:
+      [
+        "*[Ii]nfini[Bb]and*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/networking"
+
+  # Implementation Engineer certifications
+  implementation_engineer:
+    patterns:
+      [
+        "*Implementation*Engineer*",
+        "*Specialist*",
+      ]
+    extensions: [".zip", ".pdf"]
+    destination: "3_Resources/formations/certifications"
+
+  # IDRAC documentation
+  idrac_docs:
+    patterns:
+      [
+        "*IDRAC*",
+        "*iDRAC*",
+      ]
+    extensions: [".pdf", ".csv"]
+    destination: "3_Resources/docs/Dell-Server"
+
+  # Formulaire documents
+  formulaire_docs:
+    patterns:
+      [
+        "Formulaire*",
+        "*formulaire*",
+      ]
+    extensions: [".doc", ".pdf"]
+    destination: "4_Archives/administratif/formulaires/{YYYY}"
+    date_source: "file_modified"
+
+  # GE Menu documents
+  ge_menu:
+    patterns:
+      [
+        "GE_*",
+        "*_GSB_*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/divers"
+
+  # Glossary documents
+  glossary_docs:
+    patterns:
+      [
+        "*[Gg]lossary*",
+        "*[Gg]lossaire*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/references"
+
+  # HFR documents (hospital/medical)
+  hfr_documents:
+    patterns:
+      [
+        "HFR-*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/sante/HFR/{YYYY}"
+    date_source: "file_modified"
+
+  # INFO documents
+  info_documents:
+    patterns:
+      [
+        "INFOS*",
+        "*PRECONTRACTUELLES*",
+      ]
+    extensions: [".doc", ".pdf"]
+    destination: "4_Archives/administratif/informations/{YYYY}"
+    date_source: "file_modified"
+
+  # Osprey military history books
+  osprey_books:
+    patterns:
+      [
+        "Osprey*",
+        "*Warrior*[0-9]*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/livres/histoire-militaire"
+
+  # SG documents (Société Générale?)
+  sg_documents:
+    patterns:
+      [
+        "sg[0-9]*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/banques/divers/{YYYY}"
+    date_source: "file_modified"
+
+  # S-number documents
+  s_number_docs:
+    patterns:
+      [
+        "s[0-9]-*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/documents/divers/{YYYY}"
+    date_source: "file_modified"
+
+  # SPDX license documents
+  spdx_docs:
+    patterns:
+      [
+        "spdx-*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/legal"
+
+  # Royal TSX documentation
+  royal_tsx:
+    patterns:
+      [
+        "*[Rr]oyal*[Tt][Ss][Xx]*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/logiciels"
+
+  # VM series spec sheets
+  vm_series:
+    patterns:
+      [
+        "vm-series*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/VMware"
+
+  # vGPU documentation
+  vgpu_docs:
+    patterns:
+      [
+        "*vGPU*",
+        "*[Vv]irtual*GPU*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/NVIDIA"
+
+  # Twonky media server
+  twonky_docs:
+    patterns:
+      [
+        "*[Tt]wonky*",
+      ]
+    extensions: [".txt", ".pdf"]
+    destination: "3_Resources/docs/logiciels"
+
+  # Total ventes (sales totals)
+  total_ventes:
+    patterns:
+      [
+        "*total*ventes*",
+        "*ventes*total*",
+      ]
+    extensions: [".xlsx", ".xls"]
+    destination: "4_Archives/comptabilite/ventes/{YYYY}"
+    date_source: "file_modified"
+
+  # Test documents
+  test_documents:
+    patterns:
+      [
+        "test.pdf",
+        "test_*.pdf",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/documents/tests"
+
+  # Exam materials
+  exam_materials:
+    patterns:
+      [
+        "*[Ee]xam*",
+        "*3V0-*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/formations/examens"
+
+  # Research papers (nsdi, academic)
+  research_papers:
+    patterns:
+      [
+        "nsdi*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/research-papers"
+
+  # Depigny farm documents
+  depigny_documents:
+    patterns:
+      [
+        "Depigny*",
+      ]
+    extensions: [".pdf", ".xlsx"]
+    destination: "3_Resources/agriculture/exploitations"
+
+  # Fichier scans
+  fichier_scans:
+    patterns:
+      [
+        "Fichier*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/scans/divers/{YYYY}"
+    date_source: "file_modified"
+
+  # Hautin farm documents
+  hautin_documents:
+    patterns:
+      [
+        "Hautin*",
+      ]
+    extensions: [".pdf", ".xlsx"]
+    destination: "3_Resources/agriculture/exploitations"
+
+  # AMN scans
+  amn_scans:
+    patterns:
+      [
+        "*AMN*",
+        "=AMN*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/scans/divers/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
+
+  # Notre Dame documents
+  notre_dame:
+    patterns:
+      [
+        "*Notre*Dame*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/voyages/France/{YYYY}"
+    date_source: "file_modified"
+
+  # RE- prefix receipts
+  re_receipts:
+    patterns:
+      [
+        "RE-*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/divers/{YYYY}"
+    date_source: "file_modified"
+
+  # List/Report documents
+  list_reports:
+    patterns:
+      [
+        "*List*Report*",
+        "*Report*List*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/documents/rapports/{YYYY}"
+    date_source: "file_modified"
+
+  # Numeric 8-digit bank refs
+  bank_numeric_refs:
+    patterns:
+      [
+        "[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]_*.PDF",
+        "[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]_*.PDF",
+      ]
+    extensions: [".pdf", ".PDF"]
+    destination: "4_Archives/banques/divers/{YYYY}"
+    date_source: "file_modified"
+
+  # F2E4/GUID based scans
+  guid_scans:
+    patterns:
+      [
+        "F2E4*",
+        "*-*-*-*-*_*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/scans/divers/{YYYY}"
+    date_source: "file_modified"
+
+  # FA prefix receipts
+  fa_receipts:
+    patterns:
+      [
+        "#FA*",
+        "FA[0-9]*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/divers/{YYYY}"
+    date_source: "file_modified"
+
+  # 007 prefix scans
+  prefix_007_scans:
+    patterns:
+      [
+        "007_*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/scans/divers/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
