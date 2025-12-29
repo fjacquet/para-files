@@ -840,6 +840,90 @@ routing_rules:
     destination: "4_Archives/factures/Telephonie/Swisscom/{YYYY}"
     date_source: "file_modified"
 
+  # =============================================================================
+  # TRANSPORT & MOBILITY RULES - Added 2025-12-29
+  # =============================================================================
+
+  # CFF/SBB invoices - Pattern C00*_1_*.pdf (prevents ByJuno confusion)
+  # These are monthly rail invoices, NOT ByJuno payment confirmations
+  cff_invoices:
+    patterns:
+      [
+        "C00*_1_*.pdf",
+        "*CFF*[Ff]acture*",
+        "*CFF*[Ii]nvoice*",
+        "*SBB*[Ff]acture*",
+        "*SBB*[Ii]nvoice*",
+        "*[Cc]hemins*[Ff]er*[Ff]édéraux*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/Mobilité/CFF/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
+
+  # Mobility car-sharing receipts
+  mobility_receipts:
+    patterns:
+      [
+        "Receipt_BI_*.pdf",
+        "*Mobility*[Rr]eceipt*",
+        "*Mobility*[Ff]acture*",
+        "*Mobility*[Qq]uittung*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/Mobilité/Mobility/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
+
+  # =============================================================================
+  # ENERGY RULES - Added 2025-12-29 (GDF/ERDF separate from EDF)
+  # =============================================================================
+
+  # GDF (Gaz de France) invoices - must be before EDF rule
+  gdf_invoices:
+    patterns:
+      [
+        "*GDF*[Ff]acture*",
+        "*GDF*[Ii]nvoice*",
+        "*Gaz*[Ff]rance*",
+        "*GRDF*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/Energie/GDF/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # ERDF (now Enedis) invoices - must be before EDF rule
+  erdf_invoices:
+    patterns:
+      [
+        "*ERDF*",
+        "*Enedis*",
+        "*enedis*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/Energie/ERDF/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # =============================================================================
+  # UPC CABLECOM RULES - Added 2025-12-29
+  # =============================================================================
+
+  # UPC Cablecom / UPC Suisse invoices
+  upc_invoices:
+    patterns:
+      [
+        "*UPC*[Ff]acture*",
+        "*UPC*[Ii]nvoice*",
+        "*[Cc]ablecom*",
+        "*upc*suisse*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/Telephonie/UPC/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{2})[./](\\d{2})[./](\\d{4})"
+
   # Crédit Agricole bank statements (also Credit Suisse with Compte_ prefix)
   credit_agricole:
     patterns:
