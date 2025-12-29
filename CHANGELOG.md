@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **THEMA book classification**: Book detector now uses official THEMA v1.6 international book classification
+  - Replaces custom technology categories with standardized THEMA codes
+  - PARA paths now use THEMA hierarchy (e.g., `3_Resources/livres/Informatique/Génie logiciel`)
+  - New `thema_lookup.py` service for subject-to-THEMA code mapping
+  - Supports computing, business, and science subject mappings
+  - Result includes `thema_code` in extracted_params for traceability
 - **New routing categories**:
   - `billets_avion` - Flight tickets with airline issuers (Swiss, Lufthansa, etc.)
   - `documents_voyage` - Travel documents (ESTA, Visa applications)

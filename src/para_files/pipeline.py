@@ -86,13 +86,8 @@ class ClassificationPipeline:
             self._classifiers.append(rules_engine)
 
         # Signal 2: Book Detector (92%, 100% with ISBN)
-        # Technologies from routing_rules or defaults
-        technologies = self._get_known_technologies()
-        book_detector = BookDetector(
-            technologies=technologies,
-            enable_isbn_lookup=True,
-            base_pattern="3_Resources/livres/{technology}",
-        )
+        # Now uses THEMA classification codes for book categorization
+        book_detector = BookDetector(enable_isbn_lookup=True)
         self._classifiers.append(book_detector)
 
         # Signal 3: Taxonomy Classifier (90%) - Issuers + keywords from documents.json

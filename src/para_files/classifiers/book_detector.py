@@ -21,14 +21,14 @@ from para_files.types import (
     Confidence,
     FileMetadata,
 )
-from para_files.utils.isbn_lookup import BookInfo, infer_technology_from_subjects, lookup_isbn
+from para_files.utils.isbn_lookup import BookInfo, lookup_isbn
 from para_files.utils.pdf_metadata import (
     PdfMetadata,
     contains_book_keywords,
     extract_pdf_metadata,
     is_book_creator,
 )
-from para_files.utils.technology_extractor import TechnologyExtractor
+from para_files.utils.thema_lookup import ThemaLookup, get_thema_lookup
 
 
 logger = logging.getLogger(__name__)
@@ -278,19 +278,18 @@ class BookDetector(BaseClassifier):
         technologies: list[str] | None = None,
         *,
         enable_isbn_lookup: bool = True,
-        base_pattern: str = "3_Resources/livres/{technology}",
+        thema_lookup: ThemaLookup | None = None,
     ) -> None:
         """Initialize the book detector.
 
         Args:
-            technologies: List of known technology categories for matching.
+            technologies: Deprecated, kept for compatibility. Use THEMA codes instead.
             enable_isbn_lookup: Whether to call ISBN lookup API.
-            base_pattern: Base path pattern for book classification.
+            thema_lookup: Optional ThemaLookup instance. If None, uses global instance.
         """
-        self._technologies = technologies or []
+        self._technologies = technologies or []  # Kept for compatibility
         self._enable_isbn_lookup = enable_isbn_lookup
-        self._base_pattern = base_pattern
-        self._tech_extractor = TechnologyExtractor(technologies=self._technologies)
+        self._thema_lookup = thema_lookup or get_thema_lookup()
 
     @property
     def name(self) -> str:
@@ -307,16 +306,20 @@ class BookDetector(BaseClassifier):
         """Return default confidence (92%)."""
         return 0.92
 
-    def _detect_technology(
+    def _detect_thema_code(  # noqa: C901, PLR0911
         self,
         content: str,
         book_info: BookInfo | None,
         pdf_meta: PdfMetadata | None,
         filename: str = "",
     ) -> str | None:
-        """Detect technology category from available information.
+        """Detect THEMA classification code from available information.
 
-        Tries multiple sources in order of reliability.
+        Tries multiple sources in order of reliability:
+        1. ISBN subjects (most reliable - from publisher metadata)
+        2. PDF subject field
+        3. Book title/description
+        4. Filename keywords
 
         Args:
             content: Book content.
@@ -325,35 +328,50 @@ class BookDetector(BaseClassifier):
             filename: Filename for pattern-based detection.
 
         Returns:
-            Technology category or None.
+            THEMA code (e.g., "UMZ") or None.
         """
-        # Try filename pattern matching first (fast path)
-        if filename:
-            tech = self._tech_extractor.extract_from_filename(filename)
-            if tech:
-                logger.debug("Detected technology from filename: %s", tech)
-                return tech
-
-        # Try ISBN subjects (most reliable for content)
+        # Try ISBN subjects first (most reliable - from publisher)
         if book_info and book_info.subjects:
-            tech = infer_technology_from_subjects(book_info.subjects, self._technologies)
-            if tech:
-                logger.debug("Detected technology from ISBN subjects: %s", tech)
-                return tech
+            code = self._thema_lookup.lookup_subjects(book_info.subjects)
+            if code:
+                logger.debug("Detected THEMA from ISBN subjects: %s", code)
+                return code
+
+        # Try book description (often contains subject keywords)
+        if book_info and book_info.description:
+            code = self._thema_lookup.lookup_from_text(book_info.description)
+            if code:
+                logger.debug("Detected THEMA from book description: %s", code)
+                return code
 
         # Try PDF subject field
         if pdf_meta and pdf_meta.subject:
-            for tech in self._technologies:
-                if tech.lower() in pdf_meta.subject.lower():
-                    logger.debug("Detected technology from PDF subject: %s", tech)
-                    return tech
+            code = self._thema_lookup.lookup_from_text(pdf_meta.subject)
+            if code:
+                logger.debug("Detected THEMA from PDF subject: %s", code)
+                return code
 
-        # Try semantic matching on content using TechnologyExtractor
+        # Try PDF title
+        if pdf_meta and pdf_meta.title:
+            code = self._thema_lookup.lookup_from_text(pdf_meta.title)
+            if code:
+                logger.debug("Detected THEMA from PDF title: %s", code)
+                return code
+
+        # Try filename (least reliable but useful fallback)
+        if filename:
+            code = self._thema_lookup.lookup_from_text(filename)
+            if code:
+                logger.debug("Detected THEMA from filename: %s", code)
+                return code
+
+        # Try content if nothing else worked
         if content:
-            tech, score = self._tech_extractor.extract_from_content(content)
-            if tech:
-                logger.debug("Detected technology via semantic matching: %s (%.2f)", tech, score)
-                return tech
+            # Limit content to first 2000 chars for performance
+            code = self._thema_lookup.lookup_from_text(content[:2000])
+            if code:
+                logger.debug("Detected THEMA from content: %s", code)
+                return code
 
         return None
 
@@ -469,18 +487,23 @@ class BookDetector(BaseClassifier):
             )
             return None
 
-        # Detect technology category
-        technology = self._detect_technology(
+        # Detect THEMA classification code
+        thema_code = self._detect_thema_code(
             content, book_info, pdf_meta, filename=metadata.filename
         )
-        if technology:
-            signals.append(f"technology={technology}")
-        else:
-            technology = "misc"
-            signals.append("technology=misc")
 
-        # Build category path
-        category = self._base_pattern.format(technology=technology)
+        # Build category path using THEMA hierarchy
+        if thema_code:
+            signals.append(f"thema={thema_code}")
+            code_info = self._thema_lookup.get_code_info(thema_code)
+            if code_info:
+                signals.append(f"thema_desc={code_info.CodeDescription[:30]}")
+            category = self._thema_lookup.build_para_path(thema_code)
+        else:
+            # Fallback to generic books category
+            thema_code = "U"  # Default to Computing/IT
+            signals.append("thema=U(default)")
+            category = "3_Resources/livres/Informatique"
 
         # Determine suggested name if not already set from ISBN
         if not suggested_name and score >= SMART_RENAME_THRESHOLD and pdf_meta.title:
@@ -505,7 +528,7 @@ class BookDetector(BaseClassifier):
             ),
             route_name="livres",
             extracted_params={
-                "technology": technology,
+                "thema_code": thema_code,
             },
         )
 

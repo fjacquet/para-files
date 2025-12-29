@@ -153,10 +153,14 @@ class TaxonomyLoader:
         code_list = data.get("CodeList", {}).get("ThemaCodes", {}).get("Code", [])
 
         for code_data in code_list:
+            # Handle CodeParent which can be string, int, or empty
+            parent = code_data.get("CodeParent", "")
+            if isinstance(parent, int):
+                parent = str(parent)
             code = ThemaCode(
-                CodeValue=code_data.get("CodeValue", ""),
+                CodeValue=str(code_data.get("CodeValue", "")),
                 CodeDescription=code_data.get("CodeDescription", ""),
-                CodeParent=code_data.get("CodeParent", ""),
+                CodeParent=parent,
                 CodeNotes=code_data.get("CodeNotes"),
             )
             codes[code.CodeValue] = code

@@ -127,11 +127,7 @@ class TestBookDetector:
     @pytest.fixture
     def detector(self) -> BookDetector:
         """Create a BookDetector instance."""
-        return BookDetector(
-            technologies=["Python", "JavaScript", "Kubernetes"],
-            enable_isbn_lookup=True,
-            base_pattern="3_Resources/books/{technology}",
-        )
+        return BookDetector(enable_isbn_lookup=True)
 
     @pytest.fixture
     def pdf_metadata(self) -> FileMetadata:
@@ -232,7 +228,9 @@ class TestBookDetectorClassify:
 
             assert result is not None
             assert result.confidence.source == ClassificationSource.BOOK_DETECTOR
-            assert "Python" in result.category or "technology" in str(result.extracted_params)
+            # Now uses THEMA codes instead of custom technology categories
+            assert "thema_code" in result.extracted_params
+            assert "livres" in result.category
 
     def test_classify_non_pdf_rejected(self, detector: BookDetector, tmp_path: Path):
         """Test that non-PDF files are rejected."""
