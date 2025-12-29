@@ -257,8 +257,9 @@ def _extract_pdf_with_pypdf(file_path: Path, max_chars: int) -> str:
     try:
         import subprocess
 
-        result = subprocess.run(
-            ["pdftotext", "-q", str(file_path), "-"],
+        result = subprocess.run(  # noqa: S603
+            ["pdftotext", "-q", str(file_path), "-"],  # noqa: S607
+            check=False,
             capture_output=True,
             text=True,
             timeout=30,
