@@ -228,7 +228,8 @@ def _read_pdf_file(file_path: Path, max_chars: int) -> str:
 
 
 def _extract_pdf_with_pypdf(file_path: Path, max_chars: int) -> str:
-    """Extract text from PDF using pypdf."""
+    """Extract text from PDF using pypdf, with pdftotext fallback."""
+    # Try pypdf first
     try:
         from pypdf import PdfReader
 
@@ -248,10 +249,28 @@ def _extract_pdf_with_pypdf(file_path: Path, max_chars: int) -> str:
 
     except ImportError:
         logger.debug("pypdf not installed: %s", file_path)
-        return ""
-    except (OSError, ValueError):
-        logger.warning("Failed to extract PDF text with pypdf: %s", file_path)
-        return ""
+    except Exception:  # noqa: BLE001
+        # pypdf can fail on various PDF formats - try pdftotext fallback
+        logger.debug("pypdf failed, trying pdftotext: %s", file_path)
+
+    # Fallback to pdftotext (poppler-utils)
+    try:
+        import subprocess
+
+        result = subprocess.run(
+            ["pdftotext", "-q", str(file_path), "-"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode == 0 and result.stdout:
+            return result.stdout[:max_chars]
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        logger.debug("pdftotext not available or timeout: %s", file_path)
+    except Exception:  # noqa: BLE001
+        logger.debug("pdftotext failed: %s", file_path)
+
+    return ""
 
 
 def _ocr_pdf_first_page(file_path: Path, max_chars: int) -> str:
