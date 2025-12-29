@@ -7,9 +7,83 @@ Supports:
 
 from __future__ import annotations
 
+import unicodedata
+
 from pydantic import BaseModel, Field
 
-from para_files.utils.filename_sanitizer import sanitize_path_component
+from para_files.utils.filename_sanitizer import sanitize_filename
+
+
+def _make_short_name(description: str, max_length: int = 20) -> str:
+    """Create a short, filesystem-safe name from a Thema description.
+
+    Transforms descriptions like:
+    - "Arts : généralités" → "Generalites"
+    - "Informatique et traitement de l'information" → "Informatique"
+    - "Radio / podcasts" → "Radio_podcasts"
+    - "Fiction / romans" → "Fiction"
+
+    Args:
+        description: Full Thema CodeDescription.
+        max_length: Maximum length for the short name.
+
+    Returns:
+        Short, sanitized name suitable for folder names.
+    """
+    if not description:
+        return "Unknown"
+
+    name = description
+
+    # Handle colon-separated patterns: "Arts : généralités" → "Generalites"
+    if " : " in name:
+        # Always take part after colon (the specific part)
+        name = name.split(" : ", 1)[1]
+
+    # Handle slash-separated alternatives: "Fiction / romans" → "Fiction"
+    # Take the first part (more general term)
+    if " / " in name:
+        name = name.split(" / ", 1)[0]
+
+    # Remove accents for filesystem compatibility
+    # é → e, ç → c, etc.
+    name = unicodedata.normalize("NFD", name)
+    name = "".join(c for c in name if unicodedata.category(c) != "Mn")
+
+    # Sanitize using centralized function (handles special chars + spaces)
+    name = sanitize_filename(name, replacement="_")
+
+    # Take first N characters, try to break at underscore
+    if len(name) > max_length:
+        name = name[:max_length]
+        if "_" in name:
+            name = name.rsplit("_", 1)[0]
+
+    # Capitalize first letter for readability
+    if name:
+        name = name[0].upper() + name[1:] if len(name) > 1 else name.upper()
+
+    return name or "Unknown"
+
+
+def _make_folder_name(code: ThemaCode, max_length: int = 35) -> str:
+    """Create a hybrid folder name from a Thema code.
+
+    Format: {CodeValue}_{ShortName}
+    Example: "AB_Generalites", "U_Informatique", "UBW_Web"
+
+    Args:
+        code: ThemaCode instance.
+        max_length: Maximum total length for folder name.
+
+    Returns:
+        Hybrid folder name like "AB_Generalites".
+    """
+    code_value = code.CodeValue
+    # Reserve space for code + underscore
+    short_name_max = max_length - len(code_value) - 1
+    short_name = _make_short_name(code.CodeDescription, max_length=short_name_max)
+    return f"{code_value}_{short_name}"
 
 
 # =============================================================================
@@ -170,17 +244,23 @@ class ThemaTaxonomy(BaseModel):
     def build_para_path(self, code_value: str) -> str:
         """Build PARA path from Thema hierarchy.
 
-        Returns path like: 3_Resources/livres/Informatique/Programmation
+        Uses hybrid format: {CodeValue}_{ShortName} for each level.
+        Example: 3_Resources/livres/U_Informatique/UB_Programmation
+
+        Args:
+            code_value: Thema code to build path for.
+
+        Returns:
+            PARA path string like "3_Resources/livres/U_Informatique/UB_Programmation"
         """
         hierarchy = self.get_hierarchy(code_value)
         if not hierarchy:
             return "3_Resources/livres"
 
-        # Use top 2 levels for path
+        # Use top 2 levels for path with hybrid naming
         parts = ["3_Resources", "livres"]
         for code in hierarchy[:2]:
-            # Clean description for filesystem using centralized sanitizer
-            desc = sanitize_path_component(code.CodeDescription)
-            parts.append(desc)
+            folder_name = _make_folder_name(code)
+            parts.append(folder_name)
 
         return "/".join(parts)
