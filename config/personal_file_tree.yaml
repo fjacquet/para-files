@@ -2797,3 +2797,208 @@ routing_rules:
     extensions: [".pdf"]
     destination: "4_Archives/factures/immobilier/Domicim/{YYYY}"
     date_source: "file_modified"
+
+  # =============================================================================
+  # IT TRAINING & DOCUMENTATION - Added 2025-12-30
+  # =============================================================================
+
+  # EMC/Dell Storage Training (SRG Velocity, ISM, etc.)
+  emc_training:
+    patterns:
+      [
+        "*srg_velocity*",
+        "*[Ii][Ss][Mm]_course*",
+        "*[Ee][Aa][Aa]_*",
+        "*eaal_*",
+        "*[Ee][Mm][Cc]*[Aa]cademic*",
+        "*customer*success*checklist*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx"]
+    destination: "3_Resources/IT/Training/EMC/{YYYY}"
+    date_source: "file_modified"
+
+  # Dell/EMC Storage Solutions (Thermal, Power, etc.)
+  dell_storage_solutions:
+    patterns:
+      [
+        "*[Tt]hermal_*",
+        "*[Pp]ower*[Ss]olution*",
+        "*[Dd]ell*[Ss]torage*",
+        "*[Ss]torage*[Ss]olution*",
+      ]
+    extensions: [".pdf", ".xlsx"]
+    destination: "3_Resources/IT/Storage/Dell/{YYYY}"
+    date_source: "file_modified"
+
+  # Datacenter documentation
+  datacenter_docs:
+    patterns:
+      [
+        "*[Dd]ata[Cc]enter*",
+        "*[Dd]ata*[Ss]heet*",
+        "*ds_zurich*",
+        "*[Mm]etro*[Bb]usiness*[Ee]xchange*",
+        "*[Cc]olocation*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/IT/Datacenter/{YYYY}"
+    date_source: "file_modified"
+
+  # Development tutorials and guides
+  dev_tutorials:
+    patterns:
+      [
+        "*[Gg]itignore*",
+        "*[Gg]it*[Tt]utorial*",
+        "*[Pp]ython*[Tt]utorial*",
+        "*[Dd]evelop*[Gg]uide*",
+      ]
+    extensions: [".pdf", ".md"]
+    destination: "3_Resources/IT/Development/{YYYY}"
+    date_source: "file_modified"
+
+  # 2FA Recovery codes and credentials
+  recovery_codes:
+    patterns:
+      [
+        "*[Rr]ecovery*[Cc]ode*",
+        "*[Tt]eam[Vv]iewer*",
+        "*2[Ff][Aa]*",
+        "*[Bb]ackup*[Cc]ode*",
+      ]
+    extensions: [".pdf", ".txt"]
+    destination: "2_Areas/IT/credentials/{YYYY}"
+    date_source: "file_modified"
+
+  # =============================================================================
+  # FAMILY & PERSONAL - Added 2025-12-30
+  # =============================================================================
+
+  # Childcare attestations (frais de garde)
+  garde_enfants:
+    patterns:
+      [
+        "*[Gg]arde*",
+        "*[Ff]rais*[Gg]arde*",
+        "*[Cc]reche*",
+        "*[Aa]ttestation*[Gg]arde*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/administratif/impots-suisse/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Succession/inheritance documents
+  succession_docs:
+    patterns:
+      [
+        "*[Ss]uccession*",
+        "*[Hh]eritage*",
+        "*[Nn]otaire*",
+        "*gut-remorque*",
+      ]
+    extensions: [".pdf", ".docx"]
+    destination: "4_Archives/famille/succession/{YYYY}"
+    date_source: "file_modified"
+
+  # Bank account details (RIB)
+  rib_bancaire:
+    patterns:
+      [
+        "*[Rr][Ii][Bb]*",
+        "*[Rr]elev[ée]*[Ii]dentit[ée]*[Bb]ancaire*",
+        "*[Bb]ank*[Aa]ccount*[Dd]etails*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/famille/banque/{YYYY}"
+    date_source: "file_modified"
+
+  # Genealogy documents
+  genealogie:
+    patterns:
+      [
+        "*genealog*",
+        "*family*tree*",
+        "*arbre*",
+        "*fredjacquet*classic*asc*",
+      ]
+    extensions: [".pdf", ".ged", ".jpg", ".png"]
+    destination: "4_Archives/famille/genealogie/{YYYY}"
+    date_source: "file_modified"
+
+  # Software purchases (PayPal, licenses)
+  software_purchases:
+    patterns:
+      [
+        "*[Rr]eceipt*[Pp]ayment*",
+        "*[Pp]ay[Pp]al*[Rr]eceipt*",
+        "*[Ll]icense*[Kk]ey*",
+        "*[Kk]olor*",
+        "*[Aa]utopano*",
+      ]
+    extensions: [".pdf", ".txt"]
+    destination: "4_Archives/factures/Logiciels/{YYYY}"
+    date_source: "file_modified"
+
+  # Travel planning and maps
+  voyages_planning:
+    patterns:
+      [
+        "*[Vv]acances*",
+        "*[Gg]rand*[Tt]our*",
+        "*[Tt]ravel*[Pp]lan*",
+        "*[Ii]tinerary*",
+        "*date-ie-list*",
+      ]
+    extensions: [".pdf", ".xlsx"]
+    destination: "4_Archives/voyages/planning/{YYYY}"
+    date_source: "file_modified"
+
+  # Restaurant menus (low priority, goes to divers)
+  restaurant_menus:
+    patterns:
+      [
+        "*[Mm]enu*",
+        "*[Rr]estaurant*",
+        "*[Aa]uberge*",
+        "*carte.pdf",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/divers/restaurants/{YYYY}"
+    date_source: "file_modified"
+
+  # Attendance sheets (fiche de présence)
+  fiche_presence:
+    patterns:
+      [
+        "*[Ff]iche*[Pp]r[ée]sence*",
+        "*[Aa]ttendance*",
+        "*[Pp]resence*[Ss]heet*",
+      ]
+    extensions: [".pdf", ".xlsx"]
+    destination: "4_Archives/administratif/divers/{YYYY}"
+    date_source: "file_modified"
+
+  # IT Security magazines (MISC, etc.)
+  security_magazines:
+    patterns:
+      [
+        "*[Mm]isc*",
+        "*[Hh]akin9*",
+        "*[Ss]ecurit[ée]*[Mm]ag*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/IT/Security/magazines/{YYYY}"
+    date_source: "file_modified"
+
+  # Family business invoices (succession Jacquet)
+  factures_famille:
+    patterns:
+      [
+        "*liste*ventes*",
+        "*[Jj]acquet*[Mm]arcel*",
+        "*[Ff]acture*[Pp]iquet*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/famille/succession/{YYYY}"
+    date_source: "file_modified"
