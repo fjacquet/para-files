@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
-
-import pytest
 
 from para_files.learning.feedback_tracker import CorrectionRecord, FeedbackTracker
 from para_files.learning.pattern_extractor import PatternExtractor, PatternSuggestion
