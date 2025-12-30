@@ -303,7 +303,7 @@ def rescan(
     base_path: Annotated[
         Path | None,
         typer.Argument(
-            help="PARA root directory to rescan",
+            help="PARA root directory (defaults to config para_root)",
             exists=True,
             file_okay=False,
             dir_okay=True,
@@ -347,23 +347,22 @@ def rescan(
 
     \b
     Examples:
-        # Preview all rescans (default)
-        uv run para-files rescan /path/to/PARA
+        # Preview all rescans (uses config para_root)
+        uv run para-files rescan
 
         # Execute rescan
-        uv run para-files rescan /path/to/PARA --no-dry-run
+        uv run para-files rescan --no-dry-run
 
         # Rescan only fiscal documents
         uv run para-files rescan --category fiscalite
 
-        # JSON output for scripting
-        uv run para-files rescan --json
+        # Override path
+        uv run para-files rescan /custom/path
     """
     setup_logging(verbose=verbose)
-    load_config_or_exit()  # Ensure config is loaded for TaxonomyLoader
+    config = load_config_or_exit()
 
-    # Use current directory if not specified
-    effective_path = base_path if base_path else Path.cwd()
+    effective_path = base_path if base_path else config.para_root
 
     results = _run_rescan(
         effective_path,

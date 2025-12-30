@@ -374,7 +374,7 @@ def migrate(
     base_path: Annotated[
         Path | None,
         typer.Argument(
-            help="PARA root directory to migrate",
+            help="PARA root directory (defaults to config para_root)",
             exists=True,
             file_okay=False,
             dir_okay=True,
@@ -409,17 +409,17 @@ def migrate(
 
     \b
     Examples:
-        # Preview all migrations (default)
-        uv run para-files migrate /path/to/PARA
+        # Preview all migrations (uses config para_root)
+        uv run para-files migrate
 
         # Execute migration
-        uv run para-files migrate /path/to/PARA --no-dry-run
+        uv run para-files migrate --no-dry-run
 
         # Migrate only fiscal folders
         uv run para-files migrate --category fiscalite
 
-        # JSON output for scripting
-        uv run para-files migrate --json
+        # Override path
+        uv run para-files migrate /custom/path
 
     \b
     Migration types:
@@ -428,9 +428,9 @@ def migrate(
         📦✏️ move_rename - Both move and rename
     """
     setup_logging(verbose=verbose)
-    load_config_or_exit()
+    config = load_config_or_exit()
 
-    effective_path = base_path if base_path else Path.cwd()
+    effective_path = base_path if base_path else config.para_root
 
     results = _run_migration(
         effective_path,
