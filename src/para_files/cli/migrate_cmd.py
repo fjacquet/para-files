@@ -69,6 +69,9 @@ RETENTION_CONFIG: dict[str, dict[str, str | None]] = {
 # Pattern to detect folder with retention prefix (e.g., "10y_fiscalite")
 RETENTION_PREFIX_PATTERN = re.compile(r"^(10y|5y|2y|ret|ctr)_")
 
+# Pattern to detect OLD suffix format (e.g., "fiscalite_10y") for migration
+RETENTION_SUFFIX_PATTERN = re.compile(r"_(10y|5y|2y|ret|ctr|perm)$")
+
 
 def _build_retention_mapping_from_taxonomy() -> dict[str, dict[str, Any]]:
     """Build folder mapping from documents.json taxonomy.
@@ -116,6 +119,15 @@ def _build_retention_mapping_from_taxonomy() -> dict[str, dict[str, Any]]:
                             "prefix": None if is_permanent else prefix,
                             "target_para": "3_Resources" if is_permanent else "4_Archives",
                         }
+
+        # Merge static config for folder names not in taxonomy
+        for name, config in RETENTION_CONFIG.items():
+            if name not in mapping:
+                mapping[name] = {
+                    "retention": config["retention"],
+                    "prefix": config["prefix"],
+                    "target_para": "3_Resources" if config["retention"] == "permanent" else "4_Archives",
+                }
 
         if mapping:
             logger.debug("Built retention mapping from taxonomy: %d entries", len(mapping))
@@ -167,11 +179,15 @@ def _discover_folders_to_migrate(
 
             folder_name = child.name
 
-            # Strip existing prefix to get base name (e.g., "10y_fiscalite" → "fiscalite")
+            # Strip existing prefix OR suffix to get base name
+            # Handles both new format (10y_fiscalite) and old format (fiscalite_10y)
             base_name = folder_name
-            match = RETENTION_PREFIX_PATTERN.match(folder_name)
-            if match:
-                base_name = folder_name[match.end():]
+            prefix_match = RETENTION_PREFIX_PATTERN.match(folder_name)
+            suffix_match = RETENTION_SUFFIX_PATTERN.search(folder_name)
+            if prefix_match:
+                base_name = folder_name[prefix_match.end():]
+            elif suffix_match:
+                base_name = folder_name[:suffix_match.start()]
 
             # Apply category filter
             if category_filter and not base_name.startswith(category_filter):
