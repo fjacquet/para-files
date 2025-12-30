@@ -50,6 +50,7 @@ RETENTION_CONFIG: dict[str, dict[str, str | None]] = {
     "vehicules": {"retention": "permanent", "prefix": None},
     "animaux": {"retention": "permanent", "prefix": None},
     "immobilier": {"retention": "permanent", "prefix": None},
+    "correspondance": {"retention": "permanent", "prefix": None},
     # Time-limited categories → Archives (with prefix)
     "fiscalite": {"retention": "10_years", "prefix": "10y_"},
     "impots-france": {"retention": "10_years", "prefix": "10y_"},
@@ -62,6 +63,9 @@ RETENTION_CONFIG: dict[str, dict[str, str | None]] = {
     "factures": {"retention": "contract", "prefix": "ctr_"},
     "mobilite": {"retention": "contract", "prefix": "ctr_"},
     "abonnement": {"retention": "contract", "prefix": "ctr_"},
+    "agriculture": {"retention": "contract", "prefix": "ctr_"},
+    "assurances": {"retention": "contract", "prefix": "ctr_"},
+    "comptabilite": {"retention": "10_years", "prefix": "10y_"},
     "voyages": {"retention": "5_years", "prefix": "5y_"},
     "loisirs": {"retention": "2_years", "prefix": "2y_"},
 }
