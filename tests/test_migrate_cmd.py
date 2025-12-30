@@ -14,6 +14,7 @@ from para_files.cli.migrate_cmd import (
     RETENTION_SUFFIX_PATTERN,
     _build_retention_mapping_from_taxonomy,
     _discover_folders_to_migrate,
+    _merge_folder,
     _migrate_folder,
     _print_summary,
     _run_migration,
@@ -445,3 +446,194 @@ class TestMigrateCommand:
         mock_run.assert_called_once()
         call_kwargs = mock_run.call_args[1]
         assert call_kwargs["category"] == "fiscalite"
+
+
+class TestMergeFolder:
+    """Tests for _merge_folder function."""
+
+    def test_merge_moves_unique_files(self, tmp_path: Path) -> None:
+        """Test merging moves files that only exist in source."""
+        source = tmp_path / "4_Archives" / "formations"
+        source.mkdir(parents=True)
+        (source / "file1.pdf").write_text("content1")
+
+        dest = tmp_path / "3_Resources" / "formations"
+        dest.mkdir(parents=True)
+        (dest / "file2.pdf").write_text("content2")
+
+        result = _merge_folder(source, dest, dry_run=False)
+
+        assert result["success"] is True
+        assert result["files_moved"] == 1
+        assert (dest / "file1.pdf").exists()
+        assert (dest / "file1.pdf").read_text() == "content1"
+
+    def test_merge_removes_duplicates(self, tmp_path: Path) -> None:
+        """Test merging removes identical files from source."""
+        source = tmp_path / "4_Archives" / "formations"
+        source.mkdir(parents=True)
+        (source / "same.pdf").write_text("identical")
+
+        dest = tmp_path / "3_Resources" / "formations"
+        dest.mkdir(parents=True)
+        (dest / "same.pdf").write_text("identical")
+
+        result = _merge_folder(source, dest, dry_run=False)
+
+        assert result["success"] is True
+        assert result["files_duplicate"] == 1
+        assert not (source / "same.pdf").exists()
+        assert (dest / "same.pdf").read_text() == "identical"
+
+    def test_merge_renames_different_files(self, tmp_path: Path) -> None:
+        """Test merging renames files with same name but different content."""
+        source = tmp_path / "4_Archives" / "formations"
+        source.mkdir(parents=True)
+        (source / "doc.pdf").write_text("source content")
+
+        dest = tmp_path / "3_Resources" / "formations"
+        dest.mkdir(parents=True)
+        (dest / "doc.pdf").write_text("dest content")
+
+        result = _merge_folder(source, dest, dry_run=False)
+
+        assert result["success"] is True
+        assert result["files_renamed"] == 1
+        assert (dest / "doc.pdf").read_text() == "dest content"
+        assert (dest / "doc_from_archives.pdf").exists()
+        assert (dest / "doc_from_archives.pdf").read_text() == "source content"
+
+    def test_merge_dry_run(self, tmp_path: Path) -> None:
+        """Test merge dry run doesn't change anything."""
+        source = tmp_path / "4_Archives" / "formations"
+        source.mkdir(parents=True)
+        (source / "file.pdf").write_text("content")
+
+        dest = tmp_path / "3_Resources" / "formations"
+        dest.mkdir(parents=True)
+
+        result = _merge_folder(source, dest, dry_run=True)
+
+        assert result["success"] is True
+        assert result["dry_run_action"] == "would_merge"
+        assert result["files_moved"] == 1
+        assert (source / "file.pdf").exists()  # Source unchanged
+        assert not (dest / "file.pdf").exists()  # Dest unchanged
+
+    def test_merge_recursive_subdirs(self, tmp_path: Path) -> None:
+        """Test merging handles nested subdirectories."""
+        source = tmp_path / "4_Archives" / "formations" / "2024"
+        source.mkdir(parents=True)
+        (source / "jan.pdf").write_text("january")
+
+        dest_base = tmp_path / "3_Resources" / "formations"
+        dest_base.mkdir(parents=True)
+        dest_2024 = dest_base / "2024"
+        dest_2024.mkdir()
+        (dest_2024 / "feb.pdf").write_text("february")
+
+        result = _merge_folder(
+            tmp_path / "4_Archives" / "formations",
+            dest_base,
+            dry_run=False,
+        )
+
+        assert result["success"] is True
+        assert result["subdirs_merged"] == 1
+        assert (dest_2024 / "jan.pdf").exists()
+        assert (dest_2024 / "feb.pdf").exists()
+
+    def test_merge_cleans_empty_source(self, tmp_path: Path) -> None:
+        """Test that empty source directories are removed after merge."""
+        source = tmp_path / "4_Archives" / "formations"
+        source.mkdir(parents=True)
+        (source / "file.pdf").write_text("content")
+
+        dest = tmp_path / "3_Resources" / "formations"
+        dest.mkdir(parents=True)
+
+        _merge_folder(source, dest, dry_run=False)
+
+        assert not source.exists()
+
+
+class TestDiscoverWithMerge:
+    """Tests for _discover_folders_to_migrate with merge option."""
+
+    def test_discover_includes_merge_when_enabled(self, tmp_path: Path) -> None:
+        """Test that merge mode includes folders where destination exists."""
+        source = tmp_path / "4_Archives" / "identite"
+        source.mkdir(parents=True)
+        (source / "passport.pdf").touch()
+
+        dest = tmp_path / "3_Resources" / "identite"
+        dest.mkdir(parents=True)
+
+        mapping = {
+            "identite": {
+                "retention": "permanent",
+                "suffix": None,
+                "target_para": "3_Resources",
+            }
+        }
+
+        # Without merge - should be empty (skipped)
+        migrations = _discover_folders_to_migrate(tmp_path, mapping, merge=False)
+        assert len(migrations) == 0
+
+        # With merge - should include merge action
+        migrations = _discover_folders_to_migrate(tmp_path, mapping, merge=True)
+        assert len(migrations) == 1
+        source_found, dest_found, action = migrations[0]
+        assert "4_Archives" in str(source_found)
+        assert "3_Resources" in str(dest_found)
+        assert action == "merge"
+
+
+class TestMigrateCommandMerge:
+    """Tests for migrate CLI command with --merge option."""
+
+    @patch("para_files.cli.migrate_cmd.load_config_or_exit")
+    @patch("para_files.cli.migrate_cmd._run_migration")
+    def test_migrate_command_with_merge(
+        self, mock_run: MagicMock, mock_config: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test migrate command with --merge flag."""
+        mock_run.return_value = {
+            "folders_scanned": 5,
+            "folders_need_migration": 3,
+            "folders_migrated": 3,
+            "folders_errored": 0,
+            "total_files": 50,
+            "dry_run": True,
+            "merge_mode": True,
+            "migrations": [],
+        }
+
+        result = runner.invoke(app, ["migrate", str(tmp_path), "--merge"])
+        assert result.exit_code == 0
+        mock_run.assert_called_once()
+        call_kwargs = mock_run.call_args[1]
+        assert call_kwargs["merge"] is True
+
+    @patch("para_files.cli.migrate_cmd.load_config_or_exit")
+    @patch("para_files.cli.migrate_cmd._run_migration")
+    def test_migrate_command_merge_short_option(
+        self, mock_run: MagicMock, mock_config: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test migrate command with -m shorthand."""
+        mock_run.return_value = {
+            "folders_scanned": 5,
+            "folders_need_migration": 3,
+            "folders_migrated": 3,
+            "folders_errored": 0,
+            "total_files": 50,
+            "dry_run": True,
+            "merge_mode": True,
+            "migrations": [],
+        }
+
+        result = runner.invoke(app, ["migrate", str(tmp_path), "-m"])
+        assert result.exit_code == 0
+        call_kwargs = mock_run.call_args[1]
+        assert call_kwargs["merge"] is True

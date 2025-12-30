@@ -39,6 +39,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Preview mode by default (`--dry-run`)
   - Filter by category (`--category fiscalite`)
   - JSON output for scripting (`--json`)
+  - **New: `--merge` flag** for merging folders when destination already exists
+    - Moves unique files to destination
+    - Removes duplicate files (identical content)
+    - Renames conflicting files with `_from_archives` suffix
   - Example: `uv run para-files migrate /path/to/PARA --no-dry-run`
 - **New `rescan` command**: Re-classify files already in PARA archives (SLOW)
   - Per-file classification for fixing misclassified documents
