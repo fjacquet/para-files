@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Fuzzy matching for issuers**: TaxonomyClassifier now uses difflib.SequenceMatcher for typo tolerance
+  - Threshold: 85% similarity required for fuzzy matches
+  - Confidence penalty: 95% of base confidence for fuzzy matches
+  - Handles OCR errors and misspellings (e.g., "Swicom" → "Swisscom")
+  - Fuzzy matches tracked in extracted_params: `fuzzy_match`, `fuzzy_similarity`
 - **PDF metadata for classification**: TaxonomyClassifier now uses PDF author/title/subject for better matching
   - PDF author is checked first for issuer matching (most reliable source)
   - PDF title/subject are prepended to content for keyword matching

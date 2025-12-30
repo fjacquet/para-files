@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 from datetime import UTC, datetime
+from difflib import SequenceMatcher
 from functools import lru_cache
 from typing import TYPE_CHECKING, ClassVar
 
@@ -86,6 +87,10 @@ class TaxonomyClassifier(BaseClassifier):
     # Minimum path parts for retention suffix injection (PARA prefix + category)
     MIN_PATH_PARTS_FOR_SUFFIX = 2
 
+    # Fuzzy matching configuration
+    FUZZY_MATCH_THRESHOLD = 0.85  # Minimum similarity ratio for fuzzy matches
+    FUZZY_CONFIDENCE_MULTIPLIER = 0.95  # Confidence penalty for fuzzy matches
+
     # Retention suffix mapping for folder names
     RETENTION_SUFFIXES: ClassVar[dict[str, str]] = {
         "permanent": "_perm",
@@ -152,6 +157,42 @@ class TaxonomyClassifier(BaseClassifier):
         taxonomy = self._loader.load_documents()
         self._keyword_cache = taxonomy.get_all_keywords()
         return self._keyword_cache
+
+    def _fuzzy_match_issuer(
+        self,
+        text: str,
+    ) -> tuple[Issuer, DocumentType, DocumentCategory, float] | None:
+        """Fuzzy match text against known issuer names.
+
+        Uses difflib.SequenceMatcher to find similar issuer names.
+        Only returns matches above FUZZY_MATCH_THRESHOLD.
+
+        Args:
+            text: Text to search for issuer-like patterns
+
+        Returns:
+            Tuple of (Issuer, DocumentType, DocumentCategory, similarity_ratio) or None
+        """
+        cache = self._build_issuer_cache()
+        if not cache:
+            return None
+
+        text_lower = text.lower()
+        best_match: tuple[Issuer, DocumentType, DocumentCategory, float] | None = None
+        best_ratio = 0.0
+
+        # Extract words from text that could be issuer names (3+ chars)
+        words = list(re.findall(r"\b[a-zA-Z]{3,}\b", text_lower))
+
+        for word in words:
+            for pattern, (issuer, doc_type, category) in cache.items():
+                # Compare word against each issuer pattern
+                ratio = SequenceMatcher(None, word, pattern).ratio()
+                if ratio >= self.FUZZY_MATCH_THRESHOLD and ratio > best_ratio:
+                    best_ratio = ratio
+                    best_match = (issuer, doc_type, category, ratio)
+
+        return best_match
 
     def _match_issuer(
         self,
@@ -482,8 +523,8 @@ class TaxonomyClassifier(BaseClassifier):
         """
         filename = metadata.filename if metadata else None
 
-        # Priority 1: Issuer matching (90% confidence)
-        # Now also checks pdf_author from metadata
+        # Priority 1: Exact issuer matching (90% confidence)
+        # Checks pdf_author, filename, then content
         issuer_match = self._match_issuer(content, filename, metadata)
         if issuer_match:
             issuer, doc_type, category = issuer_match
@@ -517,7 +558,7 @@ class TaxonomyClassifier(BaseClassifier):
             )
 
         # Priority 2: Keyword matching (85% confidence)
-        # Now also checks pdf_title/subject from metadata
+        # Checks pdf_title/subject, then content
         keyword_match = self._match_keywords(content, metadata)
         if keyword_match:
             doc_type, category, matched_keyword = keyword_match
@@ -546,6 +587,47 @@ class TaxonomyClassifier(BaseClassifier):
                     "category_id": category.id,
                     "doc_type": doc_type.sub_id,
                     "retention": doc_type.retention,
+                },
+            )
+
+        # Priority 3: Fuzzy issuer matching (confidence * 0.95)
+        # Fallback for misspellings and OCR errors
+        fuzzy_match = self._fuzzy_match_issuer(content)
+        if fuzzy_match:
+            issuer, doc_type, category, similarity = fuzzy_match
+
+            # Use document-level pattern if set, else category pattern
+            pattern = doc_type.para_pattern or category.para_pattern
+
+            year = self._extract_year(content, metadata)
+            resolved_path = self._resolve_pattern(
+                pattern,
+                issuer_name=issuer.name,
+                year=year,
+                metadata=metadata,
+                retention=doc_type.retention,
+            )
+
+            # Confidence = base issuer confidence * fuzzy multiplier * similarity
+            fuzzy_confidence = (
+                self.ISSUER_CONFIDENCE * self.FUZZY_CONFIDENCE_MULTIPLIER * similarity
+            )
+
+            return ClassificationResult(
+                category=resolved_path,
+                confidence=Confidence(
+                    value=fuzzy_confidence,
+                    source=self.source,
+                ),
+                route_name=f"{category.id}/{doc_type.sub_id}/{issuer.name}",
+                extracted_params={
+                    "issuer": issuer.name,
+                    "year": year,
+                    "category_id": category.id,
+                    "doc_type": doc_type.sub_id,
+                    "retention": doc_type.retention,
+                    "fuzzy_match": "true",
+                    "fuzzy_similarity": f"{similarity:.2f}",
                 },
             )
 
