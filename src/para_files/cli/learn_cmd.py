@@ -2,7 +2,7 @@
 
 This module provides the learn command that allows users to interactively
 correct classifications and improve the routing model by adding keywords
-to routes.
+to routes. Corrections are also tracked for pattern learning.
 """
 
 from __future__ import annotations
@@ -19,12 +19,14 @@ from para_files.cli.shared import (
     print_classification_result,
     setup_logging,
 )
+from para_files.learning import FeedbackTracker
 from para_files.pipeline import ClassificationPipeline
 from para_files.utils.validation import validate_file_exists
 
 
 if TYPE_CHECKING:
     from para_files.learner import RoutingLearner
+    from para_files.types import ClassificationResult
 
 
 def _select_route_from_choice(choice: str, routes: list[str]) -> str | None:
@@ -69,6 +71,56 @@ def _handle_keyword_addition(learner: RoutingLearner, route: str) -> None:
             typer.echo("Keyword already exists or could not be added")
 
 
+def _track_correction(
+    file_path: Path,
+    original_result: ClassificationResult | None,
+    corrected_route: str,
+    content_preview: str,
+) -> None:
+    """Track the correction in FeedbackTracker for pattern learning.
+
+    Args:
+        file_path: Path to the file being corrected.
+        original_result: The original classification result (may be None).
+        corrected_route: The user-selected correct route.
+        content_preview: Preview of file content for pattern extraction.
+    """
+    from para_files.utils.pdf_metadata import extract_pdf_metadata
+
+    tracker = FeedbackTracker()
+
+    # Extract metadata for pattern learning (PDF only for now)
+    metadata_dict: dict[str, str | None] = {}
+    if file_path.suffix.lower() == ".pdf":
+        pdf_meta = extract_pdf_metadata(file_path)
+        if pdf_meta:
+            metadata_dict = {
+                "author": pdf_meta.author,
+                "title": pdf_meta.title,
+                "creator": pdf_meta.creator,
+            }
+
+    original_category = original_result.category if original_result else None
+    original_confidence = (
+        original_result.confidence.value if original_result and original_result.confidence else 0.0
+    )
+    source = (
+        original_result.confidence.source.value
+        if original_result and original_result.confidence
+        else "unknown"
+    )
+
+    tracker.record_correction(
+        file_path=file_path,
+        original_category=original_category,
+        corrected_category=corrected_route,
+        original_confidence=original_confidence,
+        content_preview=content_preview,
+        metadata=metadata_dict,
+        source=source,
+    )
+
+
 @app.command()
 def learn(
     file: Annotated[Path, typer.Argument(help="Path to file to learn from")],
@@ -86,9 +138,13 @@ def learn(
     or correct the classification. If you correct it, you can optionally
     add keywords to improve future matching.
 
+    Corrections are tracked for pattern learning to improve future
+    automatic classification accuracy.
+
     This is a key workflow for building up your routing model over time.
     """
     from para_files.learner import RoutingLearner
+    from para_files.utils.file_utils import read_content_preview
 
     setup_logging(verbose=verbose)
     file_path = file.resolve()
@@ -128,5 +184,11 @@ def learn(
         raise typer.Exit(1)
 
     typer.echo(f"\nSelected route: {correct_route}")
+
+    # Track correction for pattern learning
+    content_preview = read_content_preview(file_path, max_chars=500)
+    _track_correction(file_path, result, correct_route, content_preview)
+    typer.echo("Correction tracked for pattern learning.")
+
     _handle_keyword_addition(learner, correct_route)
     typer.echo("\nLearning complete!")

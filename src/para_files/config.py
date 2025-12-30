@@ -92,6 +92,18 @@ class MLXConfig(BaseSettings):
         description="Minimum similarity score for semantic matching",
     )
 
+    # Semantic classifier configuration (v2.0 - MLX embeddings)
+    semantic_enabled: bool = Field(
+        default=True,
+        description="Enable semantic classifier using MLX embeddings",
+    )
+    semantic_threshold: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="Minimum cosine similarity threshold for semantic matching",
+    )
+
     # LLM fallback configuration (v2.0 - optional native MLX-LM)
     llm_enabled: bool = Field(
         default=False,

@@ -1,10 +1,11 @@
-"""Classification pipeline orchestrating 4-signal cascade.
+"""Classification pipeline orchestrating 5-signal cascade.
 
 Pipeline v2.0 - Simplified with taxonomy-based classification:
 1. RulesEngine (95%) - Extension/pattern based routing
 2. BookDetector (92%) - ISBN detection + Thema classification
 3. TaxonomyClassifier (90%) - Issuers + keywords from documents.json
-4. MLXLLMClassifier (60%) - Optional LLM fallback via mlx-lm
+4. SemanticClassifier (85%) - MLX embedding similarity
+5. MLXLLMClassifier (60%) - Optional LLM fallback via mlx-lm
 
 Chains classifiers in priority order: first match wins.
 """
@@ -18,6 +19,7 @@ from typing import TYPE_CHECKING
 from para_files.classifiers.book_detector import BookDetector
 from para_files.classifiers.mlx_llm_classifier import MLXLLMClassifier
 from para_files.classifiers.rules_engine import RulesEngineClassifier
+from para_files.classifiers.semantic_classifier import SemanticClassifier
 from para_files.classifiers.taxonomy_classifier import TaxonomyClassifier
 from para_files.config import Config
 from para_files.reference_tree import ReferenceTree
@@ -37,19 +39,21 @@ logger = logging.getLogger(__name__)
 
 
 class ClassificationPipeline:
-    """Orchestrates 4-signal classification cascade (v2.0).
+    """Orchestrates 5-signal classification cascade (v2.0).
 
     Simplified pipeline using JSON taxonomies:
     1. Rules Engine (95%) - Extension/pattern based routing
     2. Book Detector (92%, 100% with ISBN) - ISBN + Thema classification
     3. Taxonomy Classifier (90%) - Issuers + keywords from documents.json
-    4. MLX-LLM Fallback (60%) - Optional native Apple Silicon LLM
+    4. Semantic Classifier (85%) - MLX embedding similarity
+    5. MLX-LLM Fallback (60%) - Optional native Apple Silicon LLM
 
     First match wins. If nothing matches, returns default 0_Inbox.
 
     Key changes from v1.0:
-    - Removed: ValidatedDB, DomainKB, SemanticRouter
+    - Removed: ValidatedDB, DomainKB
     - Added: TaxonomyClassifier (unified issuer + keyword matching)
+    - Added: SemanticClassifier (MLX embeddings for similarity matching)
     - Replaced: LLMFallback (Ollama) with MLXLLMClassifier (native MLX)
     """
 
@@ -94,7 +98,17 @@ class ClassificationPipeline:
         taxonomy_classifier = TaxonomyClassifier(loader=taxonomy_loader)
         self._classifiers.append(taxonomy_classifier)
 
-        # Signal 4: MLX-LLM Fallback (configurable via mlx.llm_* settings)
+        # Signal 4: Semantic Classifier (85%) - MLX embedding similarity
+        # Uses pre-computed embeddings for category descriptions
+        if self._config.mlx.semantic_enabled:
+            semantic_classifier = SemanticClassifier(
+                loader=taxonomy_loader,
+                confidence_threshold=self._config.mlx.semantic_threshold,
+                enabled=True,
+            )
+            self._classifiers.append(semantic_classifier)
+
+        # Signal 5: MLX-LLM Fallback (configurable via mlx.llm_* settings)
         if self._config.mlx.llm_enabled:
             mlx_llm = MLXLLMClassifier(
                 enabled=True,
