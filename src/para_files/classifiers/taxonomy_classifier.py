@@ -157,15 +157,17 @@ class TaxonomyClassifier(BaseClassifier):
         self,
         content: str,
         filename: str | None = None,
+        metadata: FileMetadata | None = None,
     ) -> tuple[Issuer, DocumentType, DocumentCategory] | None:
         """Match content against known issuer patterns.
 
-        Priority: filename > header (first 1000 chars) > full content
+        Priority: pdf_author > filename > header (first 1000 chars) > full content
         Within each area, the issuer appearing earliest (by position) wins.
 
         Args:
             content: Text content to search
             filename: Optional filename for priority matching
+            metadata: Optional file metadata with PDF author/title
 
         Returns:
             Tuple of (Issuer, DocumentType, DocumentCategory) if matched, None otherwise
@@ -174,10 +176,16 @@ class TaxonomyClassifier(BaseClassifier):
         if not cache:
             return None
 
-        # Search priority: filename first, then header, then full content
+        # Search priority: pdf_author first (most reliable), then filename, then content
         search_areas: list[tuple[str, str]] = []
+
+        # PDF author is the most reliable source for issuer identification
+        if metadata and metadata.pdf_author:
+            search_areas.append(("pdf_author", metadata.pdf_author.lower()))
+
         if filename:
             search_areas.append(("filename", filename.lower()))
+
         if content:
             header = content[: self.HEADER_LENGTH].lower()
             search_areas.append(("header", header))
@@ -224,9 +232,70 @@ class TaxonomyClassifier(BaseClassifier):
 
         return False
 
+    def _enrich_content_with_metadata(
+        self,
+        content: str,
+        metadata: FileMetadata | None,
+    ) -> str:
+        """Prepend PDF title and subject to content for better keyword matching.
+
+        Args:
+            content: Original text content
+            metadata: Optional file metadata with PDF title/subject
+
+        Returns:
+            Enriched content string
+        """
+        if not metadata:
+            return content
+
+        pdf_parts = []
+        if metadata.pdf_title:
+            pdf_parts.append(metadata.pdf_title)
+        if metadata.pdf_subject:
+            pdf_parts.append(metadata.pdf_subject)
+
+        if pdf_parts:
+            return " ".join(pdf_parts) + " " + content
+        return content
+
+    def _calculate_keyword_score(
+        self,
+        position: int,
+        content_length: int,
+        keyword_length: int,
+        *,
+        match_in_normalized: bool,
+    ) -> float:
+        """Calculate score for a keyword match based on position and length.
+
+        Args:
+            position: Match position in content
+            content_length: Total content length
+            keyword_length: Length of matched keyword
+            match_in_normalized: Whether match was in OCR-normalized content
+
+        Returns:
+            Score value (higher is better)
+        """
+        # Score based on position (earlier = better)
+        position_score = 1.0 - (position / content_length) if content_length > 0 else 0.5
+
+        # Boost for header matches
+        header_boost = 1.5 if position < self.KEYWORD_HEADER_THRESHOLD else 1.0
+
+        # Boost for longer keywords (more specific)
+        length_boost = 1.0 + (keyword_length / self.KEYWORD_LENGTH_FACTOR)
+
+        # Slight penalty for matches only in normalized content (less certain)
+        ocr_penalty = 0.95 if match_in_normalized else 1.0
+
+        return position_score * header_boost * length_boost * ocr_penalty
+
     def _match_keywords(
         self,
         content: str,
+        metadata: FileMetadata | None = None,
     ) -> tuple[DocumentType, DocumentCategory, str] | None:
         """Match content against document type keywords with position weighting and AND logic.
 
@@ -234,9 +303,11 @@ class TaxonomyClassifier(BaseClassifier):
         Longer keywords are weighted higher (more specific).
         If required_context is specified, at least one context word must also be present.
         Also tries matching against OCR-normalized text for corrupted PDFs.
+        PDF title/subject are prepended to content for better matching.
 
         Args:
             content: Text content to search
+            metadata: Optional file metadata with PDF title/subject
 
         Returns:
             Tuple of (DocumentType, DocumentCategory, matched_keyword) if matched, None otherwise
@@ -245,11 +316,12 @@ class TaxonomyClassifier(BaseClassifier):
         if not cache:
             return None
 
-        content_lower = content.lower()
+        # Enrich content with PDF metadata
+        enriched_content = self._enrich_content_with_metadata(content, metadata)
+        content_lower = enriched_content.lower()
         content_length = len(content_lower)
 
-        # Also prepare normalized version for OCR-corrupted text
-        # Only normalize if we detect potential OCR corruption (single letters with spaces)
+        # Prepare normalized version for OCR-corrupted text
         normalized_content = None
         if re.search(r"\b[a-z]\s+[a-z]\s+[a-z]\b", content_lower):
             normalized_content = _normalize_cached(content_lower)
@@ -259,7 +331,6 @@ class TaxonomyClassifier(BaseClassifier):
 
         for keyword, (doc_type, category, required_context) in cache.items():
             # Check AND logic: required_context must be present
-            # Check in both original and normalized content
             has_context = self._has_required_context(content_lower, required_context)
             if not has_context and normalized_content:
                 has_context = self._has_required_context(normalized_content, required_context)
@@ -267,33 +338,20 @@ class TaxonomyClassifier(BaseClassifier):
                 continue
 
             pattern = r"\b" + re.escape(keyword) + r"\b"
-
-            # Try original content first
             match = re.search(pattern, content_lower, re.IGNORECASE)
             match_in_normalized = False
 
-            # If no match, try normalized content
             if not match and normalized_content:
                 match = re.search(pattern, normalized_content, re.IGNORECASE)
                 match_in_normalized = True
 
             if match:
-                # Score based on position (earlier = better)
-                # Use original content length for scoring
-                position = match.start()
-                position_score = 1.0 - (position / content_length) if content_length > 0 else 0.5
-
-                # Boost for header matches
-                header_boost = 1.5 if position < self.KEYWORD_HEADER_THRESHOLD else 1.0
-
-                # Boost for longer keywords (more specific)
-                length_boost = 1.0 + (len(keyword) / self.KEYWORD_LENGTH_FACTOR)
-
-                # Slight penalty for matches only in normalized content (less certain)
-                ocr_penalty = 0.95 if match_in_normalized else 1.0
-
-                # Final score
-                score = position_score * header_boost * length_boost * ocr_penalty
+                score = self._calculate_keyword_score(
+                    match.start(),
+                    content_length,
+                    len(keyword),
+                    match_in_normalized=match_in_normalized,
+                )
                 matches.append((score, keyword, doc_type, category))
 
         if not matches:
@@ -417,7 +475,7 @@ class TaxonomyClassifier(BaseClassifier):
 
         Args:
             content: Text content to classify
-            metadata: Optional file metadata
+            metadata: Optional file metadata (including PDF author/title/subject)
 
         Returns:
             ClassificationResult if matched, None otherwise
@@ -425,7 +483,8 @@ class TaxonomyClassifier(BaseClassifier):
         filename = metadata.filename if metadata else None
 
         # Priority 1: Issuer matching (90% confidence)
-        issuer_match = self._match_issuer(content, filename)
+        # Now also checks pdf_author from metadata
+        issuer_match = self._match_issuer(content, filename, metadata)
         if issuer_match:
             issuer, doc_type, category = issuer_match
 
@@ -458,7 +517,8 @@ class TaxonomyClassifier(BaseClassifier):
             )
 
         # Priority 2: Keyword matching (85% confidence)
-        keyword_match = self._match_keywords(content)
+        # Now also checks pdf_title/subject from metadata
+        keyword_match = self._match_keywords(content, metadata)
         if keyword_match:
             doc_type, category, matched_keyword = keyword_match
 

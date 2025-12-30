@@ -175,6 +175,20 @@ class FileMetadata(BaseModel):
         description="Camera make and model",
     )
 
+    # PDF metadata (extracted via pypdf)
+    pdf_title: str | None = Field(
+        default=None,
+        description="PDF document title from metadata",
+    )
+    pdf_author: str | None = Field(
+        default=None,
+        description="PDF document author from metadata",
+    )
+    pdf_subject: str | None = Field(
+        default=None,
+        description="PDF document subject from metadata",
+    )
+
     model_config = {"arbitrary_types_allowed": True}
 
     @property

@@ -83,7 +83,7 @@ def extract_file_metadata(file_path: Path, *, extract_exif: bool = True) -> File
         extract_exif: Whether to extract EXIF data (requires exiftool).
 
     Returns:
-        FileMetadata with filename, extension, size, dates, and optional EXIF.
+        FileMetadata with filename, extension, size, dates, and optional EXIF/PDF.
     """
     stat = file_path.stat()
 
@@ -117,6 +117,20 @@ def extract_file_metadata(file_path: Path, *, extract_exif: bool = True) -> File
             elif exif.model:
                 exif_camera = exif.model
 
+    # Extract PDF metadata for PDF files
+    pdf_title = None
+    pdf_author = None
+    pdf_subject = None
+
+    if file_path.suffix.lower() == ".pdf":
+        from para_files.utils.pdf_metadata import extract_pdf_metadata
+
+        pdf_meta = extract_pdf_metadata(file_path, max_pages_for_isbn=0)  # Skip ISBN scan
+        if pdf_meta:
+            pdf_title = pdf_meta.title
+            pdf_author = pdf_meta.author
+            pdf_subject = pdf_meta.subject
+
     return FileMetadata(
         path=file_path,
         filename=file_path.name,
@@ -128,6 +142,9 @@ def extract_file_metadata(file_path: Path, *, extract_exif: bool = True) -> File
         exif_gps_lat=exif_gps_lat,
         exif_gps_lon=exif_gps_lon,
         exif_camera=exif_camera,
+        pdf_title=pdf_title,
+        pdf_author=pdf_author,
+        pdf_subject=pdf_subject,
     )
 
 

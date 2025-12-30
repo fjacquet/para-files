@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **PDF metadata for classification**: TaxonomyClassifier now uses PDF author/title/subject for better matching
+  - PDF author is checked first for issuer matching (most reliable source)
+  - PDF title/subject are prepended to content for keyword matching
+  - New fields in FileMetadata: `pdf_title`, `pdf_author`, `pdf_subject`
+  - extract_file_metadata() now extracts PDF metadata automatically
 - **Retention-based folder suffixes**: TaxonomyClassifier now adds retention policy suffixes to folder names
   - `_perm` for permanent (stays in 3_Resources)
   - `_10y` for 10_years retention
