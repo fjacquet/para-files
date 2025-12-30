@@ -150,7 +150,7 @@ class TestTestFileAgainstRoute:
         mock_config.return_value = MagicMock()
         mock_pipeline = MagicMock()
         mock_result = MagicMock()
-        mock_result.category = "4_Archives/fiscalite_10y/2024"
+        mock_result.category = "4_Archives/10y_fiscalite/2024"
         mock_result.route_name = "fiscalite"
         mock_result.confidence.value = 0.95
         mock_result.confidence.source.value = "semantic"
@@ -179,7 +179,7 @@ class TestTestFileAgainstRoute:
         mock_config.return_value = MagicMock()
         mock_pipeline = MagicMock()
         mock_result = MagicMock()
-        mock_result.category = "4_Archives/sante_10y/2024"
+        mock_result.category = "4_Archives/10y_sante/2024"
         mock_result.route_name = "sante"
         mock_result.confidence.value = 0.85
         mock_result.confidence.source.value = "semantic"
@@ -512,7 +512,7 @@ class TestTestRouteCommand:
         mock_get_path.return_value = Path("/fake/tree.yaml")
         mock_learner = MagicMock()
         mock_learner.get_route_info.return_value = {
-            "pattern": "4_Archives/fiscalite_10y/{year}",
+            "pattern": "4_Archives/10y_fiscalite/{year}",
             "utterances": ["impot", "taxes"],
         }
         mock_learner_class.return_value = mock_learner
@@ -568,7 +568,7 @@ class TestTestRouteCommand:
 
         mock_get_path.return_value = Path("/fake/tree.yaml")
         mock_learner = MagicMock()
-        mock_learner.get_route_info.return_value = {"pattern": "4_Archives/fiscalite_10y/{year}"}
+        mock_learner.get_route_info.return_value = {"pattern": "4_Archives/10y_fiscalite/{year}"}
         mock_learner_class.return_value = mock_learner
         mock_validate.return_value = True
 

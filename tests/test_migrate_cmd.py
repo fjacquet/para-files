@@ -11,7 +11,7 @@ from typer.testing import CliRunner
 
 from para_files.cli.app import app
 from para_files.cli.migrate_cmd import (
-    RETENTION_SUFFIX_PATTERN,
+    RETENTION_PREFIX_PATTERN,
     _build_retention_mapping_from_taxonomy,
     _discover_folders_to_migrate,
     _merge_folder,
@@ -24,42 +24,42 @@ from para_files.cli.migrate_cmd import (
 runner = CliRunner()
 
 
-class TestRetentionSuffixPattern:
-    """Tests for RETENTION_SUFFIX_PATTERN regex."""
+class TestRetentionPrefixPattern:
+    """Tests for RETENTION_PREFIX_PATTERN regex."""
 
-    def test_matches_10y_suffix(self) -> None:
-        """Test matching _10y suffix."""
-        match = RETENTION_SUFFIX_PATTERN.search("fiscalite_10y")
+    def test_matches_10y_prefix(self) -> None:
+        """Test matching 10y_ prefix."""
+        match = RETENTION_PREFIX_PATTERN.match("10y_fiscalite")
         assert match is not None
-        assert match.group(0) == "_10y"
+        assert match.group(0) == "10y_"
 
-    def test_matches_5y_suffix(self) -> None:
-        """Test matching _5y suffix."""
-        match = RETENTION_SUFFIX_PATTERN.search("factures_5y")
+    def test_matches_5y_prefix(self) -> None:
+        """Test matching 5y_ prefix."""
+        match = RETENTION_PREFIX_PATTERN.match("5y_factures")
         assert match is not None
-        assert match.group(0) == "_5y"
+        assert match.group(0) == "5y_"
 
-    def test_matches_ret_suffix(self) -> None:
-        """Test matching _ret suffix."""
-        match = RETENTION_SUFFIX_PATTERN.search("prevoyance_ret")
+    def test_matches_ret_prefix(self) -> None:
+        """Test matching ret_ prefix."""
+        match = RETENTION_PREFIX_PATTERN.match("ret_prevoyance")
         assert match is not None
-        assert match.group(0) == "_ret"
+        assert match.group(0) == "ret_"
 
-    def test_matches_ctr_suffix(self) -> None:
-        """Test matching _ctr suffix."""
-        match = RETENTION_SUFFIX_PATTERN.search("abonnement_ctr")
+    def test_matches_ctr_prefix(self) -> None:
+        """Test matching ctr_ prefix."""
+        match = RETENTION_PREFIX_PATTERN.match("ctr_abonnement")
         assert match is not None
-        assert match.group(0) == "_ctr"
+        assert match.group(0) == "ctr_"
 
-    def test_matches_perm_suffix(self) -> None:
-        """Test matching _perm suffix."""
-        match = RETENTION_SUFFIX_PATTERN.search("identite_perm")
-        assert match is not None
-        assert match.group(0) == "_perm"
+    def test_no_prefix_for_permanent(self) -> None:
+        """Test that permanent items have no prefix to match."""
+        # Permanent items go to 3_Resources with no prefix
+        match = RETENTION_PREFIX_PATTERN.match("identite")
+        assert match is None  # No prefix means no match
 
-    def test_no_match_without_suffix(self) -> None:
-        """Test no match for folder without suffix."""
-        match = RETENTION_SUFFIX_PATTERN.search("fiscalite")
+    def test_no_match_without_prefix(self) -> None:
+        """Test no match for folder without prefix."""
+        match = RETENTION_PREFIX_PATTERN.match("fiscalite")
         assert match is None
 
 
@@ -72,7 +72,7 @@ class TestBuildRetentionMapping:
         mock_taxonomy = MagicMock()
         mock_category = MagicMock()
         mock_doc = MagicMock()
-        mock_doc.para_pattern = "4_Archives/fiscalite_10y"
+        mock_doc.para_pattern = "4_Archives/10y_fiscalite"
         mock_doc.retention = "10_years"
         mock_category.documents = [mock_doc]
         mock_taxonomy.categories = [mock_category]
@@ -82,7 +82,7 @@ class TestBuildRetentionMapping:
 
         assert "fiscalite" in mapping
         assert mapping["fiscalite"]["retention"] == "10_years"
-        assert mapping["fiscalite"]["suffix"] == "_10y"
+        assert mapping["fiscalite"]["prefix"] == "10y_"
         assert mapping["fiscalite"]["target_para"] == "4_Archives"
 
     @patch("para_files.taxonomies.loader.TaxonomyLoader")
@@ -101,7 +101,7 @@ class TestBuildRetentionMapping:
 
         assert "identite" in mapping
         assert mapping["identite"]["retention"] == "permanent"
-        assert mapping["identite"]["suffix"] is None
+        assert mapping["identite"]["prefix"] is None
         assert mapping["identite"]["target_para"] == "3_Resources"
 
     @patch("para_files.taxonomies.loader.TaxonomyLoader")
@@ -119,8 +119,8 @@ class TestBuildRetentionMapping:
 class TestDiscoverFoldersToMigrate:
     """Tests for _discover_folders_to_migrate function."""
 
-    def test_discover_folder_needs_suffix(self, tmp_path: Path) -> None:
-        """Test discovering folder that needs retention suffix."""
+    def test_discover_folder_needs_prefix(self, tmp_path: Path) -> None:
+        """Test discovering folder that needs retention prefix."""
         archives = tmp_path / "4_Archives" / "fiscalite"
         archives.mkdir(parents=True)
         (archives / "file.pdf").touch()
@@ -128,7 +128,7 @@ class TestDiscoverFoldersToMigrate:
         mapping = {
             "fiscalite": {
                 "retention": "10_years",
-                "suffix": "_10y",
+                "prefix": "10y_",
                 "target_para": "4_Archives",
             }
         }
@@ -138,7 +138,7 @@ class TestDiscoverFoldersToMigrate:
         assert len(migrations) == 1
         source, dest, action = migrations[0]
         assert source.name == "fiscalite"
-        assert dest.name == "fiscalite_10y"
+        assert dest.name == "10y_fiscalite"
         assert action == "rename"
 
     def test_discover_folder_needs_move_to_resources(self, tmp_path: Path) -> None:
@@ -150,7 +150,7 @@ class TestDiscoverFoldersToMigrate:
         mapping = {
             "identite": {
                 "retention": "permanent",
-                "suffix": None,
+                "prefix": None,
                 "target_para": "3_Resources",
             }
         }
@@ -168,13 +168,13 @@ class TestDiscoverFoldersToMigrate:
 
     def test_skip_folder_already_correct(self, tmp_path: Path) -> None:
         """Test skipping folder already in correct location."""
-        archives = tmp_path / "4_Archives" / "fiscalite_10y"
+        archives = tmp_path / "4_Archives" / "10y_fiscalite"
         archives.mkdir(parents=True)
 
         mapping = {
             "fiscalite": {
                 "retention": "10_years",
-                "suffix": "_10y",
+                "prefix": "10y_",
                 "target_para": "4_Archives",
             }
         }
@@ -188,14 +188,14 @@ class TestDiscoverFoldersToMigrate:
         # Source folder
         source = tmp_path / "4_Archives" / "fiscalite"
         source.mkdir(parents=True)
-        # Destination already exists
-        dest = tmp_path / "4_Archives" / "fiscalite_10y"
+        # Destination already exists (with prefix format)
+        dest = tmp_path / "4_Archives" / "10y_fiscalite"
         dest.mkdir(parents=True)
 
         mapping = {
             "fiscalite": {
                 "retention": "10_years",
-                "suffix": "_10y",
+                "prefix": "10y_",
                 "target_para": "4_Archives",
             }
         }
@@ -212,12 +212,12 @@ class TestDiscoverFoldersToMigrate:
         mapping = {
             "fiscalite": {
                 "retention": "10_years",
-                "suffix": "_10y",
+                "prefix": "10y_",
                 "target_para": "4_Archives",
             },
             "banque": {
                 "retention": "10_years",
-                "suffix": "_10y",
+                "prefix": "10y_",
                 "target_para": "4_Archives",
             },
         }
@@ -239,7 +239,7 @@ class TestMigrateFolder:
         source.mkdir(parents=True)
         (source / "file.pdf").touch()
 
-        dest = tmp_path / "4_Archives" / "fiscalite_10y"
+        dest = tmp_path / "4_Archives" / "10y_fiscalite"
 
         result = _migrate_folder(source, dest, "rename", dry_run=True)
 
@@ -255,7 +255,7 @@ class TestMigrateFolder:
         source.mkdir(parents=True)
         (source / "file.pdf").touch()
 
-        dest = tmp_path / "4_Archives" / "fiscalite_10y"
+        dest = tmp_path / "4_Archives" / "10y_fiscalite"
 
         result = _migrate_folder(source, dest, "rename", dry_run=False)
 
@@ -290,7 +290,7 @@ class TestMigrateFolder:
         subdir.mkdir()
         (subdir / "file3.pdf").touch()
 
-        dest = tmp_path / "4_Archives" / "fiscalite_10y"
+        dest = tmp_path / "4_Archives" / "10y_fiscalite"
 
         result = _migrate_folder(source, dest, "rename", dry_run=True)
 
@@ -366,7 +366,7 @@ class TestRunMigration:
             verbose=False,
         )
 
-        # Should find fiscalite and want to add _10y suffix
+        # Should find fiscalite and want to add 10y_ prefix
         assert results["folders_scanned"] >= 0
 
 
@@ -572,7 +572,7 @@ class TestDiscoverWithMerge:
         mapping = {
             "identite": {
                 "retention": "permanent",
-                "suffix": None,
+                "prefix": None,
                 "target_para": "3_Resources",
             }
         }

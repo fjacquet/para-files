@@ -4,7 +4,7 @@ This module provides the 'rescan' command which re-classifies existing files
 in PARA archives and moves them to their correct locations.
 
 WARNING: This is a SLOW operation that processes files one by one.
-For folder-level operations (adding retention suffixes), use 'migrate' instead.
+For folder-level operations (adding retention prefixes), use 'migrate' instead.
 """
 
 from __future__ import annotations

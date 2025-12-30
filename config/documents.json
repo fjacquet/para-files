@@ -67,7 +67,7 @@
         {
           "sub_id": "administration_communale",
           "name": "Rapports avec la Commune",
-          "para_pattern": "4_Archives/administratif_5y/commune/{year}",
+          "para_pattern": "4_Archives/5y_administratif/commune/{year}",
           "examples": [
             "Certificat de domicile",
             "Attestation de séjour",
@@ -93,7 +93,7 @@
         {
           "sub_id": "militaire_pci",
           "name": "Armée & Protection Civile",
-          "para_pattern": "4_Archives/administratif_ret/militaire/{year}",
+          "para_pattern": "4_Archives/ret_administratif/militaire/{year}",
           "examples": [
             "Livret de service",
             "Ordres de marche",
@@ -143,7 +143,7 @@
               ]
             }
           ],
-          "para_pattern": "4_Archives/fiscalite_10y/{year}"
+          "para_pattern": "4_Archives/10y_fiscalite/{year}"
         },
         {
           "sub_id": "decisions_taxation",
@@ -171,7 +171,7 @@
               ]
             }
           ],
-          "para_pattern": "4_Archives/fiscalite_10y/{year}"
+          "para_pattern": "4_Archives/10y_fiscalite/{year}"
         },
         {
           "sub_id": "justificatifs_fiscaux",
@@ -190,12 +190,12 @@
           ],
           "retention": "10_years",
           "paper_required": false,
-          "para_pattern": "4_Archives/fiscalite_10y/{year}"
+          "para_pattern": "4_Archives/10y_fiscalite/{year}"
         },
         {
           "sub_id": "dons",
           "name": "Dons et contributions",
-          "para_pattern": "4_Archives/dons_10y/{issuer}/{year}",
+          "para_pattern": "4_Archives/10y_dons/{issuer}/{year}",
           "examples": [
             "Reçu de don",
             "Attestation fiscale pour don"
@@ -329,7 +329,7 @@
           ],
           "retention": "10_years",
           "paper_required": false,
-          "para_pattern": "4_Archives/fiscalite_10y/{year}"
+          "para_pattern": "4_Archives/10y_fiscalite/{year}"
         }
       ]
     },
@@ -342,7 +342,7 @@
         {
           "sub_id": "bail_locataire",
           "name": "Dossier Locataire",
-          "para_pattern": "4_Archives/factures_ctr/Logement/{issuer}/{year}",
+          "para_pattern": "4_Archives/ctr_factures/Logement/{issuer}/{year}",
           "examples": [
             "Contrat de bail",
             "État des lieux",
@@ -410,7 +410,7 @@
         {
           "sub_id": "ppe_copropriete",
           "name": "Administration PPE",
-          "para_pattern": "4_Archives/immobilier_10y/ppe/{year}",
+          "para_pattern": "4_Archives/10y_immobilier/ppe/{year}",
           "examples": [
             "Règlement de copropriété",
             "Procès-verbaux des AG",
@@ -428,7 +428,7 @@
         {
           "sub_id": "dpe_diagnostics",
           "name": "Diagnostics Immobiliers",
-          "para_pattern": "4_Archives/immobilier_10y/diagnostics/{year}",
+          "para_pattern": "4_Archives/10y_immobilier/diagnostics/{year}",
           "examples": [
             "DPE",
             "Diagnostic de Performance Énergétique",
@@ -482,7 +482,7 @@
         {
           "sub_id": "energie_fluides",
           "name": "Énergie & Déchets",
-          "para_pattern": "4_Archives/factures_5y/Energie/{issuer}/{year}",
+          "para_pattern": "4_Archives/5y_factures/Energie/{issuer}/{year}",
           "examples": [
             "Facture Électricité",
             "Facture Gaz",
@@ -553,7 +553,7 @@
         {
           "sub_id": "media_telecom",
           "name": "Téléphonie & Internet",
-          "para_pattern": "4_Archives/factures_5y/Telephonie/{issuer}/{year}",
+          "para_pattern": "4_Archives/5y_factures/Telephonie/{issuer}/{year}",
           "examples": [
             "Facture mobile",
             "Facture Internet",
@@ -634,7 +634,7 @@
         {
           "sub_id": "redevances",
           "name": "Redevances & Taxes média",
-          "para_pattern": "4_Archives/factures_5y/Redevances/{issuer}/{year}",
+          "para_pattern": "4_Archives/5y_factures/Redevances/{issuer}/{year}",
           "examples": [
             "Serafe",
             "Redevance RTV"
@@ -667,7 +667,7 @@
         {
           "sub_id": "assurance_batiment",
           "name": "Assurance Bâtiment",
-          "para_pattern": "4_Archives/factures_5y/Assurances/ECA/{year}",
+          "para_pattern": "4_Archives/5y_factures/Assurances/ECA/{year}",
           "examples": [
             "Police ECA",
             "Facture ECA"
@@ -700,7 +700,7 @@
         {
           "sub_id": "lamal_base",
           "name": "Assurance de Base (LAMal)",
-          "para_pattern": "4_Archives/factures_5y/Assurances/{issuer}/{year}",
+          "para_pattern": "4_Archives/5y_factures/Assurances/{issuer}/{year}",
           "examples": [
             "Police d'assurance annuelle",
             "Carte d'assuré",
@@ -794,7 +794,7 @@
         {
           "sub_id": "lca_complementaire",
           "name": "Assurances Complémentaires (LCA)",
-          "para_pattern": "4_Archives/factures_ctr/Assurances/{issuer}/{year}",
+          "para_pattern": "4_Archives/ctr_factures/Assurances/{issuer}/{year}",
           "examples": [
             "Police LCA",
             "Réserves émises",
@@ -812,7 +812,7 @@
         {
           "sub_id": "frais_medicaux",
           "name": "Frais Médicaux & Remboursements",
-          "para_pattern": "4_Archives/factures_5y/Santé/{issuer}/{year}",
+          "para_pattern": "4_Archives/5y_factures/Santé/{issuer}/{year}",
           "examples": [
             "Décomptes de prestations",
             "Factures médecins",
@@ -959,7 +959,7 @@
         {
           "sub_id": "salaires",
           "name": "Fiches de Salaire",
-          "para_pattern": "4_Archives/travail_10y/salaires/{year}",
+          "para_pattern": "4_Archives/10y_travail/salaires/{year}",
           "examples": [
             "Fiches mensuelles",
             "Fiche cumulée Décembre",
@@ -981,7 +981,7 @@
         {
           "sub_id": "chomage",
           "name": "Chômage & ORP",
-          "para_pattern": "4_Archives/travail_10y/chomage/{year}",
+          "para_pattern": "4_Archives/10y_travail/chomage/{year}",
           "examples": [
             "Inscription ORP",
             "Décomptes indemnités",
@@ -999,7 +999,7 @@
         {
           "sub_id": "feuilles_heures",
           "name": "Feuilles d'heures employés",
-          "para_pattern": "4_Archives/administratif_5y/employes/heures/{year}",
+          "para_pattern": "4_Archives/5y_administratif/employes/heures/{year}",
           "examples": [
             "Feuille d'heures mensuelle",
             "Timesheet",
@@ -1034,7 +1034,7 @@
         {
           "sub_id": "avs_ai",
           "name": "1er Pilier (AVS/AI)",
-          "para_pattern": "3_Resources/prevoyance_ret/avs",
+          "para_pattern": "3_Resources/ret_prevoyance/avs",
           "examples": [
             "Certificat d'assurance AVS",
             "Extrait de Compte Individuel",
@@ -1053,7 +1053,7 @@
         {
           "sub_id": "lpp",
           "name": "2ème Pilier (LPP)",
-          "para_pattern": "4_Archives/prevoyance_ret/{issuer}/{year}",
+          "para_pattern": "4_Archives/ret_prevoyance/{issuer}/{year}",
           "examples": [
             "Certificat de prévoyance",
             "Décompte de sortie",
@@ -1131,7 +1131,7 @@
         {
           "sub_id": "pilier_3a_3b",
           "name": "3ème Pilier (Privé)",
-          "para_pattern": "4_Archives/prevoyance_ret/{issuer}/{year}",
+          "para_pattern": "4_Archives/ret_prevoyance/{issuer}/{year}",
           "examples": [
             "Police d'assurance vie",
             "Convention de compte 3a",
@@ -1268,12 +1268,12 @@
               ]
             }
           ],
-          "para_pattern": "4_Archives/banques_10y/{issuer}/{year}"
+          "para_pattern": "4_Archives/10y_banques/{issuer}/{year}"
         },
         {
           "sub_id": "placements",
           "name": "Titres & Investissements",
-          "para_pattern": "4_Archives/banques_10y/{issuer}/{year}",
+          "para_pattern": "4_Archives/10y_banques/{issuer}/{year}",
           "examples": [
             "Relevés de dépôt titres",
             "Avis d'opérations",
@@ -1337,7 +1337,7 @@
         {
           "sub_id": "poursuites",
           "name": "Office des Poursuites",
-          "para_pattern": "4_Archives/juridique_10y/poursuites/{year}",
+          "para_pattern": "4_Archives/10y_juridique/poursuites/{year}",
           "examples": [
             "Extrait du registre des poursuites",
             "Commandement de payer"
@@ -1389,7 +1389,7 @@
         {
           "sub_id": "vehicule_contrats",
           "name": "Contrats Véhicule",
-          "para_pattern": "4_Archives/mobilite_ctr/vehicule/{year}",
+          "para_pattern": "4_Archives/ctr_mobilite/vehicule/{year}",
           "examples": [
             "Contrat d'achat",
             "Contrat de Leasing",
@@ -1407,7 +1407,7 @@
         {
           "sub_id": "entretien_vehicule",
           "name": "Entretien & Amendes",
-          "para_pattern": "4_Archives/mobilite_5y/entretien/{year}",
+          "para_pattern": "4_Archives/5y_mobilite/entretien/{year}",
           "examples": [
             "Factures garage",
             "Achat pneus",
@@ -1436,7 +1436,7 @@
         {
           "sub_id": "transports_publics",
           "name": "Transports Publics",
-          "para_pattern": "4_Archives/factures_5y/Mobilité/{issuer}/{year}",
+          "para_pattern": "4_Archives/5y_factures/Mobilité/{issuer}/{year}",
           "examples": [
             "Carte SwissPass",
             "Factures AG/Demi-tarif",
@@ -1648,7 +1648,7 @@
         {
           "sub_id": "formation_enfants",
           "name": "Formation Enfants",
-          "para_pattern": "4_Archives/factures_5y/Enfant/{issuer}/{year}",
+          "para_pattern": "4_Archives/5y_factures/Enfant/{issuer}/{year}",
           "examples": [
             "Crèche",
             "Parascolaire",
@@ -1726,7 +1726,7 @@
         {
           "sub_id": "assurances_rc_menage",
           "name": "RC Privée & Ménage",
-          "para_pattern": "4_Archives/factures_ctr/Assurances/{issuer}/{year}",
+          "para_pattern": "4_Archives/ctr_factures/Assurances/{issuer}/{year}",
           "examples": [
             "Police RC Privée",
             "Police Assurance Ménage",
@@ -1760,7 +1760,7 @@
         {
           "sub_id": "garanties_achats",
           "name": "Garanties & Factures Appareils",
-          "para_pattern": "4_Archives/factures_2y/Materiels/{issuer}/{year}",
+          "para_pattern": "4_Archives/2y_factures/Materiels/{issuer}/{year}",
           "examples": [
             "Tickets de caisse",
             "Factures électronique",
@@ -1938,7 +1938,7 @@
         {
           "sub_id": "livraison_logistique",
           "name": "Services de Livraison",
-          "para_pattern": "4_Archives/factures_2y/Materiels/{issuer}/{year}",
+          "para_pattern": "4_Archives/2y_factures/Materiels/{issuer}/{year}",
           "examples": [
             "Bordereaux d'expédition",
             "Factures de livraison"
@@ -1984,7 +1984,7 @@
         {
           "sub_id": "cloud_licences",
           "name": "Abonnements Cloud & Licences",
-          "para_pattern": "4_Archives/factures_5y/Licences/{issuer}/{year}",
+          "para_pattern": "4_Archives/5y_factures/Licences/{issuer}/{year}",
           "examples": [
             "Factures abonnement",
             "Licences logicielles",
@@ -2185,7 +2185,7 @@
         {
           "sub_id": "voyages",
           "name": "Voyages & Vacances",
-          "para_pattern": "4_Archives/voyages_5y/hotels/{issuer}/{year}",
+          "para_pattern": "4_Archives/5y_voyages/hotels/{issuer}/{year}",
           "examples": [
             "Réservations hôtel",
             "Location voiture",
@@ -2285,7 +2285,7 @@
         {
           "sub_id": "billets_avion",
           "name": "Billets d'avion & Transport",
-          "para_pattern": "4_Archives/voyages_5y/vols/{year}",
+          "para_pattern": "4_Archives/5y_voyages/vols/{year}",
           "examples": [
             "E-ticket",
             "Confirmation de vol",
@@ -2375,7 +2375,7 @@
         {
           "sub_id": "documents_voyage",
           "name": "Documents de voyage",
-          "para_pattern": "4_Archives/voyages_5y/documents/{year}",
+          "para_pattern": "4_Archives/5y_voyages/documents/{year}",
           "examples": [
             "ESTA",
             "Visa touristique",
@@ -2399,7 +2399,7 @@
         {
           "sub_id": "spectacles_evenements",
           "name": "Spectacles & Événements",
-          "para_pattern": "4_Archives/loisirs_2y/spectacles/{year}",
+          "para_pattern": "4_Archives/2y_loisirs/spectacles/{year}",
           "examples": [
             "Billets de concert",
             "Entrées cinéma",
@@ -2440,7 +2440,7 @@
         {
           "sub_id": "services_divers",
           "name": "Services Divers",
-          "para_pattern": "4_Archives/factures_2y/Services/{issuer}/{year}",
+          "para_pattern": "4_Archives/2y_factures/Services/{issuer}/{year}",
           "examples": [
             "Pressing",
             "Nettoyage",

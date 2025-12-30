@@ -1,51 +1,51 @@
 #!/usr/bin/env python3
-"""Update documents.json to add retention suffixes to para_pattern fields."""
+"""Update documents.json to add retention prefixes to para_pattern fields."""
 
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 
-# Retention suffix mapping (same as in taxonomy_classifier.py)
-RETENTION_SUFFIXES = {
-    "permanent": "_perm",
-    "retirement": "_ret",
-    "10_years": "_10y",
-    "5_years": "_5y",
-    "contract_duration": "_ctr",
-    "warranty_2_years": "_2y",
+# Retention prefix mapping (same as in taxonomy_classifier.py)
+# Permanent items have no prefix (they go to 3_Resources)
+RETENTION_PREFIXES = {
+    "permanent": "",  # No prefix
+    "retirement": "ret_",
+    "10_years": "10y_",
+    "5_years": "5y_",
+    "contract_duration": "ctr_",
+    "warranty_2_years": "2y_",
 }
 
 
-def add_retention_suffix(pattern: str, retention: str) -> str:
-    """Add retention suffix to the category folder in a para_pattern.
+def add_retention_prefix(pattern: str, retention: str) -> str:
+    """Add retention prefix to the category folder in a para_pattern.
 
     Examples:
-        4_Archives/fiscalite/{year} + 10_years -> 4_Archives/fiscalite_10y/{year}
-        3_Resources/administratif/identite + permanent -> 3_Resources/administratif/identite_perm
+        4_Archives/fiscalite/{year} + 10_years -> 4_Archives/10y_fiscalite/{year}
+        3_Resources/administratif/identite + permanent -> 3_Resources/administratif/identite (no change)
     """
-    suffix = RETENTION_SUFFIXES.get(retention, "")
-    if not suffix:
-        return pattern
+    prefix = RETENTION_PREFIXES.get(retention, "")
+    if not prefix:
+        return pattern  # No prefix for permanent items
 
     # Pattern: PARA_folder/category[/subpath]
-    # We want to add suffix to the second component (after PARA folder)
+    # We want to add prefix to the second component (after PARA folder)
     parts = pattern.split("/")
     if len(parts) < 2:
         return pattern
 
-    # Check if suffix already present
-    if any(s in parts[1] for s in RETENTION_SUFFIXES.values()):
-        return pattern  # Already has a suffix
+    # Check if prefix already present
+    if any(parts[1].startswith(p) for p in RETENTION_PREFIXES.values() if p):
+        return pattern  # Already has a prefix
 
-    # Add suffix to the category folder (second part)
-    parts[1] = parts[1] + suffix
+    # Add prefix to the category folder (second part)
+    parts[1] = prefix + parts[1]
     return "/".join(parts)
 
 
-def update_documents_json(filepath: Path) -> dict:
-    """Update documents.json with retention suffixes in para_patterns."""
+def update_documents_json(filepath: Path) -> tuple[dict, list]:
+    """Update documents.json with retention prefixes in para_patterns."""
     with filepath.open() as f:
         data = json.load(f)
 
@@ -53,7 +53,6 @@ def update_documents_json(filepath: Path) -> dict:
 
     for category in data.get("categories", []):
         category_pattern = category.get("para_pattern", "")
-        category_retention = None  # Will be determined from documents
 
         for doc in category.get("documents", []):
             retention = doc.get("retention")
@@ -65,8 +64,8 @@ def update_documents_json(filepath: Path) -> dict:
             if not original_pattern:
                 continue
 
-            # Add retention suffix
-            new_pattern = add_retention_suffix(original_pattern, retention)
+            # Add retention prefix
+            new_pattern = add_retention_prefix(original_pattern, retention)
 
             if new_pattern != original_pattern:
                 # Store the new pattern at document level
@@ -91,7 +90,7 @@ def main():
 
     data, updates = update_documents_json(filepath)
 
-    print(f"\nUpdates to be made: {len(updates)}")
+    print(f"\nPrefix updates to be made: {len(updates)}")
     print("-" * 60)
 
     for u in updates:

@@ -18,13 +18,13 @@ class TestCorrectionRecord:
             file_path="/path/to/file.pdf",
             filename="file.pdf",
             original_category="4_Archives/divers",
-            corrected_category="4_Archives/fiscalite_10y/2024",
+            corrected_category="4_Archives/10y_fiscalite/2024",
             original_confidence=0.75,
         )
         assert record.file_path == "/path/to/file.pdf"
         assert record.filename == "file.pdf"
         assert record.original_category == "4_Archives/divers"
-        assert record.corrected_category == "4_Archives/fiscalite_10y/2024"
+        assert record.corrected_category == "4_Archives/10y_fiscalite/2024"
         assert record.original_confidence == 0.75
         assert record.source == "unknown"
 
@@ -34,14 +34,14 @@ class TestCorrectionRecord:
             file_path="/path/to/file.pdf",
             filename="file.pdf",
             original_category=None,
-            corrected_category="4_Archives/fiscalite_10y/2024",
+            corrected_category="4_Archives/10y_fiscalite/2024",
             original_confidence=0.0,
         )
         data = record.to_dict()
         assert data["file_path"] == "/path/to/file.pdf"
         assert data["filename"] == "file.pdf"
         assert data["original_category"] is None
-        assert data["corrected_category"] == "4_Archives/fiscalite_10y/2024"
+        assert data["corrected_category"] == "4_Archives/10y_fiscalite/2024"
 
     def test_from_dict(self) -> None:
         """Test creating record from dictionary."""
@@ -182,7 +182,7 @@ class TestPatternSuggestion:
         suggestion = PatternSuggestion(
             pattern_type="issuer",
             pattern="SwissLife",
-            category="4_Archives/assurances_10y",
+            category="4_Archives/10y_assurances",
             confidence=0.8,
             occurrences=5,
             examples=["SwissLife-2024.pdf"],

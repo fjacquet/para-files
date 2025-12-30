@@ -2,8 +2,8 @@
 
 This module provides the 'migrate' command which reorganizes existing folders
 based on retention rules:
-- Permanent folders → 3_Resources/ (no suffix needed)
-- Time-limited folders → 4_Archives/ with retention suffix
+- Permanent folders → 3_Resources/ (no prefix needed)
+- Time-limited folders → 4_Archives/ with retention prefix (e.g., 10y_fiscalite)
 
 FAST: Works at folder level, not file level.
 """
@@ -33,42 +33,47 @@ logger = logging.getLogger(__name__)
 
 # Retention types and their target PARA category
 # permanent → 3_Resources (no suffix)
-# others → 4_Archives (with suffix)
+# others → 4_Archives (with prefix)
 RETENTION_CONFIG: dict[str, dict[str, str | None]] = {
-    # Permanent categories → Resources (no suffix)
-    "administratif": {"retention": "permanent", "suffix": None},
-    "identite": {"retention": "permanent", "suffix": None},
-    "sante": {"retention": "permanent", "suffix": None},
-    "carriere": {"retention": "permanent", "suffix": None},
-    "formation": {"retention": "permanent", "suffix": None},
-    "education": {"retention": "permanent", "suffix": None},
-    "famille": {"retention": "permanent", "suffix": None},
-    "succession": {"retention": "permanent", "suffix": None},
-    "vehicules": {"retention": "permanent", "suffix": None},
-    "animaux": {"retention": "permanent", "suffix": None},
-    "immobilier": {"retention": "permanent", "suffix": None},  # Property docs
-    # Time-limited categories → Archives (with suffix)
-    "fiscalite": {"retention": "10_years", "suffix": "_10y"},
-    "dons": {"retention": "10_years", "suffix": "_10y"},
-    "travail": {"retention": "10_years", "suffix": "_10y"},
-    "banque": {"retention": "10_years", "suffix": "_10y"},
-    "juridique": {"retention": "10_years", "suffix": "_10y"},
-    "factures": {"retention": "5_years", "suffix": "_5y"},
-    "prevoyance": {"retention": "retirement", "suffix": "_ret"},
-    "retraite": {"retention": "retirement", "suffix": "_ret"},
-    "assurance-vie": {"retention": "retirement", "suffix": "_ret"},
-    "vehicule": {"retention": "contract", "suffix": "_ctr"},
-    "abonnement": {"retention": "contract", "suffix": "_ctr"},
+    # Permanent categories → Resources (no prefix needed)
+    "administratif": {"retention": "permanent", "prefix": None},
+    "identite": {"retention": "permanent", "prefix": None},
+    "sante": {"retention": "permanent", "prefix": None},
+    "carriere": {"retention": "permanent", "prefix": None},
+    "formation": {"retention": "permanent", "prefix": None},
+    "education": {"retention": "permanent", "prefix": None},
+    "famille": {"retention": "permanent", "prefix": None},
+    "prevoyance": {"retention": "permanent", "prefix": None},
+    "retraite": {"retention": "permanent", "prefix": None},
+    "assurance-vie": {"retention": "permanent", "prefix": None},
+    "succession": {"retention": "permanent", "prefix": None},
+    "vehicules": {"retention": "permanent", "prefix": None},
+    "animaux": {"retention": "permanent", "prefix": None},
+    "immobilier": {"retention": "permanent", "prefix": None},
+    # Time-limited categories → Archives (with prefix)
+    "fiscalite": {"retention": "10_years", "prefix": "10y_"},
+    "impots-france": {"retention": "10_years", "prefix": "10y_"},
+    "impots-suisse": {"retention": "10_years", "prefix": "10y_"},
+    "dons": {"retention": "10_years", "prefix": "10y_"},
+    "travail": {"retention": "10_years", "prefix": "10y_"},
+    "banque": {"retention": "10_years", "prefix": "10y_"},
+    "banques": {"retention": "10_years", "prefix": "10y_"},
+    "juridique": {"retention": "10_years", "prefix": "10y_"},
+    "factures": {"retention": "contract", "prefix": "ctr_"},
+    "mobilite": {"retention": "contract", "prefix": "ctr_"},
+    "abonnement": {"retention": "contract", "prefix": "ctr_"},
+    "voyages": {"retention": "5_years", "prefix": "5y_"},
+    "loisirs": {"retention": "2_years", "prefix": "2y_"},
 }
 
-# Patterns that indicate a folder already has a retention suffix
-RETENTION_SUFFIX_PATTERN = re.compile(r"_(perm|10y|5y|2y|ret|ctr)$")
+# Pattern to detect folder with retention prefix (e.g., "10y_fiscalite")
+RETENTION_PREFIX_PATTERN = re.compile(r"^(10y|5y|2y|ret|ctr)_")
 
 
 def _build_retention_mapping_from_taxonomy() -> dict[str, dict[str, Any]]:
     """Build folder mapping from documents.json taxonomy.
 
-    Returns mapping of base folder name → {retention, suffix, target_para}.
+    Returns mapping of base folder name → {retention, prefix, target_para}.
     """
     try:
         from para_files.taxonomies.loader import TaxonomyLoader
@@ -88,28 +93,27 @@ def _build_retention_mapping_from_taxonomy() -> dict[str, dict[str, Any]]:
                 parts = para_pattern.split("/")
                 if len(parts) >= 2:
                     target_para = parts[0]  # "3_Resources" or "4_Archives"
-                    folder_with_suffix = parts[1]
+                    folder_with_prefix = parts[1]
 
-                    # Extract base name and suffix
-                    match = RETENTION_SUFFIX_PATTERN.search(folder_with_suffix)
+                    # Extract base name and prefix (e.g., "10y_fiscalite" → "fiscalite", "10y_")
+                    match = RETENTION_PREFIX_PATTERN.match(folder_with_prefix)
                     if match:
-                        base_name = folder_with_suffix[: match.start()]
-                        suffix = match.group(0)
+                        prefix = match.group(0)
+                        base_name = folder_with_prefix[match.end():]
                     else:
-                        base_name = folder_with_suffix
-                        suffix = None
+                        base_name = folder_with_prefix
+                        prefix = None
 
                     if base_name and base_name not in mapping:
                         # Determine if permanent based on target or retention
                         is_permanent = (
                             target_para == "3_Resources"
                             or retention == "permanent"
-                            or suffix == "_perm"
                         )
 
                         mapping[base_name] = {
                             "retention": "permanent" if is_permanent else retention,
-                            "suffix": None if is_permanent else suffix,
+                            "prefix": None if is_permanent else prefix,
                             "target_para": "3_Resources" if is_permanent else "4_Archives",
                         }
 
@@ -124,7 +128,7 @@ def _build_retention_mapping_from_taxonomy() -> dict[str, dict[str, Any]]:
     return {
         name: {
             "retention": config["retention"],
-            "suffix": config["suffix"],
+            "prefix": config["prefix"],
             "target_para": "3_Resources" if config["retention"] == "permanent" else "4_Archives",
         }
         for name, config in RETENTION_CONFIG.items()
@@ -163,11 +167,11 @@ def _discover_folders_to_migrate(
 
             folder_name = child.name
 
-            # Strip existing suffix to get base name
+            # Strip existing prefix to get base name (e.g., "10y_fiscalite" → "fiscalite")
             base_name = folder_name
-            match = RETENTION_SUFFIX_PATTERN.search(folder_name)
+            match = RETENTION_PREFIX_PATTERN.match(folder_name)
             if match:
-                base_name = folder_name[: match.start()]
+                base_name = folder_name[match.end():]
 
             # Apply category filter
             if category_filter and not base_name.startswith(category_filter):
@@ -179,10 +183,10 @@ def _discover_folders_to_migrate(
 
             config = mapping[base_name]
             target_para = config["target_para"]
-            target_suffix = config["suffix"]
+            target_prefix = config["prefix"]
 
             # Determine new folder name and location
-            new_name = base_name + (target_suffix or "")
+            new_name = (target_prefix or "") + base_name
             new_path = base_path / target_para / new_name
 
             # Skip if already correct
@@ -579,8 +583,8 @@ def migrate(
     """Migrate folders based on PARA retention rules.
 
     Reorganizes folders according to retention policy:
-    - Permanent docs → 3_Resources/ (no suffix needed)
-    - Time-limited docs → 4_Archives/ with retention suffix
+    - Permanent docs → 3_Resources/ (no prefix needed)
+    - Time-limited docs → 4_Archives/ with retention prefix (e.g., 10y_fiscalite)
 
     This is a FAST operation that works at folder level.
     For per-file reclassification, use 'rescan' instead.
@@ -605,7 +609,7 @@ def migrate(
     \b
     Migration types:
         📦 move       - Relocate between Resources/Archives
-        ✏️  rename     - Add/change retention suffix
+        ✏️  rename     - Add/change retention prefix
         📦✏️ move_rename - Both move and rename
         🔀 merge      - Combine contents (with --merge)
     """

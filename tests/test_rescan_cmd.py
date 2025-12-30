@@ -95,10 +95,10 @@ class TestBuildExpectedPath:
         """Test building expected path."""
         file_path = tmp_path / "old" / "document.pdf"
         result = MagicMock()
-        result.category = "4_Archives/fiscalite_10y/2024"
+        result.category = "4_Archives/10y_fiscalite/2024"
 
         expected = _build_expected_path(file_path, result, tmp_path)
-        assert expected == tmp_path / "4_Archives/fiscalite_10y/2024" / "document.pdf"
+        assert expected == tmp_path / "4_Archives/10y_fiscalite/2024" / "document.pdf"
 
     def test_build_path_no_category(self, tmp_path: Path) -> None:
         """Test building path with no category."""
@@ -278,7 +278,7 @@ class TestRunRescan:
 
         # Mock classification result
         mock_result = MagicMock()
-        mock_result.category = "4_Archives/fiscalite_10y/2024"
+        mock_result.category = "4_Archives/10y_fiscalite/2024"
         mock_classify.return_value = mock_result
 
         results = _run_rescan(

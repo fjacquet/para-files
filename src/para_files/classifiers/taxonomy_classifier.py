@@ -84,21 +84,21 @@ class TaxonomyClassifier(BaseClassifier):
     # Length normalization factor for keyword scoring
     KEYWORD_LENGTH_FACTOR = 50
 
-    # Minimum path parts for retention suffix injection (PARA prefix + category)
-    MIN_PATH_PARTS_FOR_SUFFIX = 2
+    # Minimum path parts for retention prefix injection (PARA prefix + category)
+    MIN_PATH_PARTS_FOR_PREFIX = 2
 
     # Fuzzy matching configuration
     FUZZY_MATCH_THRESHOLD = 0.85  # Minimum similarity ratio for fuzzy matches
     FUZZY_CONFIDENCE_MULTIPLIER = 0.95  # Confidence penalty for fuzzy matches
 
-    # Retention suffix mapping for folder names
-    RETENTION_SUFFIXES: ClassVar[dict[str, str]] = {
-        "permanent": "_perm",
-        "retirement": "_ret",
-        "10_years": "_10y",
-        "5_years": "_5y",
-        "contract_duration": "_ctr",
-        "warranty_2_years": "_2y",
+    # Retention prefix mapping for folder names (no prefix for permanent items)
+    RETENTION_PREFIXES: ClassVar[dict[str, str]] = {
+        "permanent": "",  # No prefix - goes to 3_Resources
+        "retirement": "ret_",
+        "10_years": "10y_",
+        "5_years": "5y_",
+        "contract_duration": "ctr_",
+        "warranty_2_years": "2y_",
     }
 
     def __init__(
@@ -450,10 +450,10 @@ class TaxonomyClassifier(BaseClassifier):
         - {day} - Day (DD)
         - {YYYY}, {MM}, {DD} - Alternative format
 
-        Retention suffixes are added to the category folder:
-        - permanent → _perm (stays in 3_Resources)
-        - 10_years → _10y
-        - 5_years → _5y
+        Retention prefixes are added to the category folder:
+        - permanent → (no prefix, stays in 3_Resources)
+        - 10_years → 10y_
+        - 5_years → 5y_
         - etc.
 
         Args:
@@ -468,19 +468,20 @@ class TaxonomyClassifier(BaseClassifier):
         """
         result = pattern
 
-        # Inject retention suffix into the category folder
-        if retention and retention in self.RETENTION_SUFFIXES:
-            suffix = self.RETENTION_SUFFIXES[retention]
-            # Pattern like "4_Archives/fiscalite/{year}" → "4_Archives/fiscalite_10y/{year}"
-            # Find the first path component after PARA prefix and add suffix
+        # Inject retention prefix into the category folder
+        if retention and retention in self.RETENTION_PREFIXES:
+            prefix = self.RETENTION_PREFIXES[retention]
+            # Pattern like "4_Archives/fiscalite/{year}" → "4_Archives/10y_fiscalite/{year}"
+            # Find the first path component after PARA prefix and add prefix
             parts = result.split("/")
-            if len(parts) >= self.MIN_PATH_PARTS_FOR_SUFFIX:
+            if len(parts) >= self.MIN_PATH_PARTS_FOR_PREFIX and prefix:
                 # parts[0] = "4_Archives" or "3_Resources", parts[1] = category
-                # Add suffix to category (parts[1])
+                # Add prefix to category (parts[1])
                 category_part = parts[1]
-                # Only add if not already has a suffix
-                if not any(category_part.endswith(s) for s in self.RETENTION_SUFFIXES.values()):
-                    parts[1] = category_part + suffix
+                # Only add if not already has a prefix
+                existing_prefixes = [p for p in self.RETENTION_PREFIXES.values() if p]
+                if not any(category_part.startswith(p) for p in existing_prefixes):
+                    parts[1] = prefix + category_part
                     result = "/".join(parts)
 
         # Year placeholder
