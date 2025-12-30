@@ -1,194 +1,157 @@
 # Classification Issues Report
 
 Generated: 2024-12-29
+**Last Updated: 2024-12-30**
 
 ## Summary
 
-| Category | Total Files | Issues Detected |
-|----------|-------------|-----------------|
-| Mobilité | 888 | 23 |
-| Energie | 84 | 3 |
-| Assurances | 393 | 1 |
+| Category | Total Files | Issues Detected | Status |
+|----------|-------------|-----------------|--------|
+| Mobilité | 888 | 23 | ✅ Resolved |
+| Energie | 84 | 3 | ✅ Resolved |
+| Assurances | 393 | 1 | ✅ Resolved |
 
-## Orphan Year Folders
+## Orphan Year Folders - ALL RESOLVED ✅
 
-These folders contain files by year but should be organized by issuer:
+All ~40 orphan year folders have been consolidated into issuer-based structure.
 
-### Energie (3 folders)
-| Folder | File Count |
-|--------|------------|
-| Energie/2022 | 1 |
-| Energie/2001 | 1 |
-| Energie/2016 | 1 |
+### Energie (3 folders) - COMPLETED 2025-12-29
+| Original Folder | Files | Action Taken |
+|----------------|-------|--------------|
+| Energie/2022 | 1 | → divers (unidentified) |
+| Energie/2001 | 1 | → GDF/2011 (was mislabeled year) |
+| Energie/2016 | 1 | → Eau/2016 (water bill) |
 
-### Assurances (11 folders)
-| Folder | File Count |
-|--------|------------|
-| Assurances/2008 | 1 |
-| Assurances/2011 | 1 |
-| Assurances/2012 | 1 |
-| Assurances/2013 | 1 |
-| Assurances/2014 | 1 |
-| Assurances/2015 | 4 |
-| Assurances/2016 | 1 |
-| Assurances/2019 | 1 |
-| Assurances/2020 | 1 |
-| Assurances/2022 | 1 |
+### Assurances (11 folders) - COMPLETED 2025-12-29
+| Original Folder | Files | Action Taken |
+|----------------|-------|--------------|
+| Assurances/2008-2022 | 14 | → Pacifica, Orion, banques, divers |
 
-### Santé (8 folders, 16 files)
-| Folder | File Count |
-|--------|------------|
-| Santé/2011 | 1 |
-| Santé/2012 | 5 |
-| Santé/2013 | 2 |
-| Santé/2015 | 1 |
-| Santé/2016 | 1 |
-| Santé/2022 | 4 |
-| Santé/2024 | 1 |
-| Santé/2025 | 1 |
+Key reclassifications:
+- Pacifica insurance documents → Assurances/Pacifica/{YYYY}
+- Orion legal protection → Assurances/Orion/{YYYY}
+- Bank statements → banques/Credit Agricole/{YYYY}
 
-### Materiels (18 folders, 76 files)
-| Folder | File Count |
-|--------|------------|
-| Materiels/1980 | 1 |
-| Materiels/2007 | 2 |
-| Materiels/2008 | 1 |
-| Materiels/2010 | 1 |
-| Materiels/2011 | 5 |
-| Materiels/2012 | 10 |
-| Materiels/2013 | 3 |
-| Materiels/2014 | 10 |
-| Materiels/2015 | 5 |
-| Materiels/2016 | 3 |
-| Materiels/2017 | 4 |
-| Materiels/2018 | 1 |
-| Materiels/2019 | 1 |
-| Materiels/2021 | 4 |
-| Materiels/2022 | 11 |
-| Materiels/2023 | 12 |
-| Materiels/2024 | 1 |
-| Materiels/2050 | 1 |
+### Santé (8 folders, 16 files) - COMPLETED 2025-12-29
+| Original Folder | Files | Action Taken |
+|----------------|-------|--------------|
+| Santé/2011-2025 | 16 | → AVS, CAF, Kuoni, impots, divers |
 
-## Misclassified Files
+Key reclassifications:
+- AVS documents → administratif/AVS/{YYYY}
+- CAF allocations → administratif/CAF/{YYYY}
+- Kuoni travel → voyages/Kuoni/{YYYY}
+- Tax documents → impots-suisse/{YYYY}
 
-### Mobilité Issues
+### Materiels (18 folders, 76 files) - COMPLETED 2025-12-30
+| Category | Files | Destination |
+|----------|-------|-------------|
+| 5àSec tickets | ~20 | Services/5aSec/{YYYY} |
+| IT hardware | ~10 | Materiels/Informatique/{YYYY} |
+| Home/Kitchen | ~8 | Materiels/Maison/{YYYY} |
+| Real estate | ~12 | immobilier/{issuer}/{YYYY} |
+| Travel | ~5 | voyages/{issuer}/{YYYY} |
+| Insurance | ~5 | Assurances/{issuer}/{YYYY} |
+| Leisure | ~5 | loisirs/{type}/{YYYY} |
+| Fines | 2 | administratif/amendes/{YYYY} |
+| Unreadable scans | 7 | Materiels/divers/scans-non-classes/ |
 
-#### ByJuno folder contains CFF invoices (17 files)
-- Pattern: `C00*_1_*.pdf` files are CFF invoices, not ByJuno
-- Files like `C004828398_1_20220809053711.pdf` should go to `CFF/{YYYY}`
+**Correction:** `20111226-lavevaiselle.pdf` was incorrectly in 1980 folder → moved to Maison/2011
 
-#### SNCF folder contains CFF-related files (4 files)
-- These are international tickets (Paris-Geneva) that mention both SNCF and CFF
-- Files like `GENEVE_CFF-BOURGES_*.pdf` or `PARIS_GARE_LYON-GENEVE_CFF_*.pdf`
-- **Decision needed**: Keep in SNCF (origin) or move to CFF?
+## Misclassified Files - RESOLVED ✅
 
-#### EasyPark folder - VERIFIED CORRECT
-- `Receipt_BI_1022743311.pdf` is correctly an **EasyPark receipt**
-- Mentions "Mobility Hub Parkservice GmbH" as parking operator (NOT Mobility car-sharing)
+### Mobilité Issues - COMPLETED 2025-12-29
+
+#### ByJuno → CFF (17 files)
+- **Problem:** `C00*_1_*.pdf` files were CFF invoices misclassified as ByJuno
+- **Solution:** Moved to `CFF/{YYYY}` based on filename date
+- **Status:** ✅ Completed
+
+#### SNCF/CFF International Tickets (4 files)
+- **Decision:** Keep in SNCF (vendor-based classification)
+- **Reason:** These are SNCF purchases for international routes
+- **Status:** ✅ No action needed
+
+#### EasyPark - VERIFIED CORRECT
+- `Receipt_BI_1022743311.pdf` correctly classified
+- "Mobility Hub Parkservice GmbH" is parking operator, not Mobility car-sharing
+- **Status:** ✅ Verified
 
 #### MOB folder - CLEANED
-- `3100015203-1787806.pdf` is correctly a **MOB train ticket** (Montreux-Schönried)
-- Removed 3 CV files (CV.pdf, CV UK LAN.pdf, CV UK EMC.pdf) → moved to `2_Areas/carriere/CV/`
+- Train ticket correctly classified
+- 3 CV files moved to `2_Areas/carriere/CV/`
+- **Status:** ✅ Completed
 
-### Energie Issues - CORRECTED
+### Energie Issues - COMPLETED 2025-12-29
 
-#### EDF folder contained misclassified bank statements (4 files)
-- `Compte_23316454000_*` files were **Crédit Agricole bank statements**, not GDF
-- Moved to `banques/Credit Agricole/{YYYY}`
-- `facture*` files are correctly EDF invoices
+#### Crédit Agricole Bank Statements (6 files)
+- **Problem:** `Compte_23316454000_*` files were in EDF, GDF, Maif folders
+- **Solution:** Moved to `banques/Credit Agricole/{YYYY}`
+- **Status:** ✅ Completed
 
-#### GDF folder contained bank statement (1 file)
-- `Compte_23316454000_*` was Crédit Agricole, moved to `banques/Credit Agricole/2011`
+### Assurances Issues - COMPLETED 2025-12-29
 
-### Assurances Issues - CORRECTED
+#### Maif folder bank statement
+- **Problem:** Crédit Agricole statement misclassified as Pacifica
+- **Solution:** Moved to `banques/Credit Agricole/2013`
+- **Status:** ✅ Completed
 
-#### Maif folder contained bank statement (1 file)
-- `Compte_23316454000_*` was **Crédit Agricole bank statement**, not Pacifica
-- Moved to `banques/Credit Agricole/2013`
+## Route Updates - COMPLETED ✅
 
-## Recommended Route Fixes
+### Rules Added 2025-12-29
 
-### 1. ByJuno Pattern Fix
-The current `byjuno` rule is capturing CFF invoices. Need to:
-- Make ByJuno pattern more specific (require "ByJuno" in content)
-- OR create specific pattern for CFF invoices with `C00*_1_*.pdf` format
+| Rule | Patterns | Destination |
+|------|----------|-------------|
+| CFF invoices | `C00*_1_*.pdf`, `*CFF*`, `*sbb*` | Mobilité/CFF/{YYYY} |
+| Mobility receipts | `Receipt_BI_*`, `*Mobility*` | Mobilité/Mobility/{YYYY} |
+| Pacifica | `*Pacifica*`, `611*_*.pdf` | Assurances/Pacifica/{YYYY} |
+| Orion | `*Orion*Private*`, `*Protection*Juridique*` | Assurances/Orion/{YYYY} |
+| Eau | `*Eau*Facture*`, `*Services*Eaux*` | Energie/Eau/{YYYY} |
+| AVS | `*AVS*`, `*assurance*vieillesse*` | administratif/AVS/{YYYY} |
+| CAF | `*CAF*`, `*allocations*familiales*` | administratif/CAF/{YYYY} |
+| Kuoni | `*Kuoni*`, `*DER*Touristik*` | voyages/Kuoni/{YYYY} |
 
-```yaml
-# Proposed fix in personal_file_tree.yaml
-cff_invoices:
-  patterns:
-    - "C00*_1_*.pdf"  # CFF invoice pattern
-  destination: "4_Archives/factures/Mobilité/CFF/{YYYY}"
-  date_source: "filename"
-  date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
-```
+### Rules Added 2025-12-30
 
-### 2. SNCF/CFF International Tickets
-These are valid SNCF purchases for CFF routes. Consider:
-- Keeping in SNCF (vendor) - current behavior
-- Creating `Transport International` category
+| Rule | Patterns | Destination |
+|------|----------|-------------|
+| 5àSec | `*5àSec*`, `Ticket [0-9]*` | Services/5aSec/{YYYY} |
+| DFi Service | `*DFi*Service*`, `*zimbra*` | Materiels/Informatique/{YYYY} |
+| Corsica Ferries | `*Corsica*Ferries*` | voyages/Corsica-Ferries/{YYYY} |
+| American Airlines | `*American*Airlines*` | voyages/American-Airlines/{YYYY} |
+| Tryba | `*Tryba*` | immobilier/Tryba/{YYYY} |
+| Bleu Marine | `*Bleu*Marine*`, `*CRG*DU*AU*` | immobilier/Bleu-Marine/{YYYY} |
+| Editions Diamond | `*Diamond*`, `*Linux*Magazine*` | loisirs/magazines/{YYYY} |
+| Ninja Kitchen | `*Ninja*`, `*SharkNinja*` | Materiels/Maison/Cuisine/{YYYY} |
 
-### 3. Content-Based Classification Needed
-Current rules rely on filename patterns. Files with generic names like `Invoice_*` or `C00*` need content-based classification:
+## Remaining Items
 
-| Pattern | Detected Issuer | Destination |
-|---------|----------------|-------------|
-| `Invoice_*` | Multiple | Need content check |
-| `C00*_1_*.pdf` | CFF | Mobilité/CFF |
-| `Receipt_BI_*` | Mobility | Mobilité/Mobility |
+### Low Priority
+1. [ ] Review `Invoice_*` pattern (generic, may catch multiple issuers)
+2. [ ] Consider OCR for scanned documents in `divers/scans-non-classes/`
+3. [ ] SNCF/CFF international tickets - consider `Transport International` category
 
-## Action Items
+### Manual Review Needed
+7 scanned PDFs in `Materiels/divers/scans-non-classes/` have no extractable text:
+- `200506-2007.pdf`
+- `20110926-blackcaviar.pdf`
+- `20111027.pdf`
+- `devoir.pdf`
+- `Numériser 2015-3-1 16.37.04.pdf`
+- `Numériser 2015-6-2 18.04.53.pdf`
+- `S28C-117031009370.pdf`
 
-### Immediate Fixes (Move Files) - COMPLETED 2025-12-29
-1. [x] Move 17 ByJuno files to CFF ✓ (C00*_1_*.pdf → CFF/{YYYY})
-2. [x] EasyPark file verified ✓ (Receipt_BI_1022743311.pdf is correctly EasyPark, mentions "Mobility Hub" as parking operator)
-3. [x] MOB file verified ✓ (3100015203-1787806.pdf is correct MOB train ticket Montreux-Schönried)
-4. [x] Move 6 Crédit Agricole statements ✓ (Compte_23316454000_* files moved from EDF, GDF, Maif to banques/Credit Agricole/{YYYY})
-5. [x] Maif file corrected ✓ (was Crédit Agricole bank statement, not Pacifica)
+## Statistics
 
-### Route Updates Needed
+| Metric | Value |
+|--------|-------|
+| Total orphan folders processed | 40 |
+| Total files reclassified | ~120 |
+| New routing rules added | 16 |
+| Commits | 3 |
 
-Add these rules to `config/personal_file_tree.yaml`:
+## Commits
 
-```yaml
-# CFF invoices with specific pattern (prevents ByJuno confusion)
-cff_invoices_pattern:
-  patterns:
-    - "C00*_1_*.pdf"
-    - "*CFF*.pdf"
-    - "*sbb*.pdf"
-  extensions: [".pdf"]
-  destination: "4_Archives/factures/Mobilité/CFF/{YYYY}"
-  date_source: "filename"
-  date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
-
-# Mobility receipts
-mobility_receipts:
-  patterns:
-    - "Receipt_BI_*.pdf"
-    - "*Mobility*.pdf"
-  extensions: [".pdf"]
-  destination: "4_Archives/factures/Mobilité/Mobility/{YYYY}"
-  date_source: "filename"
-
-# GDF invoices (separate from EDF)
-gdf_invoices:
-  patterns:
-    - "*GDF*"
-    - "*gdf*"
-  extensions: [".pdf"]
-  destination: "4_Archives/factures/Energie/GDF/{YYYY}"
-
-# ERDF invoices (separate from EDF)
-erdf_invoices:
-  patterns:
-    - "*ERDF*"
-    - "*erdf*"
-  extensions: [".pdf"]
-  destination: "4_Archives/factures/Energie/ERDF/{YYYY}"
-```
-
-### Structural Issues
-7. [ ] Consolidate ~40 orphan year folders into issuer-based structure
-8. [ ] Consider content-based classification for generic filenames
-9. [ ] Review Invoice_* pattern (too generic, catches multiple issuers)
+- `16c0dcc` - Initial route additions (CFF, Mobility, Pacifica, Orion, Eau, AVS, CAF, Kuoni)
+- `00b86ef` - File moves and corrections
+- `559934c` - Additional routes (5àSec, DFi, Corsica, American Airlines, Tryba, Bleu Marine, Diamond, Ninja)
