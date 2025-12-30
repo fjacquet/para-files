@@ -26,37 +26,87 @@
         {
           "sub_id": "id_personnelle",
           "name": "Pièces d'identité",
-          "examples": ["Passeport Suisse", "Carte d'Identité", "Permis de conduire", "Permis de séjour"],
-          "keywords": ["Confédération Suisse", "Passeport", "Identité", "Permis de séjour"],
+          "examples": [
+            "Passeport Suisse",
+            "Carte d'Identité",
+            "Permis de conduire",
+            "Permis de séjour"
+          ],
+          "keywords": [
+            "Confédération Suisse",
+            "Passeport",
+            "Identité",
+            "Permis de séjour"
+          ],
           "retention": "permanent",
-          "paper_required": true
+          "paper_required": true,
+          "para_pattern": "3_Resources/administratif_perm/identite"
         },
         {
           "sub_id": "actes_officiels",
           "name": "Actes d'État Civil",
-          "examples": ["Acte d'origine", "Certificat d'état civil", "Acte de naissance", "Acte de mariage", "Livret de famille", "Jugement de divorce"],
-          "keywords": ["Etat Civil", "Naissance", "Mariage", "Divorce", "Jugement"],
+          "examples": [
+            "Acte d'origine",
+            "Certificat d'état civil",
+            "Acte de naissance",
+            "Acte de mariage",
+            "Livret de famille",
+            "Jugement de divorce"
+          ],
+          "keywords": [
+            "Etat Civil",
+            "Naissance",
+            "Mariage",
+            "Divorce",
+            "Jugement"
+          ],
           "retention": "permanent",
-          "paper_required": true
+          "paper_required": true,
+          "para_pattern": "3_Resources/administratif_perm/identite"
         },
         {
           "sub_id": "administration_communale",
           "name": "Rapports avec la Commune",
-          "para_pattern": "4_Archives/administratif/commune/{year}",
-          "examples": ["Certificat de domicile", "Attestation de séjour", "Carte de vote"],
-          "keywords": ["Contrôle des habitants", "Commune de Montreux", "Domicile"],
+          "para_pattern": "4_Archives/administratif_5y/commune/{year}",
+          "examples": [
+            "Certificat de domicile",
+            "Attestation de séjour",
+            "Carte de vote"
+          ],
+          "keywords": [
+            "Contrôle des habitants",
+            "Commune de Montreux",
+            "Domicile"
+          ],
           "retention": "5_years",
           "paper_required": false,
           "issuers": [
-            {"name": "Commune de Montreux", "patterns": ["Commune de Montreux", "montreux.ch"]}
+            {
+              "name": "Commune de Montreux",
+              "patterns": [
+                "Commune de Montreux",
+                "montreux.ch"
+              ]
+            }
           ]
         },
         {
           "sub_id": "militaire_pci",
           "name": "Armée & Protection Civile",
-          "para_pattern": "4_Archives/administratif/militaire/{year}",
-          "examples": ["Livret de service", "Ordres de marche", "Feuilles de solde", "Taxe d'exemption militaire"],
-          "keywords": ["Armée Suisse", "Protection Civile", "PCi", "Obligation de servir", "Taxe d'exemption"],
+          "para_pattern": "4_Archives/administratif_ret/militaire/{year}",
+          "examples": [
+            "Livret de service",
+            "Ordres de marche",
+            "Feuilles de solde",
+            "Taxe d'exemption militaire"
+          ],
+          "keywords": [
+            "Armée Suisse",
+            "Protection Civile",
+            "PCi",
+            "Obligation de servir",
+            "Taxe d'exemption"
+          ],
           "retention": "retirement",
           "paper_required": true
         }
@@ -71,65 +121,215 @@
         {
           "sub_id": "declarations",
           "name": "Déclarations d'impôts",
-          "examples": ["Copie Déclaration VaudTax", "Liste des annexes soumises"],
-          "keywords": ["Déclaration d'impôt", "VaudTax", "Code 110", "Code 120"],
+          "examples": [
+            "Copie Déclaration VaudTax",
+            "Liste des annexes soumises"
+          ],
+          "keywords": [
+            "Déclaration d'impôt",
+            "VaudTax",
+            "Code 110",
+            "Code 120"
+          ],
           "retention": "10_years",
           "paper_required": false,
           "issuers": [
-            {"name": "ACI", "patterns": ["ACI", "Administration cantonale des impôts", "VaudTax"]}
-          ]
+            {
+              "name": "ACI",
+              "patterns": [
+                "ACI",
+                "Administration cantonale des impôts",
+                "VaudTax"
+              ]
+            }
+          ],
+          "para_pattern": "4_Archives/fiscalite_10y/{year}"
         },
         {
           "sub_id": "decisions_taxation",
           "name": "Décisions de taxation",
-          "examples": ["Bordereau ICC", "Bordereau IFD", "Décision de taxation définitive"],
-          "keywords": ["Bordereau", "Taxation définitive", "ACI", "Administration cantonale des impôts"],
+          "examples": [
+            "Bordereau ICC",
+            "Bordereau IFD",
+            "Décision de taxation définitive"
+          ],
+          "keywords": [
+            "Bordereau",
+            "Taxation définitive",
+            "ACI",
+            "Administration cantonale des impôts"
+          ],
           "retention": "10_years",
           "paper_required": true,
           "issuers": [
-            {"name": "ACI", "patterns": ["ACI", "Administration cantonale des impôts", "Canton de Vaud"]}
-          ]
+            {
+              "name": "ACI",
+              "patterns": [
+                "ACI",
+                "Administration cantonale des impôts",
+                "Canton de Vaud"
+              ]
+            }
+          ],
+          "para_pattern": "4_Archives/fiscalite_10y/{year}"
         },
         {
           "sub_id": "justificatifs_fiscaux",
           "name": "Justificatifs de déductions",
-          "examples": ["Attestations 3ème pilier", "Attestations rachat LPP", "Frais médicaux", "Dons"],
-          "keywords": ["Attestation fiscale", "Déductible", "3e pilier", "Rachat"],
+          "examples": [
+            "Attestations 3ème pilier",
+            "Attestations rachat LPP",
+            "Frais médicaux",
+            "Dons"
+          ],
+          "keywords": [
+            "Attestation fiscale",
+            "Déductible",
+            "3e pilier",
+            "Rachat"
+          ],
           "retention": "10_years",
-          "paper_required": false
+          "paper_required": false,
+          "para_pattern": "4_Archives/fiscalite_10y/{year}"
         },
         {
           "sub_id": "dons",
           "name": "Dons et contributions",
-          "para_pattern": "4_Archives/dons/{issuer}/{year}",
-          "examples": ["Reçu de don", "Attestation fiscale pour don"],
-          "keywords": ["Reçu de don", "Confirmation de don", "Merci pour votre don", "Attestation de don"],
-          "required_context": ["reçu", "attestation", "déductible", "merci", "générosité", "soutien", "contribution"],
+          "para_pattern": "4_Archives/dons_10y/{issuer}/{year}",
+          "examples": [
+            "Reçu de don",
+            "Attestation fiscale pour don"
+          ],
+          "keywords": [
+            "Reçu de don",
+            "Confirmation de don",
+            "Merci pour votre don",
+            "Attestation de don"
+          ],
+          "required_context": [
+            "reçu",
+            "attestation",
+            "déductible",
+            "merci",
+            "générosité",
+            "soutien",
+            "contribution"
+          ],
           "retention": "10_years",
           "paper_required": false,
           "issuers": [
-            {"name": "Croix-Rouge", "patterns": ["Croix-Rouge", "Croix Rouge", "croix-rouge.ch"]},
-            {"name": "MSF", "patterns": ["Médecins Sans Frontières", "MSF", "msf.ch"]},
-            {"name": "WWF", "patterns": ["WWF", "wwf.ch"]},
-            {"name": "Caritas", "patterns": ["Caritas", "caritas.ch"]},
-            {"name": "Amnesty", "patterns": ["Amnesty", "amnesty.ch"]},
-            {"name": "Rega", "patterns": ["Rega", "rega.ch"]},
-            {"name": "Unicef", "patterns": ["Unicef", "unicef.ch"]},
-            {"name": "Wikimedia", "patterns": ["Wikimedia Foundation", "wikimediafoundation.org", "donate.wikimedia.org"]},
-            {"name": "Fondation Paraplegiques", "patterns": ["Fondation suisse pour les paraplegiques", "paraplegie.ch"]},
-            {"name": "Ligue Vaudoise", "patterns": ["Ligue Vaudoise", "liguevaudoise.ch"]},
-            {"name": "SwissRando", "patterns": ["SwissRando", "suisse-rando.ch"]},
-            {"name": "Restos du Coeur", "patterns": ["Restos du coeur", "restosducoeur"]},
-            {"name": "Amis du Léman", "patterns": ["Amis du Leman", "asleman.org"]}
+            {
+              "name": "Croix-Rouge",
+              "patterns": [
+                "Croix-Rouge",
+                "Croix Rouge",
+                "croix-rouge.ch"
+              ]
+            },
+            {
+              "name": "MSF",
+              "patterns": [
+                "Médecins Sans Frontières",
+                "MSF",
+                "msf.ch"
+              ]
+            },
+            {
+              "name": "WWF",
+              "patterns": [
+                "WWF",
+                "wwf.ch"
+              ]
+            },
+            {
+              "name": "Caritas",
+              "patterns": [
+                "Caritas",
+                "caritas.ch"
+              ]
+            },
+            {
+              "name": "Amnesty",
+              "patterns": [
+                "Amnesty",
+                "amnesty.ch"
+              ]
+            },
+            {
+              "name": "Rega",
+              "patterns": [
+                "Rega",
+                "rega.ch"
+              ]
+            },
+            {
+              "name": "Unicef",
+              "patterns": [
+                "Unicef",
+                "unicef.ch"
+              ]
+            },
+            {
+              "name": "Wikimedia",
+              "patterns": [
+                "Wikimedia Foundation",
+                "wikimediafoundation.org",
+                "donate.wikimedia.org"
+              ]
+            },
+            {
+              "name": "Fondation Paraplegiques",
+              "patterns": [
+                "Fondation suisse pour les paraplegiques",
+                "paraplegie.ch"
+              ]
+            },
+            {
+              "name": "Ligue Vaudoise",
+              "patterns": [
+                "Ligue Vaudoise",
+                "liguevaudoise.ch"
+              ]
+            },
+            {
+              "name": "SwissRando",
+              "patterns": [
+                "SwissRando",
+                "suisse-rando.ch"
+              ]
+            },
+            {
+              "name": "Restos du Coeur",
+              "patterns": [
+                "Restos du coeur",
+                "restosducoeur"
+              ]
+            },
+            {
+              "name": "Amis du Léman",
+              "patterns": [
+                "Amis du Leman",
+                "asleman.org"
+              ]
+            }
           ]
         },
         {
           "sub_id": "impot_foncier",
           "name": "Fiscalité Immobilière",
-          "examples": ["Impôt foncier communal", "Taxe d'encaissement immobilier", "Estimation fiscale"],
-          "keywords": ["Impôt foncier", "Estimation fiscale", "Valeur locative"],
+          "examples": [
+            "Impôt foncier communal",
+            "Taxe d'encaissement immobilier",
+            "Estimation fiscale"
+          ],
+          "keywords": [
+            "Impôt foncier",
+            "Estimation fiscale",
+            "Valeur locative"
+          ],
           "retention": "10_years",
-          "paper_required": false
+          "paper_required": false,
+          "para_pattern": "4_Archives/fiscalite_10y/{year}"
         }
       ]
     },
@@ -142,111 +342,351 @@
         {
           "sub_id": "bail_locataire",
           "name": "Dossier Locataire",
-          "para_pattern": "4_Archives/factures/Logement/{issuer}/{year}",
-          "examples": ["Contrat de bail", "État des lieux", "Certificat de garantie"],
-          "keywords": ["Bail", "Gérance", "État des lieux", "Loyers", "Resiliation"],
+          "para_pattern": "4_Archives/factures_ctr/Logement/{issuer}/{year}",
+          "examples": [
+            "Contrat de bail",
+            "État des lieux",
+            "Certificat de garantie"
+          ],
+          "keywords": [
+            "Bail",
+            "Gérance",
+            "État des lieux",
+            "Loyers",
+            "Resiliation"
+          ],
           "retention": "contract_duration",
           "paper_required": true,
           "issuers": [
-            {"name": "Régie du Rhône", "patterns": ["Régie du Rhône", "regiedurhone.ch"]},
-            {"name": "Naef", "patterns": ["Naef", "naef.ch"]},
-            {"name": "Foncia", "patterns": ["Foncia", "foncia.ch"]},
-            {"name": "Gérance Privée", "patterns": ["Gérance Privée", "geranceprivee.ch"]}
+            {
+              "name": "Régie du Rhône",
+              "patterns": [
+                "Régie du Rhône",
+                "regiedurhone.ch"
+              ]
+            },
+            {
+              "name": "Naef",
+              "patterns": [
+                "Naef",
+                "naef.ch"
+              ]
+            },
+            {
+              "name": "Foncia",
+              "patterns": [
+                "Foncia",
+                "foncia.ch"
+              ]
+            },
+            {
+              "name": "Gérance Privée",
+              "patterns": [
+                "Gérance Privée",
+                "geranceprivee.ch"
+              ]
+            }
           ]
         },
         {
           "sub_id": "propriete_fonciere",
           "name": "Dossier Propriétaire",
-          "para_pattern": "3_Resources/immobilier/propriete",
-          "examples": ["Acte d'achat notarié", "Extrait du Registre Foncier", "Cédule hypothécaire"],
-          "keywords": ["Notaire", "Registre foncier", "Cédule", "Hypothèque", "PPE"],
+          "para_pattern": "3_Resources/immobilier_perm/propriete",
+          "examples": [
+            "Acte d'achat notarié",
+            "Extrait du Registre Foncier",
+            "Cédule hypothécaire"
+          ],
+          "keywords": [
+            "Notaire",
+            "Registre foncier",
+            "Cédule",
+            "Hypothèque",
+            "PPE"
+          ],
           "retention": "permanent",
           "paper_required": true
         },
         {
           "sub_id": "ppe_copropriete",
           "name": "Administration PPE",
-          "para_pattern": "4_Archives/immobilier/ppe/{year}",
-          "examples": ["Règlement de copropriété", "Procès-verbaux des AG", "Décomptes de charges PPE"],
-          "keywords": ["PPE", "Administrateur", "Assemblée générale", "Millièmes"],
+          "para_pattern": "4_Archives/immobilier_10y/ppe/{year}",
+          "examples": [
+            "Règlement de copropriété",
+            "Procès-verbaux des AG",
+            "Décomptes de charges PPE"
+          ],
+          "keywords": [
+            "PPE",
+            "Administrateur",
+            "Assemblée générale",
+            "Millièmes"
+          ],
           "retention": "10_years",
           "paper_required": false
         },
         {
           "sub_id": "dpe_diagnostics",
           "name": "Diagnostics Immobiliers",
-          "para_pattern": "4_Archives/immobilier/diagnostics/{year}",
-          "examples": ["DPE", "Diagnostic de Performance Énergétique", "Diagnostic amiante", "Diagnostic plomb"],
-          "keywords": ["DPE", "Diagnostic de Performance Énergétique", "Diagnostic immobilier", "Performance énergétique", "Classe énergie", "Diagnostic amiante", "Diagnostic plomb", "Diagnostic électrique"],
-          "required_context": ["diagnostic", "immobilier", "énergie", "performance", "classe", "kWh/m²"],
+          "para_pattern": "4_Archives/immobilier_10y/diagnostics/{year}",
+          "examples": [
+            "DPE",
+            "Diagnostic de Performance Énergétique",
+            "Diagnostic amiante",
+            "Diagnostic plomb"
+          ],
+          "keywords": [
+            "DPE",
+            "Diagnostic de Performance Énergétique",
+            "Diagnostic immobilier",
+            "Performance énergétique",
+            "Classe énergie",
+            "Diagnostic amiante",
+            "Diagnostic plomb",
+            "Diagnostic électrique"
+          ],
+          "required_context": [
+            "diagnostic",
+            "immobilier",
+            "énergie",
+            "performance",
+            "classe",
+            "kWh/m²"
+          ],
           "retention": "10_years",
           "paper_required": false,
           "issuers": [
-            {"name": "Diagamter", "patterns": ["Diagamter", "diagamter.com"]},
-            {"name": "DEKRA", "patterns": ["DEKRA", "dekra.fr"]},
-            {"name": "Qualiconsult", "patterns": ["Qualiconsult", "qualiconsult.com"]}
+            {
+              "name": "Diagamter",
+              "patterns": [
+                "Diagamter",
+                "diagamter.com"
+              ]
+            },
+            {
+              "name": "DEKRA",
+              "patterns": [
+                "DEKRA",
+                "dekra.fr"
+              ]
+            },
+            {
+              "name": "Qualiconsult",
+              "patterns": [
+                "Qualiconsult",
+                "qualiconsult.com"
+              ]
+            }
           ]
         },
         {
           "sub_id": "energie_fluides",
           "name": "Énergie & Déchets",
-          "para_pattern": "4_Archives/factures/Energie/{issuer}/{year}",
-          "examples": ["Facture Électricité", "Facture Gaz", "Eau potable", "Taxe au sac"],
-          "keywords": ["KWh", "Relevé de compteur", "Romande Energie", "Taxe épuration"],
+          "para_pattern": "4_Archives/factures_5y/Energie/{issuer}/{year}",
+          "examples": [
+            "Facture Électricité",
+            "Facture Gaz",
+            "Eau potable",
+            "Taxe au sac"
+          ],
+          "keywords": [
+            "KWh",
+            "Relevé de compteur",
+            "Romande Energie",
+            "Taxe épuration"
+          ],
           "retention": "5_years",
           "paper_required": false,
           "issuers": [
-            {"name": "Romande Energie", "patterns": ["Romande Energie", "romande-energie.ch"]},
-            {"name": "SIG", "patterns": ["Services Industriels de Genève", "sig-ge.ch", "SIG Genève"]},
-            {"name": "Holdigaz", "patterns": ["Holdigaz", "holdigaz.ch"]},
-            {"name": "EDF", "patterns": ["EDF", "edf.fr"]},
-            {"name": "ERDF", "patterns": ["ERDF", "Enedis"]},
-            {"name": "GDF", "patterns": ["GDF", "gdf.fr"]},
-            {"name": "Engie", "patterns": ["Engie", "engie.fr"]}
+            {
+              "name": "Romande Energie",
+              "patterns": [
+                "Romande Energie",
+                "romande-energie.ch"
+              ]
+            },
+            {
+              "name": "SIG",
+              "patterns": [
+                "Services Industriels de Genève",
+                "sig-ge.ch",
+                "SIG Genève"
+              ]
+            },
+            {
+              "name": "Holdigaz",
+              "patterns": [
+                "Holdigaz",
+                "holdigaz.ch"
+              ]
+            },
+            {
+              "name": "EDF",
+              "patterns": [
+                "EDF",
+                "edf.fr"
+              ]
+            },
+            {
+              "name": "ERDF",
+              "patterns": [
+                "ERDF",
+                "Enedis"
+              ]
+            },
+            {
+              "name": "GDF",
+              "patterns": [
+                "GDF",
+                "gdf.fr"
+              ]
+            },
+            {
+              "name": "Engie",
+              "patterns": [
+                "Engie",
+                "engie.fr"
+              ]
+            }
           ]
         },
         {
           "sub_id": "media_telecom",
           "name": "Téléphonie & Internet",
-          "para_pattern": "4_Archives/factures/Telephonie/{issuer}/{year}",
-          "examples": ["Facture mobile", "Facture Internet", "Facture TV"],
-          "keywords": ["Forfait mobile", "Abonnement mobile", "Forfait Internet", "Fibre optique", "Facture télécom"],
+          "para_pattern": "4_Archives/factures_5y/Telephonie/{issuer}/{year}",
+          "examples": [
+            "Facture mobile",
+            "Facture Internet",
+            "Facture TV"
+          ],
+          "keywords": [
+            "Forfait mobile",
+            "Abonnement mobile",
+            "Forfait Internet",
+            "Fibre optique",
+            "Facture télécom"
+          ],
           "retention": "5_years",
           "paper_required": false,
           "issuers": [
-            {"name": "Swisscom", "patterns": ["Swisscom", "swisscom.ch"]},
-            {"name": "Salt", "patterns": ["Salt Mobile", "salt.ch", "Salt SA"]},
-            {"name": "Sunrise", "patterns": ["Sunrise", "sunrise.ch"]},
-            {"name": "UPC", "patterns": ["UPC", "upc.ch"]},
-            {"name": "Bouygues Telecom", "patterns": ["Bouygues Telecom", "bouyguestelecom.fr"]},
-            {"name": "Orange", "patterns": ["Orange France", "Orange SA", "orange.fr", "Facture Orange", "Orange Mobile"]},
-            {"name": "SFR", "patterns": ["SFR", "sfr.fr"]},
-            {"name": "France Telecom", "patterns": ["France Telecom", "FT"]}
+            {
+              "name": "Swisscom",
+              "patterns": [
+                "Swisscom",
+                "swisscom.ch"
+              ]
+            },
+            {
+              "name": "Salt",
+              "patterns": [
+                "Salt Mobile",
+                "salt.ch",
+                "Salt SA"
+              ]
+            },
+            {
+              "name": "Sunrise",
+              "patterns": [
+                "Sunrise",
+                "sunrise.ch"
+              ]
+            },
+            {
+              "name": "UPC",
+              "patterns": [
+                "UPC",
+                "upc.ch"
+              ]
+            },
+            {
+              "name": "Bouygues Telecom",
+              "patterns": [
+                "Bouygues Telecom",
+                "bouyguestelecom.fr"
+              ]
+            },
+            {
+              "name": "Orange",
+              "patterns": [
+                "Orange France",
+                "Orange SA",
+                "orange.fr",
+                "Facture Orange",
+                "Orange Mobile"
+              ]
+            },
+            {
+              "name": "SFR",
+              "patterns": [
+                "SFR",
+                "sfr.fr"
+              ]
+            },
+            {
+              "name": "France Telecom",
+              "patterns": [
+                "France Telecom",
+                "FT"
+              ]
+            }
           ]
         },
         {
           "sub_id": "redevances",
           "name": "Redevances & Taxes média",
-          "para_pattern": "4_Archives/factures/Redevances/{issuer}/{year}",
-          "examples": ["Serafe", "Redevance RTV"],
-          "keywords": ["Serafe", "Billag", "Redevance", "RTV"],
+          "para_pattern": "4_Archives/factures_5y/Redevances/{issuer}/{year}",
+          "examples": [
+            "Serafe",
+            "Redevance RTV"
+          ],
+          "keywords": [
+            "Serafe",
+            "Billag",
+            "Redevance",
+            "RTV"
+          ],
           "retention": "5_years",
           "paper_required": false,
           "issuers": [
-            {"name": "Serafe", "patterns": ["Serafe", "serafe.ch"]},
-            {"name": "Billag", "patterns": ["Billag", "billag.ch"]}
+            {
+              "name": "Serafe",
+              "patterns": [
+                "Serafe",
+                "serafe.ch"
+              ]
+            },
+            {
+              "name": "Billag",
+              "patterns": [
+                "Billag",
+                "billag.ch"
+              ]
+            }
           ]
         },
         {
           "sub_id": "assurance_batiment",
           "name": "Assurance Bâtiment",
-          "para_pattern": "4_Archives/factures/Assurances/ECA/{year}",
-          "examples": ["Police ECA", "Facture ECA"],
-          "keywords": ["ECA", "Incendie", "Assurance bâtiment"],
+          "para_pattern": "4_Archives/factures_5y/Assurances/ECA/{year}",
+          "examples": [
+            "Police ECA",
+            "Facture ECA"
+          ],
+          "keywords": [
+            "ECA",
+            "Incendie",
+            "Assurance bâtiment"
+          ],
           "retention": "5_years",
           "paper_required": false,
           "issuers": [
-            {"name": "ECA", "patterns": ["ECA", "eca-vaud.ch"]}
+            {
+              "name": "ECA",
+              "patterns": [
+                "ECA",
+                "eca-vaud.ch"
+              ]
+            }
           ]
         }
       ]
@@ -260,62 +700,233 @@
         {
           "sub_id": "lamal_base",
           "name": "Assurance de Base (LAMal)",
-          "para_pattern": "4_Archives/factures/Assurances/{issuer}/{year}",
-          "examples": ["Police d'assurance annuelle", "Carte d'assuré", "Décision de subside"],
-          "keywords": ["LAMal", "Assurance obligatoire", "Police", "Subsides"],
+          "para_pattern": "4_Archives/factures_5y/Assurances/{issuer}/{year}",
+          "examples": [
+            "Police d'assurance annuelle",
+            "Carte d'assuré",
+            "Décision de subside"
+          ],
+          "keywords": [
+            "LAMal",
+            "Assurance obligatoire",
+            "Police",
+            "Subsides"
+          ],
           "retention": "5_years",
           "paper_required": false,
           "issuers": [
-            {"name": "Swica", "patterns": ["Swica", "swica.ch"]},
-            {"name": "Groupe Mutuel", "patterns": ["Groupe Mutuel", "groupemutuel.ch"]},
-            {"name": "Vaudoise", "patterns": ["Vaudoise Assurances", "Vaudoise Générale", "vaudoise.ch"]},
-            {"name": "Axa", "patterns": ["Axa-Winterthur", "Axa", "axa.ch"]},
-            {"name": "Zurich", "patterns": ["Zurich Versicherung", "Zurich Insurance", "Zurich Assurance", "zurich.ch"]},
-            {"name": "Baloise", "patterns": ["Baloise", "baloise.ch"]},
-            {"name": "Generali", "patterns": ["Generali", "generali.ch"]},
-            {"name": "Swiss Life", "patterns": ["Swiss Life", "swisslife.ch"]},
-            {"name": "Allianz", "patterns": ["Allianz", "allianz.ch"]},
-            {"name": "Maif", "patterns": ["Maif", "maif.fr"]}
+            {
+              "name": "Swica",
+              "patterns": [
+                "Swica",
+                "swica.ch"
+              ]
+            },
+            {
+              "name": "Groupe Mutuel",
+              "patterns": [
+                "Groupe Mutuel",
+                "groupemutuel.ch"
+              ]
+            },
+            {
+              "name": "Vaudoise",
+              "patterns": [
+                "Vaudoise Assurances",
+                "Vaudoise Générale",
+                "vaudoise.ch"
+              ]
+            },
+            {
+              "name": "Axa",
+              "patterns": [
+                "Axa-Winterthur",
+                "Axa",
+                "axa.ch"
+              ]
+            },
+            {
+              "name": "Zurich",
+              "patterns": [
+                "Zurich Versicherung",
+                "Zurich Insurance",
+                "Zurich Assurance",
+                "zurich.ch"
+              ]
+            },
+            {
+              "name": "Baloise",
+              "patterns": [
+                "Baloise",
+                "baloise.ch"
+              ]
+            },
+            {
+              "name": "Generali",
+              "patterns": [
+                "Generali",
+                "generali.ch"
+              ]
+            },
+            {
+              "name": "Swiss Life",
+              "patterns": [
+                "Swiss Life",
+                "swisslife.ch"
+              ]
+            },
+            {
+              "name": "Allianz",
+              "patterns": [
+                "Allianz",
+                "allianz.ch"
+              ]
+            },
+            {
+              "name": "Maif",
+              "patterns": [
+                "Maif",
+                "maif.fr"
+              ]
+            }
           ]
         },
         {
           "sub_id": "lca_complementaire",
           "name": "Assurances Complémentaires (LCA)",
-          "para_pattern": "4_Archives/factures/Assurances/{issuer}/{year}",
-          "examples": ["Police LCA", "Réserves émises", "Avis de résiliation"],
-          "keywords": ["Complémentaire", "LCA", "Médecine douce", "Chambre privée"],
+          "para_pattern": "4_Archives/factures_ctr/Assurances/{issuer}/{year}",
+          "examples": [
+            "Police LCA",
+            "Réserves émises",
+            "Avis de résiliation"
+          ],
+          "keywords": [
+            "Complémentaire",
+            "LCA",
+            "Médecine douce",
+            "Chambre privée"
+          ],
           "retention": "contract_duration",
           "paper_required": false
         },
         {
           "sub_id": "frais_medicaux",
           "name": "Frais Médicaux & Remboursements",
-          "para_pattern": "4_Archives/factures/Santé/{issuer}/{year}",
-          "examples": ["Décomptes de prestations", "Factures médecins", "Ordonnances"],
-          "keywords": ["Tarmed", "Décompte", "Prestations", "Quote-part", "Franchise"],
+          "para_pattern": "4_Archives/factures_5y/Santé/{issuer}/{year}",
+          "examples": [
+            "Décomptes de prestations",
+            "Factures médecins",
+            "Ordonnances"
+          ],
+          "keywords": [
+            "Tarmed",
+            "Décompte",
+            "Prestations",
+            "Quote-part",
+            "Franchise"
+          ],
           "retention": "5_years",
           "paper_required": false,
           "issuers": [
-            {"name": "Médecine Chinoise HAN", "patterns": ["Médecine Chinoise HAN"]},
-            {"name": "CHUV", "patterns": ["CHUV", "chuv.ch"]},
-            {"name": "HUG", "patterns": ["HUG", "hug.ch"]},
-            {"name": "Laboratoires CDL", "patterns": ["Laboratoires CDL", "laboratoirescdl", "CDL"]},
-            {"name": "Unilabs", "patterns": ["Unilabs", "unilabs.ch"]},
-            {"name": "Synlab", "patterns": ["Synlab", "synlab.ch"]},
-            {"name": "Centre de soins LES ALPES", "patterns": ["Centre de soins", "Centre de soins LES ALPES"]},
-            {"name": "Physiothérapie", "patterns": ["Physiothérapie", "Physio"]},
-            {"name": "Ostéopathie", "patterns": ["Ostéopathie", "Ostheopathe"]},
-            {"name": "M-Thérapies", "patterns": ["M-Thérapies"]},
-            {"name": "Silhouette", "patterns": ["Silhouette"]},
-            {"name": "Pharmacie", "patterns": ["Pharmacie"]}
+            {
+              "name": "Médecine Chinoise HAN",
+              "patterns": [
+                "Médecine Chinoise HAN"
+              ]
+            },
+            {
+              "name": "CHUV",
+              "patterns": [
+                "CHUV",
+                "chuv.ch"
+              ]
+            },
+            {
+              "name": "HUG",
+              "patterns": [
+                "HUG",
+                "hug.ch"
+              ]
+            },
+            {
+              "name": "Laboratoires CDL",
+              "patterns": [
+                "Laboratoires CDL",
+                "laboratoirescdl",
+                "CDL"
+              ]
+            },
+            {
+              "name": "Unilabs",
+              "patterns": [
+                "Unilabs",
+                "unilabs.ch"
+              ]
+            },
+            {
+              "name": "Synlab",
+              "patterns": [
+                "Synlab",
+                "synlab.ch"
+              ]
+            },
+            {
+              "name": "Centre de soins LES ALPES",
+              "patterns": [
+                "Centre de soins",
+                "Centre de soins LES ALPES"
+              ]
+            },
+            {
+              "name": "Physiothérapie",
+              "patterns": [
+                "Physiothérapie",
+                "Physio"
+              ]
+            },
+            {
+              "name": "Ostéopathie",
+              "patterns": [
+                "Ostéopathie",
+                "Ostheopathe"
+              ]
+            },
+            {
+              "name": "M-Thérapies",
+              "patterns": [
+                "M-Thérapies"
+              ]
+            },
+            {
+              "name": "Silhouette",
+              "patterns": [
+                "Silhouette"
+              ]
+            },
+            {
+              "name": "Pharmacie",
+              "patterns": [
+                "Pharmacie"
+              ]
+            }
           ]
         },
         {
           "sub_id": "dossier_medical",
           "name": "Dossier Médical",
-          "para_pattern": "3_Resources/sante/dossier-medical",
-          "examples": ["Carnet de vaccination", "Groupe sanguin", "Carte d'allergie", "Directives anticipées"],
-          "keywords": ["Vaccin", "Radiologie", "Sang", "Hôpital"],
+          "para_pattern": "3_Resources/sante_perm/dossier-medical",
+          "examples": [
+            "Carnet de vaccination",
+            "Groupe sanguin",
+            "Carte d'allergie",
+            "Directives anticipées"
+          ],
+          "keywords": [
+            "Vaccin",
+            "Radiologie",
+            "Sang",
+            "Hôpital"
+          ],
           "retention": "permanent",
           "paper_required": false
         }
@@ -330,37 +941,85 @@
         {
           "sub_id": "contrats_travail",
           "name": "Contrats & Carrière",
-          "para_pattern": "3_Resources/carriere/contrats",
-          "examples": ["Contrat de travail", "Avenants", "Certificats de travail"],
-          "keywords": ["Contrat", "Employeur", "Certificat de travail", "Ressources Humaines"],
+          "para_pattern": "3_Resources/carriere_perm/contrats",
+          "examples": [
+            "Contrat de travail",
+            "Avenants",
+            "Certificats de travail"
+          ],
+          "keywords": [
+            "Contrat",
+            "Employeur",
+            "Certificat de travail",
+            "Ressources Humaines"
+          ],
           "retention": "permanent",
           "paper_required": true
         },
         {
           "sub_id": "salaires",
           "name": "Fiches de Salaire",
-          "para_pattern": "4_Archives/travail/salaires/{year}",
-          "examples": ["Fiches mensuelles", "Fiche cumulée Décembre", "Certificat de salaire annuel"],
-          "keywords": ["Décompte de salaire", "Fiche de paie", "Payslip", "Net à payer", "Salaire brut", "Cotisations sociales", "Certificat de salaire", "Lohnausweis"],
+          "para_pattern": "4_Archives/travail_10y/salaires/{year}",
+          "examples": [
+            "Fiches mensuelles",
+            "Fiche cumulée Décembre",
+            "Certificat de salaire annuel"
+          ],
+          "keywords": [
+            "Décompte de salaire",
+            "Fiche de paie",
+            "Payslip",
+            "Net à payer",
+            "Salaire brut",
+            "Cotisations sociales",
+            "Certificat de salaire",
+            "Lohnausweis"
+          ],
           "retention": "10_years",
           "paper_required": false
         },
         {
           "sub_id": "chomage",
           "name": "Chômage & ORP",
-          "para_pattern": "4_Archives/travail/chomage/{year}",
-          "examples": ["Inscription ORP", "Décomptes indemnités", "Preuves de recherches d'emploi"],
-          "keywords": ["Caisse de chômage", "ORP", "Indemnité", "Timbre"],
+          "para_pattern": "4_Archives/travail_10y/chomage/{year}",
+          "examples": [
+            "Inscription ORP",
+            "Décomptes indemnités",
+            "Preuves de recherches d'emploi"
+          ],
+          "keywords": [
+            "Caisse de chômage",
+            "ORP",
+            "Indemnité",
+            "Timbre"
+          ],
           "retention": "10_years",
           "paper_required": false
         },
         {
           "sub_id": "feuilles_heures",
           "name": "Feuilles d'heures employés",
-          "para_pattern": "4_Archives/administratif/employes/heures/{year}",
-          "examples": ["Feuille d'heures mensuelle", "Timesheet", "Relevé d'heures travaillées"],
-          "keywords": ["Feuille d'heures", "Heures travaillées", "Timesheet", "Relevé heures", "Total heures"],
-          "required_context": ["heures", "travail", "employé", "travaillées", "mensuel", "semaine"],
+          "para_pattern": "4_Archives/administratif_5y/employes/heures/{year}",
+          "examples": [
+            "Feuille d'heures mensuelle",
+            "Timesheet",
+            "Relevé d'heures travaillées"
+          ],
+          "keywords": [
+            "Feuille d'heures",
+            "Heures travaillées",
+            "Timesheet",
+            "Relevé heures",
+            "Total heures"
+          ],
+          "required_context": [
+            "heures",
+            "travail",
+            "employé",
+            "travaillées",
+            "mensuel",
+            "semaine"
+          ],
           "retention": "5_years",
           "paper_required": false
         }
@@ -375,37 +1034,115 @@
         {
           "sub_id": "avs_ai",
           "name": "1er Pilier (AVS/AI)",
-          "para_pattern": "3_Resources/prevoyance/avs",
-          "examples": ["Certificat d'assurance AVS", "Extrait de Compte Individuel", "Décision de rente"],
-          "keywords": ["Extrait AVS", "Compte Individuel AVS", "Caisse AVS", "Rente AVS", "AI-Rente"],
+          "para_pattern": "3_Resources/prevoyance_ret/avs",
+          "examples": [
+            "Certificat d'assurance AVS",
+            "Extrait de Compte Individuel",
+            "Décision de rente"
+          ],
+          "keywords": [
+            "Extrait AVS",
+            "Compte Individuel AVS",
+            "Caisse AVS",
+            "Rente AVS",
+            "AI-Rente"
+          ],
           "retention": "retirement",
           "paper_required": false
         },
         {
           "sub_id": "lpp",
           "name": "2ème Pilier (LPP)",
-          "para_pattern": "4_Archives/prevoyance/{issuer}/{year}",
-          "examples": ["Certificat de prévoyance", "Décompte de sortie", "Attestation de rachat"],
-          "keywords": ["LPP", "Caisse de pension", "Libre passage", "Capital décès"],
+          "para_pattern": "4_Archives/prevoyance_ret/{issuer}/{year}",
+          "examples": [
+            "Certificat de prévoyance",
+            "Décompte de sortie",
+            "Attestation de rachat"
+          ],
+          "keywords": [
+            "LPP",
+            "Caisse de pension",
+            "Libre passage",
+            "Capital décès"
+          ],
           "retention": "retirement",
           "paper_required": false,
           "issuers": [
-            {"name": "Generali", "patterns": ["Generali", "generali.ch"]},
-            {"name": "Vaudoise", "patterns": ["Vaudoise Assurances", "Vaudoise Vie", "vaudoise.ch"]},
-            {"name": "Swiss Life", "patterns": ["Swiss Life", "swisslife.ch"]},
-            {"name": "Retraites Populaires", "patterns": ["Retraites Populaires", "retraitespopulaires.ch"]},
-            {"name": "Allianz", "patterns": ["Allianz", "allianz.ch"]},
-            {"name": "BCV", "patterns": ["BCV", "bcv.ch", "Banque Cantonale Vaudoise"]},
-            {"name": "PUBLICA", "patterns": ["PUBLICA", "publica.ch"]},
-            {"name": "Axa", "patterns": ["Axa", "axa.ch"]}
+            {
+              "name": "Generali",
+              "patterns": [
+                "Generali",
+                "generali.ch"
+              ]
+            },
+            {
+              "name": "Vaudoise",
+              "patterns": [
+                "Vaudoise Assurances",
+                "Vaudoise Vie",
+                "vaudoise.ch"
+              ]
+            },
+            {
+              "name": "Swiss Life",
+              "patterns": [
+                "Swiss Life",
+                "swisslife.ch"
+              ]
+            },
+            {
+              "name": "Retraites Populaires",
+              "patterns": [
+                "Retraites Populaires",
+                "retraitespopulaires.ch"
+              ]
+            },
+            {
+              "name": "Allianz",
+              "patterns": [
+                "Allianz",
+                "allianz.ch"
+              ]
+            },
+            {
+              "name": "BCV",
+              "patterns": [
+                "BCV",
+                "bcv.ch",
+                "Banque Cantonale Vaudoise"
+              ]
+            },
+            {
+              "name": "PUBLICA",
+              "patterns": [
+                "PUBLICA",
+                "publica.ch"
+              ]
+            },
+            {
+              "name": "Axa",
+              "patterns": [
+                "Axa",
+                "axa.ch"
+              ]
+            }
           ]
         },
         {
           "sub_id": "pilier_3a_3b",
           "name": "3ème Pilier (Privé)",
-          "para_pattern": "4_Archives/prevoyance/{issuer}/{year}",
-          "examples": ["Police d'assurance vie", "Convention de compte 3a", "Attestations fiscales annuelles"],
-          "keywords": ["3e pilier", "Prévoyance liée", "Police", "Bénéficiaire"],
+          "para_pattern": "4_Archives/prevoyance_ret/{issuer}/{year}",
+          "examples": [
+            "Police d'assurance vie",
+            "Convention de compte 3a",
+            "Attestations fiscales annuelles"
+          ],
+          "keywords": [
+            "3e pilier",
+            "Prévoyance liée",
+            "Police",
+            "Bénéficiaire"
+          ],
           "retention": "retirement",
           "paper_required": true
         }
@@ -420,49 +1157,196 @@
         {
           "sub_id": "comptes_bancaires",
           "name": "Comptes & Cartes",
-          "examples": ["Contrats d'ouverture", "Relevés de compte mensuels", "Relevés de cartes de crédit"],
-          "keywords": ["IBAN", "Relevé de compte", "Carte de crédit", "Carte Visa", "Mastercard"],
-          "required_context": ["banque", "bancaire", "compte", "solde", "crédit", "CHF", "EUR"],
+          "examples": [
+            "Contrats d'ouverture",
+            "Relevés de compte mensuels",
+            "Relevés de cartes de crédit"
+          ],
+          "keywords": [
+            "IBAN",
+            "Relevé de compte",
+            "Carte de crédit",
+            "Carte Visa",
+            "Mastercard"
+          ],
+          "required_context": [
+            "banque",
+            "bancaire",
+            "compte",
+            "solde",
+            "crédit",
+            "CHF",
+            "EUR"
+          ],
           "retention": "10_years",
           "paper_required": false,
           "issuers": [
-            {"name": "PostFinance", "patterns": ["PostFinance", "postfinance.ch"]},
-            {"name": "UBS", "patterns": ["UBS", "ubs.com"]},
-            {"name": "Raiffeisen", "patterns": ["Raiffeisen", "raiffeisen.ch"]},
-            {"name": "Credit Suisse", "patterns": ["Credit Suisse", "credit-suisse.com"]},
-            {"name": "BCV", "patterns": ["BCV", "bcv.ch", "Banque Cantonale Vaudoise"]},
-            {"name": "BCGE", "patterns": ["BCGE", "bcge.ch"]},
-            {"name": "BCN", "patterns": ["BCN", "bcn.ch"]},
-            {"name": "Viseca", "patterns": ["Viseca", "viseca.ch"]},
-            {"name": "Cornèrcard", "patterns": ["Cornèrcard", "cornercard.ch"]},
-            {"name": "Cembra", "patterns": ["Cembra", "cembra.ch"]},
-            {"name": "American Express", "patterns": ["American Express", "Amex", "americanexpress.ch"]},
-            {"name": "Neon", "patterns": ["Neon", "neon-free.ch"]}
-          ]
+            {
+              "name": "PostFinance",
+              "patterns": [
+                "PostFinance",
+                "postfinance.ch"
+              ]
+            },
+            {
+              "name": "UBS",
+              "patterns": [
+                "UBS",
+                "ubs.com"
+              ]
+            },
+            {
+              "name": "Raiffeisen",
+              "patterns": [
+                "Raiffeisen",
+                "raiffeisen.ch"
+              ]
+            },
+            {
+              "name": "Credit Suisse",
+              "patterns": [
+                "Credit Suisse",
+                "credit-suisse.com"
+              ]
+            },
+            {
+              "name": "BCV",
+              "patterns": [
+                "BCV",
+                "bcv.ch",
+                "Banque Cantonale Vaudoise"
+              ]
+            },
+            {
+              "name": "BCGE",
+              "patterns": [
+                "BCGE",
+                "bcge.ch"
+              ]
+            },
+            {
+              "name": "BCN",
+              "patterns": [
+                "BCN",
+                "bcn.ch"
+              ]
+            },
+            {
+              "name": "Viseca",
+              "patterns": [
+                "Viseca",
+                "viseca.ch"
+              ]
+            },
+            {
+              "name": "Cornèrcard",
+              "patterns": [
+                "Cornèrcard",
+                "cornercard.ch"
+              ]
+            },
+            {
+              "name": "Cembra",
+              "patterns": [
+                "Cembra",
+                "cembra.ch"
+              ]
+            },
+            {
+              "name": "American Express",
+              "patterns": [
+                "American Express",
+                "Amex",
+                "americanexpress.ch"
+              ]
+            },
+            {
+              "name": "Neon",
+              "patterns": [
+                "Neon",
+                "neon-free.ch"
+              ]
+            }
+          ],
+          "para_pattern": "4_Archives/banques_10y/{issuer}/{year}"
         },
         {
           "sub_id": "placements",
           "name": "Titres & Investissements",
-          "para_pattern": "4_Archives/banques/{issuer}/{year}",
-          "examples": ["Relevés de dépôt titres", "Avis d'opérations", "Relevés Crypto"],
-          "keywords": ["Titres", "Dividendes", "Action", "Obligation", "Crypto"],
+          "para_pattern": "4_Archives/banques_10y/{issuer}/{year}",
+          "examples": [
+            "Relevés de dépôt titres",
+            "Avis d'opérations",
+            "Relevés Crypto"
+          ],
+          "keywords": [
+            "Titres",
+            "Dividendes",
+            "Action",
+            "Obligation",
+            "Crypto"
+          ],
           "retention": "10_years",
           "paper_required": false,
           "issuers": [
-            {"name": "Selma", "patterns": ["Selma", "Selma Finance", "selma.io"]},
-            {"name": "Saxo Bank", "patterns": ["Saxo Bank", "saxobank.ch"]},
-            {"name": "SwissQuote", "patterns": ["SwissQuote", "swissquote.ch"]},
-            {"name": "TradeDirect", "patterns": ["TradeDirect", "tradedirect.ch"]},
-            {"name": "Caisse d'Epargne", "patterns": ["Caisse d'epargne", "caisse-epargne.fr"]},
-            {"name": "Crédit Agricole", "patterns": ["Credit Agricole", "credit-agricole.fr"]}
+            {
+              "name": "Selma",
+              "patterns": [
+                "Selma",
+                "Selma Finance",
+                "selma.io"
+              ]
+            },
+            {
+              "name": "Saxo Bank",
+              "patterns": [
+                "Saxo Bank",
+                "saxobank.ch"
+              ]
+            },
+            {
+              "name": "SwissQuote",
+              "patterns": [
+                "SwissQuote",
+                "swissquote.ch"
+              ]
+            },
+            {
+              "name": "TradeDirect",
+              "patterns": [
+                "TradeDirect",
+                "tradedirect.ch"
+              ]
+            },
+            {
+              "name": "Caisse d'Epargne",
+              "patterns": [
+                "Caisse d'epargne",
+                "caisse-epargne.fr"
+              ]
+            },
+            {
+              "name": "Crédit Agricole",
+              "patterns": [
+                "Credit Agricole",
+                "credit-agricole.fr"
+              ]
+            }
           ]
         },
         {
           "sub_id": "poursuites",
           "name": "Office des Poursuites",
-          "para_pattern": "4_Archives/juridique/poursuites/{year}",
-          "examples": ["Extrait du registre des poursuites", "Commandement de payer"],
-          "keywords": ["Poursuites", "Office des poursuites", "Commandement de payer"],
+          "para_pattern": "4_Archives/juridique_10y/poursuites/{year}",
+          "examples": [
+            "Extrait du registre des poursuites",
+            "Commandement de payer"
+          ],
+          "keywords": [
+            "Poursuites",
+            "Office des poursuites",
+            "Commandement de payer"
+          ],
           "retention": "10_years",
           "paper_required": true
         }
@@ -477,60 +1361,238 @@
         {
           "sub_id": "vehicule_admin",
           "name": "Papiers du Véhicule",
-          "para_pattern": "3_Resources/vehicules/papiers",
-          "examples": ["Permis de circulation", "Fiche technique", "Certificat de conformité"],
-          "keywords": ["Service des automobiles", "Permis de circulation", "Châssis", "Immatriculation"],
+          "para_pattern": "3_Resources/vehicules_perm/papiers",
+          "examples": [
+            "Permis de circulation",
+            "Fiche technique",
+            "Certificat de conformité"
+          ],
+          "keywords": [
+            "Service des automobiles",
+            "Permis de circulation",
+            "Châssis",
+            "Immatriculation"
+          ],
           "retention": "permanent",
           "paper_required": true,
           "issuers": [
-            {"name": "SAN", "patterns": ["Service des automobiles", "san.vd.ch", "SAN Vaud"]}
+            {
+              "name": "SAN",
+              "patterns": [
+                "Service des automobiles",
+                "san.vd.ch",
+                "SAN Vaud"
+              ]
+            }
           ]
         },
         {
           "sub_id": "vehicule_contrats",
           "name": "Contrats Véhicule",
-          "para_pattern": "4_Archives/mobilite/vehicule/{year}",
-          "examples": ["Contrat d'achat", "Contrat de Leasing", "Assurance RC/Casco"],
-          "keywords": ["Leasing", "Cembra", "Assurance auto", "Casco"],
+          "para_pattern": "4_Archives/mobilite_ctr/vehicule/{year}",
+          "examples": [
+            "Contrat d'achat",
+            "Contrat de Leasing",
+            "Assurance RC/Casco"
+          ],
+          "keywords": [
+            "Leasing",
+            "Cembra",
+            "Assurance auto",
+            "Casco"
+          ],
           "retention": "contract_duration",
           "paper_required": false
         },
         {
           "sub_id": "entretien_vehicule",
           "name": "Entretien & Amendes",
-          "para_pattern": "4_Archives/mobilite/entretien/{year}",
-          "examples": ["Factures garage", "Achat pneus", "Amendes d'ordre", "Vignette autoroutière"],
-          "keywords": ["Garage automobile", "Service auto", "Révision véhicule", "Pneus", "Amende", "Vidange"],
-          "required_context": ["véhicule", "voiture", "auto", "moto", "km", "kilométrage"],
+          "para_pattern": "4_Archives/mobilite_5y/entretien/{year}",
+          "examples": [
+            "Factures garage",
+            "Achat pneus",
+            "Amendes d'ordre",
+            "Vignette autoroutière"
+          ],
+          "keywords": [
+            "Garage automobile",
+            "Service auto",
+            "Révision véhicule",
+            "Pneus",
+            "Amende",
+            "Vidange"
+          ],
+          "required_context": [
+            "véhicule",
+            "voiture",
+            "auto",
+            "moto",
+            "km",
+            "kilométrage"
+          ],
           "retention": "5_years",
           "paper_required": false
         },
         {
           "sub_id": "transports_publics",
           "name": "Transports Publics",
-          "para_pattern": "4_Archives/factures/Mobilité/{issuer}/{year}",
-          "examples": ["Carte SwissPass", "Factures AG/Demi-tarif", "Abonnement Mobilis", "Billet SNCF", "Billet TER"],
-          "keywords": ["CFF", "SBB", "Mobilis", "SwissPass", "SNCF", "TER", "TGV", "Billet", "MON BILLET", "BILLET REMI", "Aller Simple", "Aller-Retour", "Trenitalia", "biglietto"],
+          "para_pattern": "4_Archives/factures_5y/Mobilité/{issuer}/{year}",
+          "examples": [
+            "Carte SwissPass",
+            "Factures AG/Demi-tarif",
+            "Abonnement Mobilis",
+            "Billet SNCF",
+            "Billet TER"
+          ],
+          "keywords": [
+            "CFF",
+            "SBB",
+            "Mobilis",
+            "SwissPass",
+            "SNCF",
+            "TER",
+            "TGV",
+            "Billet",
+            "MON BILLET",
+            "BILLET REMI",
+            "Aller Simple",
+            "Aller-Retour",
+            "Trenitalia",
+            "biglietto"
+          ],
           "retention": "5_years",
           "paper_required": false,
           "issuers": [
-            {"name": "CFF", "patterns": ["CFF", "SBB", "cff.ch", "sbb.ch", "Schweizerische Bundesbahnen"]},
-            {"name": "SNCF", "patterns": ["SNCF", "sncf.com", "oui.sncf", "TER", "TGV", "BILLET REMI", "MON BILLET"]},
-            {"name": "Trenitalia", "patterns": ["Trenitalia", "trenitalia.com", "Ferrovie dello Stato"]},
-            {"name": "TL", "patterns": ["TL", "t-l.ch", "Transports Lausannois"]},
-            {"name": "TPG", "patterns": ["TPG", "tpg.ch"]},
-            {"name": "VMCV", "patterns": ["VMCV", "vmcv.ch"]},
-            {"name": "MOB", "patterns": ["MOB", "Montreux Oberland bernois", "mob.ch"]},
-            {"name": "RhB", "patterns": ["Rhätische Bahn", "RhB", "rhb.ch"]},
-            {"name": "Travys", "patterns": ["Travys", "travys.ch"]},
-            {"name": "Mobility", "patterns": ["Mobility", "mobility-genossenschaft", "mobility.ch"]},
-            {"name": "EasyPark", "patterns": ["EasyPark", "easypark.ch"]},
-            {"name": "AirFrance", "patterns": ["AirFrance", "airfrance.fr"]},
-            {"name": "Cofiroute", "patterns": ["Cofiroute"]},
-            {"name": "Hertz", "patterns": ["Hertz", "hertz.ch"]},
-            {"name": "Europcar", "patterns": ["europcar", "europcar.ch"]},
-            {"name": "VeloSpot", "patterns": ["VeloSpot", "velospot.ch"]},
-            {"name": "ByJuno", "patterns": ["ByJuno"]}
+            {
+              "name": "CFF",
+              "patterns": [
+                "CFF",
+                "SBB",
+                "cff.ch",
+                "sbb.ch",
+                "Schweizerische Bundesbahnen"
+              ]
+            },
+            {
+              "name": "SNCF",
+              "patterns": [
+                "SNCF",
+                "sncf.com",
+                "oui.sncf",
+                "TER",
+                "TGV",
+                "BILLET REMI",
+                "MON BILLET"
+              ]
+            },
+            {
+              "name": "Trenitalia",
+              "patterns": [
+                "Trenitalia",
+                "trenitalia.com",
+                "Ferrovie dello Stato"
+              ]
+            },
+            {
+              "name": "TL",
+              "patterns": [
+                "TL",
+                "t-l.ch",
+                "Transports Lausannois"
+              ]
+            },
+            {
+              "name": "TPG",
+              "patterns": [
+                "TPG",
+                "tpg.ch"
+              ]
+            },
+            {
+              "name": "VMCV",
+              "patterns": [
+                "VMCV",
+                "vmcv.ch"
+              ]
+            },
+            {
+              "name": "MOB",
+              "patterns": [
+                "MOB",
+                "Montreux Oberland bernois",
+                "mob.ch"
+              ]
+            },
+            {
+              "name": "RhB",
+              "patterns": [
+                "Rhätische Bahn",
+                "RhB",
+                "rhb.ch"
+              ]
+            },
+            {
+              "name": "Travys",
+              "patterns": [
+                "Travys",
+                "travys.ch"
+              ]
+            },
+            {
+              "name": "Mobility",
+              "patterns": [
+                "Mobility",
+                "mobility-genossenschaft",
+                "mobility.ch"
+              ]
+            },
+            {
+              "name": "EasyPark",
+              "patterns": [
+                "EasyPark",
+                "easypark.ch"
+              ]
+            },
+            {
+              "name": "AirFrance",
+              "patterns": [
+                "AirFrance",
+                "airfrance.fr"
+              ]
+            },
+            {
+              "name": "Cofiroute",
+              "patterns": [
+                "Cofiroute"
+              ]
+            },
+            {
+              "name": "Hertz",
+              "patterns": [
+                "Hertz",
+                "hertz.ch"
+              ]
+            },
+            {
+              "name": "Europcar",
+              "patterns": [
+                "europcar",
+                "europcar.ch"
+              ]
+            },
+            {
+              "name": "VeloSpot",
+              "patterns": [
+                "VeloSpot",
+                "velospot.ch"
+              ]
+            },
+            {
+              "name": "ByJuno",
+              "patterns": [
+                "ByJuno"
+              ]
+            }
           ]
         }
       ]
@@ -544,238 +1606,1049 @@
         {
           "sub_id": "formation_scolaire",
           "name": "Scolarité & Formation",
-          "para_pattern": "3_Resources/formation/diplomes",
-          "examples": ["Bulletins scolaires", "Contrats d'apprentissage", "Attestations de cours"],
-          "keywords": ["Bulletin scolaire", "Relevé de notes", "Contrat d'apprentissage", "Diplôme", "Certificat de scolarité", "Attestation scolaire", "Livret scolaire"],
-          "required_context": ["école", "ecole", "scolaire", "élève", "eleve", "étudiant", "etudiant", "établissement", "etablissement", "cursus", "formation", "apprenti", "CFC", "maturité", "baccalauréat", "lycée", "collège", "université", "faculté"],
+          "para_pattern": "3_Resources/formation_perm/diplomes",
+          "examples": [
+            "Bulletins scolaires",
+            "Contrats d'apprentissage",
+            "Attestations de cours"
+          ],
+          "keywords": [
+            "Bulletin scolaire",
+            "Relevé de notes",
+            "Contrat d'apprentissage",
+            "Diplôme",
+            "Certificat de scolarité",
+            "Attestation scolaire",
+            "Livret scolaire"
+          ],
+          "required_context": [
+            "école",
+            "ecole",
+            "scolaire",
+            "élève",
+            "eleve",
+            "étudiant",
+            "etudiant",
+            "établissement",
+            "etablissement",
+            "cursus",
+            "formation",
+            "apprenti",
+            "CFC",
+            "maturité",
+            "baccalauréat",
+            "lycée",
+            "collège",
+            "université",
+            "faculté"
+          ],
           "retention": "permanent",
           "paper_required": false
         },
         {
           "sub_id": "formation_enfants",
           "name": "Formation Enfants",
-          "para_pattern": "4_Archives/factures/Enfant/{issuer}/{year}",
-          "examples": ["Crèche", "Parascolaire", "Activités extrascolaires"],
-          "keywords": ["Crèche", "Parascolaire", "École", "Garderie"],
+          "para_pattern": "4_Archives/factures_5y/Enfant/{issuer}/{year}",
+          "examples": [
+            "Crèche",
+            "Parascolaire",
+            "Activités extrascolaires"
+          ],
+          "keywords": [
+            "Crèche",
+            "Parascolaire",
+            "École",
+            "Garderie"
+          ],
           "retention": "5_years",
           "paper_required": false,
           "issuers": [
-            {"name": "Commune de Montreux", "patterns": ["Commune de Montreux"]},
-            {"name": "Leukerbad Skischule", "patterns": ["Leukerbad Skischule"]},
-            {"name": "Réseau enfance", "patterns": ["Réseau enfance"]}
+            {
+              "name": "Commune de Montreux",
+              "patterns": [
+                "Commune de Montreux"
+              ]
+            },
+            {
+              "name": "Leukerbad Skischule",
+              "patterns": [
+                "Leukerbad Skischule"
+              ]
+            },
+            {
+              "name": "Réseau enfance",
+              "patterns": [
+                "Réseau enfance"
+              ]
+            }
           ]
         },
         {
           "sub_id": "animaux",
           "name": "Animaux de Compagnie",
-          "para_pattern": "3_Resources/animaux",
-          "examples": ["Passeport pour animaux", "Enregistrement puce", "Carnet de vaccination"],
-          "keywords": ["Amicus", "Vétérinaire", "Chien", "Chat", "Puce", "animal", "animaux"],
-          "required_context": ["animal", "animaux", "pet", "vétérinaire", "veterinaire", "vaccination", "vaccin", "passeport animal", "micropuce", "compagnie", "clinique", "vermifuge", "antiparasitaire", "ANIS", "chiot", "chaton", "race"],
+          "para_pattern": "3_Resources/animaux_perm",
+          "examples": [
+            "Passeport pour animaux",
+            "Enregistrement puce",
+            "Carnet de vaccination"
+          ],
+          "keywords": [
+            "Amicus",
+            "Vétérinaire",
+            "Chien",
+            "Chat",
+            "Puce",
+            "animal",
+            "animaux"
+          ],
+          "required_context": [
+            "animal",
+            "animaux",
+            "pet",
+            "vétérinaire",
+            "veterinaire",
+            "vaccination",
+            "vaccin",
+            "passeport animal",
+            "micropuce",
+            "compagnie",
+            "clinique",
+            "vermifuge",
+            "antiparasitaire",
+            "ANIS",
+            "chiot",
+            "chaton",
+            "race"
+          ],
           "retention": "permanent",
           "paper_required": true
         },
         {
           "sub_id": "assurances_rc_menage",
           "name": "RC Privée & Ménage",
-          "para_pattern": "4_Archives/factures/Assurances/{issuer}/{year}",
-          "examples": ["Police RC Privée", "Police Assurance Ménage", "Déclarations de sinistres"],
-          "keywords": ["Responsabilité civile", "Ménage", "Vol", "Sinistre"],
+          "para_pattern": "4_Archives/factures_ctr/Assurances/{issuer}/{year}",
+          "examples": [
+            "Police RC Privée",
+            "Police Assurance Ménage",
+            "Déclarations de sinistres"
+          ],
+          "keywords": [
+            "Responsabilité civile",
+            "Ménage",
+            "Vol",
+            "Sinistre"
+          ],
           "retention": "contract_duration",
           "paper_required": false,
           "issuers": [
-            {"name": "TCS", "patterns": ["TCS", "tcs.ch"]},
-            {"name": "SwissCaution", "patterns": ["SwissCaution", "swisscaution.ch"]}
+            {
+              "name": "TCS",
+              "patterns": [
+                "TCS",
+                "tcs.ch"
+              ]
+            },
+            {
+              "name": "SwissCaution",
+              "patterns": [
+                "SwissCaution",
+                "swisscaution.ch"
+              ]
+            }
           ]
         },
         {
           "sub_id": "garanties_achats",
           "name": "Garanties & Factures Appareils",
-          "para_pattern": "4_Archives/factures/Materiels/{issuer}/{year}",
-          "examples": ["Tickets de caisse", "Factures électronique", "Modes d'emploi"],
-          "keywords": ["Garantie", "Ticket", "Achat"],
+          "para_pattern": "4_Archives/factures_2y/Materiels/{issuer}/{year}",
+          "examples": [
+            "Tickets de caisse",
+            "Factures électronique",
+            "Modes d'emploi"
+          ],
+          "keywords": [
+            "Garantie",
+            "Ticket",
+            "Achat"
+          ],
           "retention": "warranty_2_years",
           "paper_required": false,
           "issuers": [
-            {"name": "Fnac", "patterns": ["fnac", "fnac.ch"]},
-            {"name": "Migros", "patterns": ["Migros", "migros.ch"]},
-            {"name": "Manor", "patterns": ["Manor", "manor.ch"]},
-            {"name": "Coop@Home", "patterns": ["coop@home", "coopathome.ch"]},
-            {"name": "Digitec", "patterns": ["digitec", "digitec.ch"]},
-            {"name": "Galaxus", "patterns": ["Galaxus", "galaxus.ch"]},
-            {"name": "Nespresso", "patterns": ["Nespresso", "nespresso.com"]},
-            {"name": "Interdiscount", "patterns": ["interdiscount", "interdiscount.ch"]},
-            {"name": "MediaMarkt", "patterns": ["MediaMarkt", "mediamarkt.ch"]},
-            {"name": "QoQa", "patterns": ["QoQa", "QoQa Services", "qoqa.ch"]},
-            {"name": "Fust", "patterns": ["Fust", "fust.ch"]},
-            {"name": "Brack", "patterns": ["Brack", "brack.ch"]},
-            {"name": "Conrad", "patterns": ["Conrad", "conrad.ch"]},
-            {"name": "Hornbach", "patterns": ["Hornbach", "hornbach.ch"]},
-            {"name": "Apple", "patterns": ["Apple", "apple.com"]},
-            {"name": "Boulanger", "patterns": ["Boulanger", "boulanger.com"]},
-            {"name": "Cumulus", "patterns": ["Cumulus"]},
-            {"name": "Netatmo", "patterns": ["Netatmo", "netatmo.com"]},
-            {"name": "iRobot", "patterns": ["irobot", "irobot.com"]},
-            {"name": "Thermomix", "patterns": ["thermomix"]},
-            {"name": "Withings", "patterns": ["withings", "withings.com"]},
-            {"name": "Yubico", "patterns": ["Yubico", "yubico.com"]},
-            {"name": "Glowing Sky", "patterns": ["Glowing Sky"]}
+            {
+              "name": "Fnac",
+              "patterns": [
+                "fnac",
+                "fnac.ch"
+              ]
+            },
+            {
+              "name": "Migros",
+              "patterns": [
+                "Migros",
+                "migros.ch"
+              ]
+            },
+            {
+              "name": "Manor",
+              "patterns": [
+                "Manor",
+                "manor.ch"
+              ]
+            },
+            {
+              "name": "Coop@Home",
+              "patterns": [
+                "coop@home",
+                "coopathome.ch"
+              ]
+            },
+            {
+              "name": "Digitec",
+              "patterns": [
+                "digitec",
+                "digitec.ch"
+              ]
+            },
+            {
+              "name": "Galaxus",
+              "patterns": [
+                "Galaxus",
+                "galaxus.ch"
+              ]
+            },
+            {
+              "name": "Nespresso",
+              "patterns": [
+                "Nespresso",
+                "nespresso.com"
+              ]
+            },
+            {
+              "name": "Interdiscount",
+              "patterns": [
+                "interdiscount",
+                "interdiscount.ch"
+              ]
+            },
+            {
+              "name": "MediaMarkt",
+              "patterns": [
+                "MediaMarkt",
+                "mediamarkt.ch"
+              ]
+            },
+            {
+              "name": "QoQa",
+              "patterns": [
+                "QoQa",
+                "QoQa Services",
+                "qoqa.ch"
+              ]
+            },
+            {
+              "name": "Fust",
+              "patterns": [
+                "Fust",
+                "fust.ch"
+              ]
+            },
+            {
+              "name": "Brack",
+              "patterns": [
+                "Brack",
+                "brack.ch"
+              ]
+            },
+            {
+              "name": "Conrad",
+              "patterns": [
+                "Conrad",
+                "conrad.ch"
+              ]
+            },
+            {
+              "name": "Hornbach",
+              "patterns": [
+                "Hornbach",
+                "hornbach.ch"
+              ]
+            },
+            {
+              "name": "Apple",
+              "patterns": [
+                "Apple",
+                "apple.com"
+              ]
+            },
+            {
+              "name": "Boulanger",
+              "patterns": [
+                "Boulanger",
+                "boulanger.com"
+              ]
+            },
+            {
+              "name": "Cumulus",
+              "patterns": [
+                "Cumulus"
+              ]
+            },
+            {
+              "name": "Netatmo",
+              "patterns": [
+                "Netatmo",
+                "netatmo.com"
+              ]
+            },
+            {
+              "name": "iRobot",
+              "patterns": [
+                "irobot",
+                "irobot.com"
+              ]
+            },
+            {
+              "name": "Thermomix",
+              "patterns": [
+                "thermomix"
+              ]
+            },
+            {
+              "name": "Withings",
+              "patterns": [
+                "withings",
+                "withings.com"
+              ]
+            },
+            {
+              "name": "Yubico",
+              "patterns": [
+                "Yubico",
+                "yubico.com"
+              ]
+            },
+            {
+              "name": "Glowing Sky",
+              "patterns": [
+                "Glowing Sky"
+              ]
+            }
           ]
         },
         {
           "sub_id": "livraison_logistique",
           "name": "Services de Livraison",
-          "para_pattern": "4_Archives/factures/Materiels/{issuer}/{year}",
-          "examples": ["Bordereaux d'expédition", "Factures de livraison"],
-          "keywords": ["Expédition", "Livraison", "Colis"],
+          "para_pattern": "4_Archives/factures_2y/Materiels/{issuer}/{year}",
+          "examples": [
+            "Bordereaux d'expédition",
+            "Factures de livraison"
+          ],
+          "keywords": [
+            "Expédition",
+            "Livraison",
+            "Colis"
+          ],
           "retention": "warranty_2_years",
           "paper_required": false,
           "issuers": [
-            {"name": "FedEx", "patterns": ["FedEx", "fedex.com"]},
-            {"name": "La Poste", "patterns": ["La Poste", "laposte.ch"]},
-            {"name": "DHL", "patterns": ["DHL", "dhl.com"]},
-            {"name": "UPS", "patterns": ["UPS", "ups.com"]}
+            {
+              "name": "FedEx",
+              "patterns": [
+                "FedEx",
+                "fedex.com"
+              ]
+            },
+            {
+              "name": "La Poste",
+              "patterns": [
+                "La Poste",
+                "laposte.ch"
+              ]
+            },
+            {
+              "name": "DHL",
+              "patterns": [
+                "DHL",
+                "dhl.com"
+              ]
+            },
+            {
+              "name": "UPS",
+              "patterns": [
+                "UPS",
+                "ups.com"
+              ]
+            }
           ]
         },
         {
           "sub_id": "cloud_licences",
           "name": "Abonnements Cloud & Licences",
-          "para_pattern": "4_Archives/factures/Licences/{issuer}/{year}",
-          "examples": ["Factures abonnement", "Licences logicielles", "Reçus cloud"],
-          "keywords": ["Abonnement cloud", "Licence logicielle", "Subscription"],
-          "required_context": ["facture", "renouvellement", "invoice", "paiement", "montant"],
+          "para_pattern": "4_Archives/factures_5y/Licences/{issuer}/{year}",
+          "examples": [
+            "Factures abonnement",
+            "Licences logicielles",
+            "Reçus cloud"
+          ],
+          "keywords": [
+            "Abonnement cloud",
+            "Licence logicielle",
+            "Subscription"
+          ],
+          "required_context": [
+            "facture",
+            "renouvellement",
+            "invoice",
+            "paiement",
+            "montant"
+          ],
           "retention": "5_years",
           "paper_required": false,
           "issuers": [
-            {"name": "Apple", "patterns": ["Apple", "apple.com", "iCloud"]},
-            {"name": "Microsoft", "patterns": ["Microsoft", "Microsoft 365", "Office 365", "Azure"]},
-            {"name": "Google", "patterns": ["Google", "Google One", "google.com"]},
-            {"name": "Dropbox", "patterns": ["Dropbox", "dropbox.com"]},
-            {"name": "Netflix", "patterns": ["Netflix", "netflix.com"]},
-            {"name": "Spotify", "patterns": ["Spotify", "spotify.com"]},
-            {"name": "Adobe", "patterns": ["Adobe", "Creative Cloud", "adobe.com"]},
-            {"name": "Infomaniak", "patterns": ["Facture Infomaniak", "Infomaniak hébergement", "infomaniak.ch"]},
-            {"name": "AWS", "patterns": ["AWS", "Amazon Web Services", "aws.amazon.com"]},
-            {"name": "OVH", "patterns": ["OVH", "ovh.com"]},
-            {"name": "Hetzner", "patterns": ["Hetzner", "hetzner.com"]},
-            {"name": "SwitchPlus", "patterns": ["SwitchPlus", "switchplus.ch"]},
-            {"name": "JetBrains", "patterns": ["JetBrains", "jetbrains.com"]},
-            {"name": "1Password", "patterns": ["1Password", "1password.com"]},
-            {"name": "Parallels", "patterns": ["Parallels", "parallels.com"]},
-            {"name": "Abbyy", "patterns": ["Abbyy", "abbyy.com"]},
-            {"name": "Commvault", "patterns": ["Commvault", "commvault.com"]},
-            {"name": "Crashplan", "patterns": ["Crashplan", "crashplan.com"]},
-            {"name": "Mobatek", "patterns": ["Mobatek", "mobaxterm.mobatek.net"]},
-            {"name": "Next Inpact", "patterns": ["Next Inpact", "nextinpact.com"]},
-            {"name": "OpsView", "patterns": ["OpsView", "opsview.com"]},
-            {"name": "Paragon", "patterns": ["Paragon", "paragon-software.com"]},
-            {"name": "PearsonVue", "patterns": ["PearsonVue", "pearsonvue.com"]},
-            {"name": "ifolor", "patterns": ["ifolor", "ifolor.ch"]}
+            {
+              "name": "Apple",
+              "patterns": [
+                "Apple",
+                "apple.com",
+                "iCloud"
+              ]
+            },
+            {
+              "name": "Microsoft",
+              "patterns": [
+                "Microsoft",
+                "Microsoft 365",
+                "Office 365",
+                "Azure"
+              ]
+            },
+            {
+              "name": "Google",
+              "patterns": [
+                "Google",
+                "Google One",
+                "google.com"
+              ]
+            },
+            {
+              "name": "Dropbox",
+              "patterns": [
+                "Dropbox",
+                "dropbox.com"
+              ]
+            },
+            {
+              "name": "Netflix",
+              "patterns": [
+                "Netflix",
+                "netflix.com"
+              ]
+            },
+            {
+              "name": "Spotify",
+              "patterns": [
+                "Spotify",
+                "spotify.com"
+              ]
+            },
+            {
+              "name": "Adobe",
+              "patterns": [
+                "Adobe",
+                "Creative Cloud",
+                "adobe.com"
+              ]
+            },
+            {
+              "name": "Infomaniak",
+              "patterns": [
+                "Facture Infomaniak",
+                "Infomaniak hébergement",
+                "infomaniak.ch"
+              ]
+            },
+            {
+              "name": "AWS",
+              "patterns": [
+                "AWS",
+                "Amazon Web Services",
+                "aws.amazon.com"
+              ]
+            },
+            {
+              "name": "OVH",
+              "patterns": [
+                "OVH",
+                "ovh.com"
+              ]
+            },
+            {
+              "name": "Hetzner",
+              "patterns": [
+                "Hetzner",
+                "hetzner.com"
+              ]
+            },
+            {
+              "name": "SwitchPlus",
+              "patterns": [
+                "SwitchPlus",
+                "switchplus.ch"
+              ]
+            },
+            {
+              "name": "JetBrains",
+              "patterns": [
+                "JetBrains",
+                "jetbrains.com"
+              ]
+            },
+            {
+              "name": "1Password",
+              "patterns": [
+                "1Password",
+                "1password.com"
+              ]
+            },
+            {
+              "name": "Parallels",
+              "patterns": [
+                "Parallels",
+                "parallels.com"
+              ]
+            },
+            {
+              "name": "Abbyy",
+              "patterns": [
+                "Abbyy",
+                "abbyy.com"
+              ]
+            },
+            {
+              "name": "Commvault",
+              "patterns": [
+                "Commvault",
+                "commvault.com"
+              ]
+            },
+            {
+              "name": "Crashplan",
+              "patterns": [
+                "Crashplan",
+                "crashplan.com"
+              ]
+            },
+            {
+              "name": "Mobatek",
+              "patterns": [
+                "Mobatek",
+                "mobaxterm.mobatek.net"
+              ]
+            },
+            {
+              "name": "Next Inpact",
+              "patterns": [
+                "Next Inpact",
+                "nextinpact.com"
+              ]
+            },
+            {
+              "name": "OpsView",
+              "patterns": [
+                "OpsView",
+                "opsview.com"
+              ]
+            },
+            {
+              "name": "Paragon",
+              "patterns": [
+                "Paragon",
+                "paragon-software.com"
+              ]
+            },
+            {
+              "name": "PearsonVue",
+              "patterns": [
+                "PearsonVue",
+                "pearsonvue.com"
+              ]
+            },
+            {
+              "name": "ifolor",
+              "patterns": [
+                "ifolor",
+                "ifolor.ch"
+              ]
+            }
           ]
         },
         {
           "sub_id": "voyages",
           "name": "Voyages & Vacances",
-          "para_pattern": "4_Archives/voyages/hotels/{issuer}/{year}",
-          "examples": ["Réservations hôtel", "Location voiture", "Facture hôtel"],
-          "keywords": ["Réservation", "Check-in", "Check-out", "Chambre", "Room", "Nuitée"],
-          "required_context": ["hôtel", "hotel", "room", "chambre", "nuit", "night", "séjour", "stay"],
+          "para_pattern": "4_Archives/voyages_5y/hotels/{issuer}/{year}",
+          "examples": [
+            "Réservations hôtel",
+            "Location voiture",
+            "Facture hôtel"
+          ],
+          "keywords": [
+            "Réservation",
+            "Check-in",
+            "Check-out",
+            "Chambre",
+            "Room",
+            "Nuitée"
+          ],
+          "required_context": [
+            "hôtel",
+            "hotel",
+            "room",
+            "chambre",
+            "nuit",
+            "night",
+            "séjour",
+            "stay"
+          ],
           "retention": "5_years",
           "paper_required": false,
           "issuers": [
-            {"name": "Radisson", "patterns": ["Radisson", "radisson.com", "Radisson Blu"]},
-            {"name": "Hilton", "patterns": ["Hilton", "hilton.com", "DoubleTree", "Hampton Inn"]},
-            {"name": "Marriott", "patterns": ["Marriott", "marriott.com", "Sheraton", "Westin"]},
-            {"name": "Accor", "patterns": ["Accor", "accor.com", "Novotel", "Ibis", "Mercure", "Sofitel"]},
-            {"name": "IHG", "patterns": ["IHG", "ihg.com", "Holiday Inn", "InterContinental", "Crowne Plaza"]},
-            {"name": "Booking", "patterns": ["Booking.com", "booking.com"]},
-            {"name": "Hotels.com", "patterns": ["Hotels.com", "hotels.com"]},
-            {"name": "Expedia", "patterns": ["Expedia", "expedia.com"]}
+            {
+              "name": "Radisson",
+              "patterns": [
+                "Radisson",
+                "radisson.com",
+                "Radisson Blu"
+              ]
+            },
+            {
+              "name": "Hilton",
+              "patterns": [
+                "Hilton",
+                "hilton.com",
+                "DoubleTree",
+                "Hampton Inn"
+              ]
+            },
+            {
+              "name": "Marriott",
+              "patterns": [
+                "Marriott",
+                "marriott.com",
+                "Sheraton",
+                "Westin"
+              ]
+            },
+            {
+              "name": "Accor",
+              "patterns": [
+                "Accor",
+                "accor.com",
+                "Novotel",
+                "Ibis",
+                "Mercure",
+                "Sofitel"
+              ]
+            },
+            {
+              "name": "IHG",
+              "patterns": [
+                "IHG",
+                "ihg.com",
+                "Holiday Inn",
+                "InterContinental",
+                "Crowne Plaza"
+              ]
+            },
+            {
+              "name": "Booking",
+              "patterns": [
+                "Booking.com",
+                "booking.com"
+              ]
+            },
+            {
+              "name": "Hotels.com",
+              "patterns": [
+                "Hotels.com",
+                "hotels.com"
+              ]
+            },
+            {
+              "name": "Expedia",
+              "patterns": [
+                "Expedia",
+                "expedia.com"
+              ]
+            }
           ]
         },
         {
           "sub_id": "billets_avion",
           "name": "Billets d'avion & Transport",
-          "para_pattern": "4_Archives/voyages/vols/{year}",
-          "examples": ["E-ticket", "Confirmation de vol", "Carte d'embarquement", "Bagages"],
-          "keywords": ["e-ticket", "boarding pass", "itinerary", "flight confirmation", "baggage", "PNR"],
-          "required_context": ["flight", "vol", "airline", "airport", "departure", "arrival", "passenger"],
+          "para_pattern": "4_Archives/voyages_5y/vols/{year}",
+          "examples": [
+            "E-ticket",
+            "Confirmation de vol",
+            "Carte d'embarquement",
+            "Bagages"
+          ],
+          "keywords": [
+            "e-ticket",
+            "boarding pass",
+            "itinerary",
+            "flight confirmation",
+            "baggage",
+            "PNR"
+          ],
+          "required_context": [
+            "flight",
+            "vol",
+            "airline",
+            "airport",
+            "departure",
+            "arrival",
+            "passenger"
+          ],
           "retention": "5_years",
           "paper_required": false,
           "issuers": [
-            {"name": "Swiss", "patterns": ["Swiss International", "SWISS Air", "swiss.com", "Swiss Airlines"]},
-            {"name": "Lufthansa", "patterns": ["Lufthansa", "lufthansa.com"]},
-            {"name": "Air France", "patterns": ["Air France", "airfrance.com"]},
-            {"name": "EasyJet", "patterns": ["EasyJet", "easyjet.com"]},
-            {"name": "British Airways", "patterns": ["British Airways", "ba.com"]},
-            {"name": "Emirates", "patterns": ["Emirates", "emirates.com"]},
-            {"name": "Delta", "patterns": ["Delta", "delta.com"]},
-            {"name": "United", "patterns": ["United Airlines", "united.com"]}
+            {
+              "name": "Swiss",
+              "patterns": [
+                "Swiss International",
+                "SWISS Air",
+                "swiss.com",
+                "Swiss Airlines"
+              ]
+            },
+            {
+              "name": "Lufthansa",
+              "patterns": [
+                "Lufthansa",
+                "lufthansa.com"
+              ]
+            },
+            {
+              "name": "Air France",
+              "patterns": [
+                "Air France",
+                "airfrance.com"
+              ]
+            },
+            {
+              "name": "EasyJet",
+              "patterns": [
+                "EasyJet",
+                "easyjet.com"
+              ]
+            },
+            {
+              "name": "British Airways",
+              "patterns": [
+                "British Airways",
+                "ba.com"
+              ]
+            },
+            {
+              "name": "Emirates",
+              "patterns": [
+                "Emirates",
+                "emirates.com"
+              ]
+            },
+            {
+              "name": "Delta",
+              "patterns": [
+                "Delta",
+                "delta.com"
+              ]
+            },
+            {
+              "name": "United",
+              "patterns": [
+                "United Airlines",
+                "united.com"
+              ]
+            }
           ]
         },
         {
           "sub_id": "documents_voyage",
           "name": "Documents de voyage",
-          "para_pattern": "4_Archives/voyages/documents/{year}",
-          "examples": ["ESTA", "Visa touristique", "Assurance voyage"],
-          "keywords": ["ESTA", "Travel Authorization", "Visa Application"],
-          "required_context": ["travel", "authorization", "customs", "border", "entry"],
+          "para_pattern": "4_Archives/voyages_5y/documents/{year}",
+          "examples": [
+            "ESTA",
+            "Visa touristique",
+            "Assurance voyage"
+          ],
+          "keywords": [
+            "ESTA",
+            "Travel Authorization",
+            "Visa Application"
+          ],
+          "required_context": [
+            "travel",
+            "authorization",
+            "customs",
+            "border",
+            "entry"
+          ],
           "retention": "5_years",
           "paper_required": false
         },
         {
           "sub_id": "spectacles_evenements",
           "name": "Spectacles & Événements",
-          "para_pattern": "4_Archives/loisirs/spectacles/{year}",
-          "examples": ["Billets de concert", "Entrées cinéma", "Tickets événements", "Entrées musée", "Visites guidées"],
-          "keywords": ["Billet", "Ticket", "Place", "Entrée", "Concert", "Spectacle", "Musée", "Museum", "Museo", "biglietto", "visita", "visite"],
-          "required_context": ["concert", "spectacle", "cinéma", "théâtre", "festival", "événement", "ouverture des portes", "museo", "musée", "exposition", "visite"],
+          "para_pattern": "4_Archives/loisirs_2y/spectacles/{year}",
+          "examples": [
+            "Billets de concert",
+            "Entrées cinéma",
+            "Tickets événements",
+            "Entrées musée",
+            "Visites guidées"
+          ],
+          "keywords": [
+            "Billet",
+            "Ticket",
+            "Place",
+            "Entrée",
+            "Concert",
+            "Spectacle",
+            "Musée",
+            "Museum",
+            "Museo",
+            "biglietto",
+            "visita",
+            "visite"
+          ],
+          "required_context": [
+            "concert",
+            "spectacle",
+            "cinéma",
+            "théâtre",
+            "festival",
+            "événement",
+            "ouverture des portes",
+            "museo",
+            "musée",
+            "exposition",
+            "visite"
+          ],
           "retention": "warranty_2_years",
           "paper_required": false
         },
         {
           "sub_id": "services_divers",
           "name": "Services Divers",
-          "para_pattern": "4_Archives/factures/Services/{issuer}/{year}",
-          "examples": ["Pressing", "Nettoyage", "Autres services"],
-          "keywords": ["Pressing", "Nettoyage", "Service à domicile", "Prestation de service"],
-          "required_context": ["facture", "devis", "tarif", "prix", "montant"],
+          "para_pattern": "4_Archives/factures_2y/Services/{issuer}/{year}",
+          "examples": [
+            "Pressing",
+            "Nettoyage",
+            "Autres services"
+          ],
+          "keywords": [
+            "Pressing",
+            "Nettoyage",
+            "Service à domicile",
+            "Prestation de service"
+          ],
+          "required_context": [
+            "facture",
+            "devis",
+            "tarif",
+            "prix",
+            "montant"
+          ],
           "retention": "warranty_2_years",
           "paper_required": false,
           "issuers": [
-            {"name": "5aSec", "patterns": ["5aSec", "5asec.ch"]}
+            {
+              "name": "5aSec",
+              "patterns": [
+                "5aSec",
+                "5asec.ch"
+              ]
+            }
           ]
         },
         {
           "sub_id": "formation_professionnelle",
           "name": "Formations Professionnelles IT",
-          "para_pattern": "4_Archives/formations/certifications/{issuer}/{year}",
-          "examples": ["Certificate of Completion", "Training Badge", "Professional Certification"],
-          "keywords": ["Certificate of Completion", "Badge", "Credential", "Training", "Certified", "Professional Development"],
-          "required_context": ["training", "certification", "completed", "awarded", "credential", "badge"],
+          "para_pattern": "4_Archives/formations_perm/certifications/{issuer}/{year}",
+          "examples": [
+            "Certificate of Completion",
+            "Training Badge",
+            "Professional Certification"
+          ],
+          "keywords": [
+            "Certificate of Completion",
+            "Badge",
+            "Credential",
+            "Training",
+            "Certified",
+            "Professional Development"
+          ],
+          "required_context": [
+            "training",
+            "certification",
+            "completed",
+            "awarded",
+            "credential",
+            "badge"
+          ],
           "retention": "permanent",
           "paper_required": false,
           "issuers": [
-            {"name": "Coursera", "patterns": ["Coursera", "coursera.org"]},
-            {"name": "LinkedIn Learning", "patterns": ["LinkedIn Learning", "linkedin.com/learning"]},
-            {"name": "Udemy", "patterns": ["Udemy", "udemy.com"]},
-            {"name": "Pluralsight", "patterns": ["Pluralsight", "pluralsight.com"]},
-            {"name": "O'Reilly", "patterns": ["O'Reilly", "oreilly.com"]},
-            {"name": "DataCamp", "patterns": ["DataCamp", "datacamp.com"]},
-            {"name": "Dell EMC", "patterns": ["Dell EMC", "Dell Technologies", "dell.com", "EMC Corporation"]},
-            {"name": "VMware", "patterns": ["VMware", "vmware.com", "Broadcom VMware"]},
-            {"name": "Red Hat", "patterns": ["Red Hat", "redhat.com"]},
-            {"name": "Microsoft", "patterns": ["Microsoft", "microsoft.com", "Microsoft Learn"]},
-            {"name": "AWS", "patterns": ["AWS", "Amazon Web Services", "aws.amazon.com", "AWS Training"]},
-            {"name": "Google Cloud", "patterns": ["Google Cloud", "cloud.google.com", "Google Cloud Skills Boost"]},
-            {"name": "Cisco", "patterns": ["Cisco", "cisco.com", "Cisco Networking Academy"]},
-            {"name": "Oracle", "patterns": ["Oracle", "oracle.com", "Oracle University"]},
-            {"name": "FalconStor", "patterns": ["FalconStor", "falconstor.com"]},
-            {"name": "Nutanix", "patterns": ["Nutanix", "nutanix.com", "Nutanix University"]},
-            {"name": "NetApp", "patterns": ["NetApp", "netapp.com"]},
-            {"name": "Pure Storage", "patterns": ["Pure Storage", "purestorage.com"]},
-            {"name": "Veeam", "patterns": ["Veeam", "veeam.com"]},
-            {"name": "Commvault", "patterns": ["Commvault", "commvault.com"]}
+            {
+              "name": "Coursera",
+              "patterns": [
+                "Coursera",
+                "coursera.org"
+              ]
+            },
+            {
+              "name": "LinkedIn Learning",
+              "patterns": [
+                "LinkedIn Learning",
+                "linkedin.com/learning"
+              ]
+            },
+            {
+              "name": "Udemy",
+              "patterns": [
+                "Udemy",
+                "udemy.com"
+              ]
+            },
+            {
+              "name": "Pluralsight",
+              "patterns": [
+                "Pluralsight",
+                "pluralsight.com"
+              ]
+            },
+            {
+              "name": "O'Reilly",
+              "patterns": [
+                "O'Reilly",
+                "oreilly.com"
+              ]
+            },
+            {
+              "name": "DataCamp",
+              "patterns": [
+                "DataCamp",
+                "datacamp.com"
+              ]
+            },
+            {
+              "name": "Dell EMC",
+              "patterns": [
+                "Dell EMC",
+                "Dell Technologies",
+                "dell.com",
+                "EMC Corporation"
+              ]
+            },
+            {
+              "name": "VMware",
+              "patterns": [
+                "VMware",
+                "vmware.com",
+                "Broadcom VMware"
+              ]
+            },
+            {
+              "name": "Red Hat",
+              "patterns": [
+                "Red Hat",
+                "redhat.com"
+              ]
+            },
+            {
+              "name": "Microsoft",
+              "patterns": [
+                "Microsoft",
+                "microsoft.com",
+                "Microsoft Learn"
+              ]
+            },
+            {
+              "name": "AWS",
+              "patterns": [
+                "AWS",
+                "Amazon Web Services",
+                "aws.amazon.com",
+                "AWS Training"
+              ]
+            },
+            {
+              "name": "Google Cloud",
+              "patterns": [
+                "Google Cloud",
+                "cloud.google.com",
+                "Google Cloud Skills Boost"
+              ]
+            },
+            {
+              "name": "Cisco",
+              "patterns": [
+                "Cisco",
+                "cisco.com",
+                "Cisco Networking Academy"
+              ]
+            },
+            {
+              "name": "Oracle",
+              "patterns": [
+                "Oracle",
+                "oracle.com",
+                "Oracle University"
+              ]
+            },
+            {
+              "name": "FalconStor",
+              "patterns": [
+                "FalconStor",
+                "falconstor.com"
+              ]
+            },
+            {
+              "name": "Nutanix",
+              "patterns": [
+                "Nutanix",
+                "nutanix.com",
+                "Nutanix University"
+              ]
+            },
+            {
+              "name": "NetApp",
+              "patterns": [
+                "NetApp",
+                "netapp.com"
+              ]
+            },
+            {
+              "name": "Pure Storage",
+              "patterns": [
+                "Pure Storage",
+                "purestorage.com"
+              ]
+            },
+            {
+              "name": "Veeam",
+              "patterns": [
+                "Veeam",
+                "veeam.com"
+              ]
+            },
+            {
+              "name": "Commvault",
+              "patterns": [
+                "Commvault",
+                "commvault.com"
+              ]
+            }
           ]
         }
       ]
