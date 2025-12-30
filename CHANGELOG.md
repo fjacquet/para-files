@@ -31,6 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Updated documents.json with retention suffixes**: All 48 document types now have `para_pattern` with retention suffix
   - Automated update script at `scripts/update_documents_json.py`
   - Enables visual identification of retention requirements in folder structure
+- **New `migrate` command**: Reorganizes existing files to retention-aware folder structure
+  - Preview mode by default (`--dry-run`)
+  - Filter by category (`--category fiscalite`)
+  - JSON output for scripting (`--json`)
+  - Automatic cleanup of empty directories (`--cleanup`)
+  - Example: `uv run para-files migrate /path/to/PARA --no-dry-run`
 - **THEMA book classification**: Book detector now uses official THEMA v1.6 international book classification
   - Replaces custom technology categories with standardized THEMA codes
   - PARA paths now use hybrid naming: `{CodeValue}_{ShortName}` (e.g., `3_Resources/livres/U_Informatique/UB_Programmation`)
