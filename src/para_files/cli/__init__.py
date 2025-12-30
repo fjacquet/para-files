@@ -24,6 +24,7 @@ from para_files.cli import (
     learn_cmd,
     migrate_cmd,
     move_cmd,
+    rescan_cmd,
     routes_cmd,
     scan_cmd,
     tree_cmd,
@@ -52,11 +53,8 @@ from para_files.cli.shared import (
 __all__ = [
     "MAX_PATTERNS_SHOWN",
     "MAX_UTTERANCES_SHOWN",
-    # Shared utilities
     "ConflictChoice",
-    # App
     "app",
-    # Command modules (for documentation purposes)
     "classify_cmd",
     "clean_cmd",
     "config_cmd",
@@ -73,6 +71,7 @@ __all__ = [
     "move_cmd",
     "parse_extensions_filter",
     "print_classification_result",
+    "rescan_cmd",
     "routes_cmd",
     "scan_cmd",
     "setup_logging",

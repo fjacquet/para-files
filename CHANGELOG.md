@@ -31,12 +31,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Updated documents.json with retention suffixes**: All 48 document types now have `para_pattern` with retention suffix
   - Automated update script at `scripts/update_documents_json.py`
   - Enables visual identification of retention requirements in folder structure
-- **New `migrate` command**: Reorganizes existing files to retention-aware folder structure
+- **Rewritten `migrate` command**: FAST folder-based migration with PARA relocation
+  - Renames folders to add retention suffixes (e.g., `fiscalite` → `fiscalite_10y`)
+  - Moves permanent folders to `3_Resources/` (no suffix needed - implicit permanent)
+  - Moves time-limited folders to `4_Archives/` with retention suffix
+  - O(folders) instead of O(files) - completes in seconds, not hours
   - Preview mode by default (`--dry-run`)
   - Filter by category (`--category fiscalite`)
   - JSON output for scripting (`--json`)
-  - Automatic cleanup of empty directories (`--cleanup`)
   - Example: `uv run para-files migrate /path/to/PARA --no-dry-run`
+- **New `rescan` command**: Re-classify files already in PARA archives (SLOW)
+  - Per-file classification for fixing misclassified documents
+  - Use when taxonomy changed or files need reclassification
+  - Same options as old migrate: `--dry-run`, `--category`, `--json`, `--cleanup`
+  - Example: `uv run para-files rescan /path/to/PARA --no-dry-run`
 - **THEMA book classification**: Book detector now uses official THEMA v1.6 international book classification
   - Replaces custom technology categories with standardized THEMA codes
   - PARA paths now use hybrid naming: `{CodeValue}_{ShortName}` (e.g., `3_Resources/livres/U_Informatique/UB_Programmation`)
@@ -77,6 +85,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Patterns: `*[Rr]ed*[Hh]at*`, `*RH-*`, `*RHEL*`, `*[Oo]pen[Ss]hift*`, `*[Aa]nsible*`, `*AAP*`, etc.
   - Routes to `3_Resources/docs/Red_Hat/{technology}`
   - Known technologies: RHEL, OpenShift, Ansible, AAP, Satellite, JBoss, Ceph, Quay, ACM
+
+### Changed
+
+- **documents.json patterns simplified**: Removed `_perm` suffix from `3_Resources` patterns
+  - Resources folder = permanent by definition, no suffix needed
+  - Example: `3_Resources/administratif_perm/identite` → `3_Resources/administratif/identite`
+  - Archives still use retention suffixes: `_10y`, `_5y`, `_ret`, `_ctr`
 
 ### Fixed
 

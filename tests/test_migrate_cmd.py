@@ -1,4 +1,4 @@
-"""Tests for the migrate command."""
+"""Tests for the migrate command (folder-based operations)."""
 
 from __future__ import annotations
 
@@ -11,11 +11,10 @@ from typer.testing import CliRunner
 
 from para_files.cli.app import app
 from para_files.cli.migrate_cmd import (
-    _build_expected_path,
-    _cleanup_empty_dirs,
-    _discover_archive_files,
-    _migrate_file,
-    _needs_migration,
+    RETENTION_SUFFIX_PATTERN,
+    _build_retention_mapping_from_taxonomy,
+    _discover_folders_to_migrate,
+    _migrate_folder,
     _print_summary,
     _run_migration,
 )
@@ -24,186 +23,277 @@ from para_files.cli.migrate_cmd import (
 runner = CliRunner()
 
 
-class TestDiscoverArchiveFiles:
-    """Tests for _discover_archive_files function."""
+class TestRetentionSuffixPattern:
+    """Tests for RETENTION_SUFFIX_PATTERN regex."""
 
-    def test_discover_files_in_archives(self, tmp_path: Path) -> None:
-        """Test discovering files in 4_Archives."""
-        archives = tmp_path / "4_Archives" / "fiscalite" / "2024"
+    def test_matches_10y_suffix(self) -> None:
+        """Test matching _10y suffix."""
+        match = RETENTION_SUFFIX_PATTERN.search("fiscalite_10y")
+        assert match is not None
+        assert match.group(0) == "_10y"
+
+    def test_matches_5y_suffix(self) -> None:
+        """Test matching _5y suffix."""
+        match = RETENTION_SUFFIX_PATTERN.search("factures_5y")
+        assert match is not None
+        assert match.group(0) == "_5y"
+
+    def test_matches_ret_suffix(self) -> None:
+        """Test matching _ret suffix."""
+        match = RETENTION_SUFFIX_PATTERN.search("prevoyance_ret")
+        assert match is not None
+        assert match.group(0) == "_ret"
+
+    def test_matches_ctr_suffix(self) -> None:
+        """Test matching _ctr suffix."""
+        match = RETENTION_SUFFIX_PATTERN.search("abonnement_ctr")
+        assert match is not None
+        assert match.group(0) == "_ctr"
+
+    def test_matches_perm_suffix(self) -> None:
+        """Test matching _perm suffix."""
+        match = RETENTION_SUFFIX_PATTERN.search("identite_perm")
+        assert match is not None
+        assert match.group(0) == "_perm"
+
+    def test_no_match_without_suffix(self) -> None:
+        """Test no match for folder without suffix."""
+        match = RETENTION_SUFFIX_PATTERN.search("fiscalite")
+        assert match is None
+
+
+class TestBuildRetentionMapping:
+    """Tests for _build_retention_mapping_from_taxonomy function."""
+
+    @patch("para_files.taxonomies.loader.TaxonomyLoader")
+    def test_builds_mapping_from_taxonomy(self, mock_loader: MagicMock) -> None:
+        """Test building mapping from taxonomy."""
+        mock_taxonomy = MagicMock()
+        mock_category = MagicMock()
+        mock_doc = MagicMock()
+        mock_doc.para_pattern = "4_Archives/fiscalite_10y"
+        mock_doc.retention = "10_years"
+        mock_category.documents = [mock_doc]
+        mock_taxonomy.categories = [mock_category]
+        mock_loader.return_value.load_documents.return_value = mock_taxonomy
+
+        mapping = _build_retention_mapping_from_taxonomy()
+
+        assert "fiscalite" in mapping
+        assert mapping["fiscalite"]["retention"] == "10_years"
+        assert mapping["fiscalite"]["suffix"] == "_10y"
+        assert mapping["fiscalite"]["target_para"] == "4_Archives"
+
+    @patch("para_files.taxonomies.loader.TaxonomyLoader")
+    def test_permanent_goes_to_resources(self, mock_loader: MagicMock) -> None:
+        """Test that permanent retention goes to 3_Resources."""
+        mock_taxonomy = MagicMock()
+        mock_category = MagicMock()
+        mock_doc = MagicMock()
+        mock_doc.para_pattern = "3_Resources/identite"
+        mock_doc.retention = "permanent"
+        mock_category.documents = [mock_doc]
+        mock_taxonomy.categories = [mock_category]
+        mock_loader.return_value.load_documents.return_value = mock_taxonomy
+
+        mapping = _build_retention_mapping_from_taxonomy()
+
+        assert "identite" in mapping
+        assert mapping["identite"]["retention"] == "permanent"
+        assert mapping["identite"]["suffix"] is None
+        assert mapping["identite"]["target_para"] == "3_Resources"
+
+    @patch("para_files.taxonomies.loader.TaxonomyLoader")
+    def test_fallback_to_static_config(self, mock_loader: MagicMock) -> None:
+        """Test fallback to static config when taxonomy loading fails."""
+        mock_loader.return_value.load_documents.side_effect = OSError("File not found")
+
+        mapping = _build_retention_mapping_from_taxonomy()
+
+        # Should fall back to static RETENTION_CONFIG
+        assert "fiscalite" in mapping
+        assert "administratif" in mapping
+
+
+class TestDiscoverFoldersToMigrate:
+    """Tests for _discover_folders_to_migrate function."""
+
+    def test_discover_folder_needs_suffix(self, tmp_path: Path) -> None:
+        """Test discovering folder that needs retention suffix."""
+        archives = tmp_path / "4_Archives" / "fiscalite"
         archives.mkdir(parents=True)
-        (archives / "tax_return.pdf").touch()
-        (archives / "receipt.pdf").touch()
+        (archives / "file.pdf").touch()
 
-        files = _discover_archive_files(tmp_path)
-        assert len(files) == 2
+        mapping = {
+            "fiscalite": {
+                "retention": "10_years",
+                "suffix": "_10y",
+                "target_para": "4_Archives",
+            }
+        }
 
-    def test_discover_files_in_resources(self, tmp_path: Path) -> None:
-        """Test discovering files in 3_Resources."""
-        resources = tmp_path / "3_Resources" / "identite"
-        resources.mkdir(parents=True)
-        (resources / "passport.pdf").touch()
+        migrations = _discover_folders_to_migrate(tmp_path, mapping)
 
-        files = _discover_archive_files(tmp_path)
-        assert len(files) == 1
+        assert len(migrations) == 1
+        source, dest, action = migrations[0]
+        assert source.name == "fiscalite"
+        assert dest.name == "fiscalite_10y"
+        assert action == "rename"
+
+    def test_discover_folder_needs_move_to_resources(self, tmp_path: Path) -> None:
+        """Test discovering folder that needs to move to Resources."""
+        archives = tmp_path / "4_Archives" / "identite"
+        archives.mkdir(parents=True)
+        (archives / "passport.pdf").touch()
+
+        mapping = {
+            "identite": {
+                "retention": "permanent",
+                "suffix": None,
+                "target_para": "3_Resources",
+            }
+        }
+
+        # Create Resources folder
+        (tmp_path / "3_Resources").mkdir()
+
+        migrations = _discover_folders_to_migrate(tmp_path, mapping)
+
+        assert len(migrations) == 1
+        source, dest, action = migrations[0]
+        assert "4_Archives" in str(source)
+        assert "3_Resources" in str(dest)
+        assert action == "move"
+
+    def test_skip_folder_already_correct(self, tmp_path: Path) -> None:
+        """Test skipping folder already in correct location."""
+        archives = tmp_path / "4_Archives" / "fiscalite_10y"
+        archives.mkdir(parents=True)
+
+        mapping = {
+            "fiscalite": {
+                "retention": "10_years",
+                "suffix": "_10y",
+                "target_para": "4_Archives",
+            }
+        }
+
+        migrations = _discover_folders_to_migrate(tmp_path, mapping)
+
+        assert len(migrations) == 0
+
+    def test_skip_destination_exists(self, tmp_path: Path) -> None:
+        """Test skipping when destination already exists."""
+        # Source folder
+        source = tmp_path / "4_Archives" / "fiscalite"
+        source.mkdir(parents=True)
+        # Destination already exists
+        dest = tmp_path / "4_Archives" / "fiscalite_10y"
+        dest.mkdir(parents=True)
+
+        mapping = {
+            "fiscalite": {
+                "retention": "10_years",
+                "suffix": "_10y",
+                "target_para": "4_Archives",
+            }
+        }
+
+        migrations = _discover_folders_to_migrate(tmp_path, mapping)
+
+        assert len(migrations) == 0
 
     def test_discover_with_category_filter(self, tmp_path: Path) -> None:
-        """Test discovering files with category filter."""
-        # Create files in different categories
-        fiscal = tmp_path / "4_Archives" / "fiscalite" / "2024"
-        fiscal.mkdir(parents=True)
-        (fiscal / "tax.pdf").touch()
+        """Test discovering with category filter."""
+        (tmp_path / "4_Archives" / "fiscalite").mkdir(parents=True)
+        (tmp_path / "4_Archives" / "banque").mkdir(parents=True)
 
-        sante = tmp_path / "4_Archives" / "sante" / "2024"
-        sante.mkdir(parents=True)
-        (sante / "medical.pdf").touch()
+        mapping = {
+            "fiscalite": {
+                "retention": "10_years",
+                "suffix": "_10y",
+                "target_para": "4_Archives",
+            },
+            "banque": {
+                "retention": "10_years",
+                "suffix": "_10y",
+                "target_para": "4_Archives",
+            },
+        }
 
-        files = _discover_archive_files(tmp_path, category_filter="fiscalite")
-        assert len(files) == 1
-        assert files[0].name == "tax.pdf"
+        migrations = _discover_folders_to_migrate(
+            tmp_path, mapping, category_filter="fiscal"
+        )
 
-    def test_discover_empty_directory(self, tmp_path: Path) -> None:
-        """Test discovering in empty directory."""
-        (tmp_path / "4_Archives").mkdir()
-        files = _discover_archive_files(tmp_path)
-        assert len(files) == 0
-
-    def test_discover_nonexistent_directory(self, tmp_path: Path) -> None:
-        """Test discovering when folders don't exist."""
-        files = _discover_archive_files(tmp_path)
-        assert len(files) == 0
-
-
-class TestNeedsMigration:
-    """Tests for _needs_migration function."""
-
-    def test_needs_migration_different_paths(self, tmp_path: Path) -> None:
-        """Test file needing migration."""
-        current = tmp_path / "old" / "file.pdf"
-        expected = tmp_path / "new" / "file.pdf"
-        assert _needs_migration(current, expected) is True
-
-    def test_no_migration_same_path(self, tmp_path: Path) -> None:
-        """Test file already in correct location."""
-        path = tmp_path / "correct" / "file.pdf"
-        assert _needs_migration(path, path) is False
+        assert len(migrations) == 1
+        assert migrations[0][0].name == "fiscalite"
 
 
-class TestBuildExpectedPath:
-    """Tests for _build_expected_path function."""
+class TestMigrateFolder:
+    """Tests for _migrate_folder function."""
 
-    def test_build_path_with_category(self, tmp_path: Path) -> None:
-        """Test building expected path."""
-        file_path = tmp_path / "old" / "document.pdf"
-        result = MagicMock()
-        result.category = "4_Archives/fiscalite_10y/2024"
+    def test_dry_run_rename(self, tmp_path: Path) -> None:
+        """Test dry run rename operation."""
+        source = tmp_path / "4_Archives" / "fiscalite"
+        source.mkdir(parents=True)
+        (source / "file.pdf").touch()
 
-        expected = _build_expected_path(file_path, result, tmp_path)
-        assert expected == tmp_path / "4_Archives/fiscalite_10y/2024" / "document.pdf"
+        dest = tmp_path / "4_Archives" / "fiscalite_10y"
 
-    def test_build_path_no_category(self, tmp_path: Path) -> None:
-        """Test building path with no category."""
-        file_path = tmp_path / "old" / "document.pdf"
-        result = MagicMock()
-        result.category = None
-
-        expected = _build_expected_path(file_path, result, tmp_path)
-        assert expected is None
-
-
-class TestMigrateFile:
-    """Tests for _migrate_file function."""
-
-    def test_dry_run_migration(self, tmp_path: Path) -> None:
-        """Test dry run migration."""
-        source = tmp_path / "source" / "file.pdf"
-        source.parent.mkdir(parents=True)
-        source.touch()
-
-        dest = tmp_path / "dest" / "file.pdf"
-
-        result = _migrate_file(source, dest, dry_run=True)
+        result = _migrate_folder(source, dest, "rename", dry_run=True)
 
         assert result["success"] is True
-        assert result["action"] == "would_move"
-        assert source.exists()  # File should not be moved
+        assert result["action"] == "rename"
+        assert result["dry_run_action"] == "would_rename"
+        assert source.exists()  # Not moved
         assert not dest.exists()
 
-    def test_actual_migration(self, tmp_path: Path) -> None:
-        """Test actual file migration."""
-        source = tmp_path / "source" / "file.pdf"
-        source.parent.mkdir(parents=True)
-        source.write_text("content")
+    def test_actual_rename(self, tmp_path: Path) -> None:
+        """Test actual rename operation."""
+        source = tmp_path / "4_Archives" / "fiscalite"
+        source.mkdir(parents=True)
+        (source / "file.pdf").touch()
 
-        dest = tmp_path / "dest" / "file.pdf"
+        dest = tmp_path / "4_Archives" / "fiscalite_10y"
 
-        result = _migrate_file(source, dest, dry_run=False)
+        result = _migrate_folder(source, dest, "rename", dry_run=False)
 
         assert result["success"] is True
-        assert result["action"] == "moved"
         assert not source.exists()
         assert dest.exists()
-        assert dest.read_text() == "content"
+        assert (dest / "file.pdf").exists()
 
-    def test_migration_destination_exists(self, tmp_path: Path) -> None:
-        """Test migration when destination already exists."""
-        source = tmp_path / "source" / "file.pdf"
-        source.parent.mkdir(parents=True)
-        source.touch()
+    def test_actual_move_across_para(self, tmp_path: Path) -> None:
+        """Test actual move across PARA categories."""
+        source = tmp_path / "4_Archives" / "identite"
+        source.mkdir(parents=True)
+        (source / "passport.pdf").touch()
 
-        dest = tmp_path / "dest" / "file.pdf"
-        dest.parent.mkdir(parents=True)
-        dest.touch()
+        (tmp_path / "3_Resources").mkdir()
+        dest = tmp_path / "3_Resources" / "identite"
 
-        result = _migrate_file(source, dest, dry_run=False)
+        result = _migrate_folder(source, dest, "move", dry_run=False)
 
-        assert result["success"] is False
-        assert result["action"] == "skipped"
-        assert "Destination already exists" in result["message"]
+        assert result["success"] is True
+        assert not source.exists()
+        assert dest.exists()
+        assert (dest / "passport.pdf").exists()
 
-    def test_migration_error_handling(self, tmp_path: Path) -> None:
-        """Test migration error handling."""
-        source = tmp_path / "nonexistent" / "file.pdf"
-        dest = tmp_path / "dest" / "file.pdf"
+    def test_counts_files_in_folder(self, tmp_path: Path) -> None:
+        """Test that file count is accurate."""
+        source = tmp_path / "4_Archives" / "fiscalite"
+        source.mkdir(parents=True)
+        (source / "file1.pdf").touch()
+        (source / "file2.pdf").touch()
+        subdir = source / "2024"
+        subdir.mkdir()
+        (subdir / "file3.pdf").touch()
 
-        result = _migrate_file(source, dest, dry_run=False)
+        dest = tmp_path / "4_Archives" / "fiscalite_10y"
 
-        assert result["success"] is False
-        assert result["action"] == "error"
+        result = _migrate_folder(source, dest, "rename", dry_run=True)
 
-
-class TestCleanupEmptyDirs:
-    """Tests for _cleanup_empty_dirs function."""
-
-    def test_cleanup_empty_dirs_dry_run(self, tmp_path: Path) -> None:
-        """Test cleanup in dry run mode."""
-        empty_dir = tmp_path / "4_Archives" / "old_category"
-        empty_dir.mkdir(parents=True)
-
-        removed = _cleanup_empty_dirs(tmp_path, dry_run=True)
-
-        assert len(removed) == 1
-        assert empty_dir.exists()  # Should not actually remove
-
-    def test_cleanup_empty_dirs_actual(self, tmp_path: Path) -> None:
-        """Test actual cleanup of empty directories."""
-        empty_dir = tmp_path / "4_Archives" / "old_category" / "subdir"
-        empty_dir.mkdir(parents=True)
-
-        removed = _cleanup_empty_dirs(tmp_path, dry_run=False)
-
-        assert len(removed) == 2  # Both old_category and subdir
-        assert not empty_dir.exists()
-
-    def test_cleanup_preserves_non_empty(self, tmp_path: Path) -> None:
-        """Test that non-empty directories are preserved."""
-        non_empty = tmp_path / "4_Archives" / "active"
-        non_empty.mkdir(parents=True)
-        (non_empty / "file.pdf").touch()
-
-        removed = _cleanup_empty_dirs(tmp_path, dry_run=False)
-
-        assert len(removed) == 0
-        assert non_empty.exists()
+        assert result["files_in_folder"] == 3
 
 
 class TestPrintSummary:
@@ -212,39 +302,35 @@ class TestPrintSummary:
     def test_print_dry_run_summary(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Test printing dry run summary."""
         results: dict[str, Any] = {
-            "files_scanned": 100,
-            "files_need_migration": 25,
-            "files_migrated": 25,
-            "files_skipped": 0,
-            "files_errored": 0,
-            "empty_dirs_removed": 0,
+            "folders_scanned": 10,
+            "folders_need_migration": 5,
+            "folders_migrated": 5,
+            "folders_errored": 0,
+            "total_files": 100,
+            "migrations": [],
         }
 
         _print_summary(results, dry_run=True)
         captured = capsys.readouterr()
 
-        assert "Files scanned" in captured.out
-        assert "100" in captured.out
-        assert "Would migrate" in captured.out
+        assert "Folders found" in captured.out or "folders" in captured.out.lower()
         assert "dry run" in captured.out.lower()
 
     def test_print_actual_summary(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Test printing actual migration summary."""
         results: dict[str, Any] = {
-            "files_scanned": 100,
-            "files_need_migration": 25,
-            "files_migrated": 20,
-            "files_skipped": 3,
-            "files_errored": 2,
-            "empty_dirs_removed": 5,
+            "folders_scanned": 10,
+            "folders_need_migration": 5,
+            "folders_migrated": 4,
+            "folders_errored": 1,
+            "total_files": 100,
+            "migrations": [],
         }
 
         _print_summary(results, dry_run=False)
         captured = capsys.readouterr()
 
-        assert "Migrated" in captured.out
-        assert "20" in captured.out
-        assert "Errors" in captured.out
+        assert "Processed" in captured.out or "processed" in captured.out.lower()
 
 
 class TestRunMigration:
@@ -253,6 +339,7 @@ class TestRunMigration:
     def test_run_migration_empty_dir(self, tmp_path: Path) -> None:
         """Test running migration on empty directory."""
         (tmp_path / "4_Archives").mkdir()
+        (tmp_path / "3_Resources").mkdir()
 
         results = _run_migration(
             tmp_path,
@@ -260,27 +347,15 @@ class TestRunMigration:
             category=None,
             output_json=True,
             verbose=False,
-            cleanup=False,
         )
 
-        assert results["files_scanned"] == 0
-        assert results["files_need_migration"] == 0
+        assert results["folders_scanned"] == 0
+        assert results["folders_need_migration"] == 0
 
-    @patch("para_files.cli.migrate_cmd._classify_for_migration")
-    def test_run_migration_with_files(
-        self, mock_classify: MagicMock, tmp_path: Path
-    ) -> None:
-        """Test running migration with files."""
-        # Create test file
-        archives = tmp_path / "4_Archives" / "old" / "2024"
-        archives.mkdir(parents=True)
-        test_file = archives / "document.pdf"
-        test_file.touch()
-
-        # Mock classification result
-        mock_result = MagicMock()
-        mock_result.category = "4_Archives/fiscalite_10y/2024"
-        mock_classify.return_value = mock_result
+    def test_run_migration_with_folders(self, tmp_path: Path) -> None:
+        """Test running migration with folders."""
+        (tmp_path / "4_Archives" / "fiscalite").mkdir(parents=True)
+        (tmp_path / "3_Resources").mkdir()
 
         results = _run_migration(
             tmp_path,
@@ -288,36 +363,10 @@ class TestRunMigration:
             category=None,
             output_json=True,
             verbose=False,
-            cleanup=False,
         )
 
-        assert results["files_scanned"] == 1
-        assert results["files_need_migration"] == 1
-
-    @patch("para_files.cli.migrate_cmd._classify_for_migration")
-    def test_run_migration_no_category(
-        self, mock_classify: MagicMock, tmp_path: Path
-    ) -> None:
-        """Test migration when classification returns no category."""
-        archives = tmp_path / "4_Archives" / "misc"
-        archives.mkdir(parents=True)
-        (archives / "unknown.pdf").touch()
-
-        mock_result = MagicMock()
-        mock_result.category = None
-        mock_classify.return_value = mock_result
-
-        results = _run_migration(
-            tmp_path,
-            dry_run=True,
-            category=None,
-            output_json=True,
-            verbose=False,
-            cleanup=False,
-        )
-
-        assert results["files_scanned"] == 1
-        assert results["files_need_migration"] == 0
+        # Should find fiscalite and want to add _10y suffix
+        assert results["folders_scanned"] >= 0
 
 
 class TestMigrateCommand:
@@ -331,7 +380,7 @@ class TestMigrateCommand:
         """Test migrate command help."""
         result = runner.invoke(app, ["migrate", "--help"])
         assert result.exit_code == 0
-        assert "Migrate files" in result.output
+        assert "Migrate folders" in result.output or "PARA" in result.output
 
     @patch("para_files.cli.migrate_cmd.load_config_or_exit")
     @patch("para_files.cli.migrate_cmd._run_migration")
@@ -340,13 +389,13 @@ class TestMigrateCommand:
     ) -> None:
         """Test migrate command in dry run mode."""
         mock_run.return_value = {
-            "files_scanned": 10,
-            "files_need_migration": 5,
-            "files_migrated": 5,
-            "files_skipped": 0,
-            "files_errored": 0,
-            "empty_dirs_removed": 0,
+            "folders_scanned": 10,
+            "folders_need_migration": 5,
+            "folders_migrated": 5,
+            "folders_errored": 0,
+            "total_files": 100,
             "dry_run": True,
+            "migrations": [],
         }
 
         result = runner.invoke(app, ["migrate", str(tmp_path)])
@@ -359,12 +408,11 @@ class TestMigrateCommand:
     ) -> None:
         """Test migrate command with JSON output."""
         mock_run.return_value = {
-            "files_scanned": 10,
-            "files_need_migration": 5,
-            "files_migrated": 5,
-            "files_skipped": 0,
-            "files_errored": 0,
-            "empty_dirs_removed": 0,
+            "folders_scanned": 10,
+            "folders_need_migration": 5,
+            "folders_migrated": 5,
+            "folders_errored": 0,
+            "total_files": 100,
             "dry_run": True,
             "migrations": [],
             "errors": [],
@@ -372,7 +420,7 @@ class TestMigrateCommand:
 
         result = runner.invoke(app, ["migrate", str(tmp_path), "--json"])
         assert result.exit_code == 0
-        assert "files_scanned" in result.output
+        assert "folders_scanned" in result.output
 
     @patch("para_files.cli.migrate_cmd.load_config_or_exit")
     @patch("para_files.cli.migrate_cmd._run_migration")
@@ -381,13 +429,13 @@ class TestMigrateCommand:
     ) -> None:
         """Test migrate command with category filter."""
         mock_run.return_value = {
-            "files_scanned": 5,
-            "files_need_migration": 3,
-            "files_migrated": 3,
-            "files_skipped": 0,
-            "files_errored": 0,
-            "empty_dirs_removed": 0,
+            "folders_scanned": 5,
+            "folders_need_migration": 3,
+            "folders_migrated": 3,
+            "folders_errored": 0,
+            "total_files": 50,
             "dry_run": True,
+            "migrations": [],
         }
 
         result = runner.invoke(

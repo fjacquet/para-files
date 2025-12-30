@@ -40,7 +40,7 @@
           ],
           "retention": "permanent",
           "paper_required": true,
-          "para_pattern": "3_Resources/administratif_perm/identite"
+          "para_pattern": "3_Resources/administratif/identite"
         },
         {
           "sub_id": "actes_officiels",
@@ -62,7 +62,7 @@
           ],
           "retention": "permanent",
           "paper_required": true,
-          "para_pattern": "3_Resources/administratif_perm/identite"
+          "para_pattern": "3_Resources/administratif/identite"
         },
         {
           "sub_id": "administration_communale",
@@ -391,7 +391,7 @@
         {
           "sub_id": "propriete_fonciere",
           "name": "Dossier Propriétaire",
-          "para_pattern": "3_Resources/immobilier_perm/propriete",
+          "para_pattern": "3_Resources/immobilier/propriete",
           "examples": [
             "Acte d'achat notarié",
             "Extrait du Registre Foncier",
@@ -914,7 +914,7 @@
         {
           "sub_id": "dossier_medical",
           "name": "Dossier Médical",
-          "para_pattern": "3_Resources/sante_perm/dossier-medical",
+          "para_pattern": "3_Resources/sante/dossier-medical",
           "examples": [
             "Carnet de vaccination",
             "Groupe sanguin",
@@ -941,7 +941,7 @@
         {
           "sub_id": "contrats_travail",
           "name": "Contrats & Carrière",
-          "para_pattern": "3_Resources/carriere_perm/contrats",
+          "para_pattern": "3_Resources/carriere/contrats",
           "examples": [
             "Contrat de travail",
             "Avenants",
@@ -1361,7 +1361,7 @@
         {
           "sub_id": "vehicule_admin",
           "name": "Papiers du Véhicule",
-          "para_pattern": "3_Resources/vehicules_perm/papiers",
+          "para_pattern": "3_Resources/vehicules/papiers",
           "examples": [
             "Permis de circulation",
             "Fiche technique",
@@ -1606,7 +1606,7 @@
         {
           "sub_id": "formation_scolaire",
           "name": "Scolarité & Formation",
-          "para_pattern": "3_Resources/formation_perm/diplomes",
+          "para_pattern": "3_Resources/formation/diplomes",
           "examples": [
             "Bulletins scolaires",
             "Contrats d'apprentissage",
@@ -1686,7 +1686,7 @@
         {
           "sub_id": "animaux",
           "name": "Animaux de Compagnie",
-          "para_pattern": "3_Resources/animaux_perm",
+          "para_pattern": "3_Resources/animaux",
           "examples": [
             "Passeport pour animaux",
             "Enregistrement puce",
@@ -2474,7 +2474,7 @@
         {
           "sub_id": "formation_professionnelle",
           "name": "Formations Professionnelles IT",
-          "para_pattern": "4_Archives/formations_perm/certifications/{issuer}/{year}",
+          "para_pattern": "3_Resources/formations/certifications/{issuer}/{year}",
           "examples": [
             "Certificate of Completion",
             "Training Badge",
