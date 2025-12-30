@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from datetime import UTC, datetime
 from functools import lru_cache
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from para_files.classifiers.base import BaseClassifier
 from para_files.taxonomies.loader import TaxonomyLoader, get_taxonomy_loader
@@ -82,6 +82,19 @@ class TaxonomyClassifier(BaseClassifier):
     KEYWORD_HEADER_THRESHOLD = 500
     # Length normalization factor for keyword scoring
     KEYWORD_LENGTH_FACTOR = 50
+
+    # Minimum path parts for retention suffix injection (PARA prefix + category)
+    MIN_PATH_PARTS_FOR_SUFFIX = 2
+
+    # Retention suffix mapping for folder names
+    RETENTION_SUFFIXES: ClassVar[dict[str, str]] = {
+        "permanent": "_perm",
+        "retirement": "_ret",
+        "10_years": "_10y",
+        "5_years": "_5y",
+        "contract_duration": "_ctr",
+        "warranty_2_years": "_2y",
+    }
 
     def __init__(
         self,
@@ -327,8 +340,9 @@ class TaxonomyClassifier(BaseClassifier):
         issuer_name: str | None = None,
         year: str | None = None,
         metadata: FileMetadata | None = None,
+        retention: str | None = None,
     ) -> str:
-        """Resolve placeholders in para_pattern.
+        """Resolve placeholders in para_pattern and inject retention suffix.
 
         Placeholders:
         - {year} - Year from content or file
@@ -337,16 +351,38 @@ class TaxonomyClassifier(BaseClassifier):
         - {day} - Day (DD)
         - {YYYY}, {MM}, {DD} - Alternative format
 
+        Retention suffixes are added to the category folder:
+        - permanent → _perm (stays in 3_Resources)
+        - 10_years → _10y
+        - 5_years → _5y
+        - etc.
+
         Args:
             pattern: Path pattern with placeholders
             issuer_name: Matched issuer name
             year: Extracted year
             metadata: File metadata for dates
+            retention: Retention policy key (e.g., "10_years", "permanent")
 
         Returns:
-            Resolved path string
+            Resolved path string with retention suffix
         """
         result = pattern
+
+        # Inject retention suffix into the category folder
+        if retention and retention in self.RETENTION_SUFFIXES:
+            suffix = self.RETENTION_SUFFIXES[retention]
+            # Pattern like "4_Archives/fiscalite/{year}" → "4_Archives/fiscalite_10y/{year}"
+            # Find the first path component after PARA prefix and add suffix
+            parts = result.split("/")
+            if len(parts) >= self.MIN_PATH_PARTS_FOR_SUFFIX:
+                # parts[0] = "4_Archives" or "3_Resources", parts[1] = category
+                # Add suffix to category (parts[1])
+                category_part = parts[1]
+                # Only add if not already has a suffix
+                if not any(category_part.endswith(s) for s in self.RETENTION_SUFFIXES.values()):
+                    parts[1] = category_part + suffix
+                    result = "/".join(parts)
 
         # Year placeholder
         if year:
@@ -402,6 +438,7 @@ class TaxonomyClassifier(BaseClassifier):
                 issuer_name=issuer.name,
                 year=year,
                 metadata=metadata,
+                retention=doc_type.retention,
             )
 
             return ClassificationResult(
@@ -416,6 +453,7 @@ class TaxonomyClassifier(BaseClassifier):
                     "year": year,
                     "category_id": category.id,
                     "doc_type": doc_type.sub_id,
+                    "retention": doc_type.retention,
                 },
             )
 
@@ -432,6 +470,7 @@ class TaxonomyClassifier(BaseClassifier):
                 pattern,
                 year=year,
                 metadata=metadata,
+                retention=doc_type.retention,
             )
 
             return ClassificationResult(
@@ -446,6 +485,7 @@ class TaxonomyClassifier(BaseClassifier):
                     "year": year,
                     "category_id": category.id,
                     "doc_type": doc_type.sub_id,
+                    "retention": doc_type.retention,
                 },
             )
 

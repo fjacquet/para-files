@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Retention-based folder suffixes**: TaxonomyClassifier now adds retention policy suffixes to folder names
+  - `_perm` for permanent (stays in 3_Resources)
+  - `_10y` for 10_years retention
+  - `_5y` for 5_years retention
+  - `_ctr` for contract_duration
+  - `_2y` for warranty_2_years
+  - `_ret` for retirement
+  - Example: `4_Archives/fiscalite/{year}` → `4_Archives/fiscalite_10y/{year}`
+  - Retention info now included in `extracted_params` of ClassificationResult
 - **THEMA book classification**: Book detector now uses official THEMA v1.6 international book classification
   - Replaces custom technology categories with standardized THEMA codes
   - PARA paths now use hybrid naming: `{CodeValue}_{ShortName}` (e.g., `3_Resources/livres/U_Informatique/UB_Programmation`)
