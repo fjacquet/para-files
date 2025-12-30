@@ -2627,3 +2627,173 @@ routing_rules:
     destination: "4_Archives/factures/Materiels/Maison/Cuisine/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
+
+  # =============================================================================
+  # BOOKS & PUBLICATIONS - Added 2025-12-30
+  # =============================================================================
+
+  # Psychology and academic books
+  psychology_books:
+    patterns:
+      [
+        "*[Hh]andbook*[Pp]sychology*",
+        "*[Pp]sychology*[Hh]andbook*",
+        "*[Ww]iley*[Hh]andbook*",
+        "*[Pp]ersonal*[Cc]onstruct*",
+      ]
+    extensions: [".pdf", ".epub"]
+    destination: "3_Resources/books/Psychology/{YYYY}"
+    date_source: "filename"
+    date_pattern: "\\[(\\d{4})\\]|\\((\\d{4})\\)"
+
+  # =============================================================================
+  # ADMINISTRATIVE & TAXES - Added 2025-12-30
+  # =============================================================================
+
+  # French taxes
+  impots_france:
+    patterns:
+      [
+        "*[Ii]mpot*",
+        "*[Tt]axe*[Ff]onciere*",
+        "*[Dd]eclaration*[Ff]rance*",
+        "*[Ff]iscal*",
+      ]
+    extensions: [".pdf", ".docx", ".doc", ".txt", ".zip"]
+    destination: "4_Archives/administratif/impots-france/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Pole Emploi (French unemployment agency)
+  pole_emploi:
+    patterns:
+      [
+        "*[Pp]ole*[Ee]mploi*",
+        "*[Pp]ôle*[Ee]mploi*",
+        "*[Cc]homage*",
+      ]
+    extensions: [".pdf", ".docx", ".doc"]
+    destination: "4_Archives/administratif/pole-emploi/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # =============================================================================
+  # IT & TECHNOLOGY DOCUMENTATION - Added 2025-12-30
+  # =============================================================================
+
+  # Synology NAS documentation
+  synology_docs:
+    patterns:
+      [
+        "*[Ss]ynology*",
+        "*DS[0-9]*",
+        "*NAS*[Dd]ata*[Ss]heet*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/IT/Synology/{YYYY}"
+    date_source: "file_modified"
+
+  # VMware/Skyline documentation
+  vmware_docs:
+    patterns:
+      [
+        "*[Vv][Mm]ware*",
+        "*[Ss]kyline*",
+        "*[Vv][Ss]phere*",
+        "*VTSP*",
+      ]
+    extensions: [".pdf", ".psd", ".docx"]
+    destination: "3_Resources/IT/VMware/{YYYY}"
+    date_source: "file_modified"
+
+  # NetBackup/Veritas documentation
+  netbackup_docs:
+    patterns:
+      [
+        "*[Nn]et[Bb]ackup*",
+        "*[Nn][Bb][Uu]*",
+        "*[Vv]eritas*",
+        "*[Bb]ackup*[Ee]xec*",
+      ]
+    extensions: [".pdf", ".docx"]
+    destination: "3_Resources/IT/NetBackup/{YYYY}"
+    date_source: "file_modified"
+
+  # Linux/OpenSSL documentation
+  linux_docs:
+    patterns:
+      [
+        "*[Ll]inux*",
+        "*[Oo]pen[Ss][Ss][Ll]*",
+        "*[Uu]buntu*",
+        "*[Dd]ebian*",
+        "*[Cc]ent[Oo][Ss]*",
+      ]
+    extensions: [".pdf", ".txt"]
+    destination: "3_Resources/IT/Linux/{YYYY}"
+    date_source: "file_modified"
+
+  # Storage/SNIA documentation
+  storage_docs:
+    patterns:
+      [
+        "*SNIA*",
+        "*[Ss]torage*[Nn]etwork*",
+        "*[Ff]ibre*[Cc]hannel*",
+        "*[Ss][Aa][Nn]*[Ss]witch*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/IT/Storage/{YYYY}"
+    date_source: "file_modified"
+
+  # =============================================================================
+  # REAL ESTATE & HOME - Added 2025-12-30
+  # =============================================================================
+
+  # Asbestos/Amiante documents
+  amiante_docs:
+    patterns:
+      [
+        "*[Aa]miante*",
+        "*[Aa]sbestos*",
+        "*[Dd]iagnostic*[Ii]mmobilier*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/immobilier/diagnostics/{YYYY}"
+    date_source: "file_modified"
+
+  # Moving/Déménagement
+  demenagement_docs:
+    patterns:
+      [
+        "*[Dd][ée]m[ée]nagement*",
+        "*[Mm]oving*",
+        "*[Tt]ransfert*",
+        "*ahrres*",
+      ]
+    extensions: [".pdf", ".odt", ".docx"]
+    destination: "4_Archives/factures/immobilier/demenagement/{YYYY}"
+    date_source: "file_modified"
+
+  # Home works/Travaux
+  travaux_maison:
+    patterns:
+      [
+        "*[Tt]ravaux*[Mm]aison*",
+        "*[Rr]enovation*",
+        "*[Bb]ricolage*",
+      ]
+    extensions: [".pdf", ".xlsx", ".xls"]
+    destination: "4_Archives/factures/immobilier/travaux/{YYYY}"
+    date_source: "file_modified"
+
+  # Domicim (property management)
+  domicim_docs:
+    patterns:
+      [
+        "*[Dd]omicim*",
+        "*[Pp]laques*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/factures/immobilier/Domicim/{YYYY}"
+    date_source: "file_modified"
