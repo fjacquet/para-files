@@ -231,7 +231,7 @@ def _read_pdf_file(file_path: Path, max_chars: int) -> str:
 
     # 2. If text is too short, PDF is likely scanned - try OCR
     if len(text.strip()) < _PDF_MIN_TEXT_THRESHOLD:
-        logger.info(
+        logger.debug(
             "PDF appears scanned (<%d chars), trying OCR: %s",
             _PDF_MIN_TEXT_THRESHOLD,
             file_path,
@@ -339,7 +339,7 @@ def _ocr_pdf_first_page(file_path: Path, max_chars: int) -> str:
         return ""
 
     if result and result.text:
-        logger.info("OCR extracted %d chars from PDF: %s", len(result.text), file_path)
+        logger.debug("OCR extracted %d chars from PDF: %s", len(result.text), file_path)
         return result.text[:max_chars]
 
     return ""
