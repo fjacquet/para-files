@@ -401,9 +401,7 @@ class TestEnsureTechEmbeddings:
         assert "AnotherTech" in call_args
 
     @patch("para_files.utils.technology_extractor.TechnologyExtractor._get_encoder")
-    def test_embeddings_use_descriptions_when_available(
-        self, mock_get_encoder: MagicMock
-    ) -> None:
+    def test_embeddings_use_descriptions_when_available(self, mock_get_encoder: MagicMock) -> None:
         """Test that TECHNOLOGY_DESCRIPTIONS are used when available."""
         mock_encoder = MagicMock()
         mock_encoder.return_value = [[0.1, 0.2]]
@@ -516,9 +514,7 @@ class TestExtractFromContentWithMockedEncoder:
         assert score == 0.0
 
     @patch("para_files.utils.technology_extractor.TechnologyExtractor._get_encoder")
-    def test_content_extraction_with_none_embeddings(
-        self, mock_get_encoder: MagicMock
-    ) -> None:
+    def test_content_extraction_with_none_embeddings(self, mock_get_encoder: MagicMock) -> None:
         """Test content extraction when tech embeddings are None after ensure."""
         mock_encoder = MagicMock()
         mock_get_encoder.return_value = mock_encoder
@@ -539,9 +535,7 @@ class TestExtractWithContentFallback:
     """Test extract method with content fallback."""
 
     @patch("para_files.utils.technology_extractor.TechnologyExtractor._get_encoder")
-    def test_content_fallback_when_filename_no_match(
-        self, mock_get_encoder: MagicMock
-    ) -> None:
+    def test_content_fallback_when_filename_no_match(self, mock_get_encoder: MagicMock) -> None:
         """Test that content is used when filename doesn't match."""
         mock_encoder = MagicMock()
         tech_embeddings = [[1.0, 0.0, 0.0]]  # Docker

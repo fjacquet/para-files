@@ -204,9 +204,7 @@ class TestTrackCorrection:
         mock_tracker.record_correction.assert_called_once()
 
     @patch("para_files.cli.learn_cmd.FeedbackTracker")
-    def test_track_correction_non_pdf(
-        self, mock_tracker_class: MagicMock, tmp_path: Path
-    ) -> None:
+    def test_track_correction_non_pdf(self, mock_tracker_class: MagicMock, tmp_path: Path) -> None:
         """Test tracking correction for non-PDF file."""
         from para_files.cli.learn_cmd import _track_correction
 
@@ -479,9 +477,7 @@ class TestLearnCommand:
 
         mock_confirm.return_value = True
 
-        result = runner.invoke(
-            app, ["learn", str(test_file), "--reference-tree", str(custom_tree)]
-        )
+        result = runner.invoke(app, ["learn", str(test_file), "--reference-tree", str(custom_tree)])
 
         assert result.exit_code == 0
         # Verify config was updated with custom tree path

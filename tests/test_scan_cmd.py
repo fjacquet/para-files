@@ -38,9 +38,7 @@ class TestClassifyFileForScan:
 
         stats: dict[str, int] = {}
 
-        result = _classify_file_for_scan(
-            test_file, mock_pipeline, stats, output_json=False
-        )
+        result = _classify_file_for_scan(test_file, mock_pipeline, stats, output_json=False)
 
         assert result is None  # Returns None for console output
         assert stats["semantic"] == 1
@@ -61,9 +59,7 @@ class TestClassifyFileForScan:
 
         stats: dict[str, int] = {}
 
-        result = _classify_file_for_scan(
-            test_file, mock_pipeline, stats, output_json=True
-        )
+        result = _classify_file_for_scan(test_file, mock_pipeline, stats, output_json=True)
 
         assert result is not None
         assert result["category"] == "invoices"
@@ -82,9 +78,7 @@ class TestClassifyFileForScan:
 
         stats: dict[str, int] = {}
 
-        result = _classify_file_for_scan(
-            test_file, mock_pipeline, stats, output_json=True
-        )
+        result = _classify_file_for_scan(test_file, mock_pipeline, stats, output_json=True)
 
         assert result is not None
         assert "error" in result
@@ -102,9 +96,7 @@ class TestClassifyFileForScan:
 
         stats: dict[str, int] = {}
 
-        result = _classify_file_for_scan(
-            test_file, mock_pipeline, stats, output_json=False
-        )
+        result = _classify_file_for_scan(test_file, mock_pipeline, stats, output_json=False)
 
         assert result is None
 
@@ -124,9 +116,7 @@ class TestClassifyFileForScan:
 
         stats: dict[str, int] = {}
 
-        result = _classify_file_for_scan(
-            test_file, mock_pipeline, stats, output_json=True
-        )
+        result = _classify_file_for_scan(test_file, mock_pipeline, stats, output_json=True)
 
         assert result is not None
         assert "route_name" not in result
@@ -135,17 +125,13 @@ class TestClassifyFileForScan:
 class TestPrintScanSummary:
     """Tests for _print_scan_summary function."""
 
-    def test_print_summary_console(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture
-    ) -> None:
+    def test_print_summary_console(self, tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
         """Test printing scan summary to console."""
         files = [tmp_path / "file1.pdf", tmp_path / "file2.pdf"]
         stats = {"semantic": 1, "rules": 1}
         results: list[dict[str, Any]] = []
 
-        _print_scan_summary(
-            tmp_path, files, stats, results, output_json=False
-        )
+        _print_scan_summary(tmp_path, files, stats, results, output_json=False)
 
         captured = capsys.readouterr()
         assert "Summary" in captured.out
@@ -153,17 +139,13 @@ class TestPrintScanSummary:
         assert "semantic: 1" in captured.out
         assert "rules: 1" in captured.out
 
-    def test_print_summary_json(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture
-    ) -> None:
+    def test_print_summary_json(self, tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
         """Test printing scan summary as JSON."""
         files = [tmp_path / "file1.pdf"]
         stats = {"semantic": 1}
         results = [{"category": "invoices", "confidence": 0.9}]
 
-        _print_scan_summary(
-            tmp_path, files, stats, results, output_json=True
-        )
+        _print_scan_summary(tmp_path, files, stats, results, output_json=True)
 
         captured = capsys.readouterr()
         output = json.loads(captured.out)
@@ -171,17 +153,13 @@ class TestPrintScanSummary:
         assert output["stats"] == {"semantic": 1}
         assert len(output["results"]) == 1
 
-    def test_print_summary_empty_stats(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture
-    ) -> None:
+    def test_print_summary_empty_stats(self, tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
         """Test printing summary with empty stats."""
         files: list[Path] = []
         stats: dict[str, int] = {}
         results: list[dict[str, Any]] = []
 
-        _print_scan_summary(
-            tmp_path, files, stats, results, output_json=False
-        )
+        _print_scan_summary(tmp_path, files, stats, results, output_json=False)
 
         captured = capsys.readouterr()
         assert "0 files scanned" in captured.out
@@ -237,9 +215,7 @@ class TestScanCommand:
         mock_pipeline.get_target_path.return_value = Path("/target")
         mock_pipeline_class.return_value = mock_pipeline
 
-        result = runner.invoke(
-            app, ["scan", str(tmp_path), "--reference-tree", str(custom_tree)]
-        )
+        result = runner.invoke(app, ["scan", str(tmp_path), "--reference-tree", str(custom_tree)])
 
         assert result.exit_code == 0
         assert config.reference_tree_path == custom_tree
@@ -269,9 +245,7 @@ class TestScanCommand:
         mock_pipeline.get_target_path.return_value = Path("/target")
         mock_pipeline_class.return_value = mock_pipeline
 
-        result = runner.invoke(
-            app, ["scan", str(tmp_path), "--ext", "pdf"]
-        )
+        result = runner.invoke(app, ["scan", str(tmp_path), "--ext", "pdf"])
 
         assert result.exit_code == 0
         # Should only classify PDF file
