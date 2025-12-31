@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Unified logging with loguru**: Replaced standard Python logging with loguru across all 32 source files
+  - Console output: Colored, human-readable format
+  - File output: JSON Lines to `{PARA_ROOT}/logs/operations.log`
+  - Automatic rotation, retention, and compression
+  - Thread-safe async writes with `enqueue=True`
+- **Removed CleanupLogger**: Custom audit logger replaced by loguru's built-in file logging
 - **Streaming rescan command**: `rescan` now processes files as discovered instead of loading all into memory
   - Generator-based file discovery for lower memory usage
   - Reuses single TaxonomyClassifier instance (faster classification)
@@ -22,6 +28,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Configurable logging settings**: New `LoggingConfig` in config.py with customizable options
+  - `level`: Log level for file output (DEBUG, INFO, WARNING, ERROR)
+  - `rotation`: Size-based rotation (e.g., "10 MB", "100 MB")
+  - `retention`: How long to keep logs (e.g., "30 days", "1 year")
+  - `compression`: Format for rotated logs (gz, bz2, xz, zip)
+  - Configure via YAML (`logging:` section) or env vars (`PARA_FILES_LOG_*`)
 - **Fuzzy matching for issuers**: TaxonomyClassifier now uses difflib.SequenceMatcher for typo tolerance
   - Threshold: 85% similarity required for fuzzy matches
   - Confidence penalty: 95% of base confidence for fuzzy matches
