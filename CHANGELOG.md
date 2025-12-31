@@ -19,36 +19,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - PDF title/subject are prepended to content for keyword matching
   - New fields in FileMetadata: `pdf_title`, `pdf_author`, `pdf_subject`
   - extract_file_metadata() now extracts PDF metadata automatically
-- **Retention-based folder suffixes**: TaxonomyClassifier now adds retention policy suffixes to folder names
-  - `_perm` for permanent (stays in 3_Resources)
-  - `_10y` for 10_years retention
-  - `_5y` for 5_years retention
-  - `_ctr` for contract_duration
-  - `_2y` for warranty_2_years
-  - `_ret` for retirement
-  - Example: `4_Archives/fiscalite/{year}` → `4_Archives/fiscalite_10y/{year}`
+- **Retention-based folder prefixes**: TaxonomyClassifier now adds retention policy prefixes to folder names
+  - `10y_` for 10_years retention
+  - `5y_` for 5_years retention
+  - `ctr_` for contract_duration
+  - `2y_` for warranty_2_years
+  - `ret_` for retirement
+  - Permanent folders have no prefix (go to 3_Resources)
+  - Example: `4_Archives/fiscalite/{year}` → `4_Archives/10y_fiscalite/{year}`
   - Retention info now included in `extracted_params` of ClassificationResult
-- **Updated documents.json with retention suffixes**: All 48 document types now have `para_pattern` with retention suffix
+- **Updated documents.json with retention prefixes**: All 48 document types now have `para_pattern` with retention prefix
   - Automated update script at `scripts/update_documents_json.py`
   - Enables visual identification of retention requirements in folder structure
+- **Retention rules for additional folders**: Added retention configuration for:
+  - `agriculture` (contract duration)
+  - `assurances` (contract duration)
+  - `comptabilite` (10 years)
+  - `correspondance` (permanent → 3_Resources)
 - **Rewritten `migrate` command**: FAST folder-based migration with PARA relocation
-  - Renames folders to add retention suffixes (e.g., `fiscalite` → `fiscalite_10y`)
-  - Moves permanent folders to `3_Resources/` (no suffix needed - implicit permanent)
-  - Moves time-limited folders to `4_Archives/` with retention suffix
+  - Renames folders to add retention prefixes (e.g., `fiscalite` → `10y_fiscalite`)
+  - Moves permanent folders to `3_Resources/` (no prefix needed)
+  - Moves time-limited folders to `4_Archives/` with retention prefix
   - O(folders) instead of O(files) - completes in seconds, not hours
-  - Preview mode by default (`--dry-run`)
+  - **Executes by default** - use `--dry-run` for preview mode
   - Filter by category (`--category fiscalite`)
   - JSON output for scripting (`--json`)
   - **New: `--merge` flag** for merging folders when destination already exists
     - Moves unique files to destination
     - Removes duplicate files (identical content)
     - Renames conflicting files with `_from_archives` suffix
-  - Example: `uv run para-files migrate /path/to/PARA --no-dry-run`
+  - Example: `uv run para-files migrate /path/to/PARA`
 - **New `rescan` command**: Re-classify files already in PARA archives (SLOW)
   - Per-file classification for fixing misclassified documents
   - Use when taxonomy changed or files need reclassification
-  - Same options as old migrate: `--dry-run`, `--category`, `--json`, `--cleanup`
-  - Example: `uv run para-files rescan /path/to/PARA --no-dry-run`
+  - **Executes by default** - use `--dry-run` for preview mode
+  - Same options: `--category`, `--json`, `--cleanup`
+  - Example: `uv run para-files rescan /path/to/PARA`
+
+### Changed
+
+- **CLI commands execute by default**: All file-operation commands now execute immediately
+  - Use `--dry-run` flag to preview changes without executing
+  - Affected commands: `migrate`, `rescan`, `clean`, `dedupe`, `move`, `init`
+  - More intuitive UX: commands do what they say by default
 - **THEMA book classification**: Book detector now uses official THEMA v1.6 international book classification
   - Replaces custom technology categories with standardized THEMA codes
   - PARA paths now use hybrid naming: `{CodeValue}_{ShortName}` (e.g., `3_Resources/livres/U_Informatique/UB_Programmation`)
