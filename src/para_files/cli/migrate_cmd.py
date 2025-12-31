@@ -106,17 +106,14 @@ def _build_retention_mapping_from_taxonomy() -> dict[str, dict[str, Any]]:
                     match = RETENTION_PREFIX_PATTERN.match(folder_with_prefix)
                     if match:
                         prefix = match.group(0)
-                        base_name = folder_with_prefix[match.end():]
+                        base_name = folder_with_prefix[match.end() :]
                     else:
                         base_name = folder_with_prefix
                         prefix = None
 
                     if base_name and base_name not in mapping:
                         # Determine if permanent based on target or retention
-                        is_permanent = (
-                            target_para == "3_Resources"
-                            or retention == "permanent"
-                        )
+                        is_permanent = target_para == "3_Resources" or retention == "permanent"
 
                         mapping[base_name] = {
                             "retention": "permanent" if is_permanent else retention,
@@ -127,10 +124,11 @@ def _build_retention_mapping_from_taxonomy() -> dict[str, dict[str, Any]]:
         # Merge static config for folder names not in taxonomy
         for name, config in RETENTION_CONFIG.items():
             if name not in mapping:
+                is_permanent = config["retention"] == "permanent"
                 mapping[name] = {
                     "retention": config["retention"],
                     "prefix": config["prefix"],
-                    "target_para": "3_Resources" if config["retention"] == "permanent" else "4_Archives",
+                    "target_para": "3_Resources" if is_permanent else "4_Archives",
                 }
 
         if mapping:
@@ -189,9 +187,9 @@ def _discover_folders_to_migrate(
             prefix_match = RETENTION_PREFIX_PATTERN.match(folder_name)
             suffix_match = RETENTION_SUFFIX_PATTERN.search(folder_name)
             if prefix_match:
-                base_name = folder_name[prefix_match.end():]
+                base_name = folder_name[prefix_match.end() :]
             elif suffix_match:
-                base_name = folder_name[:suffix_match.start()]
+                base_name = folder_name[: suffix_match.start()]
 
             # Apply category filter
             if category_filter and not base_name.startswith(category_filter):
@@ -379,9 +377,7 @@ def _merge_folder(
             if not dry_run:
                 shutil.move(str(item), str(new_dst))
             result["files_renamed"] += 1
-            result["details"].append(
-                {"file": str(item), "action": "renamed", "new_name": new_name}
-            )
+            result["details"].append({"file": str(item), "action": "renamed", "new_name": new_name})
 
     def _merge_dir(
         item: Path,

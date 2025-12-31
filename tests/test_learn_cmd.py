@@ -131,9 +131,7 @@ class TestHandleKeywordAddition:
 
     @patch("para_files.cli.learn_cmd.typer.prompt")
     @patch("para_files.cli.learn_cmd.typer.confirm")
-    def test_empty_keyword(
-        self, mock_confirm: MagicMock, mock_prompt: MagicMock
-    ) -> None:
+    def test_empty_keyword(self, mock_confirm: MagicMock, mock_prompt: MagicMock) -> None:
         """Test empty keyword input."""
         mock_confirm.return_value = True
         mock_prompt.return_value = "   "  # Whitespace only
@@ -154,14 +152,12 @@ class TestLearnCommand:
         assert "Interactive classification learning" in result.output
 
     @patch("para_files.cli.learn_cmd.validate_file_exists")
-    def test_learn_command_file_not_exists(
-        self, mock_validate: MagicMock, tmp_path: Path
-    ) -> None:
+    def test_learn_command_file_not_exists(self, mock_validate: MagicMock, tmp_path: Path) -> None:
         """Test learn command with non-existent file."""
         mock_validate.return_value = False
 
         nonexistent = tmp_path / "missing.pdf"
-        result = runner.invoke(app, ["learn", str(nonexistent)])
+        runner.invoke(app, ["learn", str(nonexistent)])
 
         mock_validate.assert_called_once()
 
