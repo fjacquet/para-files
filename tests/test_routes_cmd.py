@@ -552,7 +552,7 @@ class TestTestRouteCommand:
     @patch("para_files.cli.routes_cmd.ensure_tree_exists")
     @patch("para_files.cli.routes_cmd.get_reference_tree_path")
     @patch("para_files.cli.routes_cmd.setup_logging")
-    def test_test_route_with_file(
+    def test_test_route_with_file(  # noqa: PLR0913
         self,
         mock_logging: MagicMock,
         mock_get_path: MagicMock,

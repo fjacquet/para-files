@@ -76,6 +76,51 @@ RETENTION_PREFIX_PATTERN = re.compile(r"^(10y|5y|2y|ret|ctr)_")
 # Pattern to detect OLD suffix format (e.g., "fiscalite_10y") for migration
 RETENTION_SUFFIX_PATTERN = re.compile(r"_(10y|5y|2y|ret|ctr|perm)$")
 
+# Minimum path parts required for valid PARA pattern (e.g., "4_Archives/fiscalite")
+MIN_PARA_PATH_PARTS = 2
+
+
+def _build_mapping_entry(
+    retention: str, prefix: str | None, *, is_permanent: bool
+) -> dict[str, Any]:
+    """Build a single mapping entry dict."""
+    return {
+        "retention": "permanent" if is_permanent else retention,
+        "prefix": None if is_permanent else prefix,
+        "target_para": "3_Resources" if is_permanent else "4_Archives",
+    }
+
+
+def _parse_folder_from_pattern(para_pattern: str) -> tuple[str, str | None, str] | None:
+    """Parse a PARA pattern to extract base name, prefix, and target.
+
+    Args:
+        para_pattern: Pattern like "4_Archives/10y_fiscalite/{year}"
+
+    Returns:
+        Tuple of (base_name, prefix, target_para) or None if invalid.
+    """
+    parts = para_pattern.split("/")
+    if len(parts) < MIN_PARA_PATH_PARTS:
+        return None
+
+    target_para = parts[0]  # "3_Resources" or "4_Archives"
+    folder_with_prefix = parts[1]
+
+    # Extract base name and prefix (e.g., "10y_fiscalite" → "fiscalite", "10y_")
+    match = RETENTION_PREFIX_PATTERN.match(folder_with_prefix)
+    if match:
+        prefix = match.group(0)
+        base_name = folder_with_prefix[match.end() :]
+    else:
+        base_name = folder_with_prefix
+        prefix = None
+
+    if not base_name:
+        return None
+
+    return base_name, prefix, target_para
+
 
 def _build_retention_mapping_from_taxonomy() -> dict[str, dict[str, Any]]:
     """Build folder mapping from documents.json taxonomy.
@@ -97,39 +142,21 @@ def _build_retention_mapping_from_taxonomy() -> dict[str, dict[str, Any]]:
                 if not para_pattern:
                     continue
 
-                parts = para_pattern.split("/")
-                if len(parts) >= 2:
-                    target_para = parts[0]  # "3_Resources" or "4_Archives"
-                    folder_with_prefix = parts[1]
+                parsed = _parse_folder_from_pattern(para_pattern)
+                if parsed is None:
+                    continue
 
-                    # Extract base name and prefix (e.g., "10y_fiscalite" → "fiscalite", "10y_")
-                    match = RETENTION_PREFIX_PATTERN.match(folder_with_prefix)
-                    if match:
-                        prefix = match.group(0)
-                        base_name = folder_with_prefix[match.end() :]
-                    else:
-                        base_name = folder_with_prefix
-                        prefix = None
+                base_name, prefix, target_para = parsed
+                if base_name in mapping:
+                    continue
 
-                    if base_name and base_name not in mapping:
-                        # Determine if permanent based on target or retention
-                        is_permanent = target_para == "3_Resources" or retention == "permanent"
-
-                        mapping[base_name] = {
-                            "retention": "permanent" if is_permanent else retention,
-                            "prefix": None if is_permanent else prefix,
-                            "target_para": "3_Resources" if is_permanent else "4_Archives",
-                        }
+                is_permanent = target_para == "3_Resources" or retention == "permanent"
+                mapping[base_name] = _build_mapping_entry(
+                    retention, prefix, is_permanent=is_permanent
+                )
 
         # Merge static config for folder names not in taxonomy
-        for name, config in RETENTION_CONFIG.items():
-            if name not in mapping:
-                is_permanent = config["retention"] == "permanent"
-                mapping[name] = {
-                    "retention": config["retention"],
-                    "prefix": config["prefix"],
-                    "target_para": "3_Resources" if is_permanent else "4_Archives",
-                }
+        _merge_static_config(mapping)
 
         if mapping:
             logger.debug("Built retention mapping from taxonomy: %d entries", len(mapping))
@@ -138,15 +165,119 @@ def _build_retention_mapping_from_taxonomy() -> dict[str, dict[str, Any]]:
     except (OSError, ValueError, KeyError) as e:
         logger.debug("Could not load taxonomy, using static mapping: %s", e)
 
-    # Convert static config to full mapping
+    return _build_static_mapping()
+
+
+def _merge_static_config(mapping: dict[str, dict[str, Any]]) -> None:
+    """Merge static RETENTION_CONFIG entries into mapping."""
+    for name, config in RETENTION_CONFIG.items():
+        if name not in mapping:
+            is_permanent = config["retention"] == "permanent"
+            mapping[name] = _build_mapping_entry(
+                config["retention"], config["prefix"], is_permanent=is_permanent
+            )
+
+
+def _build_static_mapping() -> dict[str, dict[str, Any]]:
+    """Build mapping from static RETENTION_CONFIG only."""
     return {
-        name: {
-            "retention": config["retention"],
-            "prefix": config["prefix"],
-            "target_para": "3_Resources" if config["retention"] == "permanent" else "4_Archives",
-        }
+        name: _build_mapping_entry(
+            config["retention"],
+            config["prefix"],
+            is_permanent=config["retention"] == "permanent",
+        )
         for name, config in RETENTION_CONFIG.items()
     }
+
+
+def _extract_base_name(folder_name: str) -> str:
+    """Extract base name by stripping retention prefix or suffix.
+
+    Handles both new format (10y_fiscalite) and old format (fiscalite_10y).
+    """
+    prefix_match = RETENTION_PREFIX_PATTERN.match(folder_name)
+    if prefix_match:
+        return folder_name[prefix_match.end() :]
+
+    suffix_match = RETENTION_SUFFIX_PATTERN.search(folder_name)
+    if suffix_match:
+        return folder_name[: suffix_match.start()]
+
+    return folder_name
+
+
+def _determine_action(
+    current_para: str, target_para: str, current_name: str, new_name: str
+) -> str | None:
+    """Determine migration action based on current vs target state.
+
+    Returns action string or None if no change needed.
+    """
+    same_para = current_para == target_para
+    same_name = current_name == new_name
+
+    if same_para and same_name:
+        return None  # No change needed
+    if same_para:
+        return "rename"
+    if same_name:
+        return "move"
+    return "move_rename"
+
+
+def _should_skip_folder(
+    base_name: str, category_filter: str | None, mapping: dict[str, dict[str, Any]]
+) -> bool:
+    """Check if folder should be skipped based on filter and mapping."""
+    if category_filter and not base_name.startswith(category_filter):
+        return True
+    return base_name not in mapping
+
+
+def _handle_existing_destination(
+    child: Path, new_path: Path, *, merge: bool
+) -> tuple[Path, Path, str] | None:
+    """Handle case when destination already exists."""
+    if merge:
+        return (child, new_path, "merge")
+    logger.warning("Cannot migrate %s: destination %s already exists", child, new_path)
+    return None
+
+
+def _process_folder_for_migration(
+    child: Path,
+    para_folder: str,
+    base_path: Path,
+    mapping: dict[str, dict[str, Any]],
+    category_filter: str | None,
+    *,
+    merge: bool,
+) -> tuple[Path, Path, str] | None:
+    """Process a single folder and return migration tuple if needed."""
+    folder_name = child.name
+    base_name = _extract_base_name(folder_name)
+
+    if _should_skip_folder(base_name, category_filter, mapping):
+        return None
+
+    config = mapping[base_name]
+    target_para = config["target_para"]
+    target_prefix = config["prefix"]
+
+    new_name = (target_prefix or "") + base_name
+    new_path = base_path / target_para / new_name
+
+    # Skip if already correct
+    if child == new_path:
+        return None
+
+    # Handle destination exists case
+    if new_path.exists():
+        return _handle_existing_destination(child, new_path, merge=merge)
+
+    # Determine action type
+    action = _determine_action(para_folder, target_para, folder_name, new_name)
+    return (child, new_path, action) if action else None
 
 
 def _discover_folders_to_migrate(
@@ -179,63 +310,11 @@ def _discover_folders_to_migrate(
             if not child.is_dir():
                 continue
 
-            folder_name = child.name
-
-            # Strip existing prefix OR suffix to get base name
-            # Handles both new format (10y_fiscalite) and old format (fiscalite_10y)
-            base_name = folder_name
-            prefix_match = RETENTION_PREFIX_PATTERN.match(folder_name)
-            suffix_match = RETENTION_SUFFIX_PATTERN.search(folder_name)
-            if prefix_match:
-                base_name = folder_name[prefix_match.end() :]
-            elif suffix_match:
-                base_name = folder_name[: suffix_match.start()]
-
-            # Apply category filter
-            if category_filter and not base_name.startswith(category_filter):
-                continue
-
-            # Look up in mapping
-            if base_name not in mapping:
-                continue
-
-            config = mapping[base_name]
-            target_para = config["target_para"]
-            target_prefix = config["prefix"]
-
-            # Determine new folder name and location
-            new_name = (target_prefix or "") + base_name
-            new_path = base_path / target_para / new_name
-
-            # Skip if already correct
-            if child == new_path:
-                continue
-
-            # Handle destination exists case
-            if new_path.exists():
-                if merge:
-                    # Add as merge action
-                    migrations.append((child, new_path, "merge"))
-                else:
-                    logger.warning(
-                        "Cannot migrate %s: destination %s already exists", child, new_path
-                    )
-                continue
-
-            # Determine action type
-            same_para = para_folder == target_para
-            same_name = folder_name == new_name
-
-            if same_para and not same_name:
-                action = "rename"
-            elif not same_para and same_name:
-                action = "move"
-            elif not same_para and not same_name:
-                action = "move_rename"
-            else:
-                continue  # No change needed
-
-            migrations.append((child, new_path, action))
+            result = _process_folder_for_migration(
+                child, para_folder, base_path, mapping, category_filter, merge=merge
+            )
+            if result:
+                migrations.append(result)
 
     return migrations
 
@@ -297,6 +376,100 @@ def _migrate_folder(
     return result
 
 
+def _get_unique_filename(dst_dir: Path, stem: str, suffix: str) -> str:
+    """Get a unique filename by adding counter suffix if needed."""
+    new_name = f"{stem}_from_archives{suffix}"
+    new_dst = dst_dir / new_name
+    counter = 1
+    while new_dst.exists():
+        new_name = f"{stem}_from_archives_{counter}{suffix}"
+        new_dst = dst_dir / new_name
+        counter += 1
+    return new_name
+
+
+def _handle_file_merge(
+    item: Path,
+    dst_item: Path,
+    dst_dir: Path,
+    result: dict[str, Any],
+    *,
+    dry_run: bool,
+) -> None:
+    """Handle merging a single file."""
+    if not dst_item.exists():
+        # File only in source → move it
+        if not dry_run:
+            dst_dir.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(item), str(dst_item))
+        result["files_moved"] += 1
+        result["details"].append({"file": str(item), "action": "moved"})
+    elif filecmp.cmp(item, dst_item, shallow=False):
+        # Identical files → delete source duplicate
+        if not dry_run:
+            item.unlink()
+        result["files_duplicate"] += 1
+        result["details"].append({"file": str(item), "action": "deleted_duplicate"})
+    else:
+        # Different files → rename and move
+        new_name = _get_unique_filename(dst_dir, item.stem, item.suffix)
+        new_dst = dst_dir / new_name
+        if not dry_run:
+            shutil.move(str(item), str(new_dst))
+        result["files_renamed"] += 1
+        result["details"].append({"file": str(item), "action": "renamed", "new_name": new_name})
+
+
+def _handle_dir_merge(
+    item: Path,
+    dst_item: Path,
+    dst_dir: Path,
+    result: dict[str, Any],
+    recurse_fn: Callable[..., None],
+    *,
+    dry_run: bool,
+) -> None:
+    """Handle merging a directory."""
+    if dst_item.exists() and dst_item.is_dir():
+        recurse_fn(item, dst_item, result, dry_run=dry_run)
+        result["subdirs_merged"] += 1
+    else:
+        if not dry_run:
+            dst_dir.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(item), str(dst_item))
+        moved_files = sum(1 for _ in item.rglob("*") if _.is_file())
+        result["files_moved"] += moved_files
+
+
+def _merge_recursive(
+    src_dir: Path, dst_dir: Path, result: dict[str, Any], *, dry_run: bool
+) -> None:
+    """Recursively merge directories."""
+    for item in src_dir.iterdir():
+        dst_item = dst_dir / item.name
+
+        if item.is_file():
+            _handle_file_merge(item, dst_item, dst_dir, result, dry_run=dry_run)
+        elif item.is_dir():
+            _handle_dir_merge(item, dst_item, dst_dir, result, _merge_recursive, dry_run=dry_run)
+
+
+def _init_merge_result(source: Path, destination: Path, *, dry_run: bool) -> dict[str, Any]:
+    """Initialize merge result dictionary."""
+    return {
+        "source": str(source),
+        "destination": str(destination),
+        "action": "merge",
+        "files_moved": 0,
+        "files_duplicate": 0,
+        "files_renamed": 0,
+        "subdirs_merged": 0,
+        "success": False,
+        "dry_run_action": "would_merge" if dry_run else "merge",
+        "details": [],
+    }
+
+
 def _merge_folder(
     source: Path,
     destination: Path,
@@ -319,87 +492,10 @@ def _merge_folder(
     Returns:
         Merge result dict with statistics.
     """
-    result: dict[str, Any] = {
-        "source": str(source),
-        "destination": str(destination),
-        "action": "merge",
-        "files_moved": 0,
-        "files_duplicate": 0,
-        "files_renamed": 0,
-        "subdirs_merged": 0,
-        "success": False,
-        "dry_run_action": "would_merge" if dry_run else "merge",
-        "details": [],
-    }
-
-    def merge_recursive(src_dir: Path, dst_dir: Path) -> None:
-        """Recursively merge directories."""
-        for item in src_dir.iterdir():
-            dst_item = dst_dir / item.name
-
-            if item.is_file():
-                _merge_file(item, dst_item, dst_dir, dry_run, result)
-            elif item.is_dir():
-                _merge_dir(item, dst_item, dst_dir, dry_run, result, merge_recursive)
-
-    def _merge_file(
-        item: Path,
-        dst_item: Path,
-        dst_dir: Path,
-        dry_run: bool,  # noqa: FBT001
-        result: dict[str, Any],
-    ) -> None:
-        """Merge a single file."""
-        if not dst_item.exists():
-            # File only in source → move it
-            if not dry_run:
-                dst_dir.mkdir(parents=True, exist_ok=True)
-                shutil.move(str(item), str(dst_item))
-            result["files_moved"] += 1
-            result["details"].append({"file": str(item), "action": "moved"})
-        elif filecmp.cmp(item, dst_item, shallow=False):
-            # Identical files → delete source duplicate
-            if not dry_run:
-                item.unlink()
-            result["files_duplicate"] += 1
-            result["details"].append({"file": str(item), "action": "deleted_duplicate"})
-        else:
-            # Different files → rename and move
-            stem = item.stem
-            suffix = item.suffix
-            new_name = f"{stem}_from_archives{suffix}"
-            new_dst = dst_dir / new_name
-            counter = 1
-            while new_dst.exists():
-                new_name = f"{stem}_from_archives_{counter}{suffix}"
-                new_dst = dst_dir / new_name
-                counter += 1
-            if not dry_run:
-                shutil.move(str(item), str(new_dst))
-            result["files_renamed"] += 1
-            result["details"].append({"file": str(item), "action": "renamed", "new_name": new_name})
-
-    def _merge_dir(
-        item: Path,
-        dst_item: Path,
-        dst_dir: Path,
-        dry_run: bool,  # noqa: FBT001
-        result: dict[str, Any],
-        recurse_fn: Callable[[Path, Path], None],
-    ) -> None:
-        """Merge a directory."""
-        if dst_item.exists() and dst_item.is_dir():
-            recurse_fn(item, dst_item)
-            result["subdirs_merged"] += 1
-        else:
-            if not dry_run:
-                dst_dir.mkdir(parents=True, exist_ok=True)
-                shutil.move(str(item), str(dst_item))
-            moved_files = sum(1 for _ in item.rglob("*") if _.is_file())
-            result["files_moved"] += moved_files
+    result = _init_merge_result(source, destination, dry_run=dry_run)
 
     try:
-        merge_recursive(source, destination)
+        _merge_recursive(source, destination, result, dry_run=dry_run)
 
         if not dry_run:
             _remove_empty_dirs(source)
