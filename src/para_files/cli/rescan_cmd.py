@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import logging
 import shutil
+from collections.abc import Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any
 
@@ -25,6 +26,7 @@ from para_files.cli.shared import (
 
 
 if TYPE_CHECKING:
+    from para_files.classifiers.taxonomy_classifier import TaxonomyClassifier
     from para_files.types import ClassificationResult
 
 logger = logging.getLogger(__name__)
@@ -34,18 +36,18 @@ def _discover_archive_files(
     base_path: Path,
     *,
     category_filter: str | None = None,
-) -> list[Path]:
-    """Discover all files in 3_Resources and 4_Archives.
+) -> Iterator[Path]:
+    """Discover files in 3_Resources and 4_Archives as a generator.
+
+    Yields files one at a time instead of loading all into memory.
 
     Args:
         base_path: PARA root directory.
         category_filter: Optional category name to filter (e.g., "fiscalite").
 
-    Returns:
-        List of file paths to potentially rescan.
+    Yields:
+        File paths to potentially rescan.
     """
-    files: list[Path] = []
-
     for para_folder in ["3_Resources", "4_Archives"]:
         folder_path = base_path / para_folder
         if not folder_path.exists():
@@ -58,14 +60,14 @@ def _discover_archive_files(
                 f"*/{category_filter}*/**/*",
             ]
             for pattern in patterns:
-                matching = [f for f in folder_path.glob(pattern) if f.is_file()]
-                files.extend(matching)
+                for f in folder_path.glob(pattern):
+                    if f.is_file():
+                        yield f
         else:
-            # All files
-            matching = [f for f in folder_path.rglob("*") if f.is_file()]
-            files.extend(matching)
-
-    return files
+            # All files - use rglob as generator
+            for f in folder_path.rglob("*"):
+                if f.is_file():
+                    yield f
 
 
 def _needs_migration(current_path: Path, expected_path: Path) -> bool:
@@ -75,16 +77,22 @@ def _needs_migration(current_path: Path, expected_path: Path) -> bool:
 
 def _classify_for_rescan(
     file_path: Path,
+    classifier: TaxonomyClassifier,
 ) -> ClassificationResult | None:
     """Classify a file to determine its expected destination.
 
     Uses TaxonomyClassifier with documents.json to get retention-aware path.
+
+    Args:
+        file_path: Path to file to classify.
+        classifier: Reusable classifier instance.
+
+    Returns:
+        Classification result or None if classification failed.
     """
-    from para_files.classifiers.taxonomy_classifier import TaxonomyClassifier
     from para_files.utils.file_utils import extract_file_metadata, read_content_preview
 
     try:
-        classifier = TaxonomyClassifier()
         metadata = extract_file_metadata(file_path, extract_exif=False)
         content = read_content_preview(file_path, max_chars=2000)
 
@@ -167,6 +175,7 @@ def _cleanup_empty_dirs(base_path: Path, *, dry_run: bool = True) -> list[Path]:
 def _process_file_rescan(
     file_path: Path,
     base_path: Path,
+    classifier: TaxonomyClassifier,
     results: dict[str, Any],
     *,
     dry_run: bool,
@@ -178,12 +187,13 @@ def _process_file_rescan(
     Args:
         file_path: File to process.
         base_path: PARA root directory.
+        classifier: Reusable classifier instance.
         results: Results dict to update.
         dry_run: If True, simulate without moving.
         verbose: If True, show per-file output.
         output_json: If True, suppress console output.
     """
-    classification = _classify_for_rescan(file_path)
+    classification = _classify_for_rescan(file_path, classifier)
     if not classification or not classification.category:
         return
 
@@ -243,6 +253,9 @@ def _run_rescan(
 ) -> dict[str, Any]:
     """Execute the rescan process.
 
+    Uses streaming approach - processes files as they're discovered
+    instead of loading all into memory first.
+
     Args:
         base_path: PARA root directory.
         dry_run: If True, simulate without moving.
@@ -254,6 +267,8 @@ def _run_rescan(
     Returns:
         Results dictionary.
     """
+    from para_files.classifiers.taxonomy_classifier import TaxonomyClassifier
+
     results: dict[str, Any] = {
         "base_path": str(base_path),
         "dry_run": dry_run,
@@ -271,20 +286,28 @@ def _run_rescan(
     if not output_json:
         action = "Preview" if dry_run else "Rescan"
         typer.echo(f"{action}ning files in {base_path}...")
-        typer.echo("WARNING: This is a slow operation (per-file classification)")
+        typer.echo("Processing files as discovered (streaming mode)...")
         if category:
             typer.echo(f"Category filter: {category}")
 
-    files = _discover_archive_files(base_path, category_filter=category)
-    results["files_scanned"] = len(files)
+    # Create classifier once and reuse
+    classifier = TaxonomyClassifier()
 
-    if not output_json:
-        typer.echo(f"Found {len(files)} files to analyze")
+    # Stream-process files as they're discovered
+    for file_path in _discover_archive_files(base_path, category_filter=category):
+        results["files_scanned"] += 1
 
-    for file_path in files:
+        # Show progress every 100 files
+        if not output_json and results["files_scanned"] % 100 == 0:
+            typer.echo(
+                f"  Processed {results['files_scanned']} files "
+                f"({results['files_need_move']} need move)..."
+            )
+
         _process_file_rescan(
             file_path,
             base_path,
+            classifier,
             results,
             dry_run=dry_run,
             verbose=verbose,
