@@ -7,7 +7,6 @@ keywords, and filename patterns.
 
 from __future__ import annotations
 
-import logging
 import re
 from collections import Counter
 from dataclasses import dataclass, field
@@ -16,8 +15,6 @@ from typing import Any
 
 from para_files.learning.feedback_tracker import CorrectionRecord, FeedbackTracker
 
-
-logger = logging.getLogger(__name__)
 
 # Minimum occurrences to suggest a pattern
 MIN_PATTERN_OCCURRENCES = 2

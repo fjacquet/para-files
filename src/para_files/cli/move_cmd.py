@@ -7,11 +7,11 @@ This module provides the 'move' command which classifies files and moves
 from __future__ import annotations
 
 import json
-import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any
 
 import typer
+from loguru import logger
 
 from para_files.cli.app import app
 from para_files.cli.shared import (
@@ -29,8 +29,6 @@ from para_files.utils.validation import validate_file_exists
 if TYPE_CHECKING:
     from para_files.mover import MoveResult
     from para_files.types import ClassificationResult
-
-logger = logging.getLogger(__name__)
 
 
 def _format_move_result_json(

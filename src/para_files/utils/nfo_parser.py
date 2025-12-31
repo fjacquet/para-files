@@ -6,13 +6,12 @@ They can contain structured information like title, category, year, etc.
 
 from __future__ import annotations
 
-import logging
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from loguru import logger
 
-logger = logging.getLogger(__name__)
 
 # Encodings to try when reading NFO files (in order)
 NFO_ENCODINGS = ["utf-8", "cp437", "latin-1", "utf-16", "windows-1252"]

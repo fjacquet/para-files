@@ -11,11 +11,6 @@ from para_files.utils.cleanup import (
     is_junk_file,
     scan_for_junk,
 )
-from para_files.utils.cleanup_log import (
-    CleanupLogEntry,
-    CleanupLogger,
-    get_default_log_path,
-)
 from para_files.utils.exiftool import (
     EXIF_EXTENSIONS,
     ExifData,
@@ -88,26 +83,29 @@ from para_files.utils.validation import (
 
 
 __all__ = [
-    # Original exports
+    # EXIF
     "EXIF_EXTENSIONS",
     # Filename sanitization
     "INVALID_FILENAME_CHARS",
     # Cleanup
     "JUNK_DIRECTORIES",
     "JUNK_PATTERNS",
+    # OCR
     "OCR_EXTENSIONS",
+    # Pandoc
     "PANDOC_EXTENSIONS",
     "PANDOC_FORMATS",
+    # ISBN
     "BookInfo",
-    "CleanupLogEntry",
-    "CleanupLogger",
     "ExifData",
     "GPSCoordinates",
+    # Geolocation
     "LocationInfo",
     # NFO Parser
     "NfoHints",
     "OCRResult",
     "PandocResult",
+    # PDF
     "PdfMetadata",
     "cleanup_empty_dirs",
     "cleanup_junk",
@@ -115,6 +113,7 @@ __all__ = [
     "delete_junk_directory",
     "delete_junk_file",
     "extract_exif",
+    # File utilities
     "extract_file_metadata",
     "extract_isbn",
     "extract_ocr_regions",
@@ -123,7 +122,6 @@ __all__ = [
     "extract_pandoc_text",
     "extract_pdf_metadata",
     "find_associated_nfo",
-    "get_default_log_path",
     "get_invalid_chars",
     "get_location_folder",
     "get_nfo_hints_for_file",
@@ -145,6 +143,7 @@ __all__ = [
     "sanitize_filename",
     "sanitize_path_component",
     "scan_for_junk",
+    # Validation
     "validate_directory_exists",
     "validate_file_exists",
     "validate_isbn",

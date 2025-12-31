@@ -11,8 +11,9 @@ Uses semantic matching to determine the appropriate technology category.
 
 from __future__ import annotations
 
-import logging
 import re
+
+from loguru import logger
 
 from para_files.classifiers.base import BaseClassifier
 from para_files.types import (
@@ -30,9 +31,6 @@ from para_files.utils.pdf_metadata import (
     is_book_creator,
 )
 from para_files.utils.thema_lookup import ThemaLookup, get_thema_lookup
-
-
-logger = logging.getLogger(__name__)
 
 
 # Patterns that indicate book structure

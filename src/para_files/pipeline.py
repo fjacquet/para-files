@@ -12,9 +12,10 @@ Chains classifiers in priority order: first match wins.
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+from loguru import logger
 
 from para_files.classifiers.book_detector import BookDetector
 from para_files.classifiers.mlx_llm_classifier import MLXLLMClassifier
@@ -34,8 +35,6 @@ from para_files.types import (
 
 if TYPE_CHECKING:
     from para_files.classifiers.base import BaseClassifier
-
-logger = logging.getLogger(__name__)
 
 
 class ClassificationPipeline:

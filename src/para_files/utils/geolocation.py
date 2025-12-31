@@ -8,13 +8,13 @@ Falls back gracefully when geocoding fails or times out.
 from __future__ import annotations
 
 import json
-import logging
 import sqlite3
 import threading
 from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from loguru import logger
 from pydantic import BaseModel, Field
 
 from para_files.utils.filename_sanitizer import sanitize_path_component
@@ -23,7 +23,6 @@ from para_files.utils.filename_sanitizer import sanitize_path_component
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-logger = logging.getLogger(__name__)
 
 # Default timeout for geocoding requests
 _GEOCODE_TIMEOUT = 5

@@ -7,16 +7,14 @@ Falls back gracefully when exiftool is not installed.
 from __future__ import annotations
 
 import json
-import logging
 import shutil
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
+from loguru import logger
 from pydantic import BaseModel, Field
 
-
-logger = logging.getLogger(__name__)
 
 # Supported extensions for EXIF extraction
 EXIF_EXTENSIONS = frozenset(

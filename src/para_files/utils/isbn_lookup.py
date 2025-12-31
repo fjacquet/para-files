@@ -6,11 +6,10 @@ Uses isbnlib for robust ISBN handling and metadata lookup from multiple sources
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass, field
 
+from loguru import logger
 
-logger = logging.getLogger(__name__)
 
 # ISBN-10 has exactly 10 characters
 ISBN_10_LENGTH = 10

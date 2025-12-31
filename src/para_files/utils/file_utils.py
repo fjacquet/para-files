@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+from loguru import logger
 
 from para_files.types import FileMetadata
 
@@ -15,8 +16,6 @@ if TYPE_CHECKING:
     from para_files.utils.ocr import OCRResult
     from para_files.utils.pandoc import PandocResult
 
-
-logger = logging.getLogger(__name__)
 
 # Text file extensions that can be read directly
 TEXT_EXTENSIONS = frozenset(

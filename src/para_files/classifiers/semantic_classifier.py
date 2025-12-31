@@ -7,9 +7,10 @@ pattern-based matching fails.
 
 from __future__ import annotations
 
-import logging
 import math
 import re
+
+from loguru import logger
 
 from para_files.classifiers.base import BaseClassifier
 from para_files.encoders.mlx_encoder import MLXEncoder
@@ -22,8 +23,6 @@ from para_files.types import (
     FileMetadata,
 )
 
-
-logger = logging.getLogger(__name__)
 
 # Minimum content length for semantic matching
 MIN_CONTENT_LENGTH = 50

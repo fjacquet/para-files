@@ -41,6 +41,7 @@ dependencies = [
     "pymupdf>=1.26.7",
     "cryptography>=46.0.3",
     "bandit>=1.9.2",
+    "loguru>=0.7.3",
 ]
 
 [project.optional-dependencies]

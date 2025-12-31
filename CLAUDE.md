@@ -34,6 +34,14 @@ pre-commit install                 # Install hooks
 pre-commit run --all-files         # Run manually
 ```
 
+## Development Principles
+
+- **KISS** - Keep It Simple, Stupid. Prefer simple solutions over complex ones.
+- **DRY** - Don't Repeat Yourself. Extract common patterns into reusable functions.
+- **YAGNI** - You Aren't Gonna Need It. Don't add features "just in case".
+- **Don't reinvent the wheel** - Use established libraries (loguru, pydantic, etc.).
+- **Functional programming** - Prefer pure functions, avoid side effects, use immutable data.
+
 ## Code Style
 
 - **Python 3.12+** with strict mypy
@@ -42,6 +50,7 @@ pre-commit run --all-files         # Run manually
 - **Future imports**: `from __future__ import annotations` in all modules
 - **Type hints**: Comprehensive typing throughout
 - **Package**: Marked as typed (`py.typed` marker present)
+- **Logging**: Use `from loguru import logger` (not standard logging)
 
 ## Key Files
 

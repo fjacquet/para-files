@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import fnmatch
-import logging
 from pathlib import Path
 
+from loguru import logger
 
-logger = logging.getLogger(__name__)
 
 # Patterns for junk files that should be deleted automatically
 JUNK_PATTERNS: list[str] = [

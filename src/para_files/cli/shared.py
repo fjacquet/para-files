@@ -7,15 +7,16 @@ code reuse and maintainability.
 
 from __future__ import annotations
 
-import logging
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import typer
+from loguru import logger
 from pydantic import ValidationError
 
 from para_files.config import DEFAULT_REFERENCE_TREE, load_config
+from para_files.logging import setup_logging as _setup_logging
 from para_files.utils.validation import (
     validate_directory_exists,
     validate_file_exists,
@@ -23,10 +24,9 @@ from para_files.utils.validation import (
 
 
 if TYPE_CHECKING:
-    from para_files.config import Config
+    from para_files.config import Config, LoggingConfig
     from para_files.types import ClassificationResult
 
-logger = logging.getLogger(__name__)
 
 # Constants used across multiple commands
 MAX_PATTERNS_SHOWN = 3
@@ -46,21 +46,26 @@ class ConflictChoice(str, Enum):
     rename_with_date = "rename_with_date"
 
 
-def setup_logging(*, verbose: bool = False) -> None:
+def setup_logging(
+    *,
+    verbose: bool = False,
+    para_root: Path | None = None,
+    config: LoggingConfig | None = None,
+) -> None:
     """Configure logging for CLI commands.
 
-    Sets up the logging configuration with appropriate level and format.
-    Uses force=True to override any existing configuration that may have
-    been set by imported modules.
+    Sets up loguru with console and optional file output.
 
     Args:
         verbose: Enable debug logging if True, otherwise use INFO level.
+        para_root: PARA root directory for log files. If None, file logging disabled.
+        config: Optional LoggingConfig for rotation/retention settings.
     """
-    level = logging.DEBUG if verbose else logging.INFO
-    logging.basicConfig(
-        level=level,
-        format="%(levelname)s: %(message)s",
-        force=True,  # Override any existing configuration
+    _setup_logging(
+        para_root,
+        verbose=verbose,
+        log_to_file=para_root is not None,
+        config=config,
     )
 
 

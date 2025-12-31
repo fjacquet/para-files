@@ -13,7 +13,6 @@ from __future__ import annotations
 import contextlib
 import filecmp
 import json
-import logging
 import re
 import shutil
 from collections.abc import Callable
@@ -21,6 +20,7 @@ from pathlib import Path
 from typing import Annotated, Any, TypedDict
 
 import typer
+from loguru import logger
 
 from para_files.cli.app import app
 from para_files.cli.shared import (
@@ -28,8 +28,6 @@ from para_files.cli.shared import (
     setup_logging,
 )
 
-
-logger = logging.getLogger(__name__)
 
 # Retention types and their target PARA category
 # permanent → 3_Resources (no suffix)

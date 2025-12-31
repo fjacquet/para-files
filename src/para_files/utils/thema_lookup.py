@@ -8,15 +8,11 @@ See: https://www.editeur.org/151/Thema/
 
 from __future__ import annotations
 
-import logging
 import re
 from functools import lru_cache
 
 from para_files.taxonomies.loader import get_taxonomy_loader
 from para_files.taxonomies.models import ThemaCode, ThemaTaxonomy
-
-
-logger = logging.getLogger(__name__)
 
 
 # =============================================================================

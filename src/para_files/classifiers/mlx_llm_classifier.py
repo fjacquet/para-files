@@ -10,9 +10,10 @@ Platform: macOS with Apple Silicon only
 from __future__ import annotations
 
 import json
-import logging
 import re
 from typing import Any
+
+from loguru import logger
 
 from para_files.classifiers.base import BaseClassifier
 from para_files.config import DEFAULT_CONTENT_PREVIEW_CHARS
@@ -22,9 +23,6 @@ from para_files.types import (
     Confidence,
     FileMetadata,
 )
-
-
-logger = logging.getLogger(__name__)
 
 
 # System prompt for PARA classification

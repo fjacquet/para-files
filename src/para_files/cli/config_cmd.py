@@ -7,17 +7,14 @@ environment variables.
 
 from __future__ import annotations
 
-import logging
 from typing import Annotated
 
 import typer
+from loguru import logger
 from pydantic import ValidationError
 
 from para_files.cli.app import app
 from para_files.config import load_config
-
-
-logger = logging.getLogger(__name__)
 
 
 @app.command()

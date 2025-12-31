@@ -6,13 +6,13 @@ Handles moving/copying files to their PARA destinations with conflict resolution
 from __future__ import annotations
 
 import hashlib
-import logging
 import shutil
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from loguru import logger
 from pydantic import BaseModel, Field
 
 
@@ -25,9 +25,6 @@ _MAX_RENAME_ATTEMPTS = 1000
 
 # Buffer size for file hashing (64KB)
 _HASH_BUFFER_SIZE = 65536
-
-
-logger = logging.getLogger(__name__)
 
 
 def _compute_file_hash(file_path: Path) -> str:

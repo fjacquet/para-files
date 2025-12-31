@@ -6,15 +6,13 @@ Falls back gracefully when pandoc is not installed.
 
 from __future__ import annotations
 
-import logging
 import shutil
 import subprocess
 from pathlib import Path
 
+from loguru import logger
 from pydantic import BaseModel, Field
 
-
-logger = logging.getLogger(__name__)
 
 # Preview length constants
 _PREVIEW_LENGTH = 500

@@ -5,14 +5,11 @@ Provides functions to add issuers and utterances to the reference tree.
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import Any
 
 import yaml
-
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class RoutingLearner:

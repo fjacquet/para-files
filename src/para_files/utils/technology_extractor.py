@@ -6,16 +6,16 @@ using MLX embeddings for semantic similarity matching.
 
 from __future__ import annotations
 
-import logging
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+from loguru import logger
 
 
 if TYPE_CHECKING:
     from para_files.encoders.mlx_encoder import MLXEncoder
 
-logger = logging.getLogger(__name__)
 
 # Minimum similarity score to consider a technology match
 TECHNOLOGY_MATCH_THRESHOLD = 0.45

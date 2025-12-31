@@ -7,11 +7,11 @@ empty directories, and optionally NFO files from a location.
 from __future__ import annotations
 
 import json
-import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import Annotated, Any
 
 import typer
+from loguru import logger
 
 from para_files.cli.app import app
 from para_files.cli.shared import (
@@ -21,15 +21,8 @@ from para_files.cli.shared import (
 )
 
 
-if TYPE_CHECKING:
-    from para_files.utils.cleanup_log import CleanupLogger
-
-logger = logging.getLogger(__name__)
-
-
 def _clean_junk_files(
     dir_path: Path,
-    cleanup_logger: CleanupLogger,
     results: dict[str, Any],
     *,
     recursive: bool,
@@ -42,7 +35,6 @@ def _clean_junk_files(
 
     Args:
         dir_path: Directory to clean.
-        cleanup_logger: Logger for audit trail.
         results: Dict to append deleted file paths to.
         recursive: If True, clean subdirectories.
         dry_run: If True, simulate without deleting.
@@ -58,11 +50,13 @@ def _clean_junk_files(
     deleted_files, deleted_dirs = cleanup_junk(dir_path, recursive=recursive, dry_run=dry_run)
 
     for f in deleted_files:
-        cleanup_logger.log_deleted(f, "junk_file", f.name, dry_run=dry_run)
+        action = "would_delete" if dry_run else "deleted"
+        logger.info("[%s] junk_file: %s (%s)", action.upper(), f, f.name)
         results["deleted_files"].append(str(f))
 
     for d in deleted_dirs:
-        cleanup_logger.log_deleted(d, "junk_dir", d.name, dry_run=dry_run)
+        action = "would_delete" if dry_run else "deleted"
+        logger.info("[%s] junk_dir: %s (%s)", action.upper(), d, d.name)
         results["deleted_dirs"].append(str(d))
 
     if not output_json:
@@ -75,7 +69,6 @@ def _clean_junk_files(
 
 def _clean_nfo_files(
     dir_path: Path,
-    cleanup_logger: CleanupLogger,
     results: dict[str, Any],
     *,
     recursive: bool,
@@ -89,7 +82,6 @@ def _clean_nfo_files(
 
     Args:
         dir_path: Directory to clean.
-        cleanup_logger: Logger for audit trail.
         results: Dict to append deleted file paths to.
         recursive: If True, clean subdirectories.
         dry_run: If True, simulate without deleting.
@@ -100,19 +92,17 @@ def _clean_nfo_files(
 
     for nfo_file in nfo_files:
         if dry_run:
-            logger.info("[DRY-RUN] Would delete NFO: %s", nfo_file)
+            logger.info("[WOULD_DELETE] nfo: %s (NFO file cleanup)", nfo_file)
             deleted_count += 1
+            results["deleted_nfo"].append(str(nfo_file))
         else:
             try:
                 nfo_file.unlink()
-                logger.info("Deleted NFO: %s", nfo_file)
+                logger.info("[DELETED] nfo: %s (NFO file cleanup)", nfo_file)
                 deleted_count += 1
+                results["deleted_nfo"].append(str(nfo_file))
             except OSError:
                 logger.exception("Failed to delete NFO %s", nfo_file)
-                continue
-
-        cleanup_logger.log_deleted(nfo_file, "nfo", "NFO file cleanup", dry_run=dry_run)
-        results["deleted_nfo"].append(str(nfo_file))
 
     if deleted_count and not output_json:
         action = "Would delete" if dry_run else "Deleted"
@@ -121,7 +111,6 @@ def _clean_nfo_files(
 
 def _clean_empty_directories(
     dir_path: Path,
-    cleanup_logger: CleanupLogger,
     results: dict[str, Any],
     *,
     dry_run: bool,
@@ -134,7 +123,6 @@ def _clean_empty_directories(
 
     Args:
         dir_path: Directory to check for empty subdirectories.
-        cleanup_logger: Logger for audit trail.
         results: Dict to append deleted directory paths to.
         dry_run: If True, simulate without deleting.
         output_json: If True, suppress console output.
@@ -144,7 +132,8 @@ def _clean_empty_directories(
     deleted_empty = cleanup_empty_dirs(dir_path, dry_run=dry_run)
 
     for d in deleted_empty:
-        cleanup_logger.log_deleted(d, "empty_dir", "Empty directory", dry_run=dry_run)
+        action = "would_delete" if dry_run else "deleted"
+        logger.info("[%s] empty_dir: %s (Empty directory)", action.upper(), d)
         results["deleted_dirs"].append(str(d))
 
     if deleted_empty and not output_json:
@@ -190,19 +179,16 @@ def clean(
     Use --nfo to also remove .nfo files after classification has
     extracted hints from them.
 
-    All deletions are logged to an audit file for traceability.
+    All deletions are logged via loguru (console + file if configured).
     """
-    from para_files.utils.cleanup_log import CleanupLogger, get_default_log_path
-
-    setup_logging(verbose=verbose)
     config = load_config_or_exit()
+
+    # Setup logging with file output (unless dry-run)
+    para_root = Path(config.para_root).expanduser() if not dry_run else None
+    setup_logging(verbose=verbose, para_root=para_root, config=config.logging)
 
     dir_path = directory.resolve()
     validate_directory_or_exit(dir_path)
-
-    # Setup audit log
-    log_path = get_default_log_path(Path(config.para_root).expanduser())
-    cleanup_logger = CleanupLogger(log_path if not dry_run else None)
 
     results: dict[str, Any] = {
         "directory": str(dir_path),
@@ -220,7 +206,6 @@ def clean(
     if junk:
         _clean_junk_files(
             dir_path,
-            cleanup_logger,
             results,
             recursive=recursive,
             dry_run=dry_run,
@@ -231,7 +216,6 @@ def clean(
     if nfo:
         _clean_nfo_files(
             dir_path,
-            cleanup_logger,
             results,
             recursive=recursive,
             dry_run=dry_run,
@@ -240,13 +224,7 @@ def clean(
 
     # Clean empty directories
     if empty_dirs:
-        _clean_empty_directories(
-            dir_path, cleanup_logger, results, dry_run=dry_run, output_json=output_json
-        )
-
-    # Write audit log
-    if not dry_run:
-        cleanup_logger.write_log()
+        _clean_empty_directories(dir_path, results, dry_run=dry_run, output_json=output_json)
 
     # Summary
     total_deleted = (

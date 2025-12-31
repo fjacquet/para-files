@@ -7,11 +7,11 @@ on the reference tree configuration.
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import Annotated, Any
 
 import typer
+from loguru import logger
 
 from para_files.cli.app import app
 from para_files.cli.shared import (
@@ -19,9 +19,6 @@ from para_files.cli.shared import (
     load_config_or_exit,
     setup_logging,
 )
-
-
-logger = logging.getLogger(__name__)
 
 
 def _create_directory(

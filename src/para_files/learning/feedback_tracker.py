@@ -7,14 +7,13 @@ and continuous improvement of the classification system.
 from __future__ import annotations
 
 import json
-import logging
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from loguru import logger
 
-logger = logging.getLogger(__name__)
 
 # Default feedback file location
 DEFAULT_FEEDBACK_FILE = Path.home() / ".config" / "para-files" / "feedback_history.json"

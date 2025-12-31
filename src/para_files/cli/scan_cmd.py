@@ -7,12 +7,12 @@ without actually moving any files.
 from __future__ import annotations
 
 import json
-import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Annotated, Any
 
 import typer
+from loguru import logger
 
 from para_files.cli.app import app
 from para_files.cli.classify_cmd import _classify_single_file
@@ -24,9 +24,6 @@ from para_files.cli.shared import (
     validate_directory_or_exit,
 )
 from para_files.pipeline import ClassificationPipeline
-
-
-logger = logging.getLogger(__name__)
 
 
 def _classify_file_for_scan(

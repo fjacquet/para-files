@@ -10,13 +10,13 @@ For folder-level operations (adding retention prefixes), use 'migrate' instead.
 from __future__ import annotations
 
 import json
-import logging
 import shutil
 from collections.abc import Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any
 
 import typer
+from loguru import logger
 
 from para_files.cli.app import app
 from para_files.cli.shared import (
@@ -28,8 +28,6 @@ from para_files.cli.shared import (
 if TYPE_CHECKING:
     from para_files.classifiers.taxonomy_classifier import TaxonomyClassifier
     from para_files.types import ClassificationResult
-
-logger = logging.getLogger(__name__)
 
 
 def _discover_archive_files(
@@ -376,8 +374,7 @@ def _run_rescan(
         # Show progress every 100 files
         if not output_json and results["files_scanned"] % 100 == 0:
             typer.echo(
-                f"  Processed {results['files_scanned']} files "
-                f"({results['files_moved']} moved)..."
+                f"  Processed {results['files_scanned']} files ({results['files_moved']} moved)..."
             )
 
         _process_file_rescan(

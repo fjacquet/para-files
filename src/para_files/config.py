@@ -36,6 +36,11 @@ DEFAULT_LLM_MODEL = "ollama/qwen2.5:1.5b"
 DEFAULT_LLM_CONFIDENCE_THRESHOLD = 0.6
 DEFAULT_CONTENT_PREVIEW_CHARS = 2000
 
+# Logging defaults
+DEFAULT_LOG_ROTATION = "10 MB"
+DEFAULT_LOG_RETENTION = "30 days"
+DEFAULT_LOG_LEVEL = "INFO"
+
 
 def _load_yaml_config(yaml_path: Path | None = None) -> dict[str, Any]:
     """Load config section from reference tree YAML.
@@ -146,6 +151,29 @@ class LLMConfig(BaseSettings):
     )
 
 
+class LoggingConfig(BaseSettings):
+    """Logging configuration for file and console output."""
+
+    model_config = SettingsConfigDict(env_prefix="PARA_FILES_LOG_")
+
+    level: str = Field(
+        default=DEFAULT_LOG_LEVEL,
+        description="Log level for file output (DEBUG, INFO, WARNING, ERROR)",
+    )
+    rotation: str = Field(
+        default=DEFAULT_LOG_ROTATION,
+        description="Log file rotation size (e.g., '10 MB', '100 MB', '1 GB')",
+    )
+    retention: str = Field(
+        default=DEFAULT_LOG_RETENTION,
+        description="Log file retention period (e.g., '7 days', '30 days', '1 year')",
+    )
+    compression: str = Field(
+        default="gz",
+        description="Compression format for rotated logs (gz, bz2, xz, zip)",
+    )
+
+
 class Config(BaseSettings):
     """Root configuration for para-files classification system."""
 
@@ -194,6 +222,7 @@ class Config(BaseSettings):
     # Nested configurations
     mlx: MLXConfig = Field(default_factory=MLXConfig)
     llm: LLMConfig = Field(default_factory=LLMConfig)
+    logging: LoggingConfig = Field(default_factory=LoggingConfig)
 
     @property
     def inbox_path(self) -> Path:
@@ -250,6 +279,7 @@ def load_config(
     # Handle nested configs from YAML
     mlx_yaml = yaml_config.pop("mlx", {})
     llm_yaml = yaml_config.pop("llm", {})
+    logging_yaml = yaml_config.pop("logging", {})
 
     # Expand ~ in para_root if present
     if "para_root" in yaml_config:
@@ -258,9 +288,16 @@ def load_config(
     # Build nested config objects (env vars override YAML)
     mlx_config = MLXConfig(**mlx_yaml)
     llm_config = LLMConfig(**llm_yaml)
+    logging_config = LoggingConfig(**logging_yaml)
 
     # Merge: YAML < env vars < overrides
     # pydantic-settings handles env var overlay automatically
-    merged = {**yaml_config, "mlx": mlx_config, "llm": llm_config, **overrides}
+    merged = {
+        **yaml_config,
+        "mlx": mlx_config,
+        "llm": llm_config,
+        "logging": logging_config,
+        **overrides,
+    }
 
     return Config(**merged)

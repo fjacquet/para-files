@@ -7,9 +7,10 @@ Handles special routing rules for photos, videos, courses, etc.
 from __future__ import annotations
 
 import fnmatch
-import logging
 import re
 from datetime import UTC, datetime
+
+from loguru import logger
 
 from para_files.classifiers.base import BaseClassifier
 from para_files.types import (
@@ -23,8 +24,6 @@ from para_files.types import (
 from para_files.utils.geolocation import LocationInfo, reverse_geocode
 from para_files.utils.technology_extractor import TechnologyExtractor
 
-
-logger = logging.getLogger(__name__)
 
 # Date validation constants
 MIN_YEAR = 1990

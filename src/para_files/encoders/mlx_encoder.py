@@ -5,16 +5,13 @@ Uses mlx-embedding-models to load embedding models optimized for Apple Silicon.
 
 from __future__ import annotations
 
-import logging
 import threading
 from typing import Any, ClassVar
 
+from loguru import logger
 from mlx_embedding_models.embedding import EmbeddingModel  # type: ignore[import-untyped]
 from pydantic import ConfigDict, PrivateAttr
 from semantic_router.encoders import DenseEncoder
-
-
-logger = logging.getLogger(__name__)
 
 
 class MLXEncoder(DenseEncoder):

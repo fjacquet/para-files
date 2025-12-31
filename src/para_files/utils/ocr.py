@@ -6,14 +6,12 @@ Falls back gracefully when Vision Framework is not available.
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import Any
 
+from loguru import logger
 from pydantic import BaseModel, Field
 
-
-logger = logging.getLogger(__name__)
 
 # Supported image extensions for OCR
 OCR_EXTENSIONS = frozenset(

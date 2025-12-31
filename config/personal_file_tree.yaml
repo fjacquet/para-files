@@ -13,7 +13,8 @@ generated: "2025-12-28"
 # =============================================================================
 config:
   # Root directory for PARA folders (0_Inbox, 1_Projects, etc.)
-  para_root: "~/OneDrive - Home/PARA"
+  # para_root: "~/OneDrive - Home/PARA"
+  para_root: "/Volumes/cloudsync/Fred/OneDrive4Business-LJF/PARA/"
 
   # Number of characters to extract for semantic matching
   content_preview_chars: 2000

@@ -6,11 +6,9 @@ consolidating duplicate validation logic from the CLI module.
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 def validate_file_exists(
