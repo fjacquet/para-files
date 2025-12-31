@@ -586,13 +586,24 @@ class TestCleanAdvanced:
         assert result.exit_code == 0
 
     def test_clean_removes_ds_store(self, tmp_path):
-        """Test clean removes .DS_Store files."""
+        """Test clean identifies .DS_Store files for deletion."""
+        import json
+        import re
+
         ds_store = tmp_path / ".DS_Store"
         ds_store.write_bytes(b"\x00\x00\x00\x01")
 
-        # Run without dry-run to actually delete
-        result = runner.invoke(app, ["clean", str(tmp_path)])
+        # Use dry-run to test identification (avoids CI permission issues)
+        result = runner.invoke(app, ["clean", str(tmp_path), "--dry-run", "--json"])
         assert result.exit_code == 0
+
+        # Extract JSON from output (may contain logger messages before JSON)
+        json_match = re.search(r"\{.*\}", result.output, re.DOTALL)
+        assert json_match is not None, f"No JSON found in output: {result.output}"
+        output = json.loads(json_match.group())
+        assert str(ds_store) in output["deleted_files"]
+        # File should still exist since it's dry-run
+        assert ds_store.exists()
 
 
 class TestInitAdvanced:
