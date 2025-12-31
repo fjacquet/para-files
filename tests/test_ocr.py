@@ -476,3 +476,190 @@ class TestExtractTextWithRegionsInternal:
             result = extract_text_with_regions(test_file)
 
         assert result is None
+
+
+class TestExtractTextVision:
+    """Tests for _extract_text_vision helper function."""
+
+    @patch("para_files.utils.ocr._extract_text_from_results")
+    @patch("para_files.utils.ocr._perform_ocr_request")
+    @patch("para_files.utils.ocr._load_cg_image")
+    def test_cg_image_failure(
+        self,
+        mock_load: MagicMock,
+        mock_request: MagicMock,
+        mock_extract: MagicMock,
+        tmp_path: Path,
+    ):
+        """Test when CGImage loading fails."""
+        from para_files.utils.ocr import _extract_text_vision
+
+        test_file = tmp_path / "test.png"
+        test_file.touch()
+
+        mock_load.return_value = None
+
+        result = _extract_text_vision(test_file)
+
+        assert result is None
+        mock_request.assert_not_called()
+        mock_extract.assert_not_called()
+
+    @patch("para_files.utils.ocr._extract_text_from_results")
+    @patch("para_files.utils.ocr._perform_ocr_request")
+    @patch("para_files.utils.ocr._load_cg_image")
+    def test_ocr_request_failure(
+        self,
+        mock_load: MagicMock,
+        mock_request: MagicMock,
+        mock_extract: MagicMock,
+        tmp_path: Path,
+    ):
+        """Test when OCR request fails."""
+        from para_files.utils.ocr import _extract_text_vision
+
+        test_file = tmp_path / "test.png"
+        test_file.touch()
+
+        mock_load.return_value = MagicMock()
+        mock_request.return_value = None
+
+        result = _extract_text_vision(test_file)
+
+        assert result is None
+        mock_extract.assert_not_called()
+
+    @patch("para_files.utils.ocr._extract_text_from_results")
+    @patch("para_files.utils.ocr._perform_ocr_request")
+    @patch("para_files.utils.ocr._load_cg_image")
+    def test_successful_extraction(
+        self,
+        mock_load: MagicMock,
+        mock_request: MagicMock,
+        mock_extract: MagicMock,
+        tmp_path: Path,
+    ):
+        """Test successful text extraction via Vision."""
+        from para_files.utils.ocr import _extract_text_vision
+
+        test_file = tmp_path / "test.png"
+        test_file.touch()
+
+        mock_load.return_value = MagicMock()
+        mock_request.return_value = [MagicMock()]
+        mock_extract.return_value = ("Extracted text", 0.95)
+
+        result = _extract_text_vision(test_file)
+
+        assert result == ("Extracted text", 0.95)
+
+    @patch("para_files.utils.ocr._load_cg_image")
+    def test_exception_handling(self, mock_load: MagicMock, tmp_path: Path):
+        """Test exception handling."""
+        from para_files.utils.ocr import _extract_text_vision
+
+        test_file = tmp_path / "test.png"
+        test_file.touch()
+
+        mock_load.side_effect = Exception("Load error")
+
+        result = _extract_text_vision(test_file)
+
+        assert result is None
+
+
+class TestOCRResultEdgeCases:
+    """Additional edge case tests for OCRResult."""
+
+    def test_ocr_result_empty_text(self):
+        """Test OCRResult with empty text."""
+        result = OCRResult(
+            text="",
+            confidence=0.0,
+            word_count=0,
+        )
+        assert result.text == ""
+        assert result.preview == ""
+        assert result.word_count == 0
+
+    def test_ocr_result_preview_exactly_500(self):
+        """Test preview with text exactly 500 characters."""
+        text = "x" * 500
+        result = OCRResult(
+            text=text,
+            confidence=0.9,
+            word_count=1,
+        )
+        assert result.preview == text
+        assert len(result.preview) == 500
+
+    def test_ocr_result_preview_501(self):
+        """Test preview with text exactly 501 characters."""
+        text = "x" * 501
+        result = OCRResult(
+            text=text,
+            confidence=0.9,
+            word_count=1,
+        )
+        assert result.preview.endswith("...")
+        assert len(result.preview) == 503
+
+
+class TestExtractTextEdgeCases:
+    """Additional edge case tests for extract_text."""
+
+    @patch("para_files.utils.ocr._extract_text_vision")
+    def test_heic_extension(self, mock_extract: MagicMock, tmp_path: Path):
+        """Test HEIC extension is supported."""
+        test_file = tmp_path / "photo.heic"
+        test_file.touch()
+
+        mock_extract.return_value = ("HEIC text", 0.9)
+
+        with patch("para_files.utils.ocr.is_vision_available", return_value=True):
+            result = extract_text(test_file)
+
+        assert result is not None
+        assert result.text == "HEIC text"
+
+    @patch("para_files.utils.ocr._extract_text_vision")
+    def test_webp_extension(self, mock_extract: MagicMock, tmp_path: Path):
+        """Test WebP extension is supported."""
+        test_file = tmp_path / "image.webp"
+        test_file.touch()
+
+        mock_extract.return_value = ("WebP text", 0.88)
+
+        with patch("para_files.utils.ocr.is_vision_available", return_value=True):
+            result = extract_text(test_file)
+
+        assert result is not None
+        assert result.text == "WebP text"
+
+    @patch("para_files.utils.ocr._extract_text_vision")
+    def test_uppercase_extension(self, mock_extract: MagicMock, tmp_path: Path):
+        """Test uppercase extension is handled."""
+        test_file = tmp_path / "image.PNG"
+        test_file.touch()
+
+        mock_extract.return_value = ("PNG text", 0.9)
+
+        with patch("para_files.utils.ocr.is_vision_available", return_value=True):
+            result = extract_text(test_file)
+
+        assert result is not None
+
+    @patch("para_files.utils.ocr._extract_text_vision")
+    def test_text_not_truncated_under_limit(self, mock_extract: MagicMock, tmp_path: Path):
+        """Test text is not truncated when under limit."""
+        test_file = tmp_path / "image.png"
+        test_file.touch()
+
+        short_text = "short text"
+        mock_extract.return_value = (short_text, 0.9)
+
+        with patch("para_files.utils.ocr.is_vision_available", return_value=True):
+            result = extract_text(test_file, max_chars=10000)
+
+        assert result is not None
+        assert result.text == short_text

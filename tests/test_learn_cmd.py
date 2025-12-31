@@ -142,6 +142,114 @@ class TestHandleKeywordAddition:
         learner.add_utterance.assert_not_called()
 
 
+class TestTrackCorrection:
+    """Tests for _track_correction function."""
+
+    @patch("para_files.cli.learn_cmd.FeedbackTracker")
+    @patch("para_files.utils.pdf_metadata.extract_pdf_metadata")
+    def test_track_correction_with_pdf_metadata(
+        self, mock_extract: MagicMock, mock_tracker_class: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test tracking correction with PDF metadata extraction."""
+        from para_files.cli.learn_cmd import _track_correction
+
+        pdf_file = tmp_path / "document.pdf"
+        pdf_file.write_bytes(b"%PDF-1.4")
+
+        mock_metadata = MagicMock()
+        mock_metadata.author = "John Doe"
+        mock_metadata.title = "Test Document"
+        mock_metadata.creator = "Test App"
+        mock_extract.return_value = mock_metadata
+
+        mock_tracker = MagicMock()
+        mock_tracker_class.return_value = mock_tracker
+
+        mock_result = MagicMock()
+        mock_result.category = "original_category"
+        mock_result.confidence.value = 0.85
+        mock_result.confidence.source.value = "semantic"
+
+        _track_correction(pdf_file, mock_result, "corrected_route", "preview content")
+
+        mock_tracker.record_correction.assert_called_once()
+        call_kwargs = mock_tracker.record_correction.call_args[1]
+        assert call_kwargs["original_category"] == "original_category"
+        assert call_kwargs["corrected_category"] == "corrected_route"
+        assert call_kwargs["metadata"]["author"] == "John Doe"
+
+    @patch("para_files.cli.learn_cmd.FeedbackTracker")
+    @patch("para_files.utils.pdf_metadata.extract_pdf_metadata")
+    def test_track_correction_no_metadata(
+        self, mock_extract: MagicMock, mock_tracker_class: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test tracking correction when no metadata available."""
+        from para_files.cli.learn_cmd import _track_correction
+
+        pdf_file = tmp_path / "document.pdf"
+        pdf_file.write_bytes(b"%PDF-1.4")
+
+        mock_extract.return_value = None
+
+        mock_tracker = MagicMock()
+        mock_tracker_class.return_value = mock_tracker
+
+        mock_result = MagicMock()
+        mock_result.category = "original"
+        mock_result.confidence.value = 0.75
+        mock_result.confidence.source.value = "rules"
+
+        _track_correction(pdf_file, mock_result, "new_route", "preview")
+
+        mock_tracker.record_correction.assert_called_once()
+
+    @patch("para_files.cli.learn_cmd.FeedbackTracker")
+    def test_track_correction_non_pdf(
+        self, mock_tracker_class: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test tracking correction for non-PDF file."""
+        from para_files.cli.learn_cmd import _track_correction
+
+        txt_file = tmp_path / "document.txt"
+        txt_file.write_text("Test content")
+
+        mock_tracker = MagicMock()
+        mock_tracker_class.return_value = mock_tracker
+
+        mock_result = MagicMock()
+        mock_result.category = "docs"
+        mock_result.confidence.value = 0.6
+        mock_result.confidence.source.value = "semantic"
+
+        _track_correction(txt_file, mock_result, "corrected", "preview")
+
+        mock_tracker.record_correction.assert_called_once()
+        call_kwargs = mock_tracker.record_correction.call_args[1]
+        # No metadata for non-PDF
+        assert call_kwargs["metadata"] == {}
+
+    @patch("para_files.cli.learn_cmd.FeedbackTracker")
+    def test_track_correction_none_result(
+        self, mock_tracker_class: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test tracking correction when original result is None."""
+        from para_files.cli.learn_cmd import _track_correction
+
+        txt_file = tmp_path / "document.txt"
+        txt_file.write_text("Test content")
+
+        mock_tracker = MagicMock()
+        mock_tracker_class.return_value = mock_tracker
+
+        _track_correction(txt_file, None, "new_route", "preview")
+
+        mock_tracker.record_correction.assert_called_once()
+        call_kwargs = mock_tracker.record_correction.call_args[1]
+        assert call_kwargs["original_category"] is None
+        assert call_kwargs["original_confidence"] == 0.0
+        assert call_kwargs["source"] == "unknown"
+
+
 class TestLearnCommand:
     """Tests for the learn CLI command."""
 
@@ -192,3 +300,189 @@ class TestLearnCommand:
         result = runner.invoke(app, ["learn", str(test_file)])
 
         assert "confirmed" in result.output.lower() or result.exit_code == 0
+
+    @patch("para_files.cli.learn_cmd._handle_keyword_addition")
+    @patch("para_files.cli.learn_cmd._track_correction")
+    @patch("para_files.utils.file_utils.read_content_preview")
+    @patch("para_files.learner.RoutingLearner")
+    @patch("para_files.cli.learn_cmd.ensure_tree_exists")
+    @patch("para_files.cli.learn_cmd.typer.prompt")
+    @patch("para_files.cli.learn_cmd.typer.confirm")
+    @patch("para_files.cli.learn_cmd.print_classification_result")
+    @patch("para_files.cli.learn_cmd.ClassificationPipeline")
+    @patch("para_files.cli.learn_cmd.load_config_or_exit")
+    @patch("para_files.cli.learn_cmd.validate_file_exists")
+    def test_learn_command_user_corrects(  # noqa: PLR0913
+        self,
+        mock_validate: MagicMock,
+        mock_config: MagicMock,
+        mock_pipeline_class: MagicMock,
+        mock_print: MagicMock,
+        mock_confirm: MagicMock,
+        mock_prompt: MagicMock,
+        mock_ensure_tree: MagicMock,
+        mock_learner_class: MagicMock,
+        mock_read_preview: MagicMock,
+        mock_track: MagicMock,
+        mock_keyword: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test learn command when user corrects classification."""
+        test_file = tmp_path / "document.pdf"
+        test_file.touch()
+
+        mock_validate.return_value = True
+        config = MagicMock()
+        config.reference_tree_path = tmp_path / "tree.yaml"
+        mock_config.return_value = config
+
+        mock_pipeline = MagicMock()
+        mock_pipeline.classify_file.return_value = MagicMock()
+        mock_pipeline.get_target_path.return_value = Path("/some/path")
+        mock_pipeline_class.return_value = mock_pipeline
+
+        mock_confirm.return_value = False  # User disagrees
+        mock_prompt.return_value = "1"  # Select first route
+
+        mock_learner = MagicMock()
+        mock_learner.list_routes.return_value = ["invoices", "receipts", "contracts"]
+        mock_learner_class.return_value = mock_learner
+
+        mock_read_preview.return_value = "file content preview"
+
+        result = runner.invoke(app, ["learn", str(test_file)])
+
+        assert result.exit_code == 0
+        mock_track.assert_called_once()
+        mock_keyword.assert_called_once()
+
+    @patch("para_files.learner.RoutingLearner")
+    @patch("para_files.cli.learn_cmd.ensure_tree_exists")
+    @patch("para_files.cli.learn_cmd.typer.prompt")
+    @patch("para_files.cli.learn_cmd.typer.confirm")
+    @patch("para_files.cli.learn_cmd.print_classification_result")
+    @patch("para_files.cli.learn_cmd.ClassificationPipeline")
+    @patch("para_files.cli.learn_cmd.load_config_or_exit")
+    @patch("para_files.cli.learn_cmd.validate_file_exists")
+    def test_learn_command_user_skips(  # noqa: PLR0913
+        self,
+        mock_validate: MagicMock,
+        mock_config: MagicMock,
+        mock_pipeline_class: MagicMock,
+        mock_print: MagicMock,
+        mock_confirm: MagicMock,
+        mock_prompt: MagicMock,
+        mock_ensure_tree: MagicMock,
+        mock_learner_class: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test learn command when user skips correction."""
+        test_file = tmp_path / "document.pdf"
+        test_file.touch()
+
+        mock_validate.return_value = True
+        config = MagicMock()
+        config.reference_tree_path = tmp_path / "tree.yaml"
+        mock_config.return_value = config
+
+        mock_pipeline = MagicMock()
+        mock_pipeline.classify_file.return_value = MagicMock()
+        mock_pipeline.get_target_path.return_value = Path("/some/path")
+        mock_pipeline_class.return_value = mock_pipeline
+
+        mock_confirm.return_value = False  # User disagrees
+        mock_prompt.return_value = "skip"  # User skips
+
+        mock_learner = MagicMock()
+        mock_learner.list_routes.return_value = ["invoices", "receipts"]
+        mock_learner_class.return_value = mock_learner
+
+        result = runner.invoke(app, ["learn", str(test_file)])
+
+        assert "cancelled" in result.output.lower()
+
+    @patch("para_files.learner.RoutingLearner")
+    @patch("para_files.cli.learn_cmd.ensure_tree_exists")
+    @patch("para_files.cli.learn_cmd.typer.prompt")
+    @patch("para_files.cli.learn_cmd.typer.confirm")
+    @patch("para_files.cli.learn_cmd.print_classification_result")
+    @patch("para_files.cli.learn_cmd.ClassificationPipeline")
+    @patch("para_files.cli.learn_cmd.load_config_or_exit")
+    @patch("para_files.cli.learn_cmd.validate_file_exists")
+    def test_learn_command_invalid_selection(  # noqa: PLR0913
+        self,
+        mock_validate: MagicMock,
+        mock_config: MagicMock,
+        mock_pipeline_class: MagicMock,
+        mock_print: MagicMock,
+        mock_confirm: MagicMock,
+        mock_prompt: MagicMock,
+        mock_ensure_tree: MagicMock,
+        mock_learner_class: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test learn command with invalid route selection."""
+        test_file = tmp_path / "document.pdf"
+        test_file.touch()
+
+        mock_validate.return_value = True
+        config = MagicMock()
+        config.reference_tree_path = tmp_path / "tree.yaml"
+        mock_config.return_value = config
+
+        mock_pipeline = MagicMock()
+        mock_pipeline.classify_file.return_value = MagicMock()
+        mock_pipeline.get_target_path.return_value = Path("/some/path")
+        mock_pipeline_class.return_value = mock_pipeline
+
+        mock_confirm.return_value = False
+        mock_prompt.return_value = "99"  # Invalid selection
+
+        mock_learner = MagicMock()
+        mock_learner.list_routes.return_value = ["invoices", "receipts"]
+        mock_learner_class.return_value = mock_learner
+
+        result = runner.invoke(app, ["learn", str(test_file)])
+
+        assert result.exit_code == 1
+        assert "invalid" in result.output.lower()
+
+    @patch("para_files.cli.learn_cmd.typer.confirm")
+    @patch("para_files.cli.learn_cmd.print_classification_result")
+    @patch("para_files.cli.learn_cmd.ClassificationPipeline")
+    @patch("para_files.cli.learn_cmd.load_config_or_exit")
+    @patch("para_files.cli.learn_cmd.validate_file_exists")
+    def test_learn_with_reference_tree_option(
+        self,
+        mock_validate: MagicMock,
+        mock_config: MagicMock,
+        mock_pipeline_class: MagicMock,
+        mock_print: MagicMock,
+        mock_confirm: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test learn command with custom reference tree."""
+        test_file = tmp_path / "document.pdf"
+        test_file.touch()
+        custom_tree = tmp_path / "custom_tree.yaml"
+        custom_tree.write_text("routes: []")
+
+        mock_validate.return_value = True
+        config = MagicMock()
+        config.reference_tree_path = tmp_path / "default.yaml"
+        mock_config.return_value = config
+
+        mock_pipeline = MagicMock()
+        mock_pipeline.classify_file.return_value = MagicMock()
+        mock_pipeline.get_target_path.return_value = Path("/some/path")
+        mock_pipeline_class.return_value = mock_pipeline
+
+        mock_confirm.return_value = True
+
+        result = runner.invoke(
+            app, ["learn", str(test_file), "--reference-tree", str(custom_tree)]
+        )
+
+        assert result.exit_code == 0
+        # Verify config was updated with custom tree path
+        assert config.reference_tree_path == custom_tree

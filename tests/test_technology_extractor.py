@@ -366,3 +366,248 @@ class TestLazyEncoderLoading:
         extractor = TechnologyExtractor()
         result = extractor._ensure_tech_embeddings()
         assert result is False
+
+
+class TestEnsureTechEmbeddings:
+    """Test _ensure_tech_embeddings method."""
+
+    def test_embeddings_cached_after_first_call(self) -> None:
+        """Test that embeddings are cached and reused."""
+        extractor = TechnologyExtractor(technologies=["Docker", "Python"])
+        # Pre-set embeddings to simulate already computed
+        extractor._tech_embeddings = [[0.1, 0.2], [0.3, 0.4]]
+        # Should return True immediately without computing
+        result = extractor._ensure_tech_embeddings()
+        assert result is True
+        # Embeddings should be unchanged
+        assert extractor._tech_embeddings == [[0.1, 0.2], [0.3, 0.4]]
+
+    @patch("para_files.utils.technology_extractor.TechnologyExtractor._get_encoder")
+    def test_embeddings_computed_for_custom_tech(self, mock_get_encoder: MagicMock) -> None:
+        """Test embeddings computed for custom technologies without descriptions."""
+        mock_encoder = MagicMock()
+        mock_encoder.return_value = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
+        mock_get_encoder.return_value = mock_encoder
+
+        # Use custom tech that's not in TECHNOLOGY_DESCRIPTIONS
+        extractor = TechnologyExtractor(technologies=["CustomTech", "AnotherTech"])
+        result = extractor._ensure_tech_embeddings()
+
+        assert result is True
+        # Encoder should be called with tech names as descriptions
+        mock_encoder.assert_called_once()
+        call_args = mock_encoder.call_args[0][0]
+        assert "CustomTech" in call_args
+        assert "AnotherTech" in call_args
+
+    @patch("para_files.utils.technology_extractor.TechnologyExtractor._get_encoder")
+    def test_embeddings_use_descriptions_when_available(
+        self, mock_get_encoder: MagicMock
+    ) -> None:
+        """Test that TECHNOLOGY_DESCRIPTIONS are used when available."""
+        mock_encoder = MagicMock()
+        mock_encoder.return_value = [[0.1, 0.2]]
+        mock_get_encoder.return_value = mock_encoder
+
+        extractor = TechnologyExtractor(technologies=["Docker"])
+        extractor._ensure_tech_embeddings()
+
+        mock_encoder.assert_called_once()
+        call_args = mock_encoder.call_args[0][0]
+        # Should use the description from TECHNOLOGY_DESCRIPTIONS
+        assert "Docker containers containerization images" in call_args[0]
+
+    @patch("para_files.utils.technology_extractor.TechnologyExtractor._get_encoder")
+    def test_embedding_computation_failure(self, mock_get_encoder: MagicMock) -> None:
+        """Test handling of embedding computation failure."""
+        mock_encoder = MagicMock()
+        mock_encoder.side_effect = RuntimeError("Embedding failed")
+        mock_get_encoder.return_value = mock_encoder
+
+        extractor = TechnologyExtractor(technologies=["Docker"])
+        result = extractor._ensure_tech_embeddings()
+
+        assert result is False
+        assert extractor._tech_embeddings is None
+
+
+class TestExtractFromContentWithMockedEncoder:
+    """Test extract_from_content with mocked encoder for full coverage."""
+
+    @patch("para_files.utils.technology_extractor.TechnologyExtractor._get_encoder")
+    def test_content_extraction_with_match(self, mock_get_encoder: MagicMock) -> None:
+        """Test content extraction finds matching technology."""
+        mock_encoder = MagicMock()
+        # Return embeddings for technologies (Docker, Python)
+        # and for the document content
+        tech_embeddings = [
+            [1.0, 0.0, 0.0],  # Docker
+            [0.0, 1.0, 0.0],  # Python
+        ]
+        doc_embedding = [[0.9, 0.1, 0.0]]  # Similar to Docker
+
+        call_count = [0]
+
+        def encoder_side_effect(texts: list[str]) -> list[list[float]]:
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return tech_embeddings
+            return doc_embedding
+
+        mock_encoder.side_effect = encoder_side_effect
+        mock_get_encoder.return_value = mock_encoder
+
+        extractor = TechnologyExtractor(technologies=["Docker", "Python"], threshold=0.4)
+        tech, score = extractor.extract_from_content("Docker containers deployment")
+
+        assert tech == "Docker"
+        assert score > 0.4
+
+    @patch("para_files.utils.technology_extractor.TechnologyExtractor._get_encoder")
+    def test_content_extraction_below_threshold(self, mock_get_encoder: MagicMock) -> None:
+        """Test content extraction returns None when below threshold."""
+        mock_encoder = MagicMock()
+        tech_embeddings = [
+            [1.0, 0.0, 0.0],  # Docker
+            [0.0, 1.0, 0.0],  # Python
+        ]
+        doc_embedding = [[0.1, 0.1, 0.8]]  # Not similar to either
+
+        call_count = [0]
+
+        def encoder_side_effect(texts: list[str]) -> list[list[float]]:
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return tech_embeddings
+            return doc_embedding
+
+        mock_encoder.side_effect = encoder_side_effect
+        mock_get_encoder.return_value = mock_encoder
+
+        extractor = TechnologyExtractor(technologies=["Docker", "Python"], threshold=0.8)
+        tech, score = extractor.extract_from_content("Random unrelated content")
+
+        assert tech is None
+        assert score == 0.0
+
+    @patch("para_files.utils.technology_extractor.TechnologyExtractor._get_encoder")
+    def test_content_extraction_exception_handling(self, mock_get_encoder: MagicMock) -> None:
+        """Test exception during content extraction is handled."""
+        mock_encoder = MagicMock()
+        # First call succeeds (tech embeddings), second fails (doc embedding)
+        tech_embeddings = [[1.0, 0.0], [0.0, 1.0]]
+
+        call_count = [0]
+
+        def encoder_side_effect(texts: list[str]) -> list[list[float]]:
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return tech_embeddings
+            msg = "Encoding failed"
+            raise RuntimeError(msg)
+
+        mock_encoder.side_effect = encoder_side_effect
+        mock_get_encoder.return_value = mock_encoder
+
+        extractor = TechnologyExtractor(technologies=["Docker", "Python"])
+        tech, score = extractor.extract_from_content("Some content")
+
+        assert tech is None
+        assert score == 0.0
+
+    @patch("para_files.utils.technology_extractor.TechnologyExtractor._get_encoder")
+    def test_content_extraction_with_none_embeddings(
+        self, mock_get_encoder: MagicMock
+    ) -> None:
+        """Test content extraction when tech embeddings are None after ensure."""
+        mock_encoder = MagicMock()
+        mock_get_encoder.return_value = mock_encoder
+
+        extractor = TechnologyExtractor(technologies=["Docker"])
+        # Force embeddings to be computed but then set to None
+        extractor._tech_embeddings = None
+
+        # Mock _ensure_tech_embeddings to return True but leave embeddings None
+        with patch.object(extractor, "_ensure_tech_embeddings", return_value=True):
+            tech, score = extractor.extract_from_content("Docker content")
+
+        assert tech is None
+        assert score == 0.0
+
+
+class TestExtractWithContentFallback:
+    """Test extract method with content fallback."""
+
+    @patch("para_files.utils.technology_extractor.TechnologyExtractor._get_encoder")
+    def test_content_fallback_when_filename_no_match(
+        self, mock_get_encoder: MagicMock
+    ) -> None:
+        """Test that content is used when filename doesn't match."""
+        mock_encoder = MagicMock()
+        tech_embeddings = [[1.0, 0.0, 0.0]]  # Docker
+        doc_embedding = [[0.95, 0.05, 0.0]]  # Very similar to Docker
+
+        call_count = [0]
+
+        def encoder_side_effect(texts: list[str]) -> list[list[float]]:
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return tech_embeddings
+            return doc_embedding
+
+        mock_encoder.side_effect = encoder_side_effect
+        mock_get_encoder.return_value = mock_encoder
+
+        extractor = TechnologyExtractor(technologies=["Docker"], threshold=0.4)
+        file_path = Path("/docs/random-guide.pdf")  # No tech in filename
+        tech, confidence, source = extractor.extract(
+            file_path, content="Docker container deployment guide"
+        )
+
+        assert tech == "Docker"
+        assert source == "content"
+        assert confidence > 0.4
+
+    def test_no_content_and_no_filename_match(self) -> None:
+        """Test returns none when no filename match and no content provided."""
+        extractor = TechnologyExtractor()
+        file_path = Path("/docs/random-guide.pdf")
+        tech, confidence, source = extractor.extract(file_path, content=None)
+
+        assert tech is None
+        assert confidence == 0.0
+        assert source == "none"
+
+
+class TestGetEncoder:
+    """Test _get_encoder method."""
+
+    def test_get_encoder_caches_result(self) -> None:
+        """Test that encoder is cached after first load."""
+        extractor = TechnologyExtractor()
+        # Pre-set encoder to simulate already loaded
+        mock_encoder = MagicMock()
+        extractor._encoder = mock_encoder
+
+        result = extractor._get_encoder()
+        assert result is mock_encoder
+
+    @patch("para_files.utils.technology_extractor.MLXEncoder", create=True)
+    def test_get_encoder_loads_mlx(self, mock_mlx_class: MagicMock) -> None:
+        """Test encoder loads MLX when available."""
+        mock_instance = MagicMock()
+        mock_mlx_class.return_value = mock_instance
+
+        with patch.dict(
+            "sys.modules",
+            {"para_files.encoders": MagicMock(MLXEncoder=mock_mlx_class)},
+        ):
+            extractor = TechnologyExtractor()
+            extractor._encoder = None
+            # Patch the import inside _get_encoder
+            with patch(
+                "para_files.utils.technology_extractor.TechnologyExtractor._get_encoder"
+            ) as mock_get:
+                mock_get.return_value = mock_instance
+                result = extractor._get_encoder()
+                assert result is mock_instance

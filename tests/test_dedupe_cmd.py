@@ -6,7 +6,9 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from typer.testing import CliRunner
 
+from para_files.cli.app import app
 from para_files.cli.dedupe_cmd import (
     _DUPLICATE_SUFFIX_PATTERN,
     _find_suffixed_duplicates,
@@ -14,6 +16,9 @@ from para_files.cli.dedupe_cmd import (
     _handle_identical_duplicate,
     _process_duplicate_pair,
 )
+
+
+runner = CliRunner()
 
 
 class TestDuplicateSuffixPattern:
@@ -227,6 +232,57 @@ class TestHandleDifferentFiles:
         assert "Kept" in captured.out
 
 
+class TestHandleIdenticalDuplicateVerbose:
+    """Test _handle_identical_duplicate verbose output."""
+
+    def test_verbose_output(self, tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
+        """Test verbose output for identical files."""
+        duplicate = tmp_path / "file_1.pdf"
+        duplicate.write_text("content")
+        original = tmp_path / "file.pdf"
+        original.write_text("content")
+
+        results: dict[str, Any] = {"deleted": [], "kept": [], "different": []}
+
+        _handle_identical_duplicate(
+            duplicate,
+            original,
+            results,
+            dry_run=True,
+            output_json=False,
+            verbose=True,
+        )
+
+        captured = capsys.readouterr()
+        assert "Would delete" in captured.out
+        assert "identical to" in captured.out
+
+
+class TestHandleDifferentFilesNonJson:
+    """Test _handle_different_files non-JSON output."""
+
+    def test_non_verbose_no_output(self, tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
+        """Test that non-verbose, non-JSON mode produces no output."""
+        duplicate = tmp_path / "file_1.pdf"
+        duplicate.write_text("different")
+        original = tmp_path / "file.pdf"
+        original.write_text("original")
+
+        results: dict[str, Any] = {"deleted": [], "kept": [], "different": []}
+
+        _handle_different_files(
+            duplicate,
+            original,
+            results,
+            output_json=False,
+            verbose=False,
+        )
+
+        captured = capsys.readouterr()
+        # No output when not verbose and not JSON
+        assert captured.out == ""
+
+
 class TestProcessDuplicatePair:
     """Test _process_duplicate_pair function."""
 
@@ -294,3 +350,126 @@ class TestProcessDuplicatePair:
         assert status == "error"
         assert len(results["kept"]) == 1
         assert "error" in results["kept"][0]
+
+    def test_handles_error_non_json(self, tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
+        """Test error handling with non-JSON output."""
+        duplicate = tmp_path / "file_1.pdf"
+        duplicate.write_text("content")
+        original = tmp_path / "nonexistent.pdf"
+
+        results: dict[str, Any] = {"deleted": [], "kept": [], "different": []}
+
+        status = _process_duplicate_pair(
+            duplicate,
+            original,
+            results,
+            dry_run=False,
+            output_json=False,
+            verbose=False,
+        )
+
+        assert status == "error"
+        captured = capsys.readouterr()
+        assert "Error processing" in captured.err
+
+
+class TestDedupeCommand:
+    """Test the dedupe CLI command."""
+
+    def test_dedupe_command_help(self) -> None:
+        """Test dedupe command help."""
+        result = runner.invoke(app, ["dedupe", "--help"])
+        assert result.exit_code == 0
+        assert "Remove duplicate files with _N suffix" in result.output
+
+    def test_dedupe_no_duplicates(self, tmp_path: Path) -> None:
+        """Test dedupe with no duplicates found."""
+        (tmp_path / "file.pdf").write_text("content")
+
+        result = runner.invoke(app, ["dedupe", str(tmp_path)])
+        assert result.exit_code == 0
+        assert "Deleted: 0" in result.output or "Would delete: 0" in result.output
+
+    def test_dedupe_dry_run(self, tmp_path: Path) -> None:
+        """Test dedupe in dry-run mode."""
+        content = "same content"
+        (tmp_path / "file.pdf").write_text(content)
+        (tmp_path / "file_1.pdf").write_text(content)
+
+        result = runner.invoke(app, ["dedupe", str(tmp_path), "--dry-run"])
+        assert result.exit_code == 0
+        assert "[DRY-RUN]" in result.output
+        assert "Would delete" in result.output
+        # File should still exist
+        assert (tmp_path / "file_1.pdf").exists()
+
+    def test_dedupe_actual_delete(self, tmp_path: Path) -> None:
+        """Test dedupe with actual deletion."""
+        content = "same content"
+        (tmp_path / "file.pdf").write_text(content)
+        (tmp_path / "file_1.pdf").write_text(content)
+
+        result = runner.invoke(app, ["dedupe", str(tmp_path)])
+        assert result.exit_code == 0
+        assert "Deleted: 1" in result.output
+        # Duplicate should be deleted
+        assert not (tmp_path / "file_1.pdf").exists()
+        # Original should remain
+        assert (tmp_path / "file.pdf").exists()
+
+    def test_dedupe_json_output(self, tmp_path: Path) -> None:
+        """Test dedupe with JSON output."""
+        import json
+        import re
+
+        content = "same content"
+        (tmp_path / "file.pdf").write_text(content)
+        (tmp_path / "file_1.pdf").write_text(content)
+
+        result = runner.invoke(app, ["dedupe", str(tmp_path), "--dry-run", "--json"])
+        assert result.exit_code == 0
+
+        # Extract JSON from output
+        json_match = re.search(r"\{.*\}", result.output, re.DOTALL)
+        assert json_match is not None, f"No JSON in output: {result.output}"
+        output = json.loads(json_match.group())
+        assert "deleted" in output
+        assert len(output["deleted"]) == 1
+
+    def test_dedupe_verbose(self, tmp_path: Path) -> None:
+        """Test dedupe with verbose output."""
+        content = "same content"
+        (tmp_path / "file.pdf").write_text(content)
+        (tmp_path / "file_1.pdf").write_text(content)
+
+        result = runner.invoke(app, ["dedupe", str(tmp_path), "--dry-run", "-v"])
+        assert result.exit_code == 0
+        assert "candidate" in result.output.lower()
+
+    def test_dedupe_recursive_finds_subdirs(self, tmp_path: Path) -> None:
+        """Test dedupe recursive mode finds files in subdirectories."""
+        subdir = tmp_path / "subdir"
+        subdir.mkdir()
+        content = "same content"
+        (subdir / "file.pdf").write_text(content)
+        (subdir / "file_1.pdf").write_text(content)
+
+        # Recursive is the default
+        result = runner.invoke(app, ["dedupe", str(tmp_path), "--dry-run"])
+        assert result.exit_code == 0
+        # Should find the duplicate in subdirectory
+        assert "Would delete: 1" in result.output
+
+    def test_dedupe_with_different_files(self, tmp_path: Path) -> None:
+        """Test dedupe with files that have different content."""
+        (tmp_path / "file.pdf").write_text("original")
+        (tmp_path / "file_1.pdf").write_text("different")
+
+        result = runner.invoke(app, ["dedupe", str(tmp_path), "-v"])
+        assert result.exit_code == 0
+        assert "Kept (different content): 1" in result.output
+
+    def test_dedupe_nonexistent_directory(self) -> None:
+        """Test dedupe with non-existent directory."""
+        result = runner.invoke(app, ["dedupe", "/nonexistent/path"])
+        assert result.exit_code != 0 or "not exist" in result.output.lower()
