@@ -114,7 +114,7 @@ class TechnologyExtractor:
 
         try:
             self._tech_embeddings = encoder(descriptions)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Failed to compute technology embeddings")
             return False
         else:
@@ -160,7 +160,7 @@ class TechnologyExtractor:
             if best_score >= self._threshold:
                 return self._technologies[best_idx], best_score
 
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Error in semantic technology extraction")
 
         return None, 0.0

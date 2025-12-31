@@ -196,7 +196,7 @@ class ClassificationPipeline:
                         result.confidence.value * 100,
                     )
                     return result
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.exception("Classifier %s failed", classifier.name)
                 continue
 

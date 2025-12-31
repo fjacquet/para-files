@@ -279,7 +279,7 @@ def _run_exiftool(file_path: Path) -> dict[str, object] | None:
         logger.warning("exiftool timed out for: %s", file_path)
     except json.JSONDecodeError:
         logger.warning("exiftool returned invalid JSON for: %s", file_path)
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.exception("Failed to extract EXIF from: %s", file_path)
 
     return None

@@ -213,7 +213,7 @@ def _handle_move_file(
         else:
             _print_move_result(file_path, result, move_result, action_verb)
 
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.exception("Failed to process %s", file_path)
         if output_json:
             results.append({"source_file": str(file_path), "error": "processing failed"})

@@ -141,7 +141,7 @@ def _classify_files_sequential(
                 results.append(format_result_json(file_path, result, target_path))
             else:
                 print_classification_result(file_path, result, target_path)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Failed to classify %s", file_path)
             if output_json:
                 results.append({"source_file": str(file_path), "error": "classification failed"})

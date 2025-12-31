@@ -124,7 +124,7 @@ class MLXLLMClassifier(BaseClassifier):
         except ImportError:
             logger.warning("mlx-lm not installed, MLX-LLM classifier disabled")
             return False
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Failed to load MLX-LM model: %s", self._model_name)
             return False
         else:
@@ -156,7 +156,7 @@ class MLXLLMClassifier(BaseClassifier):
 
         try:
             return self._generate_classification(content, metadata)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("MLX-LLM classification failed")
             return None
 
