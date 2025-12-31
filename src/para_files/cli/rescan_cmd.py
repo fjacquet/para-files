@@ -172,6 +172,48 @@ def _cleanup_empty_dirs(base_path: Path, *, dry_run: bool = True) -> list[Path]:
     return removed
 
 
+_MIN_PATH_DEPTH_FOR_CATEGORY = 2  # Minimum parts: PARA_folder/category/...
+_MAX_ERRORS_TO_DISPLAY = 5
+
+
+def _get_category_from_path(path: Path, base_path: Path) -> str:
+    """Extract the category folder name from a destination path.
+
+    Args:
+        path: Full destination path.
+        base_path: PARA root directory.
+
+    Returns:
+        Category folder name (e.g., "10y_fiscalite" or "identite").
+    """
+    try:
+        relative = path.relative_to(base_path)
+        parts = relative.parts
+        # Category is typically the second part: 4_Archives/category/... or 3_Resources/category/...
+        if len(parts) >= _MIN_PATH_DEPTH_FOR_CATEGORY:
+            return parts[1]
+    except ValueError:
+        pass
+    return "unknown"
+
+
+def _format_relative_dest(dest_path: Path, base_path: Path) -> str:
+    """Format destination path relative to base for display.
+
+    Args:
+        dest_path: Full destination path.
+        base_path: PARA root directory.
+
+    Returns:
+        Shortened relative path for display.
+    """
+    try:
+        relative = dest_path.relative_to(base_path)
+        return str(relative.parent)
+    except ValueError:
+        return str(dest_path.parent)
+
+
 def _process_file_rescan(
     file_path: Path,
     base_path: Path,
@@ -206,40 +248,73 @@ def _process_file_rescan(
 
     results["files_need_move"] += 1
 
+    # Track category for breakdown
+    category = _get_category_from_path(expected_path, base_path)
+
     move_result = _move_file(file_path, expected_path, dry_run=dry_run)
+    move_result["category"] = category
     results["moves"].append(move_result)
 
     if move_result["success"]:
         results["files_moved"] += 1
+        # Track by category
+        results["by_category"][category] = results["by_category"].get(category, 0) + 1
     elif move_result["action"] == "skipped":
         results["files_skipped"] += 1
     else:
         results["files_errored"] += 1
         results["errors"].append(move_result)
 
-    if verbose and not output_json:
-        status = "+" if move_result["success"] else "x"
-        typer.echo(f"  {status} {file_path.name} -> {expected_path.parent.name}/")
+    # Always show moves (not just in verbose mode) - this is the key info users want
+    if not output_json and move_result["success"]:
+        action = "→" if not dry_run else "⟶ (dry-run)"
+        rel_dest = _format_relative_dest(expected_path, base_path)
+        typer.echo(f"  {file_path.name}")
+        typer.echo(f"    {action} {rel_dest}/")
+    elif verbose and not output_json and not move_result["success"]:
+        typer.echo(f"  ✗ {file_path.name}: {move_result.get('message', 'failed')}")
 
 
 def _print_summary(results: dict[str, Any], *, dry_run: bool) -> None:
-    """Print rescan summary."""
+    """Print rescan summary with category breakdown."""
     typer.echo("")
-    typer.echo("=" * 50)
-    typer.echo("Rescan Summary:")
-    typer.echo(f"  Files scanned:        {results['files_scanned']}")
-    typer.echo(f"  Files need move:      {results['files_need_move']}")
+    typer.echo("=" * 60)
+    typer.echo("Rescan Summary")
+    typer.echo("=" * 60)
+    typer.echo(f"  Files scanned:      {results['files_scanned']:,}")
+    typer.echo(f"  Files need move:    {results['files_need_move']:,}")
 
     if dry_run:
-        typer.echo(f"  Would move:           {results['files_moved']}")
-        typer.echo(f"  Would skip:           {results['files_skipped']}")
+        typer.echo(f"  Would move:         {results['files_moved']:,}")
+        typer.echo(f"  Would skip:         {results['files_skipped']:,}")
+    else:
+        typer.echo(f"  Moved:              {results['files_moved']:,}")
+        typer.echo(f"  Skipped:            {results['files_skipped']:,}")
+        typer.echo(f"  Errors:             {results['files_errored']:,}")
+        typer.echo(f"  Empty dirs removed: {results['empty_dirs_removed']:,}")
+
+    # Category breakdown
+    by_category = results.get("by_category", {})
+    if by_category:
+        typer.echo("")
+        typer.echo("Moves by category:")
+        # Sort by count descending
+        for category, count in sorted(by_category.items(), key=lambda x: -x[1]):
+            typer.echo(f"  {category:30} {count:,}")
+
+    # Show errors if any
+    if results.get("errors"):
+        typer.echo("")
+        typer.echo("Errors:")
+        for err in results["errors"][:_MAX_ERRORS_TO_DISPLAY]:
+            typer.echo(f"  ✗ {Path(err['source']).name}: {err.get('message', 'unknown')}")
+        remaining = len(results["errors"]) - _MAX_ERRORS_TO_DISPLAY
+        if remaining > 0:
+            typer.echo(f"  ... and {remaining} more errors")
+
+    if dry_run:
         typer.echo("")
         typer.echo("This was a dry run. Use --no-dry-run to execute.")
-    else:
-        typer.echo(f"  Moved:                {results['files_moved']}")
-        typer.echo(f"  Skipped:              {results['files_skipped']}")
-        typer.echo(f"  Errors:               {results['files_errored']}")
-        typer.echo(f"  Empty dirs removed:   {results['empty_dirs_removed']}")
 
 
 def _run_rescan(
@@ -281,6 +356,7 @@ def _run_rescan(
         "empty_dirs_removed": 0,
         "moves": [],
         "errors": [],
+        "by_category": {},  # Track moves per category for summary
     }
 
     if not output_json:

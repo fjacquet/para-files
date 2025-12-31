@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Reuses single TaxonomyClassifier instance (faster classification)
   - Shows progress every 100 files with live move count
   - Better for large archives (10k+ files)
+- **Enhanced rescan logging**: Much more informative output showing exactly what's happening
+  - Each moved file shows source filename and full destination path
+  - Summary includes category breakdown (moves per category)
+  - Errors section shows first 5 failures with filenames
+  - Dry-run mode clearly indicates simulated moves
 
 ### Added
 
