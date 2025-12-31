@@ -205,7 +205,7 @@ def dedupe(
     ] = True,
     dry_run: Annotated[
         bool,
-        typer.Option("--dry-run", "-n", help="Preview deletions without actually deleting"),
+        typer.Option("--dry-run/--no-dry-run", "-n", help="Preview deletions without actually deleting"),
     ] = False,
     output_json: Annotated[
         bool, typer.Option("--json", "-j", help="Output results as JSON")

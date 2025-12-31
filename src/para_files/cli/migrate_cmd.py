@@ -582,7 +582,7 @@ def migrate(
         typer.Option(
             "--dry-run/--no-dry-run", "-n/-N", help="Preview changes without moving/renaming"
         ),
-    ] = True,
+    ] = False,
     merge: Annotated[
         bool,
         typer.Option("--merge", "-m", help="Merge into existing folders instead of skipping"),
@@ -611,11 +611,11 @@ def migrate(
 
     \b
     Examples:
-        # Preview all migrations (uses config para_root)
+        # Migrate all folders (uses config para_root)
         uv run para-files migrate
 
-        # Execute migration
-        uv run para-files migrate --no-dry-run
+        # Preview without moving
+        uv run para-files migrate --dry-run
 
         # Merge into existing folders (when destination exists)
         uv run para-files migrate --merge

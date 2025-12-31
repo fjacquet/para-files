@@ -312,8 +312,8 @@ def rescan(
     ] = None,
     dry_run: Annotated[
         bool,
-        typer.Option("--dry-run", "-n", help="Preview changes without moving files"),
-    ] = True,
+        typer.Option("--dry-run/--no-dry-run", "-n", help="Preview changes without moving files"),
+    ] = False,
     category: Annotated[
         str | None,
         typer.Option("--category", "-c", help="Rescan only a specific category"),
@@ -347,11 +347,11 @@ def rescan(
 
     \b
     Examples:
-        # Preview all rescans (uses config para_root)
+        # Rescan all files (uses config para_root)
         uv run para-files rescan
 
-        # Execute rescan
-        uv run para-files rescan --no-dry-run
+        # Preview without moving files
+        uv run para-files rescan --dry-run
 
         # Rescan only fiscal documents
         uv run para-files rescan --category fiscalite

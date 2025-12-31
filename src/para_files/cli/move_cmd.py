@@ -288,7 +288,7 @@ def move(
     ] = None,
     dry_run: Annotated[
         bool,
-        typer.Option("--dry-run", "-n", help="Preview without moving files"),
+        typer.Option("--dry-run/--no-dry-run", "-n", help="Preview without moving files"),
     ] = False,
     copy: Annotated[
         bool,

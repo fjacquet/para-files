@@ -127,7 +127,7 @@ def init(
     ] = False,
     dry_run: Annotated[
         bool,
-        typer.Option("--dry-run", "-n", help="Preview folders without creating them"),
+        typer.Option("--dry-run/--no-dry-run", "-n", help="Preview folders without creating them"),
     ] = False,
     verbose: Annotated[
         bool, typer.Option("--verbose", "-v", help="Enable verbose logging")
