@@ -91,7 +91,6 @@ def _resolve_pattern(para_pattern: str, extracted_params: dict[str, str]) -> str
     return re.sub(r"/+", "/", category_path).rstrip("/")
 
 
-
 class SemanticClassifier(BaseClassifier):
     """Semantic classifier using MLX embeddings.
 

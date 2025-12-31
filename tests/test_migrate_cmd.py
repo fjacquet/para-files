@@ -222,9 +222,7 @@ class TestDiscoverFoldersToMigrate:
             },
         }
 
-        migrations = _discover_folders_to_migrate(
-            tmp_path, mapping, category_filter="fiscal"
-        )
+        migrations = _discover_folders_to_migrate(tmp_path, mapping, category_filter="fiscal")
 
         assert len(migrations) == 1
         assert migrations[0][0].name == "fiscalite"
@@ -375,9 +373,7 @@ class TestMigrateCommand:
 
     @patch("para_files.cli.migrate_cmd.load_config_or_exit")
     @patch("para_files.cli.migrate_cmd._run_migration")
-    def test_migrate_command_help(
-        self, mock_run: MagicMock, mock_config: MagicMock
-    ) -> None:
+    def test_migrate_command_help(self, mock_run: MagicMock, mock_config: MagicMock) -> None:
         """Test migrate command help."""
         result = runner.invoke(app, ["migrate", "--help"])
         assert result.exit_code == 0
@@ -439,9 +435,7 @@ class TestMigrateCommand:
             "migrations": [],
         }
 
-        result = runner.invoke(
-            app, ["migrate", str(tmp_path), "--category", "fiscalite"]
-        )
+        result = runner.invoke(app, ["migrate", str(tmp_path), "--category", "fiscalite"])
         assert result.exit_code == 0
         mock_run.assert_called_once()
         call_kwargs = mock_run.call_args[1]

@@ -266,9 +266,7 @@ class TestRunRescan:
         assert results["files_need_move"] == 0
 
     @patch("para_files.cli.rescan_cmd._classify_for_rescan")
-    def test_run_rescan_with_files(
-        self, mock_classify: MagicMock, tmp_path: Path
-    ) -> None:
+    def test_run_rescan_with_files(self, mock_classify: MagicMock, tmp_path: Path) -> None:
         """Test running rescan with files."""
         # Create test file
         archives = tmp_path / "4_Archives" / "old" / "2024"
@@ -294,9 +292,7 @@ class TestRunRescan:
         assert results["files_need_move"] == 1
 
     @patch("para_files.cli.rescan_cmd._classify_for_rescan")
-    def test_run_rescan_no_category(
-        self, mock_classify: MagicMock, tmp_path: Path
-    ) -> None:
+    def test_run_rescan_no_category(self, mock_classify: MagicMock, tmp_path: Path) -> None:
         """Test rescan when classification returns no category."""
         archives = tmp_path / "4_Archives" / "misc"
         archives.mkdir(parents=True)
@@ -324,9 +320,7 @@ class TestRescanCommand:
 
     @patch("para_files.cli.rescan_cmd.load_config_or_exit")
     @patch("para_files.cli.rescan_cmd._run_rescan")
-    def test_rescan_command_help(
-        self, mock_run: MagicMock, mock_config: MagicMock
-    ) -> None:
+    def test_rescan_command_help(self, mock_run: MagicMock, mock_config: MagicMock) -> None:
         """Test rescan command help."""
         result = runner.invoke(app, ["rescan", "--help"])
         assert result.exit_code == 0
@@ -389,9 +383,7 @@ class TestRescanCommand:
             "dry_run": True,
         }
 
-        result = runner.invoke(
-            app, ["rescan", str(tmp_path), "--category", "fiscalite"]
-        )
+        result = runner.invoke(app, ["rescan", str(tmp_path), "--category", "fiscalite"])
         assert result.exit_code == 0
         mock_run.assert_called_once()
         call_kwargs = mock_run.call_args[1]

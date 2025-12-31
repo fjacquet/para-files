@@ -26,13 +26,57 @@ MIN_PATTERN_OCCURRENCES = 2
 MIN_NAME_LENGTH = 3
 
 # Common words to exclude from keyword extraction
-STOPWORDS = frozenset({
-    "le", "la", "les", "de", "du", "des", "un", "une", "et", "en", "pour",
-    "par", "sur", "avec", "dans", "ce", "cette", "ces", "au", "aux",
-    "the", "a", "an", "of", "to", "in", "for", "on", "with", "at", "by",
-    "from", "or", "and", "is", "it", "as", "be", "are", "was", "were",
-    "pdf", "doc", "docx", "txt", "jpg", "png",
-})
+STOPWORDS = frozenset(
+    {
+        "le",
+        "la",
+        "les",
+        "de",
+        "du",
+        "des",
+        "un",
+        "une",
+        "et",
+        "en",
+        "pour",
+        "par",
+        "sur",
+        "avec",
+        "dans",
+        "ce",
+        "cette",
+        "ces",
+        "au",
+        "aux",
+        "the",
+        "a",
+        "an",
+        "of",
+        "to",
+        "in",
+        "for",
+        "on",
+        "with",
+        "at",
+        "by",
+        "from",
+        "or",
+        "and",
+        "is",
+        "it",
+        "as",
+        "be",
+        "are",
+        "was",
+        "were",
+        "pdf",
+        "doc",
+        "docx",
+        "txt",
+        "jpg",
+        "png",
+    }
+)
 
 
 @dataclass
@@ -114,7 +158,8 @@ class PatternExtractor:
     ) -> PatternSuggestion:
         """Create a pattern suggestion for an issuer."""
         examples = [
-            r.filename for r in records
+            r.filename
+            for r in records
             if issuer.lower() in r.filename.lower()
             or issuer.lower() in r.metadata.get("author", "").lower()
         ][:5]
@@ -216,19 +261,22 @@ class PatternExtractor:
             for keyword, count in word_counts.most_common(20):
                 if count >= min_occurrences:
                     examples = [
-                        r.filename for r in records
+                        r.filename
+                        for r in records
                         if keyword.lower() in r.content_preview.lower()
                         or keyword.lower() in r.filename.lower()
                     ][:5]
 
-                    suggestions.append(PatternSuggestion(
-                        pattern_type="keyword",
-                        pattern=keyword,
-                        category=category,
-                        confidence=min(0.8, 0.4 + count * 0.05),
-                        occurrences=count,
-                        examples=examples,
-                    ))
+                    suggestions.append(
+                        PatternSuggestion(
+                            pattern_type="keyword",
+                            pattern=keyword,
+                            category=category,
+                            confidence=min(0.8, 0.4 + count * 0.05),
+                            occurrences=count,
+                            examples=examples,
+                        )
+                    )
 
         return suggestions
 
@@ -263,26 +311,30 @@ class PatternExtractor:
             filenames = [r.filename for r in records]
             common_prefix = self._find_common_prefix(filenames)
             if common_prefix and len(common_prefix) >= MIN_NAME_LENGTH:
-                suggestions.append(PatternSuggestion(
-                    pattern_type="filename_prefix",
-                    pattern=f"{common_prefix}*",
-                    category=category,
-                    confidence=0.7,
-                    occurrences=len(records),
-                    examples=filenames[:5],
-                ))
+                suggestions.append(
+                    PatternSuggestion(
+                        pattern_type="filename_prefix",
+                        pattern=f"{common_prefix}*",
+                        category=category,
+                        confidence=0.7,
+                        occurrences=len(records),
+                        examples=filenames[:5],
+                    )
+                )
 
             # Find common patterns (date formats, etc.)
             date_pattern = self._find_date_pattern(filenames)
             if date_pattern:
-                suggestions.append(PatternSuggestion(
-                    pattern_type="filename_pattern",
-                    pattern=date_pattern,
-                    category=category,
-                    confidence=0.6,
-                    occurrences=len(records),
-                    examples=filenames[:5],
-                ))
+                suggestions.append(
+                    PatternSuggestion(
+                        pattern_type="filename_pattern",
+                        pattern=date_pattern,
+                        category=category,
+                        confidence=0.6,
+                        occurrences=len(records),
+                        examples=filenames[:5],
+                    )
+                )
 
         return suggestions
 

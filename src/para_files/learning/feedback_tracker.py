@@ -83,8 +83,7 @@ class FeedbackTracker:
                 with self._feedback_file.open("r", encoding="utf-8") as f:
                     data = json.load(f)
                     self._corrections = [
-                        CorrectionRecord.from_dict(record)
-                        for record in data.get("corrections", [])
+                        CorrectionRecord.from_dict(record) for record in data.get("corrections", [])
                     ]
                 logger.debug("Loaded %d correction records", len(self._corrections))
             except (json.JSONDecodeError, OSError) as e:
