@@ -34,7 +34,7 @@ class TestDiscoverArchiveFiles:
         (archives / "tax_return.pdf").touch()
         (archives / "receipt.pdf").touch()
 
-        files = _discover_archive_files(tmp_path)
+        files = list(_discover_archive_files(tmp_path))
         assert len(files) == 2
 
     def test_discover_files_in_resources(self, tmp_path: Path) -> None:
@@ -43,7 +43,7 @@ class TestDiscoverArchiveFiles:
         resources.mkdir(parents=True)
         (resources / "passport.pdf").touch()
 
-        files = _discover_archive_files(tmp_path)
+        files = list(_discover_archive_files(tmp_path))
         assert len(files) == 1
 
     def test_discover_with_category_filter(self, tmp_path: Path) -> None:
@@ -57,19 +57,19 @@ class TestDiscoverArchiveFiles:
         sante.mkdir(parents=True)
         (sante / "medical.pdf").touch()
 
-        files = _discover_archive_files(tmp_path, category_filter="fiscalite")
+        files = list(_discover_archive_files(tmp_path, category_filter="fiscalite"))
         assert len(files) == 1
         assert files[0].name == "tax.pdf"
 
     def test_discover_empty_directory(self, tmp_path: Path) -> None:
         """Test discovering in empty directory."""
         (tmp_path / "4_Archives").mkdir()
-        files = _discover_archive_files(tmp_path)
+        files = list(_discover_archive_files(tmp_path))
         assert len(files) == 0
 
     def test_discover_nonexistent_directory(self, tmp_path: Path) -> None:
         """Test discovering when folders don't exist."""
-        files = _discover_archive_files(tmp_path)
+        files = list(_discover_archive_files(tmp_path))
         assert len(files) == 0
 
 

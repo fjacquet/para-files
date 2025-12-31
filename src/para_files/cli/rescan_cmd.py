@@ -301,7 +301,7 @@ def _run_rescan(
         if not output_json and results["files_scanned"] % 100 == 0:
             typer.echo(
                 f"  Processed {results['files_scanned']} files "
-                f"({results['files_need_move']} need move)..."
+                f"({results['files_moved']} moved)..."
             )
 
         _process_file_rescan(

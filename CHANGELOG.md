@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Streaming rescan command**: `rescan` now processes files as discovered instead of loading all into memory
+  - Generator-based file discovery for lower memory usage
+  - Reuses single TaxonomyClassifier instance (faster classification)
+  - Shows progress every 100 files with live move count
+  - Better for large archives (10k+ files)
+
 ### Added
 
 - **Fuzzy matching for issuers**: TaxonomyClassifier now uses difflib.SequenceMatcher for typo tolerance
