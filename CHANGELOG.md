@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Automatic rotation, retention, and compression
   - Thread-safe async writes with `enqueue=True`
 - **Removed CleanupLogger**: Custom audit logger replaced by loguru's built-in file logging
+- **OCR logs moved to DEBUG level**: Reduced console noise by changing verbose OCR messages to DEBUG
+  - "PDF appears scanned, trying OCR" now only shows with `--verbose`
+  - "OCR extracted N chars from PDF" now only shows with `--verbose`
 - **Streaming rescan command**: `rescan` now processes files as discovered instead of loading all into memory
   - Generator-based file discovery for lower memory usage
   - Reuses single TaxonomyClassifier instance (faster classification)
@@ -80,6 +83,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Executes by default** - use `--dry-run` for preview mode
   - Same options: `--category`, `--json`, `--cleanup`
   - Example: `uv run para-files rescan /path/to/PARA`
+
+### Fixed
+
+- **CI/CD ruff compliance**: Added `# noqa: BLE001` comments to intentional broad exception catches
+  - Defensive error handling for external tools (OCR, pandoc, exiftool, MLX)
+  - Prevents pipeline crashes from unexpected external tool failures
 
 ### Changed
 
