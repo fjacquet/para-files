@@ -86,6 +86,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Photo/image routing during rescan**: Photos and images were being misrouted to fiscal folders
+  - Root cause 1: `rescan` command bypassed RulesEngineClassifier by using TaxonomyClassifier directly
+  - Root cause 2: `source:` constraint in routing rules was never enforced
+  - Fix 1: `rescan` now uses full ClassificationPipeline with all classifiers in priority order
+  - Fix 2: RulesEngineClassifier now validates `source:` constraint (e.g., files must be in `0_Inbox`)
+  - Added `CAT_10_MEDIA` category in documents.json for photos, videos, and screenshots
+  - Removed duplicate routing rules in personal_file_tree.yaml (vmware_documentation, credit_agricole, etc.)
 - **CI/CD ruff compliance**: Added `# noqa: BLE001` comments to intentional broad exception catches
   - Defensive error handling for external tools (OCR, pandoc, exiftool, MLX)
   - Prevents pipeline crashes from unexpected external tool failures

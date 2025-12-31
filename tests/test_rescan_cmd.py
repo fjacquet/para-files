@@ -19,6 +19,16 @@ from para_files.cli.rescan_cmd import (
     _print_summary,
     _run_rescan,
 )
+from para_files.config import Config
+
+
+@pytest.fixture
+def mock_config(tmp_path: Path, fixtures_dir: Path) -> Config:
+    """Create a test configuration."""
+    return Config(
+        para_root=tmp_path,
+        reference_tree_path=fixtures_dir / "test_reference_tree.yaml",
+    )
 
 
 runner = CliRunner()
@@ -249,12 +259,15 @@ class TestPrintSummary:
 class TestRunRescan:
     """Tests for _run_rescan function."""
 
-    def test_run_rescan_empty_dir(self, tmp_path: Path) -> None:
+    def test_run_rescan_empty_dir(
+        self, tmp_path: Path, mock_config: Config
+    ) -> None:
         """Test running rescan on empty directory."""
         (tmp_path / "4_Archives").mkdir()
 
         results = _run_rescan(
             tmp_path,
+            mock_config,
             dry_run=True,
             category=None,
             output_json=True,
@@ -266,7 +279,9 @@ class TestRunRescan:
         assert results["files_need_move"] == 0
 
     @patch("para_files.cli.rescan_cmd._classify_for_rescan")
-    def test_run_rescan_with_files(self, mock_classify: MagicMock, tmp_path: Path) -> None:
+    def test_run_rescan_with_files(
+        self, mock_classify: MagicMock, tmp_path: Path, mock_config: Config
+    ) -> None:
         """Test running rescan with files."""
         # Create test file
         archives = tmp_path / "4_Archives" / "old" / "2024"
@@ -281,6 +296,7 @@ class TestRunRescan:
 
         results = _run_rescan(
             tmp_path,
+            mock_config,
             dry_run=True,
             category=None,
             output_json=True,
@@ -292,7 +308,9 @@ class TestRunRescan:
         assert results["files_need_move"] == 1
 
     @patch("para_files.cli.rescan_cmd._classify_for_rescan")
-    def test_run_rescan_no_category(self, mock_classify: MagicMock, tmp_path: Path) -> None:
+    def test_run_rescan_no_category(
+        self, mock_classify: MagicMock, tmp_path: Path, mock_config: Config
+    ) -> None:
         """Test rescan when classification returns no category."""
         archives = tmp_path / "4_Archives" / "misc"
         archives.mkdir(parents=True)
@@ -304,6 +322,7 @@ class TestRunRescan:
 
         results = _run_rescan(
             tmp_path,
+            mock_config,
             dry_run=True,
             category=None,
             output_json=True,

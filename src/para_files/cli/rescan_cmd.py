@@ -23,10 +23,11 @@ from para_files.cli.shared import (
     load_config_or_exit,
     setup_logging,
 )
+from para_files.config import Config
 
 
 if TYPE_CHECKING:
-    from para_files.classifiers.taxonomy_classifier import TaxonomyClassifier
+    from para_files.pipeline import ClassificationPipeline
     from para_files.types import ClassificationResult
 
 
@@ -75,30 +76,22 @@ def _needs_migration(current_path: Path, expected_path: Path) -> bool:
 
 def _classify_for_rescan(
     file_path: Path,
-    classifier: TaxonomyClassifier,
+    pipeline: ClassificationPipeline,
 ) -> ClassificationResult | None:
     """Classify a file to determine its expected destination.
 
-    Uses TaxonomyClassifier with documents.json to get retention-aware path.
+    Uses full ClassificationPipeline (including RulesEngineClassifier)
+    to get correct category based on all classification signals.
 
     Args:
         file_path: Path to file to classify.
-        classifier: Reusable classifier instance.
+        pipeline: Reusable pipeline instance.
 
     Returns:
         Classification result or None if classification failed.
     """
-    from para_files.utils.file_utils import extract_file_metadata, read_content_preview
-
     try:
-        metadata = extract_file_metadata(file_path, extract_exif=False)
-        content = read_content_preview(file_path, max_chars=2000)
-
-        return classifier.classify(
-            content=content,
-            metadata=metadata,
-        )
-
+        return pipeline.classify_file(file_path)
     except (OSError, ValueError, KeyError) as e:
         logger.debug("Classification failed for %s: %s", file_path, e)
         return None
@@ -215,7 +208,7 @@ def _format_relative_dest(dest_path: Path, base_path: Path) -> str:
 def _process_file_rescan(
     file_path: Path,
     base_path: Path,
-    classifier: TaxonomyClassifier,
+    pipeline: ClassificationPipeline,
     results: dict[str, Any],
     *,
     dry_run: bool,
@@ -227,13 +220,13 @@ def _process_file_rescan(
     Args:
         file_path: File to process.
         base_path: PARA root directory.
-        classifier: Reusable classifier instance.
+        pipeline: Reusable classification pipeline instance.
         results: Results dict to update.
         dry_run: If True, simulate without moving.
         verbose: If True, show per-file output.
         output_json: If True, suppress console output.
     """
-    classification = _classify_for_rescan(file_path, classifier)
+    classification = _classify_for_rescan(file_path, pipeline)
     if not classification or not classification.category:
         return
 
@@ -317,6 +310,7 @@ def _print_summary(results: dict[str, Any], *, dry_run: bool) -> None:
 
 def _run_rescan(
     base_path: Path,
+    config: Config,
     *,
     dry_run: bool,
     category: str | None,
@@ -331,6 +325,7 @@ def _run_rescan(
 
     Args:
         base_path: PARA root directory.
+        config: Application configuration.
         dry_run: If True, simulate without moving.
         category: Optional category filter.
         output_json: If True, suppress console output.
@@ -340,7 +335,7 @@ def _run_rescan(
     Returns:
         Results dictionary.
     """
-    from para_files.classifiers.taxonomy_classifier import TaxonomyClassifier
+    from para_files.pipeline import ClassificationPipeline
 
     results: dict[str, Any] = {
         "base_path": str(base_path),
@@ -364,8 +359,10 @@ def _run_rescan(
         if category:
             typer.echo(f"Category filter: {category}")
 
-    # Create classifier once and reuse
-    classifier = TaxonomyClassifier()
+    # Create pipeline once and reuse - includes all classifiers in priority order:
+    # ValidatedDBClassifier (100%), RulesEngineClassifier (95%), BookDetector (92%),
+    # DomainKBClassifier (90%), SemanticClassifier (85%), MLXLLMClassifier (configurable)
+    pipeline = ClassificationPipeline(config)
 
     # Stream-process files as they're discovered
     for file_path in _discover_archive_files(base_path, category_filter=category):
@@ -380,7 +377,7 @@ def _run_rescan(
         _process_file_rescan(
             file_path,
             base_path,
-            classifier,
+            pipeline,
             results,
             dry_run=dry_run,
             verbose=verbose,
@@ -462,6 +459,7 @@ def rescan(
 
     results = _run_rescan(
         effective_path,
+        config,
         dry_run=dry_run,
         category=category,
         output_json=output_json,

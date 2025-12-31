@@ -203,13 +203,6 @@ routing_rules:
     destination: "3_Resources/docs/Security"
     date_source: "file_modified"
 
-  # VMware documentation
-  vmware_documentation:
-    patterns: ["*VMware*", "*vSphere*", "*vSAN*", "*NSX*", "*Tanzu*", "*VCF*"]
-    extensions: [".pdf", ".pptx", ".ppt", ".docx", ".doc"]
-    destination: "3_Resources/documentation/VMware/{YYYY}"
-    date_source: "file_modified"
-
   # Nutanix documentation
   nutanix_documentation:
     patterns:
@@ -321,14 +314,6 @@ routing_rules:
     extensions: [".csv"]
     destination: "4_Archives/banques/exports/{YYYY}"
     date_source: "file_modified"
-
-  # Credit Agricole bank statements
-  credit_agricole:
-    patterns: ["Relevé n°*"]
-    extensions: [".pdf"]
-    destination: "4_Archives/banques/Credit Agricole/{YYYY}"
-    date_source: "filename"
-    date_pattern: "du (\\d{2})_(\\d{2})_(\\d{4})"
 
   # BCV bank documents (PDF)
   bcv_avis:
@@ -1683,17 +1668,6 @@ routing_rules:
     destination: "4_Archives/loisirs/activites/{YYYY}"
     date_source: "file_modified"
 
-  # VMware/ESXi documentation
-  vmware_documentation:
-    patterns:
-      [
-        "*[Ee][Ss][Xx]i*",
-        "*[Vv][Mm]ware*",
-        "*[Vv][Ss]phere*",
-      ]
-    extensions: [".pdf"]
-    destination: "3_Resources/docs/VMware"
-
   # Bordeaux travel documents
   bordeaux_travel:
     patterns:
@@ -2583,18 +2557,6 @@ routing_rules:
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
-  # Bleu Marine Immobilier (rental management)
-  bleu_marine_immobilier:
-    patterns:
-      [
-        "*[Bb]leu*[Mm]arine*",
-        "*CRG*DU*AU*",
-      ]
-    extensions: [".pdf"]
-    destination: "4_Archives/factures/immobilier/Bleu-Marine/{YYYY}"
-    date_source: "filename"
-    date_pattern: "(\\d{4})"
-
   # =============================================================================
   # PUBLICATIONS & MAGAZINES - Added 2025-12-29
   # =============================================================================
@@ -2774,18 +2736,6 @@ routing_rules:
       ]
     extensions: [".pdf", ".odt", ".docx"]
     destination: "4_Archives/factures/immobilier/demenagement/{YYYY}"
-    date_source: "file_modified"
-
-  # Home works/Travaux
-  travaux_maison:
-    patterns:
-      [
-        "*[Tt]ravaux*[Mm]aison*",
-        "*[Rr]enovation*",
-        "*[Bb]ricolage*",
-      ]
-    extensions: [".pdf", ".xlsx", ".xls"]
-    destination: "4_Archives/factures/immobilier/travaux/{YYYY}"
     date_source: "file_modified"
 
   # Domicim (property management)

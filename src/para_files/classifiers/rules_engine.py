@@ -9,6 +9,7 @@ from __future__ import annotations
 import fnmatch
 import re
 from datetime import UTC, datetime
+from pathlib import Path
 
 from loguru import logger
 
@@ -42,13 +43,17 @@ class RulesEngineClassifier(BaseClassifier):
     - Path patterns (for specific folder structures)
     """
 
-    def __init__(self, routing_rules: dict[str, RoutingRule]) -> None:
+    def __init__(
+        self, routing_rules: dict[str, RoutingRule], para_root: Path | None = None
+    ) -> None:
         """Initialize with routing rules from reference tree.
 
         Args:
             routing_rules: Dictionary of rule_name → RoutingRule.
+            para_root: PARA root directory for source constraint checks.
         """
         self._rules = routing_rules
+        self._para_root = para_root
 
     @property
     def name(self) -> str:
@@ -106,6 +111,17 @@ class RulesEngineClassifier(BaseClassifier):
         Returns:
             True if rule matches, False otherwise.
         """
+        # Check source constraint if defined (e.g., source: "0_Inbox")
+        # Files not in the source directory should not match this rule
+        if rule.source and self._para_root:
+            source_path = self._para_root / rule.source
+            try:
+                # Check if file is within the source directory
+                metadata.path.relative_to(source_path)
+            except ValueError:
+                # File is not under the source directory
+                return False
+
         # Must have at least extensions or patterns defined
         if not rule.extensions and not rule.patterns:
             return False

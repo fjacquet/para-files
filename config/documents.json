@@ -2652,6 +2652,71 @@
           ]
         }
       ]
+    },
+    {
+      "id": "CAT_10_MEDIA",
+      "name": "10. Media & Photos",
+      "description": "Photos, vidéos, captures d'écran et autres fichiers média.",
+      "para_pattern": "3_Resources/media",
+      "documents": [
+        {
+          "sub_id": "photos",
+          "name": "Photos & Images",
+          "para_pattern": "3_Resources/photos",
+          "examples": [
+            "Photos de vacances",
+            "Photos de famille",
+            "Images personnelles"
+          ],
+          "keywords": [
+            "photo",
+            "image",
+            "picture",
+            "EXIF",
+            "camera",
+            "appareil photo"
+          ],
+          "retention": "permanent",
+          "paper_required": false
+        },
+        {
+          "sub_id": "videos",
+          "name": "Vidéos",
+          "para_pattern": "3_Resources/videos",
+          "examples": [
+            "Vidéos familiales",
+            "Enregistrements",
+            "Clips"
+          ],
+          "keywords": [
+            "video",
+            "vidéo",
+            "film",
+            "clip",
+            "enregistrement"
+          ],
+          "retention": "permanent",
+          "paper_required": false
+        },
+        {
+          "sub_id": "screenshots",
+          "name": "Captures d'écran",
+          "para_pattern": "3_Resources/screenshots",
+          "examples": [
+            "Capture d'écran",
+            "Screenshot",
+            "Print screen"
+          ],
+          "keywords": [
+            "screenshot",
+            "capture",
+            "screen",
+            "écran"
+          ],
+          "retention": "5_years",
+          "paper_required": false
+        }
+      ]
     }
   ]
 }

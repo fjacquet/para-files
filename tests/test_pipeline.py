@@ -95,10 +95,16 @@ class TestClassificationPipeline:
             assert result.confidence.value >= 0.85
 
     def test_classify_with_metadata(self, mock_config: Config):
-        """Test classification with file metadata."""
+        """Test classification with file metadata from 0_Inbox.
+
+        Note: Photos rule has source: "0_Inbox" constraint, so file must be
+        under {para_root}/0_Inbox/ for the rule to match.
+        """
         pipeline = ClassificationPipeline(mock_config)
+        # File must be under 0_Inbox for photos rule to match (source constraint)
+        inbox_path = mock_config.para_root / "0_Inbox" / "photo.jpg"
         metadata = FileMetadata(
-            path=Path("/tmp/photo.jpg"),
+            path=inbox_path,
             filename="photo.jpg",
             extension=".jpg",
             size_bytes=1024,

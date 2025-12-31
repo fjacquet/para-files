@@ -85,7 +85,7 @@ class ClassificationPipeline:
         # Signal 1: Rules Engine (95%) - Extension/pattern based routing
         routing_rules = self._reference_tree.get_routing_rules()
         if routing_rules:
-            rules_engine = RulesEngineClassifier(routing_rules)
+            rules_engine = RulesEngineClassifier(routing_rules, para_root=self._config.para_root)
             self._classifiers.append(rules_engine)
 
         # Signal 2: Book Detector (92%, 100% with ISBN)
