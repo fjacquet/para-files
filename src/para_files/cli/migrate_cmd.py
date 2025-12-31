@@ -18,7 +18,7 @@ import re
 import shutil
 from collections.abc import Callable
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, TypedDict
 
 import typer
 
@@ -34,7 +34,16 @@ logger = logging.getLogger(__name__)
 # Retention types and their target PARA category
 # permanent → 3_Resources (no suffix)
 # others → 4_Archives (with prefix)
-RETENTION_CONFIG: dict[str, dict[str, str | None]] = {
+
+
+class _RetentionEntry(TypedDict):
+    """Type for retention config entries."""
+
+    retention: str
+    prefix: str | None
+
+
+RETENTION_CONFIG: dict[str, _RetentionEntry] = {
     # Permanent categories → Resources (no prefix needed)
     "administratif": {"retention": "permanent", "prefix": None},
     "identite": {"retention": "permanent", "prefix": None},
