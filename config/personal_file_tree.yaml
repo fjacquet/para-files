@@ -1091,6 +1091,20 @@ routing_rules:
     date_source: "filename"
     date_pattern: "(\\d{4})-(\\d{2})-(\\d{2})"
 
+  # Case studies (marketing/technical documents, NOT invoices)
+  case_studies:
+    patterns:
+      [
+        "*[Cc]ase[Ss]tudy*",
+        "*[Cc]ase-[Ss]tudy*",
+        "*[Cc]ase_[Ss]tudy*",
+        "*[Cc]ustomer[Ss]tory*",
+        "*[Ss]uccess[Ss]tory*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx"]
+    destination: "3_Resources/docs/case-studies"
+    date_source: "file_modified"
+
   # IT whitepapers and technical guides (NOT books)
   it_whitepapers:
     patterns:
