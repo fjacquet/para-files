@@ -2758,6 +2758,20 @@ routing_rules:
     destination: "3_Resources/IT/Storage/{YYYY}"
     date_source: "file_modified"
 
+  # Fujitsu Storage documentation
+  fujitsu_storage:
+    patterns:
+      [
+        "*[Ff]ujitsu*[Ss]torage*",
+        "*[Ff]ujitsu*[Ee]ternus*",
+        "*[Ee]ternus*",
+        "*[Ff]ujitsu*[Vv]irtual*[Aa]ppliance*",
+        "*[Ff]ujitsu*[Pp]rimergy*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx"]
+    destination: "3_Resources/IT/Storage/{YYYY}"
+    date_source: "file_modified"
+
   # =============================================================================
   # REAL ESTATE & HOME - Added 2025-12-30
   # =============================================================================
