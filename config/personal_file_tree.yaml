@@ -162,6 +162,9 @@ routing_rules:
         "flex-*",
         "ddl-*",
         "SLD*_*",
+        "SDS*",
+        "*[Ee][Bb]ook*[Pp]erformance*",
+        "*[Ee][Bb]ook*[Ss]torage*",
       ]
     extensions: [".pdf", ".pptx", ".ppt", ".docx", ".doc"]
     destination: "3_Resources/docs/Dell-EMC/{technology}"
@@ -355,14 +358,14 @@ routing_rules:
     patterns:
       ["*[Tt]ransaction*", "*[Rr]elevé*", "*[Ee]xport*", "*[Ss]tatement*"]
     extensions: [".csv"]
-    destination: "4_Archives/banques/exports/{YYYY}"
+    destination: "4_Archives/10y_banques/exports/{YYYY}"
     date_source: "file_modified"
 
   # BCV bank documents (PDF)
   bcv_avis:
     patterns: ["5429324*_*", "*_E310_*", "*_E100_*", "*_E204_*"]
     extensions: [".pdf"]
-    destination: "4_Archives/banques/BCV/{YYYY}"
+    destination: "4_Archives/10y_banques/BCV/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})-(\\d{2})-(\\d{2})"
 
@@ -370,7 +373,7 @@ routing_rules:
   camt_statements:
     patterns: ["CAMT.053_*", "camt053_*", "*camt.053*"]
     extensions: [".xml"]
-    destination: "4_Archives/banques/{issuer}/{YYYY}"
+    destination: "4_Archives/10y_banques/{issuer}/{YYYY}"
     date_source: "filename"
     issuers:
       - name: "BCV"
@@ -388,7 +391,7 @@ routing_rules:
   romande_energie:
     patterns: ["*romande-energie*", "*Romande*Energie*"]
     extensions: [".pdf"]
-    destination: "4_Archives/factures/Energie/Romande Energie/{YYYY}"
+    destination: "4_Archives/5y_factures/Energie/Romande Energie/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})-(\\d{2})-(\\d{2})"
 
@@ -405,7 +408,7 @@ routing_rules:
         "*[Ss]afer*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/immobilier/bornage/{YYYY}"
+    destination: "4_Archives/10y_immobilier/bornage/{YYYY}"
     date_source: "file_modified"
 
   immobilier_notaire:
@@ -419,7 +422,7 @@ routing_rules:
         "*[Pp]romesse*vente*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/immobilier/notaire/{YYYY}"
+    destination: "4_Archives/10y_immobilier/notaire/{YYYY}"
     date_source: "file_modified"
 
   immobilier_taxes:
@@ -432,7 +435,7 @@ routing_rules:
         "*[Vv]aleur*locative*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/immobilier/taxes/{YYYY}"
+    destination: "4_Archives/10y_immobilier/taxes/{YYYY}"
     date_source: "file_modified"
 
   # French tax documents
@@ -446,7 +449,7 @@ routing_rules:
         "*IMPÔTS LOCAUX*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/impots-france/{YYYY}"
+    destination: "4_Archives/10y_impots-france/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})_sur_les_revenus"
 
@@ -454,7 +457,7 @@ routing_rules:
   ifu_documents:
     patterns: ["*E-IFU*", "*IFU*", "*revenus mobiliers*"]
     extensions: [".pdf"]
-    destination: "4_Archives/banques/{issuer}/{YYYY}"
+    destination: "4_Archives/10y_banques/{issuer}/{YYYY}"
     date_source: "content"
     issuers:
       - name: "Credit Agricole"
@@ -480,7 +483,7 @@ routing_rules:
         "*[Cc]laim*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/assurances-sinistres/{YYYY}"
+    destination: "4_Archives/5y_assurances-sinistres/{YYYY}"
     date_source: "file_modified"
 
   # Dental invoices and appointments
@@ -497,7 +500,7 @@ routing_rules:
         "*[Oo]rthodont*",
       ]
     extensions: [".pdf", ".jpg", ".png"]
-    destination: "4_Archives/sante/dentaire/{YYYY}"
+    destination: "4_Archives/5y_sante/dentaire/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
 
@@ -510,7 +513,7 @@ routing_rules:
         "*M-Thérapies*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/sante/{YYYY}"
+    destination: "4_Archives/5y_sante/{YYYY}"
     date_source: "file_modified"
 
   # Real estate - urbanism and maps
@@ -525,7 +528,7 @@ routing_rules:
         "*[Ss]ervitude*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/immobilier/urbanisme/{YYYY}"
+    destination: "4_Archives/10y_immobilier/urbanisme/{YYYY}"
     date_source: "file_modified"
 
   # Career - job applications
@@ -614,7 +617,7 @@ routing_rules:
         "*[Gg]ame*[Mm]anual*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/loisirs/jeux-manuels"
+    destination: "4_Archives/5y_loisirs/jeux-manuels"
     date_source: "file_modified"
 
   # Hobbies - sailing/voile
@@ -629,7 +632,7 @@ routing_rules:
         "*[Yy]acht*",
       ]
     extensions: [".pdf", ".jpg", ".png"]
-    destination: "4_Archives/loisirs/voile/{YYYY}"
+    destination: "4_Archives/5y_loisirs/voile/{YYYY}"
     date_source: "file_modified"
 
   # Hobbies - recipes
@@ -709,7 +712,7 @@ routing_rules:
   crypto_keys:
     patterns: ["*"]
     extensions: [".pem", ".gpg", ".key", ".crt", ".p12", ".pfx"]
-    destination: "4_Archives/crypto/{YYYY}"
+    destination: "4_Archives/10y_crypto/{YYYY}"
     date_source: "file_modified"
 
   # Azure/Microsoft Cloud documentation
@@ -780,7 +783,7 @@ routing_rules:
         "*camt053*",
       ]
     extensions: [".zip"]
-    destination: "4_Archives/banques/exports/camt-backups/{YYYY}"
+    destination: "4_Archives/10y_banques/exports/camt-backups/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})-(\\d{2})-(\\d{2})"
 
@@ -825,7 +828,7 @@ routing_rules:
         "*heures*Btisane*",
       ]
     extensions: [".xlsx", ".xls", ".pdf", ".doc", ".docx"]
-    destination: "4_Archives/administratif/employes/heures/{YYYY}"
+    destination: "4_Archives/5y_administratif/employes/heures/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})|(jan|fev|mar|avr|mai|juin|juil|aout|sept|oct|nov|dec)"
 
@@ -839,7 +842,7 @@ routing_rules:
         "*CRG*loyer*",
       ]
     extensions: [".pdf", ".doc", ".docx"]
-    destination: "4_Archives/immobilier/saint-martin/loyers/{YYYY}"
+    destination: "4_Archives/10y_immobilier/saint-martin/loyers/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{2})\\.(\\d{2})\\.(\\d{4})"
 
@@ -854,7 +857,7 @@ routing_rules:
         "*-Pb-*",
       ]
     extensions: [".pdf", ".doc", ".docx"]
-    destination: "4_Archives/immobilier/diagnostics/{YYYY}"
+    destination: "4_Archives/10y_immobilier/diagnostics/{YYYY}"
     date_source: "file_modified"
 
   # Swisscom invoices (pattern Invoice_41010*)
@@ -866,7 +869,7 @@ routing_rules:
         "*Swisscom*[Ii]nvoice*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/factures/Telephonie/Swisscom/{YYYY}"
+    destination: "4_Archives/5y_factures/Telephonie/Swisscom/{YYYY}"
     date_source: "file_modified"
 
   # =============================================================================
@@ -886,7 +889,7 @@ routing_rules:
         "*[Cc]hemins*[Ff]er*[Ff]édéraux*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/factures/Mobilité/CFF/{YYYY}"
+    destination: "4_Archives/5y_factures/Mobilité/CFF/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
 
@@ -900,7 +903,7 @@ routing_rules:
         "*Mobility*[Qq]uittung*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/factures/Mobilité/Mobility/{YYYY}"
+    destination: "4_Archives/5y_factures/Mobilité/Mobility/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
 
@@ -918,7 +921,7 @@ routing_rules:
         "*GRDF*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/factures/Energie/GDF/{YYYY}"
+    destination: "4_Archives/5y_factures/Energie/GDF/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -931,7 +934,7 @@ routing_rules:
         "*enedis*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/factures/Energie/ERDF/{YYYY}"
+    destination: "4_Archives/5y_factures/Energie/ERDF/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -949,7 +952,7 @@ routing_rules:
         "*upc*suisse*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/factures/Telephonie/UPC/{YYYY}"
+    destination: "4_Archives/5y_factures/Telephonie/UPC/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{2})[./](\\d{2})[./](\\d{4})"
 
@@ -964,7 +967,7 @@ routing_rules:
         "*Crédit*Agricole*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/banques/Credit-Agricole/{YYYY}"
+    destination: "4_Archives/10y_banques/Credit-Agricole/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -984,7 +987,7 @@ routing_rules:
         "*2042*impots*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/impots-france/{YYYY}"
+    destination: "4_Archives/10y_impots-france/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -998,7 +1001,7 @@ routing_rules:
         "*groupemutuel*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/assurances/Groupe-Mutuel/{YYYY}"
+    destination: "4_Archives/5y_assurances/Groupe-Mutuel/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
 
@@ -1013,7 +1016,7 @@ routing_rules:
         "visebpp_*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/banques/Visa/{YYYY}"
+    destination: "4_Archives/10y_banques/Visa/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})(\\d{2})"
 
@@ -1030,7 +1033,7 @@ routing_rules:
         "*E-Invitation%*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/banques/extraits/{YYYY}"
+    destination: "4_Archives/10y_banques/extraits/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -1045,7 +1048,7 @@ routing_rules:
         "*Décompte*transaction*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/banques/UBS/{YYYY}"
+    destination: "4_Archives/10y_banques/UBS/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -1059,7 +1062,7 @@ routing_rules:
         "*-ocr copy.pdf",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/scans/archives"
+    destination: "4_Archives/5y_scans/archives"
     date_source: "file_modified"
 
   # Apple Store email receipts
@@ -1071,7 +1074,7 @@ routing_rules:
         "*apple*store*receipt*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/factures/Apple/{YYYY}"
+    destination: "4_Archives/5y_factures/Apple/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
 
@@ -1084,7 +1087,7 @@ routing_rules:
         "*Brack*facture*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/factures/Brack/{YYYY}"
+    destination: "4_Archives/5y_factures/Brack/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})-(\\d{2})-(\\d{2})"
 
@@ -1114,7 +1117,7 @@ routing_rules:
         "*Bose*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/factures/Software/{YYYY}"
+    destination: "4_Archives/5y_factures/Software/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -1129,7 +1132,7 @@ routing_rules:
         "*garage*facture*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/vehicules/entretien/{YYYY}"
+    destination: "4_Archives/5y_vehicules/entretien/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -1142,7 +1145,7 @@ routing_rules:
         "*[Bb]lue*[Mm]arine*",
       ]
     extensions: [".pdf", ".doc", ".docx", ".jpg", ".png"]
-    destination: "4_Archives/immobilier/Bleu-Marine/{YYYY}"
+    destination: "4_Archives/10y_immobilier/Bleu-Marine/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
 
@@ -1157,7 +1160,7 @@ routing_rules:
         "*[Mm]arina*",
       ]
     extensions: [".pdf", ".doc", ".docx", ".jpg", ".png"]
-    destination: "4_Archives/loisirs/nautisme/{YYYY}"
+    destination: "4_Archives/5y_loisirs/nautisme/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
 
@@ -1171,7 +1174,7 @@ routing_rules:
         "*acompte*provision*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/impots-france/{YYYY}"
+    destination: "4_Archives/10y_impots-france/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -1183,7 +1186,7 @@ routing_rules:
         "20[0-2][0-9][0-1][0-9][0-3][0-9]-*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/factures/divers/{YYYY}"
+    destination: "4_Archives/5y_factures/divers/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
 
@@ -1197,7 +1200,7 @@ routing_rules:
         "Ticket_*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/factures/tickets/{YYYY}"
+    destination: "4_Archives/5y_factures/tickets/{YYYY}"
     date_source: "file_modified"
 
   # Farm/agricultural business documents (EARL = Exploitation Agricole)
@@ -1213,7 +1216,7 @@ routing_rules:
         "*[Aa]gricole*",
       ]
     extensions: [".pdf", ".xlsx", ".xls", ".doc", ".docx"]
-    destination: "4_Archives/agriculture/contrats"
+    destination: "4_Archives/5y_agriculture/contrats"
     date_source: "file_modified"
 
   # Course and certification tracking files
@@ -1254,7 +1257,7 @@ routing_rules:
         "19[89][0-9][0-1][0-9].pdf",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/documents/mensuels/{YYYY}"
+    destination: "4_Archives/5y_documents/mensuels/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})(\\d{2})"
 
@@ -1266,7 +1269,7 @@ routing_rules:
         "20[0-2][0-9][0-1][0-9][0-3][0-9].doc",
       ]
     extensions: [".pdf", ".doc"]
-    destination: "4_Archives/scans/{YYYY}"
+    destination: "4_Archives/5y_scans/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
 
@@ -1291,7 +1294,7 @@ routing_rules:
         "*vmware*.xlsx",
       ]
     extensions: [".xlsx", ".xls"]
-    destination: "4_Archives/travail/vmware/{YYYY}"
+    destination: "4_Archives/5y_travail/vmware/{YYYY}"
     date_source: "file_modified"
 
   # Acknowledgment receipts (accusé de réception)
@@ -1305,7 +1308,7 @@ routing_rules:
         "AR_*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/correspondance/accuses/{YYYY}"
+    destination: "4_Archives/5y_correspondance/accuses/{YYYY}"
     date_source: "file_modified"
 
   # ZIP archives with personal backups
@@ -1343,7 +1346,7 @@ routing_rules:
         "*transfer*bancaire*",
       ]
     extensions: [".pdf", ".odt", ".doc"]
-    destination: "4_Archives/banques/virements/{YYYY}"
+    destination: "4_Archives/10y_banques/virements/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -1358,7 +1361,7 @@ routing_rules:
         "*[Ee]lba*",
       ]
     extensions: [".pdf", ".eml"]
-    destination: "4_Archives/voyages/reservations/{YYYY}"
+    destination: "4_Archives/5y_voyages/reservations/{YYYY}"
     date_source: "file_modified"
 
   # House/property work documents
@@ -1372,7 +1375,7 @@ routing_rules:
         "*devis*travaux*",
       ]
     extensions: [".xlsx", ".xls", ".pdf", ".doc", ".odt"]
-    destination: "4_Archives/immobilier/travaux/{YYYY}"
+    destination: "4_Archives/10y_immobilier/travaux/{YYYY}"
     date_source: "file_modified"
 
   # Generic invoices (facture acquittée)
@@ -1385,7 +1388,7 @@ routing_rules:
         "*invoice*paid*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/factures/divers/{YYYY}"
+    destination: "4_Archives/5y_factures/divers/{YYYY}"
     date_source: "file_modified"
 
   # Unigestion (bank/fund)
@@ -1395,7 +1398,7 @@ routing_rules:
         "*[Uu]nigestion*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/banques/Unigestion/{YYYY}"
+    destination: "4_Archives/10y_banques/Unigestion/{YYYY}"
     date_source: "file_modified"
 
   # WordPress documentation
@@ -1433,7 +1436,7 @@ routing_rules:
         "*assurance*invalidité*",
       ]
     extensions: [".pdf", ".odt", ".doc"]
-    destination: "4_Archives/administratif/assurances-sociales/{YYYY}"
+    destination: "4_Archives/5y_administratif/assurances-sociales/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -1446,7 +1449,7 @@ routing_rules:
         "*caisse*compensation*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/administratif/assurances-sociales/{YYYY}"
+    destination: "4_Archives/5y_administratif/assurances-sociales/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -1475,7 +1478,7 @@ routing_rules:
         "*fermeture*compte*",
       ]
     extensions: [".pdf", ".doc"]
-    destination: "4_Archives/administratif/resiliations/{YYYY}"
+    destination: "4_Archives/5y_administratif/resiliations/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -1487,7 +1490,7 @@ routing_rules:
         "Compte_*_Releve_*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/banques/Credit-Suisse/{YYYY}"
+    destination: "4_Archives/10y_banques/Credit-Suisse/{YYYY}"
     date_source: "filename"
     date_pattern: "du_(\\d{2})_(\\d{2})_(\\d{4})"
 
@@ -1499,7 +1502,7 @@ routing_rules:
         "E-Invitation%20*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/banques/notifications/{YYYY}"
+    destination: "4_Archives/10y_banques/notifications/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
 
@@ -1514,7 +1517,7 @@ routing_rules:
         "accord*",
       ]
     extensions: [".pdf", ".doc", ".docx"]
-    destination: "4_Archives/administratif/contrats/{YYYY}"
+    destination: "4_Archives/5y_administratif/contrats/{YYYY}"
     date_source: "file_modified"
 
   # Acknowledgment receipts (AR- prefix)
@@ -1524,7 +1527,7 @@ routing_rules:
         "AR-*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/administratif/accuses-reception/{YYYY}"
+    destination: "4_Archives/5y_administratif/accuses-reception/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
 
@@ -1538,7 +1541,7 @@ routing_rules:
         "*train*reservation*",
       ]
     extensions: [".ics"]
-    destination: "4_Archives/voyages/calendrier/{YYYY}"
+    destination: "4_Archives/5y_voyages/calendrier/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})-(\\d{2})-(\\d{2})"
 
@@ -1563,7 +1566,7 @@ routing_rules:
         "FACTURE_*",
       ]
     extensions: [".pdf", ".PDF"]
-    destination: "4_Archives/factures/divers/{YYYY}"
+    destination: "4_Archives/5y_factures/divers/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -1580,7 +1583,7 @@ routing_rules:
         "*remboursement*impots*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/impots-france/{YYYY}"
+    destination: "4_Archives/10y_impots-france/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -1629,7 +1632,7 @@ routing_rules:
         "*[Aa]sbestos*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/immobilier/diagnostics/{YYYY}"
+    destination: "4_Archives/10y_immobilier/diagnostics/{YYYY}"
     date_source: "file_modified"
 
   # Insurance attestations
@@ -1640,7 +1643,7 @@ routing_rules:
         "*[Aa]ttestation*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/assurances/attestations/{YYYY}"
+    destination: "4_Archives/5y_assurances/attestations/{YYYY}"
     date_source: "file_modified"
 
   # Catalog/product documentation
@@ -1695,7 +1698,7 @@ routing_rules:
         "*[Ll]ettre*",
       ]
     extensions: [".pdf", ".doc", ".docx"]
-    destination: "4_Archives/administratif/courriers/{YYYY}"
+    destination: "4_Archives/5y_administratif/courriers/{YYYY}"
     date_source: "file_modified"
 
   # Activities and events
@@ -1710,7 +1713,7 @@ routing_rules:
         "*[Hh]iver*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/loisirs/activites/{YYYY}"
+    destination: "4_Archives/5y_loisirs/activites/{YYYY}"
     date_source: "file_modified"
 
   # Bordeaux travel documents
@@ -1720,7 +1723,7 @@ routing_rules:
         "*[Bb]ordeaux*",
       ]
     extensions: [".pdf", ".doc"]
-    destination: "4_Archives/voyages/France/{YYYY}"
+    destination: "4_Archives/5y_voyages/France/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -1732,7 +1735,7 @@ routing_rules:
         "*[Dd]eclaration*[Aa]gricole*",
       ]
     extensions: [".pdf", ".doc", ".docx"]
-    destination: "4_Archives/administratif/agriculture"
+    destination: "4_Archives/5y_administratif/agriculture"
 
   # Single-page misc scans (W1, W2, W3, etc.)
   misc_scans_numbered:
@@ -1742,7 +1745,7 @@ routing_rules:
         "W[0-9][0-9].pdf",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/scans/divers"
+    destination: "4_Archives/5y_scans/divers"
 
   # Year-only PDF scans (####.pdf)
   year_only_scans:
@@ -1751,7 +1754,7 @@ routing_rules:
         "[12][09][0-9][0-9].pdf",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/scans/archives/{YYYY}"
+    destination: "4_Archives/5y_scans/archives/{YYYY}"
     date_source: "filename"
     date_pattern: "^(\\d{4})\\.pdf$"
 
@@ -1762,7 +1765,7 @@ routing_rules:
         "Dok_*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/documents/divers/{YYYY}"
+    destination: "4_Archives/5y_documents/divers/{YYYY}"
     date_source: "file_modified"
 
   # OCR scan variants (copies, numbered)
@@ -1777,7 +1780,7 @@ routing_rules:
         "*_2.pdf",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/scans/archives/{YYYY}"
+    destination: "4_Archives/5y_scans/archives/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -1789,7 +1792,7 @@ routing_rules:
         "[12][09][0-9][0-9][01][0-9][0-3][0-9][0-9][0-9][0-9][0-9][0-9][0-9]*.doc",
       ]
     extensions: [".pdf", ".doc"]
-    destination: "4_Archives/scans/divers/{YYYY}"
+    destination: "4_Archives/5y_scans/divers/{YYYY}"
     date_source: "filename"
     date_pattern: "^(\\d{4})"
 
@@ -1801,7 +1804,7 @@ routing_rules:
         "*rembours*",
       ]
     extensions: [".pdf", ""]
-    destination: "4_Archives/administratif/remboursements/{YYYY}"
+    destination: "4_Archives/5y_administratif/remboursements/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
 
@@ -1824,7 +1827,7 @@ routing_rules:
         "*[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].pdf",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/documents/transactions/{YYYY}"
+    destination: "4_Archives/5y_documents/transactions/{YYYY}"
     date_source: "file_modified"
 
   # SIEAPAC and utility documents
@@ -1835,7 +1838,7 @@ routing_rules:
         "*Controle*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/administratif/services-publics/{YYYY}"
+    destination: "4_Archives/5y_administratif/services-publics/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})(\\d{2})"
 
@@ -1846,7 +1849,7 @@ routing_rules:
         "*[Rr]eka*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/voyages/reka/{YYYY}"
+    destination: "4_Archives/5y_voyages/reka/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})(\\d{2})"
 
@@ -1871,7 +1874,7 @@ routing_rules:
         "*order*software*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/factures/logiciels/{YYYY}"
+    destination: "4_Archives/5y_factures/logiciels/{YYYY}"
     date_source: "file_modified"
 
   # HP/tech reference docs (codes start with letter, e.g., C5J91A-xxx, not years like 2016-)
@@ -1893,7 +1896,7 @@ routing_rules:
         "AR*reception*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/administratif/accuses-reception/{YYYY}"
+    destination: "4_Archives/5y_administratif/accuses-reception/{YYYY}"
     date_source: "file_modified"
 
   # Programming/algorithm books
@@ -1917,7 +1920,7 @@ routing_rules:
         "*[Gg]eneva*",
       ]
     extensions: [".ics"]
-    destination: "4_Archives/voyages/calendrier/{YYYY}"
+    destination: "4_Archives/5y_voyages/calendrier/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})-(\\d{2})-(\\d{2})"
 
@@ -1962,7 +1965,7 @@ routing_rules:
         "Invoice_*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/factures/divers/{YYYY}"
+    destination: "4_Archives/5y_factures/divers/{YYYY}"
     date_source: "file_modified"
 
   # CV/resume documents
@@ -1995,7 +1998,7 @@ routing_rules:
         "*[Ee]xpense*",
       ]
     extensions: [".xls", ".xlsx", ".pdf"]
-    destination: "4_Archives/administratif/notes-frais/{YYYY}"
+    destination: "4_Archives/5y_administratif/notes-frais/{YYYY}"
     date_source: "file_modified"
 
   # Destination travel documents (city names)
@@ -2012,7 +2015,7 @@ routing_rules:
         "*NZ[0-9]*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/voyages/international/{YYYY}"
+    destination: "4_Archives/5y_voyages/international/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -2024,7 +2027,7 @@ routing_rules:
         "KM*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/vehicules/kilometrage/{YYYY}"
+    destination: "4_Archives/5y_vehicules/kilometrage/{YYYY}"
     date_source: "file_modified"
 
   # Email store files
@@ -2035,7 +2038,7 @@ routing_rules:
         "*.eml",
       ]
     extensions: [".eml"]
-    destination: "4_Archives/emails/{YYYY}"
+    destination: "4_Archives/5y_emails/{YYYY}"
     date_source: "file_modified"
 
   # Loi/legal documents
@@ -2068,7 +2071,7 @@ routing_rules:
         "*[Pp]rocuration*",
       ]
     extensions: [".pdf", ".doc", ".docx"]
-    destination: "4_Archives/administratif/mandats/{YYYY}"
+    destination: "4_Archives/5y_administratif/mandats/{YYYY}"
     date_source: "file_modified"
 
   # LIBRE documents
@@ -2079,7 +2082,7 @@ routing_rules:
         "*courrier*libre*",
       ]
     extensions: [".pdf", ".doc"]
-    destination: "4_Archives/administratif/courriers/{YYYY}"
+    destination: "4_Archives/5y_administratif/courriers/{YYYY}"
     date_source: "file_modified"
 
   # La martinoise farm
@@ -2108,7 +2111,7 @@ routing_rules:
         "*[Pp]lan*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/immobilier/plans"
+    destination: "4_Archives/10y_immobilier/plans"
 
   # Partner GTMK documents
   partner_gtmk:
@@ -2157,7 +2160,7 @@ routing_rules:
         "*formulaire*",
       ]
     extensions: [".doc", ".pdf"]
-    destination: "4_Archives/administratif/formulaires/{YYYY}"
+    destination: "4_Archives/5y_administratif/formulaires/{YYYY}"
     date_source: "file_modified"
 
   # GE Menu documents
@@ -2187,7 +2190,7 @@ routing_rules:
         "HFR-*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/sante/HFR/{YYYY}"
+    destination: "4_Archives/5y_sante/HFR/{YYYY}"
     date_source: "file_modified"
 
   # INFO documents
@@ -2198,7 +2201,7 @@ routing_rules:
         "*PRECONTRACTUELLES*",
       ]
     extensions: [".doc", ".pdf"]
-    destination: "4_Archives/administratif/informations/{YYYY}"
+    destination: "4_Archives/5y_administratif/informations/{YYYY}"
     date_source: "file_modified"
 
   # Osprey military history books
@@ -2218,7 +2221,7 @@ routing_rules:
         "sg[0-9]*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/banques/divers/{YYYY}"
+    destination: "4_Archives/10y_banques/divers/{YYYY}"
     date_source: "file_modified"
 
   # S-number documents
@@ -2228,7 +2231,7 @@ routing_rules:
         "s[0-9]-*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/documents/divers/{YYYY}"
+    destination: "4_Archives/5y_documents/divers/{YYYY}"
     date_source: "file_modified"
 
   # SPDX license documents
@@ -2285,7 +2288,7 @@ routing_rules:
         "*ventes*total*",
       ]
     extensions: [".xlsx", ".xls"]
-    destination: "4_Archives/comptabilite/ventes/{YYYY}"
+    destination: "4_Archives/10y_comptabilite/ventes/{YYYY}"
     date_source: "file_modified"
 
   # Test documents
@@ -2296,7 +2299,7 @@ routing_rules:
         "test_*.pdf",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/documents/tests"
+    destination: "4_Archives/5y_documents/tests"
 
   # Exam materials
   exam_materials:
@@ -2333,7 +2336,7 @@ routing_rules:
         "Fichier*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/scans/divers/{YYYY}"
+    destination: "4_Archives/5y_scans/divers/{YYYY}"
     date_source: "file_modified"
 
   # Hautin farm documents
@@ -2353,7 +2356,7 @@ routing_rules:
         "=AMN*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/scans/divers/{YYYY}"
+    destination: "4_Archives/5y_scans/divers/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
 
@@ -2364,7 +2367,7 @@ routing_rules:
         "*Notre*Dame*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/voyages/France/{YYYY}"
+    destination: "4_Archives/5y_voyages/France/{YYYY}"
     date_source: "file_modified"
 
   # RE- prefix receipts
@@ -2374,7 +2377,7 @@ routing_rules:
         "RE-*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/factures/divers/{YYYY}"
+    destination: "4_Archives/5y_factures/divers/{YYYY}"
     date_source: "file_modified"
 
   # List/Report documents
@@ -2385,7 +2388,7 @@ routing_rules:
         "*Report*List*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/documents/rapports/{YYYY}"
+    destination: "4_Archives/5y_documents/rapports/{YYYY}"
     date_source: "file_modified"
 
   # =============================================================================
@@ -2401,7 +2404,7 @@ routing_rules:
         "*social*security*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/administratif/AVS/{YYYY}"
+    destination: "4_Archives/5y_administratif/AVS/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -2413,7 +2416,7 @@ routing_rules:
         "*allocations*familiales*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/administratif/CAF/{YYYY}"
+    destination: "4_Archives/5y_administratif/CAF/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -2429,7 +2432,7 @@ routing_rules:
         "*DER*Touristik*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/voyages/Kuoni/{YYYY}"
+    destination: "4_Archives/5y_voyages/Kuoni/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -2447,7 +2450,7 @@ routing_rules:
         "*AVIS*RENOUVELLEMENT*PACIFICA*",
       ]
     extensions: [".pdf", ".PDF"]
-    destination: "4_Archives/factures/Assurances/Pacifica/{YYYY}"
+    destination: "4_Archives/5y_factures/Assurances/Pacifica/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -2461,7 +2464,7 @@ routing_rules:
         "*[Pp]rotection*[Jj]uridique*[Oo]rion*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/factures/Assurances/Orion/{YYYY}"
+    destination: "4_Archives/5y_factures/Assurances/Orion/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -2481,7 +2484,7 @@ routing_rules:
         "Eau*SIG*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/factures/Energie/Eau/{YYYY}"
+    destination: "4_Archives/5y_factures/Energie/Eau/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -2492,7 +2495,7 @@ routing_rules:
         "[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]_*.PDF",
       ]
     extensions: [".pdf", ".PDF"]
-    destination: "4_Archives/banques/divers/{YYYY}"
+    destination: "4_Archives/10y_banques/divers/{YYYY}"
     date_source: "file_modified"
 
   # F2E4/GUID based scans
@@ -2503,7 +2506,7 @@ routing_rules:
         "*-*-*-*-*_*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/scans/divers/{YYYY}"
+    destination: "4_Archives/5y_scans/divers/{YYYY}"
     date_source: "file_modified"
 
   # FA prefix receipts
@@ -2514,7 +2517,7 @@ routing_rules:
         "FA[0-9]*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/factures/divers/{YYYY}"
+    destination: "4_Archives/5y_factures/divers/{YYYY}"
     date_source: "file_modified"
 
   # 007 prefix scans
@@ -2524,7 +2527,7 @@ routing_rules:
         "007_*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/scans/divers/{YYYY}"
+    destination: "4_Archives/5y_scans/divers/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})(\\d{2})(\\d{2})"
 
@@ -2541,7 +2544,7 @@ routing_rules:
         "[Tt]icket [0-9]*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/factures/Services/5aSec/{YYYY}"
+    destination: "4_Archives/5y_factures/Services/5aSec/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -2554,7 +2557,7 @@ routing_rules:
         "HB20*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/factures/Materiels/Informatique/{YYYY}"
+    destination: "4_Archives/5y_factures/Materiels/Informatique/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -2570,7 +2573,7 @@ routing_rules:
         "*[Cc]orsica*[Ss]ardinia*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/voyages/Corsica-Ferries/{YYYY}"
+    destination: "4_Archives/5y_voyages/Corsica-Ferries/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -2582,7 +2585,7 @@ routing_rules:
         "*AA*flight*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/voyages/American-Airlines/{YYYY}"
+    destination: "4_Archives/5y_voyages/American-Airlines/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -2598,7 +2601,7 @@ routing_rules:
         "*TRYBA*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/factures/immobilier/Tryba/{YYYY}"
+    destination: "4_Archives/5y_factures/immobilier/Tryba/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -2615,7 +2618,7 @@ routing_rules:
         "*GNU*Linux*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/loisirs/magazines/{YYYY}"
+    destination: "4_Archives/5y_loisirs/magazines/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -2632,7 +2635,7 @@ routing_rules:
         "*Speedi*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/factures/Materiels/Maison/Cuisine/{YYYY}"
+    destination: "4_Archives/5y_factures/Materiels/Maison/Cuisine/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -2668,7 +2671,7 @@ routing_rules:
         "*[Ff]iscal*",
       ]
     extensions: [".pdf", ".docx", ".doc", ".txt", ".zip"]
-    destination: "4_Archives/administratif/impots-france/{YYYY}"
+    destination: "4_Archives/10y_impots-france/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -2681,7 +2684,7 @@ routing_rules:
         "*[Cc]homage*",
       ]
     extensions: [".pdf", ".docx", ".doc"]
-    destination: "4_Archives/administratif/pole-emploi/{YYYY}"
+    destination: "4_Archives/5y_administratif/pole-emploi/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -2771,7 +2774,7 @@ routing_rules:
         "*ahrres*",
       ]
     extensions: [".pdf", ".odt", ".docx"]
-    destination: "4_Archives/factures/immobilier/demenagement/{YYYY}"
+    destination: "4_Archives/5y_factures/immobilier/demenagement/{YYYY}"
     date_source: "file_modified"
 
   # Domicim (property management)
@@ -2782,7 +2785,7 @@ routing_rules:
         "*[Pp]laques*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/factures/immobilier/Domicim/{YYYY}"
+    destination: "4_Archives/5y_factures/immobilier/Domicim/{YYYY}"
     date_source: "file_modified"
 
   # =============================================================================
@@ -2871,7 +2874,7 @@ routing_rules:
         "*[Aa]ttestation*[Gg]arde*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/administratif/impots-suisse/{YYYY}"
+    destination: "4_Archives/10y_impots-suisse/{YYYY}"
     date_source: "filename"
     date_pattern: "(\\d{4})"
 
@@ -2924,7 +2927,7 @@ routing_rules:
         "*[Aa]utopano*",
       ]
     extensions: [".pdf", ".txt"]
-    destination: "4_Archives/factures/Logiciels/{YYYY}"
+    destination: "4_Archives/5y_factures/Logiciels/{YYYY}"
     date_source: "file_modified"
 
   # Travel planning and maps
@@ -2938,7 +2941,7 @@ routing_rules:
         "*date-ie-list*",
       ]
     extensions: [".pdf", ".xlsx"]
-    destination: "4_Archives/voyages/planning/{YYYY}"
+    destination: "4_Archives/5y_voyages/planning/{YYYY}"
     date_source: "file_modified"
 
   # Restaurant menus (low priority, goes to divers)
@@ -2951,7 +2954,7 @@ routing_rules:
         "*carte.pdf",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/divers/restaurants/{YYYY}"
+    destination: "4_Archives/5y_divers/restaurants/{YYYY}"
     date_source: "file_modified"
 
   # Attendance sheets (fiche de présence)
@@ -2963,7 +2966,7 @@ routing_rules:
         "*[Pp]resence*[Ss]heet*",
       ]
     extensions: [".pdf", ".xlsx"]
-    destination: "4_Archives/administratif/divers/{YYYY}"
+    destination: "4_Archives/5y_administratif/divers/{YYYY}"
     date_source: "file_modified"
 
   # IT Security magazines (MISC, etc.)

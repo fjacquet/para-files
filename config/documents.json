@@ -116,7 +116,7 @@
       "id": "CAT_02_IMPOTS_FISCALITE",
       "name": "02. Fiscalité (Impôts)",
       "description": "Tout ce qui touche à l'administration fiscale cantonale et fédérale.",
-      "para_pattern": "4_Archives/fiscalite/{year}",
+      "para_pattern": "4_Archives/10y_fiscalite/{year}",
       "documents": [
         {
           "sub_id": "declarations",
@@ -337,7 +337,7 @@
       "id": "CAT_03_LOGEMENT",
       "name": "03. Logement & Énergie",
       "description": "Distinction Locataire vs Propriétaire.",
-      "para_pattern": "4_Archives/logement/{year}",
+      "para_pattern": "4_Archives/ctr_logement/{year}",
       "documents": [
         {
           "sub_id": "bail_locataire",
@@ -695,7 +695,7 @@
       "id": "CAT_04_SANTE_SOCIAL",
       "name": "04. Santé & Assurances Personnes",
       "description": "Gestion de la maladie, des accidents et des subsides.",
-      "para_pattern": "4_Archives/sante/{year}",
+      "para_pattern": "4_Archives/5y_sante/{year}",
       "documents": [
         {
           "sub_id": "lamal_base",
@@ -936,7 +936,7 @@
       "id": "CAT_05_TRAVAIL_REVENUS",
       "name": "05. Travail & Chômage",
       "description": "Historique professionnel et périodes d'inactivité.",
-      "para_pattern": "4_Archives/travail/{year}",
+      "para_pattern": "4_Archives/5y_travail/{year}",
       "documents": [
         {
           "sub_id": "contrats_travail",
@@ -1047,7 +1047,7 @@
       "id": "CAT_06_PREVOYANCE_RETRAITE",
       "name": "06. Prévoyance & Retraite",
       "description": "Les trois piliers suisses.",
-      "para_pattern": "4_Archives/prevoyance/{issuer}/{year}",
+      "para_pattern": "4_Archives/ret_prevoyance/{issuer}/{year}",
       "documents": [
         {
           "sub_id": "avs_ai",
@@ -1170,7 +1170,7 @@
       "id": "CAT_07_FINANCES_BANQUE",
       "name": "07. Finances & Banque",
       "description": "Gestion de fortune et dettes.",
-      "para_pattern": "4_Archives/banques/{issuer}/{year}",
+      "para_pattern": "4_Archives/10y_banques/{issuer}/{year}",
       "documents": [
         {
           "sub_id": "comptes_bancaires",
@@ -1374,7 +1374,7 @@
       "id": "CAT_08_MOBILITE_VEHICULES",
       "name": "08. Mobilité & Véhicules",
       "description": "Documents liés aux transports privés et publics.",
-      "para_pattern": "4_Archives/mobilite/{year}",
+      "para_pattern": "4_Archives/5y_mobilite/{year}",
       "documents": [
         {
           "sub_id": "vehicule_admin",
@@ -1619,7 +1619,7 @@
       "id": "CAT_09_DIVERS_VIE_PRIVEE",
       "name": "09. Divers & Vie Privée",
       "description": "Animaux, formation, juridique et garanties.",
-      "para_pattern": "4_Archives/divers/{year}",
+      "para_pattern": "4_Archives/5y_divers/{year}",
       "documents": [
         {
           "sub_id": "formation_scolaire",
