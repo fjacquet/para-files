@@ -1105,6 +1105,23 @@ routing_rules:
     destination: "3_Resources/docs/case-studies"
     date_source: "file_modified"
 
+  # Citrix/NetScaler documentation (NOT Microsoft certifications)
+  citrix_netscaler_docs:
+    patterns:
+      [
+        "*[Nn]et[Ss]caler*",
+        "*[Nn]etscaler*",
+        "*[Cc]itrix*",
+        "*deploying*netscaler*",
+        "*[Cc]itrix*[Aa][Dd][Cc]*",
+        "*[Xx]en[Ss]erver*",
+        "*[Xx]en[Aa]pp*",
+        "*[Xx]en[Dd]esktop*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx"]
+    destination: "3_Resources/docs/Citrix/{YYYY}"
+    date_source: "file_modified"
+
   # IT whitepapers and technical guides (NOT books)
   it_whitepapers:
     patterns:
