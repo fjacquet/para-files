@@ -103,7 +103,7 @@ class MLXConfig(BaseSettings):
         description="Enable semantic classifier using MLX embeddings",
     )
     semantic_threshold: float = Field(
-        default=0.5,
+        default=0.65,
         ge=0.0,
         le=1.0,
         description="Minimum cosine similarity threshold for semantic matching",
