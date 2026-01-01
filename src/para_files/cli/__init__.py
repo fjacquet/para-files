@@ -16,6 +16,7 @@ from __future__ import annotations
 # Import all command modules to register them with the app
 # The @app.command() decorators in each module register the commands
 from para_files.cli import (
+    bookstore_cmd,
     classify_cmd,
     clean_cmd,
     config_cmd,
@@ -55,6 +56,7 @@ __all__ = [
     "MAX_UTTERANCES_SHOWN",
     "ConflictChoice",
     "app",
+    "bookstore_cmd",
     "classify_cmd",
     "clean_cmd",
     "config_cmd",

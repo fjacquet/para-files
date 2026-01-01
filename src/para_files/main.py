@@ -11,6 +11,7 @@ from __future__ import annotations
 
 # Import all commands to register them with the app
 from para_files.cli import (  # noqa: F401
+    bookstore_cmd,
     classify_cmd,
     clean_cmd,
     config_cmd,
