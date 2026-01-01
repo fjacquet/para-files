@@ -93,12 +93,12 @@ class RoutingLearner:
         # Check if already exists
         issuers = tree["known_issuers"][category]
         if issuer in issuers:
-            logger.info("Issuer '%s' already exists in category '%s'", issuer, category)
+            logger.info("Issuer '{}' already exists in category '{}'", issuer, category)
             return False
 
         issuers.append(issuer)
         self._save_tree()
-        logger.info("Added issuer '%s' to category '%s'", issuer, category)
+        logger.info("Added issuer '{}' to category '{}'", issuer, category)
         return True
 
     def add_utterance(self, route_name: str, utterance: str) -> bool:
@@ -140,7 +140,7 @@ class RoutingLearner:
                     )
                     return True
 
-        logger.warning("Route '%s' not found", route_name)
+        logger.warning("Route '{}' not found", route_name)
         return False
 
     def get_route_info(self, route_name: str) -> dict[str, Any] | None:

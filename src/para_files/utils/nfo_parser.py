@@ -68,10 +68,10 @@ def _read_nfo_file(path: Path) -> str | None:
         except (UnicodeDecodeError, LookupError):
             continue
         except OSError as e:
-            logger.warning("Error reading NFO file %s: %s", path, e)
+            logger.warning("Error reading NFO file {}: {}", path, e)
             return None
 
-    logger.warning("Could not decode NFO file with any known encoding: %s", path)
+    logger.warning("Could not decode NFO file with any known encoding: {}", path)
     return None
 
 
@@ -310,7 +310,7 @@ def get_nfo_hints_for_file(file_path: Path) -> NfoHints | None:
     if nfo_path:
         hints = parse_nfo(nfo_path)
         if hints.has_hints():
-            logger.debug("Found NFO hints for %s from %s", file_path.name, nfo_path.name)
+            logger.debug("Found NFO hints for {} from {}", file_path.name, nfo_path.name)
             return hints
 
     return None

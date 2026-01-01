@@ -97,17 +97,17 @@ def delete_junk_file(path: Path, *, dry_run: bool = True) -> bool:
         return False
 
     if not is_junk_file(path):
-        logger.warning("Refusing to delete non-junk file: %s", path)
+        logger.warning("Refusing to delete non-junk file: {}", path)
         return False
 
     if dry_run:
-        logger.info("[DRY-RUN] Would delete junk file: %s", path)
+        logger.info("[DRY-RUN] Would delete junk file: {}", path)
     else:
         try:
             path.unlink()
-            logger.info("Deleted junk file: %s", path)
+            logger.info("Deleted junk file: {}", path)
         except OSError:
-            logger.exception("Failed to delete %s", path)
+            logger.exception("Failed to delete {}", path)
             return False
 
     return True
@@ -127,19 +127,19 @@ def delete_junk_directory(path: Path, *, dry_run: bool = True) -> bool:
         return False
 
     if not is_junk_directory(path):
-        logger.warning("Refusing to delete non-junk directory: %s", path)
+        logger.warning("Refusing to delete non-junk directory: {}", path)
         return False
 
     if dry_run:
-        logger.info("[DRY-RUN] Would delete junk directory: %s", path)
+        logger.info("[DRY-RUN] Would delete junk directory: {}", path)
     else:
         try:
             import shutil
 
             shutil.rmtree(path)
-            logger.info("Deleted junk directory: %s", path)
+            logger.info("Deleted junk directory: {}", path)
         except OSError:
-            logger.exception("Failed to delete directory %s", path)
+            logger.exception("Failed to delete directory {}", path)
             return False
 
     return True
@@ -171,17 +171,17 @@ def cleanup_empty_dirs(root: Path, *, dry_run: bool = True) -> list[Path]:
         try:
             if not any(dirpath.iterdir()):
                 if dry_run:
-                    logger.info("[DRY-RUN] Would delete empty directory: %s", dirpath)
+                    logger.info("[DRY-RUN] Would delete empty directory: {}", dirpath)
                 else:
                     try:
                         dirpath.rmdir()
-                        logger.info("Deleted empty directory: %s", dirpath)
+                        logger.info("Deleted empty directory: {}", dirpath)
                     except OSError:
-                        logger.exception("Failed to delete empty dir %s", dirpath)
+                        logger.exception("Failed to delete empty dir {}", dirpath)
                         continue
                 deleted.append(dirpath)
         except PermissionError:
-            logger.warning("Permission denied accessing: %s", dirpath)
+            logger.warning("Permission denied accessing: {}", dirpath)
 
     return deleted
 

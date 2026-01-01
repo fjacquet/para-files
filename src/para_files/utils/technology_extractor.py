@@ -23,32 +23,76 @@ TECHNOLOGY_MATCH_THRESHOLD = 0.45
 # Technology descriptions for semantic matching
 # These are expanded descriptions that help the embedding model understand context
 TECHNOLOGY_DESCRIPTIONS: dict[str, list[str]] = {
+    # === Databases ===
     "MariaDB": ["MariaDB database MySQL SQL relational database server"],
     "MySQL": ["MySQL database SQL relational database management"],
     "Oracle": ["Oracle Database RAC Real Application Clusters enterprise database"],
     "PostgreSQL": ["PostgreSQL Postgres database SQL open source"],
     "MongoDB": ["MongoDB NoSQL document database"],
     "Redis": ["Redis cache in-memory data store"],
+    # === Container/Cloud Platforms ===
     "Kubernetes": ["Kubernetes K8s container orchestration pods deployments"],
-    "OpenShift": ["Red Hat OpenShift container platform Kubernetes enterprise"],
+    "OpenShift": ["Red Hat OpenShift container platform Kubernetes enterprise OCP"],
+    "OpenStack": ["OpenStack cloud platform infrastructure IaaS Nova Cinder Swift"],
     "EKS": ["Amazon EKS Elastic Kubernetes Service AWS containers"],
     "Docker": ["Docker containers containerization images"],
+    # === VMware ===
     "VMware": ["VMware vSphere ESXi virtualization virtual machines hypervisor"],
     "vSphere": ["VMware vSphere ESXi vCenter virtualization"],
     "vSAN": ["VMware vSAN virtual storage area network"],
     "NSX": ["VMware NSX network virtualization software-defined networking"],
     "Tanzu": ["VMware Tanzu Kubernetes platform cloud native"],
+    # === Dell Storage (Current) ===
+    "PowerMax": ["Dell PowerMax enterprise storage array NVMe HYPERMAX VMAX successor"],
+    "PowerStore": ["Dell PowerStore midrange storage array block file NVMe"],
+    "PowerScale": ["Dell PowerScale scale-out NAS file storage Isilon successor"],
+    "PowerFlex": ["Dell PowerFlex software-defined storage SDS block ScaleIO"],
+    "PowerVault": ["Dell PowerVault entry storage DAS direct attached"],
+    "Unity": ["Dell EMC Unity midrange storage array block file VNX successor"],
+    "ObjectScale": ["Dell ObjectScale S3 object storage ECS cloud native"],
+    "ECS": ["Dell EMC ECS Elastic Cloud Storage object S3 compatible"],
+    # === Dell Data Protection ===
+    "PowerProtect": ["Dell PowerProtect data protection backup appliance DD"],
+    "DataDomain": ["Dell EMC Data Domain deduplication backup appliance DD Boost"],
+    "Avamar": ["Dell EMC Avamar backup deduplication software virtual"],
+    "NetWorker": ["Dell EMC NetWorker backup recovery enterprise software"],
+    "RecoverPoint": ["Dell EMC RecoverPoint continuous data protection CDP replication"],
+    "AppSync": ["Dell EMC AppSync copy data management snapshot orchestration"],
+    "CyberRecovery": ["Dell PowerProtect Cyber Recovery vault ransomware isolation"],
+    # === Dell Legacy Storage ===
+    "VMAX": ["Dell EMC VMAX Symmetrix enterprise storage array high-end"],
+    "Symmetrix": ["EMC Symmetrix DMX VMAX enterprise storage mainframe"],
+    "VNX": ["Dell EMC VNX unified storage array block file midrange"],
+    "CLARiiON": ["EMC CLARiiON CX storage array block SAN FC"],
+    "Isilon": ["Dell EMC Isilon scale-out NAS file storage cluster"],
+    "XtremIO": ["Dell EMC XtremIO all-flash array AFA inline deduplication"],
+    "VPLEX": ["Dell EMC VPLEX federation virtualization metro geo active-active"],
+    "ViPR": ["Dell EMC ViPR software-defined storage SDS controller"],
+    "Celerra": ["EMC Celerra NAS file storage gateway unified"],
+    "Centera": ["EMC Centera CAS content-addressed storage archive"],
+    "Atmos": ["EMC Atmos cloud storage object platform"],
+    # === Dell HCI/Converged ===
+    "VxRail": ["Dell VxRail hyperconverged infrastructure HCI VMware appliance"],
+    "VxRack": ["Dell EMC VxRack rack-scale infrastructure ScaleIO FLEX"],
+    "VxBlock": ["Dell EMC VxBlock converged infrastructure CI Vblock"],
+    # === Dell Networking ===
+    "Connectrix": ["Dell EMC Connectrix SAN switch director Brocade FC"],
+    "SONiC": ["Dell SONiC network operating system open source switching"],
+    "PowerSwitch": ["Dell PowerSwitch network switches data center fabric"],
+    # === Dell Cloud/APEX ===
+    "APEX": ["Dell APEX as-a-service cloud consumption storage compute"],
+    # === Compute/GPU ===
     "GPU": ["GPU graphics processing unit NVIDIA CUDA accelerated computing"],
     "NVIDIA": ["NVIDIA GPU graphics card CUDA deep learning AI acceleration"],
     "AI": ["artificial intelligence machine learning deep learning neural networks"],
+    # === Programming ===
     "Python": ["Python programming language development"],
     "Go": ["Go Golang programming language"],
     "Java": ["Java programming language JVM enterprise"],
+    # === Automation ===
     "Ansible": ["Ansible automation configuration management playbooks"],
     "Terraform": ["Terraform infrastructure as code IaC provisioning"],
-    "PowerFlex": ["Dell PowerFlex software-defined storage ScaleIO"],
-    "PowerStore": ["Dell PowerStore storage array enterprise"],
-    "VxRail": ["Dell VxRail hyperconverged infrastructure HCI VMware"],
+    # === General Categories ===
     "Storage": ["storage SAN NAS block file object data"],
     "Backup": ["backup recovery data protection disaster recovery"],
     "Security": ["security cybersecurity encryption authentication"],
@@ -140,7 +184,9 @@ class TechnologyExtractor:
             import numpy as np
 
             # Encode document content
-            doc_embedding = encoder([content[:2000]])[0]  # Limit content length
+            # Limit to 400 chars to stay safely under MLX model's 512 token limit
+            # (some texts tokenize poorly, e.g., 700 chars → 800+ tokens)
+            doc_embedding = encoder([content[:400]])[0]
 
             # Calculate cosine similarity with each technology
             doc_vec = np.array(doc_embedding)
@@ -188,6 +234,7 @@ class TechnologyExtractor:
 
         # Additional keyword mappings for common variations
         keyword_to_tech = {
+            # Databases
             "mariadb": "MariaDB",
             "maria db": "MariaDB",
             "mysql": "MySQL",
@@ -195,27 +242,82 @@ class TechnologyExtractor:
             "rac": "Oracle",  # RAC is Oracle-specific
             "postgres": "PostgreSQL",
             "postgresql": "PostgreSQL",
+            "mongodb": "MongoDB",
+            "redis": "Redis",
+            # Container/Cloud Platforms
             "k8s": "Kubernetes",
             "kubernetes": "Kubernetes",
             "eks": "EKS",
             "openshift": "OpenShift",
             "ocp": "OpenShift",
+            "openstack": "OpenStack",  # NOT OpenShift!
+            "nova": "OpenStack",
+            "cinder": "OpenStack",
             "docker": "Docker",
+            # VMware
             "vmware": "VMware",
             "vsphere": "vSphere",
             "esxi": "VMware",
+            "vcenter": "vSphere",
             "vsan": "vSAN",
             "nsx": "NSX",
             "tanzu": "Tanzu",
+            # Dell Storage (Current)
+            "powermax": "PowerMax",
+            "hypermax": "PowerMax",
+            "powerstore": "PowerStore",
+            "powerscale": "PowerScale",
+            "powerflex": "PowerFlex",
+            "scaleio": "PowerFlex",
+            "powervault": "PowerVault",
+            "unity": "Unity",
+            "objectscale": "ObjectScale",
+            "ecs": "ECS",
+            # Dell Data Protection
+            "powerprotect": "PowerProtect",
+            "data domain": "DataDomain",
+            "datadomain": "DataDomain",
+            "dd boost": "DataDomain",
+            "ddboost": "DataDomain",
+            "avamar": "Avamar",
+            "networker": "NetWorker",
+            "recoverpoint": "RecoverPoint",
+            "appsync": "AppSync",
+            "cyber recovery": "CyberRecovery",
+            "cyberrecovery": "CyberRecovery",
+            # Dell Legacy Storage
+            "vmax": "VMAX",
+            "symmetrix": "Symmetrix",
+            "dmx": "Symmetrix",
+            "vnx": "VNX",
+            "vnxe": "VNX",
+            "clariion": "CLARiiON",
+            "isilon": "Isilon",
+            "xtremio": "XtremIO",
+            "vplex": "VPLEX",
+            "vipr": "ViPR",
+            "celerra": "Celerra",
+            "centera": "Centera",
+            "atmos": "Atmos",
+            # Dell HCI/Converged
+            "vxrail": "VxRail",
+            "vxrack": "VxRack",
+            "vxblock": "VxBlock",
+            "vblock": "VxBlock",
+            # Dell Networking
+            "connectrix": "Connectrix",
+            "sonic": "SONiC",
+            "powerswitch": "PowerSwitch",
+            # Dell Cloud
+            "apex": "APEX",
+            # Compute/GPU
             "gpu": "GPU",
             "nvidia": "NVIDIA",
             "cuda": "NVIDIA",
-            "powerflex": "PowerFlex",
-            "scaleio": "PowerFlex",
-            "powerstore": "PowerStore",
-            "vxrail": "VxRail",
+            # Automation
             "ansible": "Ansible",
             "terraform": "Terraform",
+            # Programming
             "python": "Python",
             "golang": "Go",
         }
@@ -249,14 +351,14 @@ class TechnologyExtractor:
         # Try filename first (fast, deterministic)
         tech = self.extract_from_filename(file_path.name)
         if tech:
-            logger.debug("Technology from filename: %s", tech)
+            logger.debug("Technology from filename: {}", tech)
             return tech, 0.95, "filename"
 
         # Try content-based if available
         if content:
             tech, score = self.extract_from_content(content)
             if tech:
-                logger.debug("Technology from content: %s (%.2f)", tech, score)
+                logger.debug("Technology from content: {} ({:.2f})", tech, score)
                 return tech, score, "content"
 
         return None, 0.0, "none"

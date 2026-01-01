@@ -84,9 +84,9 @@ class FeedbackTracker:
                     self._corrections = [
                         CorrectionRecord.from_dict(record) for record in data.get("corrections", [])
                     ]
-                logger.debug("Loaded %d correction records", len(self._corrections))
+                logger.debug("Loaded {} correction records", len(self._corrections))
             except (json.JSONDecodeError, OSError) as e:
-                logger.warning("Failed to load feedback history: %s", e)
+                logger.warning("Failed to load feedback history: {}", e)
                 self._corrections = []
         else:
             self._corrections = []
@@ -106,7 +106,7 @@ class FeedbackTracker:
                 indent=2,
                 ensure_ascii=False,
             )
-        logger.debug("Saved %d correction records", len(self._corrections))
+        logger.debug("Saved {} correction records", len(self._corrections))
 
     def record_correction(  # noqa: PLR0913
         self,

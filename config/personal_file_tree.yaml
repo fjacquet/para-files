@@ -49,8 +49,9 @@ config:
 # =============================================================================
 routing_rules:
   # Photos - Route by EXIF date and GPS location
+  # NOTE: No source constraint - photos should route regardless of current location
+  # This enables rescan to correct misrouted photos (e.g., HEIC in certifications)
   photos:
-    source: "0_Inbox"
     extensions:
       [".jpg", ".jpeg", ".png", ".heic", ".raw", ".cr2", ".nef", ".dng"]
     destination: "4_Archives/photos/{YYYY}/{country}/{location}/{MM}/{DD}"
@@ -58,16 +59,16 @@ routing_rules:
     fallback_date: "file_modified"
 
   # Videos - Route by EXIF date and GPS location
+  # NOTE: No source constraint - videos should route regardless of current location
   videos:
-    source: "0_Inbox"
     extensions: [".mp4", ".mov", ".avi", ".mkv"]
     destination: "4_Archives/videos/{YYYY}/{country}/{location}/{MM}/{DD}"
     date_source: "exif"
     fallback_date: "file_modified"
 
   # Screenshots - Route by file date
+  # NOTE: No source constraint - pattern matching is sufficient
   screenshots:
-    source: "0_Inbox"
     patterns: ["Screenshot*", "Capture*", "Screen Shot*"]
     destination: "4_Archives/photos/{YYYY}/{MM}/{DD}"
     date_source: "file_modified"
@@ -167,22 +168,64 @@ routing_rules:
     date_source: "file_modified"
     known_technologies:
       [
-        MariaDB,
-        MySQL,
-        Oracle,
-        PostgreSQL,
-        Kubernetes,
-        OpenShift,
-        EKS,
+        # Dell Storage (Current)
+        PowerMax,
+        PowerStore,
+        PowerScale,
+        PowerFlex,
+        PowerVault,
+        Unity,
+        ObjectScale,
+        ECS,
+        # Dell Data Protection
+        PowerProtect,
+        DataDomain,
+        Avamar,
+        NetWorker,
+        RecoverPoint,
+        AppSync,
+        CyberRecovery,
+        # Dell Legacy Storage
+        VMAX,
+        Symmetrix,
+        VNX,
+        CLARiiON,
+        Isilon,
+        XtremIO,
+        VPLEX,
+        ViPR,
+        ScaleIO,
+        Celerra,
+        Centera,
+        Atmos,
+        # Dell HCI/Converged
+        VxRail,
+        VxRack,
+        VxBlock,
+        # Dell Networking
+        Connectrix,
+        SONiC,
+        PowerSwitch,
+        # Dell Cloud
+        APEX,
+        # Platforms (Dell integrates with)
+        OpenStack,
         VMware,
         vSphere,
+        Kubernetes,
+        OpenShift,
+        # Databases (Dell integrates with)
+        Oracle,
+        MariaDB,
+        MySQL,
+        PostgreSQL,
+        # General
         GPU,
         NVIDIA,
         Tanzu,
-        Containers,
-        SONiC,
         Networking,
-        PowerFlex,
+        Storage,
+        Backup,
       ]
 
   # Security documentation
@@ -548,14 +591,14 @@ routing_rules:
     destination: "4_Archives/carriere/certifications/{YYYY}"
     date_source: "file_modified"
 
-  # Career - work certificates
+  # Career - work certificates (formal employer-issued documents)
+  # NOTE: Recommendation letters go to lettres_accompagnement
   carriere_certificats_travail:
     patterns:
       [
         "*[Cc]ertificat*travail*",
         "*[Ww]ork*[Cc]ertificate*",
         "*[Aa]rbeitszeugnis*",
-        "*[Rr]ecommandation*",
       ]
     extensions: [".pdf", ".docx", ".doc"]
     destination: "4_Archives/carriere/certificats-travail/{YYYY}"
@@ -575,6 +618,7 @@ routing_rules:
     date_source: "file_modified"
 
   # Hobbies - sailing/voile
+  # NOTE: *[Bb]ateau* removed - generic boat files go to loisirs_nautique
   loisirs_voile:
     patterns:
       [
@@ -582,7 +626,6 @@ routing_rules:
         "*[Ss]ailing*",
         "*[Rr]egate*",
         "*[Rr]égate*",
-        "*[Bb]ateau*",
         "*[Yy]acht*",
       ]
     extensions: [".pdf", ".jpg", ".png"]
@@ -1279,13 +1322,13 @@ routing_rules:
     date_source: "file_modified"
 
   # Professional recommendation letters (lettres accompagnatrices)
+  # NOTE: Cover letters and motivation letters handled by carriere_candidatures
   lettres_accompagnement:
     patterns:
       [
         "*[Ll]ettre*[Aa]ccomp*",
-        "*[Ll]ettre*[Mm]otiv*",
-        "*[Cc]over*[Ll]etter*",
         "*LettreAcc*",
+        "*[Rr]ecommandation*",
       ]
     extensions: [".pdf", ".doc", ".docx"]
     destination: "4_Archives/carriere/lettres/{YYYY}"
@@ -1577,15 +1620,17 @@ routing_rules:
     extensions: [".pdf", ".xlsx", ".doc", ".docx"]
     destination: "3_Resources/agriculture/exploitations"
 
-  # Asbestos and property documents
+  # Asbestos-specific documents
+  # NOTE: Generic property diagnostics handled by dpe_diagnostics
   amiante_documents:
     patterns:
       [
         "*[Aa]miante*",
-        "*[Dd]iagnostic*[Ii]mmobilier*",
+        "*[Aa]sbestos*",
       ]
     extensions: [".pdf"]
-    destination: "4_Archives/immobilier/diagnostics"
+    destination: "4_Archives/immobilier/diagnostics/{YYYY}"
+    date_source: "file_modified"
 
   # Insurance attestations
   attestation_assurance:
@@ -2657,13 +2702,14 @@ routing_rules:
     date_source: "file_modified"
 
   # VMware/Skyline documentation
+  # NOTE: VTSP removed - it's a certification (VMware Technical Sales Professional)
+  # handled by carriere_certifications rule
   vmware_docs:
     patterns:
       [
         "*[Vv][Mm]ware*",
         "*[Ss]kyline*",
         "*[Vv][Ss]phere*",
-        "*VTSP*",
       ]
     extensions: [".pdf", ".psd", ".docx"]
     destination: "3_Resources/IT/VMware/{YYYY}"
@@ -2713,17 +2759,7 @@ routing_rules:
   # REAL ESTATE & HOME - Added 2025-12-30
   # =============================================================================
 
-  # Asbestos/Amiante documents
-  amiante_docs:
-    patterns:
-      [
-        "*[Aa]miante*",
-        "*[Aa]sbestos*",
-        "*[Dd]iagnostic*[Ii]mmobilier*",
-      ]
-    extensions: [".pdf"]
-    destination: "4_Archives/factures/immobilier/diagnostics/{YYYY}"
-    date_source: "file_modified"
+  # NOTE: amiante_docs removed - consolidated into amiante_documents rule above
 
   # Moving/Déménagement
   demenagement_docs:

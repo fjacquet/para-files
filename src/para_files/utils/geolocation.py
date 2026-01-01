@@ -111,9 +111,9 @@ class GeolocationCache:
                 ON geolocation_cache (lat, lon)
             """)
             conn.commit()
-            logger.debug("Geolocation cache initialized at %s", self.db_path)
+            logger.debug("Geolocation cache initialized at {}", self.db_path)
         except sqlite3.Error as e:
-            logger.warning("Failed to initialize geolocation cache: %s", e)
+            logger.warning("Failed to initialize geolocation cache: {}", e)
 
     def _get_connection(self) -> sqlite3.Connection:
         """Get or create database connection."""
@@ -141,10 +141,10 @@ class GeolocationCache:
                 row = cursor.fetchone()
                 if row:
                     result: dict[str, str] = json.loads(row[0])
-                    logger.debug("Cache hit for coordinates: %s, %s", lat, lon)
+                    logger.debug("Cache hit for coordinates: {}, {}", lat, lon)
                     return result
             except (sqlite3.Error, json.JSONDecodeError) as e:
-                logger.debug("Cache lookup failed: %s", e)
+                logger.debug("Cache lookup failed: {}", e)
             return None
 
     def set(self, lat: float, lon: float, address: Mapping[str, str]) -> None:
@@ -166,9 +166,9 @@ class GeolocationCache:
                     (lat, lon, json.dumps(dict(address))),
                 )
                 conn.commit()
-                logger.debug("Cached location for coordinates: %s, %s", lat, lon)
+                logger.debug("Cached location for coordinates: {}, {}", lat, lon)
             except sqlite3.Error as e:
-                logger.debug("Cache write failed: %s", e)
+                logger.debug("Cache write failed: {}", e)
 
     def get_stats(self) -> dict[str, int]:
         """Get cache statistics (thread-safe).
@@ -196,7 +196,7 @@ class GeolocationCache:
                 conn.commit()
                 logger.info("Geolocation cache cleared")
             except sqlite3.Error as e:
-                logger.warning("Failed to clear cache: %s", e)
+                logger.warning("Failed to clear cache: {}", e)
 
     def close(self) -> None:
         """Close the database connection."""
@@ -296,13 +296,13 @@ def _fetch_from_nominatim(lat: float, lon: float) -> dict[str, str] | None:
                 if raw is not None:
                     result = raw.get("address", {})
             else:
-                logger.debug("No location found for coordinates: %s, %s", lat, lon)
+                logger.debug("No location found for coordinates: {}, {}", lat, lon)
     except GeocoderTimedOut:
-        logger.debug("Geocoding timed out for: %s, %s", lat, lon)
+        logger.debug("Geocoding timed out for: {}, {}", lat, lon)
     except GeocoderUnavailable:
         logger.debug("Geocoder service unavailable")
     except Exception:  # noqa: BLE001
-        logger.debug("Geocoding failed for: %s, %s", lat, lon, exc_info=True)
+        logger.debug("Geocoding failed for: {}, {}", lat, lon, exc_info=True)
 
     return result
 

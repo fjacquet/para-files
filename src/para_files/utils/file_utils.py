@@ -74,6 +74,42 @@ TEXT_EXTENSIONS = frozenset(
 )
 
 
+# Media-only extensions that should NEVER be OCR'd for classification
+# These are pure photo/video files - their content (if any text) is irrelevant
+# OCR'ing these files can lead to misclassification (e.g., photo of certificate → certifications)
+MEDIA_ONLY_EXTENSIONS = frozenset(
+    {
+        # Camera raw formats
+        ".heic",  # Apple HEIC photos
+        ".heif",  # HEIF photos
+        ".raw",
+        ".cr2",  # Canon RAW
+        ".cr3",  # Canon RAW 3
+        ".nef",  # Nikon RAW
+        ".arw",  # Sony RAW
+        ".dng",  # Adobe DNG
+        ".orf",  # Olympus RAW
+        ".rw2",  # Panasonic RAW
+        # Video formats
+        ".mp4",
+        ".mov",
+        ".avi",
+        ".mkv",
+        ".m4v",
+        ".webm",
+        ".wmv",
+        ".flv",
+        # Audio (no OCR possible but for completeness)
+        ".mp3",
+        ".m4a",
+        ".wav",
+        ".flac",
+        ".aac",
+        ".ogg",
+    }
+)
+
+
 def extract_file_metadata(file_path: Path, *, extract_exif: bool = True) -> FileMetadata:
     """Extract metadata from a file.
 
@@ -181,7 +217,14 @@ def read_content_preview(
     if extension in PANDOC_EXTENSIONS:
         return _read_document_file(file_path, max_chars, extract_text)
 
-    # For image files, try OCR extraction
+    # DEFENSE-IN-DEPTH: Skip OCR for pure media files (photos, videos, audio)
+    # Even if they technically support OCR, extracting text from photos can cause
+    # misclassification (e.g., a photo of a certificate → routed to certifications)
+    if extension in MEDIA_ONLY_EXTENSIONS:
+        logger.debug("Skipping OCR for media file: {}", file_path)
+        return f"Filename: {file_path.name}"
+
+    # For image files that ARE NOT pure media (e.g., scanned documents), try OCR
     from para_files.utils.ocr import OCR_EXTENSIONS
     from para_files.utils.ocr import extract_text as extract_ocr_text
 
@@ -206,7 +249,7 @@ def _read_text_file(file_path: Path, max_chars: int) -> str:
         with file_path.open(encoding="utf-8", errors="replace") as f:
             return f.read(max_chars)
     except OSError:
-        logger.warning("Failed to read text file: %s", file_path)
+        logger.warning("Failed to read text file: {}", file_path)
         return f"Filename: {file_path.name}"
 
 
@@ -264,10 +307,10 @@ def _extract_pdf_with_pypdf(file_path: Path, max_chars: int) -> str:
         return "".join(text_parts)
 
     except ImportError:
-        logger.debug("pypdf not installed: %s", file_path)
+        logger.debug("pypdf not installed: {}", file_path)
     except Exception:  # noqa: BLE001
         # pypdf can fail on various PDF formats - try pdftotext fallback
-        logger.debug("pypdf failed, trying pdftotext: %s", file_path)
+        logger.debug("pypdf failed, trying pdftotext: {}", file_path)
 
     # Fallback to pdftotext (poppler-utils)
     try:
@@ -283,9 +326,9 @@ def _extract_pdf_with_pypdf(file_path: Path, max_chars: int) -> str:
         if result.returncode == 0 and result.stdout:
             return result.stdout[:max_chars]
     except (FileNotFoundError, subprocess.TimeoutExpired):
-        logger.debug("pdftotext not available or timeout: %s", file_path)
+        logger.debug("pdftotext not available or timeout: {}", file_path)
     except Exception:  # noqa: BLE001
-        logger.debug("pdftotext failed: %s", file_path)
+        logger.debug("pdftotext failed: {}", file_path)
 
     return ""
 
@@ -307,7 +350,7 @@ def _ocr_pdf_first_page(file_path: Path, max_chars: int) -> str:
 
         from para_files.utils.ocr import extract_text as ocr_extract
     except ImportError as e:
-        logger.debug("pymupdf or OCR not available: %s", e)
+        logger.debug("pymupdf or OCR not available: {}", e)
         return ""
 
     try:
@@ -335,11 +378,11 @@ def _ocr_pdf_first_page(file_path: Path, max_chars: int) -> str:
             tmp_path.unlink(missing_ok=True)
 
     except Exception:  # noqa: BLE001
-        logger.exception("OCR failed for PDF: %s", file_path)
+        logger.exception("OCR failed for PDF: {}", file_path)
         return ""
 
     if result and result.text:
-        logger.debug("OCR extracted %d chars from PDF: %s", len(result.text), file_path)
+        logger.debug("OCR extracted {} chars from PDF: {}", len(result.text), file_path)
         return result.text[:max_chars]
 
     return ""
@@ -364,7 +407,7 @@ def _read_document_file(
     if result and result.text:
         return result.text
 
-    logger.debug("pandoc extraction failed, using filename: %s", file_path)
+    logger.debug("pandoc extraction failed, using filename: {}", file_path)
     return f"Filename: {file_path.name}"
 
 
@@ -387,5 +430,5 @@ def _read_image_file(
     if result and result.text:
         return result.text
 
-    logger.debug("OCR extraction failed, using filename: %s", file_path)
+    logger.debug("OCR extraction failed, using filename: {}", file_path)
     return f"Filename: {file_path.name}"

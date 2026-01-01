@@ -47,7 +47,7 @@ def _create_directory(
             typer.echo(f"  [create] {dir_path}")
             created.append(dir_path)
     elif dir_path.exists():
-        logger.debug("Directory exists: %s", dir_path)
+        logger.debug("Directory exists: {}", dir_path)
         existing.append(dir_path)
     else:
         dir_path.mkdir(parents=True, exist_ok=True)

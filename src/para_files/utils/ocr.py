@@ -84,17 +84,17 @@ def _load_cg_image(image_path: Path) -> Any | None:
     image_source = CGImageSourceCreateWithURL(image_url, None)
 
     if image_source is None:
-        logger.debug("Failed to create image source for: %s", image_path)
+        logger.debug("Failed to create image source for: {}", image_path)
         return None
 
     properties = CGImageSourceCopyPropertiesAtIndex(image_source, 0, None)
     if properties is None:
-        logger.debug("Failed to get image properties for: %s", image_path)
+        logger.debug("Failed to get image properties for: {}", image_path)
         return None
 
     cg_image = CGImageSourceCreateImageAtIndex(image_source, 0, None)
     if cg_image is None:
-        logger.debug("Failed to create CGImage for: %s", image_path)
+        logger.debug("Failed to create CGImage for: {}", image_path)
         return None
 
     return cg_image
@@ -120,12 +120,12 @@ def _perform_ocr_request(cg_image: Any, image_path: Path) -> list[Any] | None:
 
     success = handler.performRequests_error_([request], None)
     if not success:
-        logger.debug("OCR request failed for: %s", image_path)
+        logger.debug("OCR request failed for: {}", image_path)
         return None
 
     results = request.results()
     if not results:
-        logger.debug("No text found in image: %s", image_path)
+        logger.debug("No text found in image: {}", image_path)
         return None
 
     return list(results)
@@ -181,7 +181,7 @@ def _extract_text_vision(image_path: Path) -> tuple[str, float] | None:
             return None
 
     except Exception:  # noqa: BLE001
-        logger.exception("Vision Framework OCR failed for: %s", image_path)
+        logger.exception("Vision Framework OCR failed for: {}", image_path)
         return None
 
     return _extract_text_from_results(results)
@@ -207,11 +207,11 @@ def extract_text(
     # Check if file extension is supported
     ext = file_path.suffix.lower()
     if ext not in OCR_EXTENSIONS:
-        logger.debug("Unsupported extension for OCR: %s", ext)
+        logger.debug("Unsupported extension for OCR: {}", ext)
         return None
 
     if not file_path.exists():
-        logger.debug("File does not exist: %s", file_path)
+        logger.debug("File does not exist: {}", file_path)
         return None
 
     result = _extract_text_vision(file_path)
@@ -295,7 +295,7 @@ def extract_text_with_regions(
             return None
 
     except Exception:  # noqa: BLE001
-        logger.exception("Vision Framework region extraction failed for: %s", file_path)
+        logger.exception("Vision Framework region extraction failed for: {}", file_path)
         return None
 
     return _extract_regions_from_results(results)

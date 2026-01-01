@@ -128,7 +128,7 @@ def extract_pdf_metadata(path: Path, max_pages_for_isbn: int = 5) -> PdfMetadata
                 found_isbn = extract_isbn(page_text)
                 if found_isbn:
                     isbn = found_isbn
-                    logger.debug("Found ISBN %s on page %d of %s", isbn, i + 1, path.name)
+                    logger.debug("Found ISBN {} on page {} of {}", isbn, i + 1, path.name)
                     break
             except Exception:  # noqa: BLE001, S112
                 # Skip pages that fail to extract (corrupted/encrypted pages)
@@ -146,7 +146,7 @@ def extract_pdf_metadata(path: Path, max_pages_for_isbn: int = 5) -> PdfMetadata
         )
 
     except Exception as e:  # noqa: BLE001
-        logger.warning("Failed to extract PDF metadata from %s: %s", path, e)
+        logger.warning("Failed to extract PDF metadata from {}: {}", path, e)
         return None
 
 

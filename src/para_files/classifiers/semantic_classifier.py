@@ -202,7 +202,7 @@ class SemanticClassifier(BaseClassifier):
             return
 
         # Compute embeddings for all categories
-        logger.info("Computing embeddings for %d document types...", len(texts_to_embed))
+        logger.info("Computing embeddings for {} document types...", len(texts_to_embed))
         embeddings = self._encoder.encode_batch(texts_to_embed, batch_size=32)
 
         # Store embeddings
@@ -210,7 +210,7 @@ class SemanticClassifier(BaseClassifier):
             self._category_embeddings[key] = embedding
 
         logger.info(
-            "SemanticClassifier initialized with %d category embeddings",
+            "SemanticClassifier initialized with {} category embeddings",
             len(self._category_embeddings),
         )
         self._initialized = True
@@ -302,7 +302,7 @@ class SemanticClassifier(BaseClassifier):
         try:
             content_embedding = self._encoder([content[:MAX_CONTENT_LENGTH]])[0]
         except (IndexError, ValueError, RuntimeError) as e:
-            logger.debug("Failed to encode content: %s", e)
+            logger.debug("Failed to encode content: {}", e)
             return None
 
         # Find best matching category

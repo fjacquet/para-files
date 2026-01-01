@@ -217,13 +217,13 @@ class RulesEngineClassifier(BaseClassifier):
             tech = tech_extractor.extract_from_filename(metadata.filename)
             if tech:
                 params["technology"] = tech
-                logger.debug("Technology from filename: %s", tech)
+                logger.debug("Technology from filename: {}", tech)
             elif content:
                 # Fallback: try to extract from content (first 1000 chars)
                 tech, score = tech_extractor.extract_from_content(content[:1000])
                 if tech:
                     params["technology"] = tech
-                    logger.debug("Technology from content: %s (score=%.2f)", tech, score)
+                    logger.debug("Technology from content: {} (score={:.2f})", tech, score)
                 else:
                     params["technology"] = "misc"
                     logger.debug("No technology detected, using 'misc'")
@@ -238,7 +238,7 @@ class RulesEngineClassifier(BaseClassifier):
             if issuer:
                 # Sanitize issuer name for folder (replace spaces with underscores)
                 params["issuer"] = issuer.name.replace(" ", "_")
-                logger.debug("Issuer from content: %s", issuer.name)
+                logger.debug("Issuer from content: {}", issuer.name)
             else:
                 # Default to 'unknown' if no issuer detected
                 params["issuer"] = "unknown"
@@ -491,7 +491,7 @@ class RulesEngineClassifier(BaseClassifier):
             if match:
                 year = int(match.group(1))
                 if MIN_YEAR <= year <= MAX_YEAR:
-                    logger.debug("Fiscal year from content: %d", year)
+                    logger.debug("Fiscal year from content: {}", year)
                     return datetime(year, 1, 1, tzinfo=UTC)
 
         # Priority 2: Full date patterns (YYYY-MM-DD or DD/MM/YYYY)
@@ -513,7 +513,7 @@ class RulesEngineClassifier(BaseClassifier):
                         month = int(match.group(2))
                         year = int(match.group(3))
                     if self._is_valid_date(year, month, day):
-                        logger.debug("Full date from content: %d-%02d-%02d", year, month, day)
+                        logger.debug("Full date from content: {:d}-{:02d}-{:02d}", year, month, day)
                         return datetime(year, month, day, tzinfo=UTC)
                 except ValueError:
                     continue
@@ -524,7 +524,7 @@ class RulesEngineClassifier(BaseClassifier):
         if year_match:
             year = int(year_match.group(1))
             if MIN_MODERN_YEAR <= year <= MAX_YEAR:
-                logger.debug("Year from content header: %d", year)
+                logger.debug("Year from content header: {}", year)
                 return datetime(year, 1, 1, tzinfo=UTC)
 
         return None

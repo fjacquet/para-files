@@ -115,7 +115,7 @@ class MLXLLMClassifier(BaseClassifier):
         try:
             from mlx_lm import load
 
-            logger.info("Loading MLX-LM model: %s", self._model_name)
+            logger.info("Loading MLX-LM model: {}", self._model_name)
             # mlx_lm.load returns (model, tokenizer) tuple
             result = load(self._model_name)
             self._model = result[0]
@@ -125,7 +125,7 @@ class MLXLLMClassifier(BaseClassifier):
             logger.warning("mlx-lm not installed, MLX-LLM classifier disabled")
             return False
         except Exception:  # noqa: BLE001
-            logger.exception("Failed to load MLX-LM model: %s", self._model_name)
+            logger.exception("Failed to load MLX-LM model: {}", self._model_name)
             return False
         else:
             return True
@@ -263,7 +263,7 @@ class MLXLLMClassifier(BaseClassifier):
             # Find JSON object in response
             json_match = re.search(r"\{[^}]+\}", text, re.DOTALL)
             if not json_match:
-                logger.debug("No JSON found in response: %s", text[:200])
+                logger.debug("No JSON found in response: {}", text[:200])
                 return None
 
             data = json.loads(json_match.group())
@@ -296,5 +296,5 @@ class MLXLLMClassifier(BaseClassifier):
             )
 
         except (json.JSONDecodeError, KeyError, ValueError) as e:
-            logger.debug("Failed to parse MLX-LLM response: %s - %s", e, response[:200])
+            logger.debug("Failed to parse MLX-LLM response: {} - {}", e, response[:200])
             return None

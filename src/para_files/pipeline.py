@@ -119,7 +119,7 @@ class ClassificationPipeline:
 
         self._initialized = True
         logger.info(
-            "Pipeline v2.0 initialized with %d classifiers: %s",
+            "Pipeline v2.0 initialized with {} classifiers: {}",
             len(self._classifiers),
             [c.name for c in self._classifiers],
         )
@@ -190,14 +190,14 @@ class ClassificationPipeline:
                 result = classifier.classify(content, metadata)
                 if result is not None:
                     logger.debug(
-                        "Classified by %s: %s (%.0f%%)",
+                        "Classified by {}: {} ({:.0f}%)",
                         classifier.name,
                         result.category,
                         result.confidence.value * 100,
                     )
                     return result
             except Exception:  # noqa: BLE001
-                logger.exception("Classifier %s failed", classifier.name)
+                logger.exception("Classifier {} failed", classifier.name)
                 continue
 
         # Default to 0_Inbox

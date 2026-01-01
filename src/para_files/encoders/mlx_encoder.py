@@ -86,7 +86,7 @@ class MLXEncoder(DenseEncoder):
         except IndexError as e:
             # Token length exceeds model's maximum sequence length
             # This can happen with texts that tokenize poorly (lots of numbers, symbols)
-            logger.warning("Text exceeds token limit, using fallback truncation: %s", e)
+            logger.warning("Text exceeds token limit, using fallback truncation: {}", e)
             # Retry with fallback_chars (700) for safety
             shorter_texts = [t[: self.fallback_chars] for t in texts]
             try:

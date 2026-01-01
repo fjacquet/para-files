@@ -436,35 +436,35 @@ class BookDetector(BaseClassifier):
         if book_info and book_info.subjects:
             code = self._thema_lookup.lookup_subjects(book_info.subjects)
             if code:
-                logger.debug("Detected THEMA from ISBN subjects: %s", code)
+                logger.debug("Detected THEMA from ISBN subjects: {}", code)
                 return code
 
         # Try book description (often contains subject keywords)
         if book_info and book_info.description:
             code = self._thema_lookup.lookup_from_text(book_info.description)
             if code:
-                logger.debug("Detected THEMA from book description: %s", code)
+                logger.debug("Detected THEMA from book description: {}", code)
                 return code
 
         # Try PDF subject field
         if pdf_meta and pdf_meta.subject:
             code = self._thema_lookup.lookup_from_text(pdf_meta.subject)
             if code:
-                logger.debug("Detected THEMA from PDF subject: %s", code)
+                logger.debug("Detected THEMA from PDF subject: {}", code)
                 return code
 
         # Try PDF title
         if pdf_meta and pdf_meta.title:
             code = self._thema_lookup.lookup_from_text(pdf_meta.title)
             if code:
-                logger.debug("Detected THEMA from PDF title: %s", code)
+                logger.debug("Detected THEMA from PDF title: {}", code)
                 return code
 
         # Try filename (least reliable but useful fallback)
         if filename:
             code = self._thema_lookup.lookup_from_text(filename)
             if code:
-                logger.debug("Detected THEMA from filename: %s", code)
+                logger.debug("Detected THEMA from filename: {}", code)
                 return code
 
         # Try content if nothing else worked
@@ -472,7 +472,7 @@ class BookDetector(BaseClassifier):
             # Limit content to first 2000 chars for performance
             code = self._thema_lookup.lookup_from_text(content[:2000])
             if code:
-                logger.debug("Detected THEMA from content: %s", code)
+                logger.debug("Detected THEMA from content: {}", code)
                 return code
 
         return None
@@ -502,33 +502,33 @@ class BookDetector(BaseClassifier):
         # IMPORTANT: Exclude financial/bank documents to avoid false ISBN matches
         # Bank account numbers and other financial identifiers can look like ISBNs
         if is_financial_document(content, metadata.filename):
-            logger.debug("Skipping book detection for financial document: %s", file_path.name)
+            logger.debug("Skipping book detection for financial document: {}", file_path.name)
             return None
 
         # Exclude tax/government documents (reference numbers look like ISBNs)
         if is_tax_document(content, metadata.filename):
-            logger.debug("Skipping book detection for tax document: %s", file_path.name)
+            logger.debug("Skipping book detection for tax document: {}", file_path.name)
             return None
 
         # Exclude insurance documents (policy/claim numbers look like ISBNs)
         if is_insurance_document(content, metadata.filename):
-            logger.debug("Skipping book detection for insurance document: %s", file_path.name)
+            logger.debug("Skipping book detection for insurance document: {}", file_path.name)
             return None
 
         # Exclude transport/travel documents (ticket IDs look like ISBNs)
         if is_transport_document(content, metadata.filename):
-            logger.debug("Skipping book detection for transport document: %s", file_path.name)
+            logger.debug("Skipping book detection for transport document: {}", file_path.name)
             return None
 
         # Exclude telecom/contract documents (DocIDs/ContractIDs look like ISBNs)
         if is_telecom_document(content, metadata.filename):
-            logger.debug("Skipping book detection for telecom document: %s", file_path.name)
+            logger.debug("Skipping book detection for telecom document: {}", file_path.name)
             return None
 
         # Extract PDF metadata
         pdf_meta = extract_pdf_metadata(file_path)
         if pdf_meta is None:
-            logger.debug("Could not extract PDF metadata from %s", file_path.name)
+            logger.debug("Could not extract PDF metadata from {}", file_path.name)
             return None
 
         score = 0.0
@@ -619,7 +619,7 @@ class BookDetector(BaseClassifier):
         confidence_value = min(score, 1.0) if score >= 1.0 else 0.92
 
         logger.info(
-            "Detected book: %s → %s (confidence=%.2f, signals=%s)",
+            "Detected book: {} → {} (confidence={:.2f}, signals={})",
             file_path.name,
             category,
             confidence_value,

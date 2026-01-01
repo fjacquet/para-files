@@ -93,7 +93,7 @@ def _classify_for_rescan(
     try:
         return pipeline.classify_file(file_path)
     except (OSError, ValueError, KeyError) as e:
-        logger.debug("Classification failed for %s: %s", file_path, e)
+        logger.debug("Classification failed for {}: {}", file_path, e)
         return None
 
 

@@ -53,11 +53,11 @@ def lookup_isbn(isbn: str, service: str = "default") -> BookInfo | None:  # noqa
     # Normalize and validate ISBN
     canonical = isbnlib.canonical(isbn)
     if not canonical:
-        logger.debug("Invalid ISBN: %s", isbn)
+        logger.debug("Invalid ISBN: {}", isbn)
         return None
 
     if not isbnlib.is_isbn10(canonical) and not isbnlib.is_isbn13(canonical):
-        logger.debug("ISBN validation failed: %s", isbn)
+        logger.debug("ISBN validation failed: {}", isbn)
         return None
 
     # Convert to ISBN-13 for consistency
@@ -72,14 +72,14 @@ def lookup_isbn(isbn: str, service: str = "default") -> BookInfo | None:  # noqa
         try:
             meta = isbnlib.meta(canonical, service=svc)
             if meta and meta.get("Title"):
-                logger.debug("Found metadata via %s for ISBN %s", svc, isbn)
+                logger.debug("Found metadata via {} for ISBN {}", svc, isbn)
                 break
         except Exception as e:  # noqa: BLE001
-            logger.debug("Service %s failed for ISBN %s: %s", svc, isbn, e)
+            logger.debug("Service {} failed for ISBN {}: {}", svc, isbn, e)
             continue
 
     if not meta or not meta.get("Title"):
-        logger.debug("No metadata found for ISBN %s", isbn)
+        logger.debug("No metadata found for ISBN {}", isbn)
         return None
 
     # Build BookInfo from isbnlib metadata

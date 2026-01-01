@@ -154,7 +154,7 @@ def _parse_exif_date(date_str: str | None) -> datetime | None:
         naive_dt = datetime.strptime(date_only, "%Y-%m-%d")  # noqa: DTZ007
         return naive_dt.replace(tzinfo=UTC)
     except ValueError:
-        logger.debug("Could not parse EXIF date: %s", date_str)
+        logger.debug("Could not parse EXIF date: {}", date_str)
         return None
 
 
@@ -266,7 +266,7 @@ def _run_exiftool(file_path: Path) -> dict[str, object] | None:
         )
 
         if result.returncode != 0:
-            logger.debug("exiftool failed: %s", result.stderr)
+            logger.debug("exiftool failed: {}", result.stderr)
             return None
 
         data_list: list[dict[str, object]] = json.loads(result.stdout)
@@ -276,11 +276,11 @@ def _run_exiftool(file_path: Path) -> dict[str, object] | None:
         return data_list[0]
 
     except subprocess.TimeoutExpired:
-        logger.warning("exiftool timed out for: %s", file_path)
+        logger.warning("exiftool timed out for: {}", file_path)
     except json.JSONDecodeError:
-        logger.warning("exiftool returned invalid JSON for: %s", file_path)
+        logger.warning("exiftool returned invalid JSON for: {}", file_path)
     except Exception:  # noqa: BLE001
-        logger.exception("Failed to extract EXIF from: %s", file_path)
+        logger.exception("Failed to extract EXIF from: {}", file_path)
 
     return None
 
@@ -302,11 +302,11 @@ def extract_exif(file_path: Path) -> ExifData | None:
     # Check if file extension is supported
     ext = file_path.suffix.lower()
     if ext not in EXIF_EXTENSIONS:
-        logger.debug("Unsupported extension for EXIF: %s", ext)
+        logger.debug("Unsupported extension for EXIF: {}", ext)
         return None
 
     if not file_path.exists():
-        logger.debug("File does not exist: %s", file_path)
+        logger.debug("File does not exist: {}", file_path)
         return None
 
     data = _run_exiftool(file_path)

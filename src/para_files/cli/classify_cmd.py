@@ -52,7 +52,7 @@ def _classify_single_file(
         target_path = pipeline.get_target_path(result)
         return format_result_json(file_path, result, target_path)
     except Exception as e:  # noqa: BLE001
-        logger.warning("Failed to classify %s: %s", file_path, e)
+        logger.warning("Failed to classify {}: {}", file_path, e)
         return {"source_file": str(file_path), "error": "classification failed"}
 
 
@@ -142,7 +142,7 @@ def _classify_files_sequential(
             else:
                 print_classification_result(file_path, result, target_path)
         except Exception:  # noqa: BLE001
-            logger.exception("Failed to classify %s", file_path)
+            logger.exception("Failed to classify {}", file_path)
             if output_json:
                 results.append({"source_file": str(file_path), "error": "classification failed"})
     return results

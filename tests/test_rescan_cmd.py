@@ -259,9 +259,7 @@ class TestPrintSummary:
 class TestRunRescan:
     """Tests for _run_rescan function."""
 
-    def test_run_rescan_empty_dir(
-        self, tmp_path: Path, mock_config: Config
-    ) -> None:
+    def test_run_rescan_empty_dir(self, tmp_path: Path, mock_config: Config) -> None:
         """Test running rescan on empty directory."""
         (tmp_path / "4_Archives").mkdir()
 

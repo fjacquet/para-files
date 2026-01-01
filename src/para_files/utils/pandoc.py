@@ -113,14 +113,14 @@ def _run_pandoc_to_plain(file_path: Path, fmt: str) -> str | None:
         )
 
         if result.returncode != 0:
-            logger.debug("pandoc failed: %s", result.stderr)
+            logger.debug("pandoc failed: {}", result.stderr)
             return None
 
     except subprocess.TimeoutExpired:
-        logger.warning("pandoc timed out for: %s", file_path)
+        logger.warning("pandoc timed out for: {}", file_path)
         return None
     except Exception:  # noqa: BLE001
-        logger.exception("Failed to extract text with pandoc from: %s", file_path)
+        logger.exception("Failed to extract text with pandoc from: {}", file_path)
         return None
 
     return result.stdout if result.stdout else None
@@ -145,7 +145,7 @@ def extract_text(
 
     fmt = get_pandoc_format(file_path)
     if fmt is None or not file_path.exists():
-        logger.debug("Unsupported format or file missing: %s", file_path)
+        logger.debug("Unsupported format or file missing: {}", file_path)
         return None
 
     text = _run_pandoc_to_plain(file_path, fmt)
@@ -216,10 +216,10 @@ def extract_metadata(file_path: Path) -> dict[str, str] | None:
             return None
 
     except subprocess.TimeoutExpired:
-        logger.warning("pandoc metadata extraction timed out for: %s", file_path)
+        logger.warning("pandoc metadata extraction timed out for: {}", file_path)
         return None
     except Exception:  # noqa: BLE001
-        logger.exception("Failed to extract metadata with pandoc from: %s", file_path)
+        logger.exception("Failed to extract metadata with pandoc from: {}", file_path)
         return None
 
     # Parse the output into a dictionary

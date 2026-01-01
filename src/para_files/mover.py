@@ -165,7 +165,7 @@ class FileMover:
         # This can happen when re-classifying files already in their correct location
         try:
             if source.resolve() == initial_destination.resolve():
-                logger.debug("Source and destination are the same file, skipping: %s", source)
+                logger.debug("Source and destination are the same file, skipping: {}", source)
                 return MoveResult(
                     source=source,
                     destination=initial_destination,
@@ -230,7 +230,7 @@ class FileMover:
             if suggested_name:
                 # Preserve original extension
                 base_name = f"{suggested_name}{source.suffix}"
-                logger.debug("Smart rename: %s → %s", source.name, base_name)
+                logger.debug("Smart rename: {} → {}", source.name, base_name)
 
                 if self.add_date_prefix:
                     mtime = datetime.fromtimestamp(source.stat().st_mtime, tz=UTC)
@@ -312,7 +312,7 @@ class FileMover:
         # CRITICAL SAFETY: Never delete if source and destination are the same file
         try:
             if source.resolve() == destination.resolve():
-                logger.warning("SAFETY: Prevented deletion of source=destination: %s", source)
+                logger.warning("SAFETY: Prevented deletion of source=destination: {}", source)
                 return MoveResult(
                     source=source,
                     destination=destination,
@@ -334,7 +334,7 @@ class FileMover:
 
         try:
             source.unlink()
-            logger.info("Deleted duplicate: %s (identical to %s)", source, destination)
+            logger.info("Deleted duplicate: {} (identical to {})", source, destination)
             return MoveResult(
                 source=source,
                 destination=destination,
@@ -343,7 +343,7 @@ class FileMover:
                 message=f"Identical file already exists at {destination}",
             )
         except OSError as e:
-            logger.exception("Failed to delete duplicate: %s", source)
+            logger.exception("Failed to delete duplicate: {}", source)
             return MoveResult(
                 source=source,
                 destination=destination,
@@ -379,7 +379,7 @@ class FileMover:
             else:
                 shutil.move(source, destination)
 
-            logger.info("%s: %s -> %s", action.capitalize(), source, destination)
+            logger.info("{}: {} -> {}", action.capitalize(), source, destination)
 
             return MoveResult(
                 source=source,
@@ -390,7 +390,7 @@ class FileMover:
             )
 
         except OSError as e:
-            logger.exception("Failed to %s file: %s", action.rstrip("d"), source)
+            logger.exception("Failed to {} file: {}", action.rstrip("d"), source)
             return MoveResult(
                 source=source,
                 destination=destination,

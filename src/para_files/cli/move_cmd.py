@@ -184,7 +184,7 @@ def _handle_move_file(
 
         # Skip unclassifiable files if requested
         if skip_unclassifiable and classification.confidence.source == ClassificationSource.DEFAULT:
-            logger.info("Skipping unclassifiable file: %s", file_path)
+            logger.info("Skipping unclassifiable file: {}", file_path)
             if output_json:
                 results.append(
                     {
@@ -214,7 +214,7 @@ def _handle_move_file(
             _print_move_result(file_path, result, move_result, action_verb)
 
     except Exception:  # noqa: BLE001
-        logger.exception("Failed to process %s", file_path)
+        logger.exception("Failed to process {}", file_path)
         if output_json:
             results.append({"source_file": str(file_path), "error": "processing failed"})
         return False, False

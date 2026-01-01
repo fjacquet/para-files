@@ -166,11 +166,11 @@ def _build_retention_mapping_from_taxonomy() -> dict[str, dict[str, Any]]:
         _merge_static_config(mapping)
 
         if mapping:
-            logger.debug("Built retention mapping from taxonomy: %d entries", len(mapping))
+            logger.debug("Built retention mapping from taxonomy: {} entries", len(mapping))
             return mapping
 
     except (OSError, ValueError, KeyError) as e:
-        logger.debug("Could not load taxonomy, using static mapping: %s", e)
+        logger.debug("Could not load taxonomy, using static mapping: {}", e)
 
     return _build_static_mapping()
 
@@ -247,7 +247,7 @@ def _handle_existing_destination(
     """Handle case when destination already exists."""
     if merge:
         return (child, new_path, "merge")
-    logger.warning("Cannot migrate %s: destination %s already exists", child, new_path)
+    logger.warning("Cannot migrate {}: destination {} already exists", child, new_path)
     return None
 
 

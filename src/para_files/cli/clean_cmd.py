@@ -51,12 +51,12 @@ def _clean_junk_files(
 
     for f in deleted_files:
         action = "would_delete" if dry_run else "deleted"
-        logger.info("[%s] junk_file: %s (%s)", action.upper(), f, f.name)
+        logger.info("[{}] junk_file: {} ({})", action.upper(), f, f.name)
         results["deleted_files"].append(str(f))
 
     for d in deleted_dirs:
         action = "would_delete" if dry_run else "deleted"
-        logger.info("[%s] junk_dir: %s (%s)", action.upper(), d, d.name)
+        logger.info("[{}] junk_dir: {} ({})", action.upper(), d, d.name)
         results["deleted_dirs"].append(str(d))
 
     if not output_json:
@@ -92,17 +92,17 @@ def _clean_nfo_files(
 
     for nfo_file in nfo_files:
         if dry_run:
-            logger.info("[WOULD_DELETE] nfo: %s (NFO file cleanup)", nfo_file)
+            logger.info("[WOULD_DELETE] nfo: {} (NFO file cleanup)", nfo_file)
             deleted_count += 1
             results["deleted_nfo"].append(str(nfo_file))
         else:
             try:
                 nfo_file.unlink()
-                logger.info("[DELETED] nfo: %s (NFO file cleanup)", nfo_file)
+                logger.info("[DELETED] nfo: {} (NFO file cleanup)", nfo_file)
                 deleted_count += 1
                 results["deleted_nfo"].append(str(nfo_file))
             except OSError:
-                logger.exception("Failed to delete NFO %s", nfo_file)
+                logger.exception("Failed to delete NFO {}", nfo_file)
 
     if deleted_count and not output_json:
         action = "Would delete" if dry_run else "Deleted"
@@ -133,7 +133,7 @@ def _clean_empty_directories(
 
     for d in deleted_empty:
         action = "would_delete" if dry_run else "deleted"
-        logger.info("[%s] empty_dir: %s (Empty directory)", action.upper(), d)
+        logger.info("[{}] empty_dir: {} (Empty directory)", action.upper(), d)
         results["deleted_dirs"].append(str(d))
 
     if deleted_empty and not output_json:

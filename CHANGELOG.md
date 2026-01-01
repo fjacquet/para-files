@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **MLX token limit crash in TechnologyExtractor**: Reduced content limit from 2000 to 400 characters
+  - Prevents `IndexError: list index out of range` when text tokenizes to >512 tokens
+  - Some texts tokenize poorly (e.g., 700 chars → 800+ tokens), causing model failure
+  - 400 chars safely stays under the MLX model's 512 token limit
+- **Remaining `%s` logging in pipeline.py**: Converted 2 remaining printf-style log calls to loguru `{}` format
+- **EMC document misclassification**: Added comprehensive Dell EMC product portfolio to TechnologyExtractor
+  - ~45 Dell EMC products in TECHNOLOGY_DESCRIPTIONS with semantic descriptions
+  - ~80 keyword mappings for filename-based detection
+  - Categories: Storage (PowerMax, PowerStore, PowerScale), Data Protection (PowerProtect, DataDomain), Legacy (VMAX, VNX, Isilon), HCI (VxRail, VxRack), Networking (Connectrix, SONiC)
+  - Added OpenStack as distinct from OpenShift (previously conflated)
+  - Prevents XtremIO→Oracle, OpenStack→OpenShift, EMC World→MariaDB misroutes
+
 ### Changed
 
 - **Unified logging with loguru**: Replaced standard Python logging with loguru across all 32 source files
@@ -86,6 +100,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **HEIC photo misrouting during rescan (Part 2)**: Photos were still misrouting to certifications folder
+  - Root cause: `source: "0_Inbox"` constraint on photos/videos/screenshots rules blocked matching during rescan
+  - Fix 1: Removed `source:` constraint from `photos`, `videos`, `screenshots` rules (extension-based rules don't need source restriction)
+  - Fix 2: Added `MEDIA_ONLY_EXTENSIONS` in file_utils.py to skip OCR for pure media files (defense-in-depth)
+  - OCR on photos could extract misleading text (e.g., photo of certificate → "certification" keyword → misroute)
+- **Comprehensive routing rules validation**: Reviewed all 216 routing rules for consistency
+  - Removed duplicate `amiante_docs` rule (consolidated into `amiante_documents`)
+  - Removed `*VTSP*` pattern from `vmware_docs` (VTSP is a certification, not documentation)
+  - Removed overlapping patterns: `*[Bb]ateau*` from `loisirs_voile`, `*[Cc]over*[Ll]etter*` from `lettres_accompagnement`
+  - Fixed `amiante_documents` destination to include `{YYYY}` for date-based organization
+  - Added clarifying comments throughout YAML for maintainability
 - **Photo/image routing during rescan**: Photos and images were being misrouted to fiscal folders
   - Root cause 1: `rescan` command bypassed RulesEngineClassifier by using TaxonomyClassifier directly
   - Root cause 2: `source:` constraint in routing rules was never enforced

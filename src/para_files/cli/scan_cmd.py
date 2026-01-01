@@ -70,7 +70,7 @@ def _classify_file_for_scan(
         typer.echo(f"📄 {file_path.name}")
         typer.echo(f"   → {result.category} ({confidence_pct} {source})")
     except Exception as e:  # noqa: BLE001
-        logger.warning("Failed to classify %s: %s", file_path.name, e)
+        logger.warning("Failed to classify {}: {}", file_path.name, e)
         if output_json:
             return {
                 "source_file": str(file_path),
