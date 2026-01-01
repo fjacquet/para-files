@@ -256,11 +256,161 @@ def _read_text_file(file_path: Path, max_chars: int) -> str:
 # Minimum chars to consider PDF as having extractable text (vs scanned)
 _PDF_MIN_TEXT_THRESHOLD = 50
 
+# Minimum quality score to consider text as useful (0.0 - 1.0)
+_PDF_MIN_QUALITY_THRESHOLD = 0.3
+
+# Text quality evaluation thresholds
+_METADATA_HIT_THRESHOLD = 3  # Number of metadata patterns to trigger rejection
+_SPACE_RATIO_MIN = 0.08  # Minimum space ratio for good text
+_SPACE_RATIO_MAX = 0.30  # Maximum space ratio for good text
+_WORD_LEN_MIN = 3  # Minimum average word length
+_WORD_LEN_MAX = 12  # Maximum average word length
+_MIN_WORD_LEN = 2  # Minimum length to consider a word
+_WORD_ALPHA_RATIO = 0.6  # Minimum alphabetic ratio for "real" words
+_SHORT_TEXT_THRESHOLD = 100  # Text below this gets penalty
+_MEDIUM_TEXT_THRESHOLD = 200  # Text below this gets smaller penalty
+
+# Common PDF metadata patterns that indicate garbage text
+_PDF_METADATA_PATTERNS = frozenset(
+    {
+        "created by",
+        "pdf producer",
+        "pdf version",
+        "endobj",
+        "startxref",
+        "%%eof",
+        "/type",
+        "/page",
+        "obj<<",
+        "stream",
+        "endstream",
+        "xref",
+        "/font",
+        "/encoding",
+    }
+)
+
+
+def _calculate_text_quality(text: str) -> float:
+    """Calculate quality score for extracted text.
+
+    Evaluates if text is useful content vs garbage/metadata.
+
+    Args:
+        text: Extracted text to evaluate.
+
+    Returns:
+        Quality score between 0.0 (garbage) and 1.0 (excellent).
+    """
+    if not text or not text.strip():
+        return 0.0
+
+    text = text.strip()
+    text_lower = text.lower()
+
+    # Check for PDF metadata patterns (strong negative signal)
+    metadata_hits = sum(1 for p in _PDF_METADATA_PATTERNS if p in text_lower)
+    if metadata_hits >= _METADATA_HIT_THRESHOLD:
+        logger.debug("Text contains {} PDF metadata patterns", metadata_hits)
+        return 0.0
+
+    # Calculate character composition metrics
+    total_chars = len(text)
+    alpha_chars = sum(1 for c in text if c.isalpha())
+    digit_chars = sum(1 for c in text if c.isdigit())
+    space_chars = sum(1 for c in text if c.isspace())
+    alnum_chars = alpha_chars + digit_chars
+
+    # Ratio of alphanumeric characters (should be high for real text)
+    alnum_ratio = alnum_chars / total_chars if total_chars > 0 else 0
+
+    # Ratio of alphabetic characters (real text has mostly letters)
+    alpha_ratio = alpha_chars / total_chars if total_chars > 0 else 0
+
+    # Space ratio (real text has ~15-20% spaces, garbage often has very few or too many)
+    space_ratio = space_chars / total_chars if total_chars > 0 else 0
+    space_score = 1.0 if _SPACE_RATIO_MIN <= space_ratio <= _SPACE_RATIO_MAX else 0.5
+
+    # Word analysis - split on whitespace and check word quality
+    words = text.split()
+    if not words:
+        return 0.0
+
+    # Average word length (real words are typically 3-10 chars)
+    avg_word_len = sum(len(w) for w in words) / len(words)
+    word_len_score = 1.0 if _WORD_LEN_MIN <= avg_word_len <= _WORD_LEN_MAX else 0.5
+
+    # Ratio of "real" words (mostly alphabetic, reasonable length)
+    real_words = sum(
+        1
+        for w in words
+        if len(w) >= _MIN_WORD_LEN and sum(1 for c in w if c.isalpha()) / len(w) > _WORD_ALPHA_RATIO
+    )
+    word_quality_ratio = real_words / len(words) if words else 0
+
+    # Combine scores with weights
+    quality_score = (
+        alpha_ratio * 0.25  # Letters are important
+        + alnum_ratio * 0.15  # Alphanumeric content
+        + space_score * 0.20  # Proper spacing
+        + word_len_score * 0.15  # Reasonable word lengths
+        + word_quality_ratio * 0.25  # Quality of words
+    )
+
+    # Penalty for very short text (less confident)
+    if total_chars < _SHORT_TEXT_THRESHOLD:
+        quality_score *= 0.7
+    elif total_chars < _MEDIUM_TEXT_THRESHOLD:
+        quality_score *= 0.85
+
+    logger.debug(
+        "Text quality: {:.2f} (alpha={:.2f}, alnum={:.2f}, space={:.2f}, "
+        "word_len={:.1f}, word_qual={:.2f}, chars={})",
+        quality_score,
+        alpha_ratio,
+        alnum_ratio,
+        space_ratio,
+        avg_word_len,
+        word_quality_ratio,
+        total_chars,
+    )
+
+    return min(1.0, max(0.0, quality_score))
+
+
+def _should_try_ocr(text: str) -> bool:
+    """Determine if OCR should be attempted based on text quality.
+
+    Args:
+        text: Text extracted by pypdf/pdftotext.
+
+    Returns:
+        True if OCR should be attempted.
+    """
+    stripped = text.strip()
+
+    # Always try OCR if text is very short
+    if len(stripped) < _PDF_MIN_TEXT_THRESHOLD:
+        return True
+
+    # Calculate quality and decide
+    quality = _calculate_text_quality(stripped)
+
+    if quality < _PDF_MIN_QUALITY_THRESHOLD:
+        logger.debug(
+            "Text quality {:.2f} below threshold {:.2f}, will try OCR",
+            quality,
+            _PDF_MIN_QUALITY_THRESHOLD,
+        )
+        return True
+
+    return False
+
 
 def _read_pdf_file(file_path: Path, max_chars: int) -> str:
     """Extract text from PDF file.
 
-    Uses pypdf first, falls back to OCR for scanned PDFs.
+    Uses pypdf first, falls back to OCR for scanned PDFs or low-quality text.
 
     Args:
         file_path: Path to PDF file.
@@ -272,16 +422,26 @@ def _read_pdf_file(file_path: Path, max_chars: int) -> str:
     # 1. Try pypdf first (fast, works for text-based PDFs)
     text = _extract_pdf_with_pypdf(file_path, max_chars)
 
-    # 2. If text is too short, PDF is likely scanned - try OCR
-    if len(text.strip()) < _PDF_MIN_TEXT_THRESHOLD:
+    # 2. Check if text quality is sufficient, or if OCR should be attempted
+    if _should_try_ocr(text):
         logger.debug(
-            "PDF appears scanned (<%d chars), trying OCR: %s",
-            _PDF_MIN_TEXT_THRESHOLD,
+            "PDF text quality insufficient, trying OCR: {}",
             file_path,
         )
         ocr_text = _ocr_pdf_first_page(file_path, max_chars)
-        if ocr_text and len(ocr_text.strip()) > len(text.strip()):
-            return ocr_text
+
+        # Use OCR result if it's better quality
+        if ocr_text:
+            ocr_quality = _calculate_text_quality(ocr_text)
+            text_quality = _calculate_text_quality(text)
+
+            if ocr_quality > text_quality or len(ocr_text.strip()) > len(text.strip()):
+                logger.debug(
+                    "Using OCR text (quality {:.2f} vs {:.2f})",
+                    ocr_quality,
+                    text_quality,
+                )
+                return ocr_text
 
     return text if text.strip() else f"Filename: {file_path.name}"
 

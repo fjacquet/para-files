@@ -31,10 +31,16 @@ from para_files.types import (
     Confidence,
     FileMetadata,
 )
+from para_files.utils.filename_detector import is_generic_filename
+from para_files.utils.ocr_metadata import extract_metadata
+from para_files.utils.smart_renamer import perform_rename, suggest_rename
 
 
 if TYPE_CHECKING:
     from para_files.classifiers.base import BaseClassifier
+
+# Minimum content length required for OCR-based renaming
+_MIN_CONTENT_FOR_RENAME = 50
 
 
 class ClassificationPipeline:
@@ -213,7 +219,8 @@ class ClassificationPipeline:
     def classify_file(self, file_path: Path) -> ClassificationResult:
         """Classify a file by path.
 
-        Extracts metadata and content preview, then classifies.
+        If OCR renaming is enabled and the file has a generic name,
+        attempts to rename it based on OCR content before classification.
 
         Args:
             file_path: Path to file to classify.
@@ -222,6 +229,9 @@ class ClassificationPipeline:
             ClassificationResult with category and confidence.
         """
         from para_files.utils.file_utils import extract_file_metadata, read_content_preview
+
+        # Pre-classification renaming for generic PDFs
+        file_path = self._maybe_rename_generic_pdf(file_path)
 
         # Extract metadata
         metadata = extract_file_metadata(file_path)
@@ -233,6 +243,69 @@ class ClassificationPipeline:
         )
 
         return self.classify(content, metadata)
+
+    def _maybe_rename_generic_pdf(self, file_path: Path) -> Path:
+        """Rename generic PDFs using OCR metadata before classification.
+
+        If the file has a generic name (scan_001.pdf, IMG_1234.pdf, etc.)
+        and OCR renaming is enabled, extracts metadata from OCR text and
+        renames the file to a descriptive name.
+
+        Args:
+            file_path: Original file path
+
+        Returns:
+            New path if renamed, original path otherwise
+        """
+        # Early exit conditions
+        should_skip = (
+            not self._config.ocr_rename.enabled
+            or file_path.suffix.lower() != ".pdf"
+            or not is_generic_filename(file_path.name)
+        )
+        if should_skip:
+            return file_path
+
+        logger.debug(f"Generic filename detected, attempting OCR rename: {file_path.name}")
+
+        # Read content for OCR (will trigger OCR if needed)
+        from para_files.utils.file_utils import read_content_preview
+
+        content = read_content_preview(file_path, max_chars=5000)
+
+        if not content or len(content.strip()) < _MIN_CONTENT_FOR_RENAME:
+            logger.debug(f"Not enough content for OCR rename: {file_path.name}")
+            return file_path
+
+        # Extract metadata from content
+        taxonomy_loader = get_taxonomy_loader()
+        metadata = extract_metadata(content, taxonomy_loader)
+
+        # Check if we have enough confidence to rename
+        if metadata.confidence < self._config.ocr_rename.min_confidence:
+            logger.debug(
+                f"OCR metadata confidence too low ({metadata.confidence:.2f}): {file_path.name}"
+            )
+            return file_path
+
+        # Suggest and perform rename
+        new_name, confidence = suggest_rename(metadata, file_path)
+        if not new_name:
+            return file_path
+
+        new_path = perform_rename(
+            file_path,
+            new_name,
+            dry_run=self._config.ocr_rename.dry_run,
+        )
+
+        if new_path and new_path != file_path:
+            logger.info(
+                f"OCR rename: {file_path.name} → {new_path.name} (confidence: {confidence:.2f})"
+            )
+            return new_path
+
+        return file_path
 
     def get_target_path(self, result: ClassificationResult) -> Path:
         """Get full target path for a classification result.

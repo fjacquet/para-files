@@ -8,10 +8,12 @@ from unittest.mock import MagicMock, patch
 
 from para_files.utils.file_utils import (
     TEXT_EXTENSIONS,
+    _calculate_text_quality,
     _read_document_file,
     _read_image_file,
     _read_pdf_file,
     _read_text_file,
+    _should_try_ocr,
     extract_file_metadata,
     read_content_preview,
 )
@@ -462,3 +464,210 @@ class TestReadContentPreview:
         content = read_content_preview(test_file, max_chars=100)
 
         assert len(content) == 100
+
+
+class TestCalculateTextQuality:
+    """Tests for _calculate_text_quality function."""
+
+    def test_empty_text_returns_zero(self):
+        """Test that empty text returns quality 0."""
+        assert _calculate_text_quality("") == 0.0
+        assert _calculate_text_quality("   ") == 0.0
+
+    def test_good_quality_text(self):
+        """Test that good quality text scores high."""
+        good_text = (
+            "This is a properly formatted document with normal English text. "
+            "It contains complete sentences and proper spacing between words. "
+            "The text quality should be assessed as high by our algorithm."
+        )
+        quality = _calculate_text_quality(good_text)
+        assert quality >= 0.5, f"Expected high quality, got {quality}"
+
+    def test_garbage_text_low_quality(self):
+        """Test that garbage/metadata text scores low."""
+        garbage_text = "xYz123!@#$%^&*()_+{}|:<>?~`abc"
+        quality = _calculate_text_quality(garbage_text)
+        assert quality < 0.3, f"Expected low quality for garbage, got {quality}"
+
+    def test_pdf_metadata_detected(self):
+        """Test that PDF metadata patterns are detected."""
+        metadata_text = (
+            "/Type /Page /MediaBox [0 0 612 792] endobj startxref %%EOF /Font /Encoding stream"
+        )
+        quality = _calculate_text_quality(metadata_text)
+        assert quality == 0.0, f"Expected 0 for metadata, got {quality}"
+
+    def test_french_text_quality(self):
+        """Test quality detection works for French text."""
+        french_text = (
+            "Ceci est un document en français avec des accents et une ponctuation normale. "
+            "Le texte devrait être évalué comme étant de bonne qualité."
+        )
+        quality = _calculate_text_quality(french_text)
+        assert quality >= 0.4, f"Expected good quality for French, got {quality}"
+
+    def test_short_text_penalty(self):
+        """Test that very short text gets a quality penalty."""
+        short_text = "Hello world"
+        long_text = "Hello world " * 20
+
+        short_quality = _calculate_text_quality(short_text)
+        long_quality = _calculate_text_quality(long_text)
+
+        # Short text should have lower quality due to penalty
+        assert short_quality < long_quality
+
+    def test_no_spaces_low_quality(self):
+        """Test that text without spaces scores lower."""
+        no_spaces = "thisisatextwithoutanyspacesbetweenwords"
+        with_spaces = "this is a text with spaces between words"
+
+        no_spaces_quality = _calculate_text_quality(no_spaces)
+        with_spaces_quality = _calculate_text_quality(with_spaces)
+
+        assert no_spaces_quality < with_spaces_quality
+
+    def test_realistic_payslip_text(self):
+        """Test quality of realistic payslip/invoice text."""
+        payslip_text = (
+            "SWORD PARIS\n"
+            "0037 RUE DE LYON\n"
+            "75012 PARIS\n"
+            "No SIRET: 43362470700033\n"
+            "CONVENTION COLLECTIVE: SYNTEC\n"
+            "EMPLOI: INGENIEUR ANALYSTE\n"
+            "COEFFICIENT: 110,00\n"
+            "CLASSIFICATION: IC 2.1\n"
+        )
+        quality = _calculate_text_quality(payslip_text)
+        assert quality >= 0.3, f"Expected decent quality for payslip, got {quality}"
+
+
+class TestShouldTryOcr:
+    """Tests for _should_try_ocr function."""
+
+    def test_empty_text_triggers_ocr(self):
+        """Test that empty text triggers OCR."""
+        assert _should_try_ocr("") is True
+        assert _should_try_ocr("   ") is True
+
+    def test_very_short_text_triggers_ocr(self):
+        """Test that very short text triggers OCR."""
+        assert _should_try_ocr("abc") is True
+        assert _should_try_ocr("Hello") is True
+
+    def test_good_quality_text_no_ocr(self):
+        """Test that good quality text does not trigger OCR."""
+        good_text = (
+            "This is a well-formatted document with proper sentences. "
+            "It contains enough text to be considered useful for classification. "
+            "The content quality is high and OCR should not be needed."
+        )
+        assert _should_try_ocr(good_text) is False
+
+    def test_garbage_text_low_quality(self):
+        """Test that garbage text has low quality score."""
+        # Text with no spaces and lots of symbols has low quality
+        garbage_text = "!@#$%^&*()_+" * 10
+        quality = _calculate_text_quality(garbage_text)
+        assert quality < 0.3, f"Expected low quality, got {quality}"
+
+    def test_pdf_metadata_triggers_ocr(self):
+        """Test that PDF metadata text triggers OCR."""
+        metadata_text = (
+            "/Type /Page /MediaBox [0 0 612 792] "
+            "endobj startxref %%EOF /Font /Encoding stream endstream"
+        )
+        assert _should_try_ocr(metadata_text) is True
+
+    def test_alphanumeric_without_spaces(self):
+        """Test that alphanumeric text without spaces has moderate quality."""
+        # Alphanumeric without spaces gets moderate score (not low enough for OCR)
+        no_space_text = "xyz123abc456" * 20
+        quality = _calculate_text_quality(no_space_text)
+        # This should have moderate quality due to alnum content
+        assert 0.3 <= quality <= 0.6, f"Expected moderate quality, got {quality}"
+
+    def test_short_text_triggers_ocr_due_to_length(self):
+        """Test that short text triggers OCR due to length threshold."""
+        short_good = "Hello world"
+        assert _should_try_ocr(short_good) is True
+
+
+class TestPdfOcrIntegration:
+    """Integration tests for PDF OCR triggering."""
+
+    @patch("para_files.utils.file_utils._ocr_pdf_first_page")
+    @patch("para_files.utils.file_utils._extract_pdf_with_pypdf")
+    def test_ocr_triggered_for_empty_pypdf(
+        self, mock_pypdf: MagicMock, mock_ocr: MagicMock, tmp_path: Path
+    ):
+        """Test that OCR is triggered when pypdf returns empty."""
+        test_file = tmp_path / "scanned.pdf"
+        test_file.write_bytes(b"%PDF-1.4")
+
+        mock_pypdf.return_value = ""
+        mock_ocr.return_value = "OCR extracted text from scanned PDF"
+
+        content = _read_pdf_file(test_file, max_chars=1000)
+
+        mock_ocr.assert_called_once()
+        assert "OCR extracted" in content
+
+    @patch("para_files.utils.file_utils._ocr_pdf_first_page")
+    @patch("para_files.utils.file_utils._extract_pdf_with_pypdf")
+    def test_ocr_triggered_for_metadata_text(
+        self, mock_pypdf: MagicMock, mock_ocr: MagicMock, tmp_path: Path
+    ):
+        """Test that OCR is triggered when pypdf returns PDF metadata."""
+        test_file = tmp_path / "metadata.pdf"
+        test_file.write_bytes(b"%PDF-1.4")
+
+        # Simulate PDF metadata extraction (common with broken PDF text extraction)
+        mock_pypdf.return_value = (
+            "/Type /Page /MediaBox [0 0 612 792] endobj startxref %%EOF /Font /Encoding stream"
+        )
+        mock_ocr.return_value = "Proper OCR text with real words and sentences."
+
+        content = _read_pdf_file(test_file, max_chars=1000)
+
+        mock_ocr.assert_called_once()
+        assert "Proper OCR" in content
+
+    @patch("para_files.utils.file_utils._ocr_pdf_first_page")
+    @patch("para_files.utils.file_utils._extract_pdf_with_pypdf")
+    def test_no_ocr_for_good_text(self, mock_pypdf: MagicMock, mock_ocr: MagicMock, tmp_path: Path):
+        """Test that OCR is NOT triggered when pypdf returns good text."""
+        test_file = tmp_path / "good.pdf"
+        test_file.write_bytes(b"%PDF-1.4")
+
+        good_text = (
+            "This is a well-formatted PDF document with proper text extraction. "
+            "The content is readable and no OCR should be needed for this file. "
+            "Quality is high enough to skip the OCR step entirely."
+        )
+        mock_pypdf.return_value = good_text
+
+        content = _read_pdf_file(test_file, max_chars=1000)
+
+        mock_ocr.assert_not_called()
+        assert content == good_text
+
+    @patch("para_files.utils.file_utils._ocr_pdf_first_page")
+    @patch("para_files.utils.file_utils._extract_pdf_with_pypdf")
+    def test_best_quality_text_selected(
+        self, mock_pypdf: MagicMock, mock_ocr: MagicMock, tmp_path: Path
+    ):
+        """Test that the better quality text is selected."""
+        test_file = tmp_path / "mixed.pdf"
+        test_file.write_bytes(b"%PDF-1.4")
+
+        # pypdf returns low quality
+        mock_pypdf.return_value = "xxx123!!!"
+        # OCR returns better quality
+        mock_ocr.return_value = "Proper document text with sentences."
+
+        content = _read_pdf_file(test_file, max_chars=1000)
+
+        assert "Proper document" in content

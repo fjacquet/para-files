@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **HP-Technical pattern capturing donation files**: Fixed overly broad regex `[0-9A-Z]{4}-*` that matched year-prefixed files
+  - Changed pattern from `[0-9A-Z][0-9A-Z][0-9A-Z][0-9]-*` to `[A-Z][0-9A-Z][0-9A-Z][0-9A-Z]-*`
+  - Now requires first character to be a letter (HP product codes start with letters, not years)
+  - Prevents `2016-amnesty.pdf`, `2017-unicef.pdf` etc. from routing to `3_Resources/docs/HP-Technical/`
+  - Donation files now correctly route to `4_Archives/10y_dons/{issuer}/{year}` via domain KB
 - **MLX token limit crash in TechnologyExtractor**: Reduced content limit from 2000 to 400 characters
   - Prevents `IndexError: list index out of range` when text tokenizes to >512 tokens
   - Some texts tokenize poorly (e.g., 700 chars → 800+ tokens), causing model failure
@@ -45,6 +50,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Intelligent PDF OCR triggering**: OCR now evaluates text quality, not just length
+  - New `_calculate_text_quality()` function scores extracted text (0.0 - 1.0)
+  - Evaluates: alphabetic ratio, word quality, spacing, word length, PDF metadata patterns
+  - OCR triggered if quality < 0.3 (garbage/metadata) or length < 50 chars
+  - Compares pypdf vs OCR quality and uses the better result
+  - Fixes scanned PDFs that pypdf extracts as metadata garbage (e.g., sword.pdf payslip → photos)
+- **OCR-based pre-classification file renaming**: Automatically rename generic PDFs before classification
+  - Detects generic filenames: `scan_001.pdf`, `IMG_1234.pdf`, `document.pdf`, timestamps, UUIDs, etc.
+  - Extracts metadata from OCR text: date (ISO, European, French/English text formats), issuer, document type
+  - Renames to descriptive format: `{YYYY-MM-DD}_{issuer}_{type}.pdf`
+  - Helps rules engine match on descriptive names instead of generic scanner output
+  - New modules: `filename_detector.py`, `ocr_metadata.py`, `smart_renamer.py`
+  - Configuration: `ocr_rename.enabled`, `ocr_rename.min_confidence`, `ocr_rename.dry_run`
+  - Default: enabled with 30% minimum confidence threshold
 - **Configurable logging settings**: New `LoggingConfig` in config.py with customizable options
   - `level`: Log level for file output (DEBUG, INFO, WARNING, ERROR)
   - `rotation`: Size-based rotation (e.g., "10 MB", "100 MB")

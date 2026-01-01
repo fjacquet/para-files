@@ -973,7 +973,25 @@
             "Salaire brut",
             "Cotisations sociales",
             "Certificat de salaire",
-            "Lohnausweis"
+            "Lohnausweis",
+            "Rémunération brute",
+            "REMUNERATION BRUTE",
+            "SYNTEC",
+            "Convention collective",
+            "URSSAF",
+            "Coefficient",
+            "Classification",
+            "Bulletin de paie",
+            "Bulletin de salaire"
+          ],
+          "issuers": [
+            {
+              "name": "SWORD",
+              "patterns": [
+                "SWORD",
+                "Sword Group"
+              ]
+            }
           ],
           "retention": "10_years",
           "paper_required": false

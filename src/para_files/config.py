@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import Field
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -174,6 +174,25 @@ class LoggingConfig(BaseSettings):
     )
 
 
+class OCRRenameConfig(BaseModel):
+    """Configuration for OCR-based file renaming."""
+
+    enabled: bool = Field(
+        default=True,
+        description="Enable OCR-based renaming of generic filenames before classification",
+    )
+    min_confidence: float = Field(
+        default=0.3,
+        ge=0.0,
+        le=1.0,
+        description="Minimum confidence score to perform rename",
+    )
+    dry_run: bool = Field(
+        default=False,
+        description="If True, log renames but don't actually rename files",
+    )
+
+
 class Config(BaseSettings):
     """Root configuration for para-files classification system."""
 
@@ -223,6 +242,7 @@ class Config(BaseSettings):
     mlx: MLXConfig = Field(default_factory=MLXConfig)
     llm: LLMConfig = Field(default_factory=LLMConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
+    ocr_rename: OCRRenameConfig = Field(default_factory=OCRRenameConfig)
 
     @property
     def inbox_path(self) -> Path:

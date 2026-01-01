@@ -1874,11 +1874,11 @@ routing_rules:
     destination: "4_Archives/factures/logiciels/{YYYY}"
     date_source: "file_modified"
 
-  # HP/tech reference docs
+  # HP/tech reference docs (codes start with letter, e.g., C5J91A-xxx, not years like 2016-)
   hp_technical_docs:
     patterns:
       [
-        "[0-9A-Z][0-9A-Z][0-9A-Z][0-9]-*",
+        "[A-Z][0-9A-Z][0-9A-Z][0-9A-Z]-*",
         "4AA*",
       ]
     extensions: [".pdf"]
