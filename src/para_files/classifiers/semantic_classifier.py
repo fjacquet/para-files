@@ -105,7 +105,7 @@ class SemanticClassifier(BaseClassifier):
     def __init__(
         self,
         loader: TaxonomyLoader | None = None,
-        confidence_threshold: float = 0.65,
+        confidence_threshold: float = 0.85,
         *,
         enabled: bool = True,
     ) -> None:
