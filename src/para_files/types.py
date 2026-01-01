@@ -111,6 +111,10 @@ class RoutingRule(BaseModel):
         default_factory=list,
         description="Known technologies for {technology} placeholder resolution",
     )
+    auto_correct_date: bool = Field(
+        default=False,
+        description="Rename file when filename date differs from content date",
+    )
 
 
 class CategoryNode(BaseModel):

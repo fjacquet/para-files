@@ -924,3 +924,201 @@ class TestConstants:
     def test_max_day(self) -> None:
         """Test MAX_DAY constant."""
         assert MAX_DAY == 31
+
+
+class TestDetectDateMismatch:
+    """Test _detect_date_mismatch method."""
+
+    def test_detects_year_mismatch(self) -> None:
+        """Test detects different years."""
+        classifier = RulesEngineClassifier({})
+        fn_date, content_date, mismatch = classifier._detect_date_mismatch(
+            "201304-Expense.pdf",  # April 2013 in filename
+            "Exercice 2014",  # 2014 in content
+        )
+        assert mismatch is True
+        assert fn_date is not None
+        assert fn_date.year == 2013
+        assert content_date is not None
+        assert content_date.year == 2014
+
+    def test_no_mismatch_when_only_month_differs(self) -> None:
+        """Test no mismatch when only months differ (same year)."""
+        classifier = RulesEngineClassifier({})
+        fn_date, content_date, mismatch = classifier._detect_date_mismatch(
+            "2013-04-01-Expense.pdf",
+            "Document dated 2013-06-15",
+        )
+        # Only year is compared, not month (content often has year-only dates)
+        assert mismatch is False
+        assert fn_date is not None
+        assert fn_date.year == 2013
+        assert content_date is not None
+        assert content_date.year == 2013
+
+    def test_no_mismatch_when_same_year(self) -> None:
+        """Test no mismatch when years match."""
+        classifier = RulesEngineClassifier({})
+        _, _, mismatch = classifier._detect_date_mismatch(
+            "2013-Expense.pdf",
+            "Exercice 2013",
+        )
+        assert mismatch is False
+
+    def test_no_mismatch_when_filename_has_no_date(self) -> None:
+        """Test no mismatch when filename has no date."""
+        classifier = RulesEngineClassifier({})
+        fn_date, content_date, mismatch = classifier._detect_date_mismatch(
+            "Expense-Report.pdf",
+            "Exercice 2014",
+        )
+        assert mismatch is False
+        assert fn_date is None
+        assert content_date is not None
+
+    def test_no_mismatch_when_content_has_no_date(self) -> None:
+        """Test no mismatch when content has no date."""
+        classifier = RulesEngineClassifier({})
+        fn_date, content_date, mismatch = classifier._detect_date_mismatch(
+            "2013-04-Expense.pdf",
+            "Some random content without a date",
+        )
+        assert mismatch is False
+        assert fn_date is not None
+        assert content_date is None
+
+
+class TestBuildCorrectedFilename:
+    """Test _build_corrected_filename method."""
+
+    def test_corrects_yyyymm_format_with_content_month(self) -> None:
+        """Test corrects YYYYMM format using content's month."""
+        classifier = RulesEngineClassifier({})
+        result = classifier._build_corrected_filename(
+            "201304-Expense.pdf",
+            datetime(2014, 6, 1, tzinfo=UTC),  # Content has specific month
+            datetime(2013, 4, 1, tzinfo=UTC),  # Filename date
+        )
+        assert result == "2014-06-Expense.pdf"
+
+    def test_preserves_filename_month_when_content_year_only(self) -> None:
+        """Test preserves filename month when content has year only (month=1)."""
+        classifier = RulesEngineClassifier({})
+        result = classifier._build_corrected_filename(
+            "201304-Expense.pdf",
+            datetime(2014, 1, 1, tzinfo=UTC),  # Year-only content (month=1)
+            datetime(2013, 4, 1, tzinfo=UTC),  # Filename has April
+        )
+        assert result == "2014-04-Expense.pdf"
+
+    def test_corrects_yyyy_mm_dd_format(self) -> None:
+        """Test corrects YYYY-MM-DD format to ISO."""
+        classifier = RulesEngineClassifier({})
+        result = classifier._build_corrected_filename(
+            "2013-04-01-Report.pdf",
+            datetime(2014, 6, 15, tzinfo=UTC),
+            datetime(2013, 4, 1, tzinfo=UTC),
+        )
+        assert result == "2014-06-Report.pdf"
+
+    def test_corrects_yyyymmdd_format(self) -> None:
+        """Test corrects YYYYMMDD format to ISO."""
+        classifier = RulesEngineClassifier({})
+        result = classifier._build_corrected_filename(
+            "20130401-Report.pdf",
+            datetime(2014, 6, 15, tzinfo=UTC),
+            datetime(2013, 4, 1, tzinfo=UTC),
+        )
+        assert result == "2014-06-Report.pdf"
+
+    def test_prepends_date_when_no_date_in_filename(self) -> None:
+        """Test prepends date when no date in filename."""
+        classifier = RulesEngineClassifier({})
+        result = classifier._build_corrected_filename(
+            "Expense Report.pdf",
+            datetime(2014, 6, 1, tzinfo=UTC),
+            None,  # No filename date
+        )
+        assert result == "2014-06-Expense Report.pdf"
+
+    def test_preserves_extension(self) -> None:
+        """Test preserves original file extension."""
+        classifier = RulesEngineClassifier({})
+        result = classifier._build_corrected_filename(
+            "201304-Report.xlsx",
+            datetime(2014, 6, 1, tzinfo=UTC),
+            datetime(2013, 4, 1, tzinfo=UTC),
+        )
+        assert result.endswith(".xlsx")
+
+
+class TestAutoCorrectDateIntegration:
+    """Integration tests for auto_correct_date feature."""
+
+    def test_suggests_rename_on_mismatch(self) -> None:
+        """Test suggested_name added to params on mismatch."""
+        rule = RoutingRule(
+            patterns=["*Expense*"],
+            extensions=[".pdf"],
+            destination="4_Archives/notes-frais/{YYYY}",
+            date_source="content",
+            auto_correct_date=True,
+        )
+        classifier = RulesEngineClassifier({"notes_frais": rule})
+        metadata = make_metadata(
+            path=Path("/test/201304-Expense.pdf"),
+            filename="201304-Expense.pdf",
+            extension=".pdf",
+        )
+        result = classifier.classify(
+            content="Exercice 2014",  # Different year
+            metadata=metadata,
+        )
+        assert result is not None
+        assert "suggested_name" in result.extracted_params
+        # Content only has year (2014), so we preserve month (04) from filename
+        assert "2014-04" in result.extracted_params["suggested_name"]
+
+    def test_no_suggested_name_when_dates_match(self) -> None:
+        """Test no suggested_name when dates match."""
+        rule = RoutingRule(
+            patterns=["*Expense*"],
+            extensions=[".pdf"],
+            destination="4_Archives/notes-frais/{YYYY}",
+            date_source="content",
+            auto_correct_date=True,
+        )
+        classifier = RulesEngineClassifier({"notes_frais": rule})
+        metadata = make_metadata(
+            path=Path("/test/2014-06-Expense.pdf"),
+            filename="2014-06-Expense.pdf",
+            extension=".pdf",
+        )
+        result = classifier.classify(
+            content="Exercice 2014",  # Same year
+            metadata=metadata,
+        )
+        assert result is not None
+        assert "suggested_name" not in result.extracted_params
+
+    def test_no_suggested_name_when_auto_correct_disabled(self) -> None:
+        """Test no suggested_name when auto_correct_date is False."""
+        rule = RoutingRule(
+            patterns=["*Expense*"],
+            extensions=[".pdf"],
+            destination="4_Archives/notes-frais/{YYYY}",
+            date_source="content",
+            auto_correct_date=False,
+        )
+        classifier = RulesEngineClassifier({"notes_frais": rule})
+        metadata = make_metadata(
+            path=Path("/test/201304-Expense.pdf"),
+            filename="201304-Expense.pdf",
+            extension=".pdf",
+        )
+        result = classifier.classify(
+            content="Exercice 2014",  # Different year
+            metadata=metadata,
+        )
+        assert result is not None
+        assert "suggested_name" not in result.extracted_params

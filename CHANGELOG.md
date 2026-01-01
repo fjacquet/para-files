@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Auto-correct date in filenames**: New `auto_correct_date` option for routing rules
+  - Detects when filename date (e.g., `201304-Expense.pdf`) differs from content date
+  - Automatically suggests corrected filename in ISO format (e.g., `2014-04-Expense.pdf`)
+  - Preserves month from filename when content only has year
+  - Works with `date_source: "content"` rules
+- **YYYYMM filename pattern support**: Added support for 6-digit date format in filenames
+  - Patterns like `201304-` now correctly extract as April 2013
+  - Previously only YYYYMMDD (8-digit) was supported
+
+### Fixed
+
+- **Expense reports routing to wrong year**: Changed `notes_frais` rule from `date_source: "file_modified"` to `date_source: "content"`
+  - Files now route based on document content date, not filesystem date
+  - Prevents old documents from routing to current year when copied/touched
+- **Silenced noisy library logs**: Reduced log spam from third-party libraries
+  - **isbnlib**: ISBN lookup 404s no longer spam CRITICAL/WARNING (expected fallback behavior)
+  - **pypdf**: "Ignoring wrong pointing object" warnings silenced (common in scanned PDFs)
+
 ### Changed
 
 - **Pipeline reorder: book_detector before rules_engine**: Books with ISBN now get proper Thema classification

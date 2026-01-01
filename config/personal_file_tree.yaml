@@ -2061,7 +2061,8 @@ routing_rules:
       ]
     extensions: [".xls", ".xlsx", ".pdf"]
     destination: "4_Archives/5y_administratif/notes-frais/{YYYY}"
-    date_source: "file_modified"
+    date_source: "content"
+    auto_correct_date: true
 
   # Destination travel documents (city names)
   travel_destinations:

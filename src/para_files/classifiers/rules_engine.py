@@ -244,6 +244,9 @@ class RulesEngineClassifier(BaseClassifier):
                 params["issuer"] = "unknown"
                 logger.debug("No issuer detected, using 'unknown'")
 
+        # Check for date mismatch and set suggested_name if needed
+        self._apply_date_correction(rule, metadata, content, params)
+
         # Resolve destination pattern
         category = rule.destination
         for key, value in params.items():
@@ -419,6 +422,22 @@ class RulesEngineClassifier(BaseClassifier):
                 except ValueError:
                     continue
 
+        # Try YYYYMM format (6 digits, year + month, common in expense reports)
+        ym_patterns = [
+            r"(\d{4})-(\d{2})(?=[^0-9]|$)",  # YYYY-MM (not followed by digit)
+            r"^(\d{4})(\d{2})(?=[^0-9]|$)",  # YYYYMM at start (not followed by digit)
+        ]
+        for pattern in ym_patterns:
+            match = re.search(pattern, filename)
+            if match:
+                try:
+                    year = int(match.group(1))
+                    month = int(match.group(2))
+                    if MIN_YEAR <= year <= MAX_YEAR and 1 <= month <= MAX_MONTH:
+                        return datetime(year, month, 1, tzinfo=UTC)
+                except ValueError:
+                    continue
+
         # Try European date formats (DMY format)
         dmy_patterns = [
             r"(\d{2})_(\d{2})_(\d{4})",  # DD_MM_YYYY
@@ -528,6 +547,128 @@ class RulesEngineClassifier(BaseClassifier):
                 return datetime(year, 1, 1, tzinfo=UTC)
 
         return None
+
+    def _detect_date_mismatch(
+        self,
+        filename: str,
+        content: str | None,
+    ) -> tuple[datetime | None, datetime | None, bool]:
+        """Detect if filename date differs from content date.
+
+        Only compares years because content extraction often yields year-only
+        dates (month defaults to 01). A year mismatch indicates the file needs
+        correction.
+
+        Args:
+            filename: Filename to extract date from.
+            content: File content for date extraction.
+
+        Returns:
+            Tuple of (filename_date, content_date, has_mismatch).
+        """
+        filename_date = self._extract_date_from_filename(filename)
+        content_date = self._extract_date_from_content(content) if content else None
+
+        # No mismatch if either date is missing
+        if not filename_date or not content_date:
+            return filename_date, content_date, False
+
+        # Compare years only (content often has year-only extraction)
+        has_mismatch = filename_date.year != content_date.year
+
+        return filename_date, content_date, has_mismatch
+
+    def _build_corrected_filename(
+        self,
+        original_filename: str,
+        content_date: datetime,
+        filename_date: datetime | None = None,
+    ) -> str:
+        """Build corrected filename with date from content in ISO format.
+
+        Strategy:
+        1. Use content year with filename month (if available) to preserve month info
+        2. Remove existing date patterns from filename
+        3. Prepend YYYY-MM- (ISO format) to the rest
+
+        Args:
+            original_filename: Original filename.
+            content_date: Authoritative date from content.
+            filename_date: Original date from filename (for preserving month).
+
+        Returns:
+            Corrected filename with content date in ISO format.
+        """
+        stem = Path(original_filename).stem
+        suffix = Path(original_filename).suffix
+
+        # Use content year with filename month to preserve month info
+        # If content has month != 1, it has specific month info, use it
+        # Otherwise, use filename's month if available
+        if content_date.month != 1:
+            month = content_date.month
+        elif filename_date and filename_date.month != 1:
+            month = filename_date.month
+        else:
+            month = 1
+
+        iso_date = f"{content_date.year}-{month:02d}"
+
+        # Patterns to remove from filename (date prefixes)
+        date_patterns = [
+            r"^\d{4}-\d{2}-\d{2}[-_]?",  # YYYY-MM-DD- or YYYY-MM-DD_
+            r"^\d{4}-\d{2}[-_]?",         # YYYY-MM- or YYYY-MM_
+            r"^\d{8}[-_]?",               # YYYYMMDD- or YYYYMMDD_
+            r"^\d{6}[-_]?",               # YYYYMM- or YYYYMM_
+        ]
+
+        # Remove existing date prefix
+        new_stem = stem
+        for pattern in date_patterns:
+            new_stem = re.sub(pattern, "", stem)
+            if new_stem != stem:
+                break
+
+        # Build new filename with ISO date prefix
+        if new_stem:
+            return f"{iso_date}-{new_stem}{suffix}"
+        # Edge case: filename was just a date
+        return f"{iso_date}{suffix}"
+
+    def _apply_date_correction(
+        self,
+        rule: RoutingRule,
+        metadata: FileMetadata,
+        content: str | None,
+        params: dict[str, str],
+    ) -> None:
+        """Check for date mismatch and add suggested_name to params if needed.
+
+        Args:
+            rule: Routing rule with auto_correct_date setting.
+            metadata: File metadata with filename.
+            content: File content for date extraction.
+            params: Parameters dict to update with suggested_name.
+        """
+        if not (rule.auto_correct_date and rule.date_source == "content" and content):
+            return
+
+        filename_date, content_date, has_mismatch = self._detect_date_mismatch(
+            metadata.filename, content
+        )
+
+        if has_mismatch and content_date:
+            corrected_name = self._build_corrected_filename(
+                metadata.filename, content_date, filename_date
+            )
+            # Store stem only (without extension) for FileMover
+            params["suggested_name"] = Path(corrected_name).stem
+            logger.info(
+                "Date mismatch: filename={}, content={}. Suggesting: {}",
+                filename_date.strftime("%Y-%m") if filename_date else "none",
+                content_date.strftime("%Y-%m"),
+                corrected_name,
+            )
 
     def _extract_issuer(
         self,

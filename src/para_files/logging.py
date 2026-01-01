@@ -45,6 +45,8 @@ def setup_logging(
         log_to_file: Write logs to file (JSON format with rotation).
         config: Optional LoggingConfig with rotation/retention/level settings.
     """
+    import logging
+
     # Import here to avoid circular dependency
     from para_files.config import LoggingConfig
 
@@ -79,3 +81,16 @@ def setup_logging(
             level=config.level,
             enqueue=True,  # Thread-safe async writes
         )
+
+    # Silence noisy loggers that spam warnings for expected conditions
+    noisy_loggers = [
+        # isbnlib logs CRITICAL/WARNING for expected 404s (normal fallback behavior)
+        "isbnlib",
+        "isbnlib.dev.webservice",
+        "isbnlib.dev.webquery",
+        # pypdf logs WARNING for malformed PDFs (common in scanned documents)
+        "pypdf",
+        "pypdf._reader",
+    ]
+    for noisy_logger in noisy_loggers:
+        logging.getLogger(noisy_logger).setLevel(logging.CRITICAL + 1)
