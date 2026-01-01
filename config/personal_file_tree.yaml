@@ -2332,6 +2332,31 @@ routing_rules:
     extensions: [".pdf"]
     destination: "4_Archives/5y_documents/tests"
 
+  # Technical publisher books (route to books, NOT exam materials)
+  # These are actual books that should be classified by book_detector/Thema
+  # Must come BEFORE exam_materials to take priority
+  technical_publisher_books:
+    patterns:
+      [
+        "*[Mm]icrosoft [Pp]ress*",
+        "*[Oo]'[Rr]eilly*",
+        "*[Oo]reilly*",
+        "*[Aa]press*",
+        "*[Pp]ackt*",
+        "*[Mm]anning*",
+        "*[Pp]ragmatic*",
+        "*[Nn]o [Ss]tarch*",
+        "*[Ww]iley*",
+        "*[Pp]earson*",
+        "*[Aa]ddison[- ][Ww]esley*",
+        "*[Pp]rentice [Hh]all*",
+        "*[Ss]ybex*",
+        "*[Mm]cGraw[- ][Hh]ill*",
+      ]
+    extensions: [".pdf", ".epub", ".mobi"]
+    destination: "3_Resources/livres/informatique"
+    date_source: "file_modified"
+
   # Exam materials
   exam_materials:
     patterns:
