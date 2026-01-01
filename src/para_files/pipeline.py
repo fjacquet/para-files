@@ -88,16 +88,17 @@ class ClassificationPipeline:
         # Initialize classifiers in priority order
         self._classifiers = []
 
-        # Signal 1: Rules Engine (95%) - Extension/pattern based routing
+        # Signal 1: Book Detector (96%, 100% with ISBN)
+        # Runs FIRST to catch books before rules_engine patterns like "*Exam*"
+        # Uses THEMA classification codes for book categorization
+        book_detector = BookDetector(enable_isbn_lookup=True)
+        self._classifiers.append(book_detector)
+
+        # Signal 2: Rules Engine (95%) - Extension/pattern based routing
         routing_rules = self._reference_tree.get_routing_rules()
         if routing_rules:
             rules_engine = RulesEngineClassifier(routing_rules, para_root=self._config.para_root)
             self._classifiers.append(rules_engine)
-
-        # Signal 2: Book Detector (92%, 100% with ISBN)
-        # Now uses THEMA classification codes for book categorization
-        book_detector = BookDetector(enable_isbn_lookup=True)
-        self._classifiers.append(book_detector)
 
         # Signal 3: Taxonomy Classifier (90%) - Issuers + keywords from documents.json
         taxonomy_classifier = TaxonomyClassifier(loader=taxonomy_loader)

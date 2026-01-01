@@ -1,4 +1,4 @@
-"""Signal 2.5: Book detector classifier (92% confidence).
+"""Signal 1: Book detector classifier (96% confidence, 100% with ISBN).
 
 Detects technical books through multi-signal analysis:
 - ISBN extraction and lookup
@@ -364,7 +364,7 @@ def score_book_structure(content: str) -> float:
 
 
 class BookDetector(BaseClassifier):
-    """Signal 2.5: Technical book detector (92% confidence).
+    """Signal 1: Technical book detector (96% confidence, 100% with ISBN).
 
     Detects books through multi-signal analysis:
     1. ISBN extraction and API lookup (100% confidence if found)
@@ -405,8 +405,8 @@ class BookDetector(BaseClassifier):
 
     @property
     def default_confidence(self) -> float:
-        """Return default confidence (92%)."""
-        return 0.92
+        """Return default confidence (96%, or 100% with ISBN)."""
+        return 0.96
 
     def _detect_thema_code(  # noqa: C901, PLR0911
         self,

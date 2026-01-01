@@ -108,8 +108,8 @@ taxonomy.build_para_path("UB")
 Files are classified using signals in priority order:
 
 1. **Validated DB** (100%) - Manual mappings from user feedback
-2. **Rules Engine** (95%) - Glob patterns on filename/path
-3. **Book Detector** (92%) - PDF book detection via ISBN/metadata
+2. **Book Detector** (96-100%) - PDF book detection via ISBN/metadata/Thema
+3. **Rules Engine** (95%) - Glob patterns on filename/path
 4. **Domain KB** (90%) - Known issuer to category mappings
 5. **Semantic Router** (85%) - MLX embedding similarity
 6. **LLM Fallback** (configurable) - Optional AI classification

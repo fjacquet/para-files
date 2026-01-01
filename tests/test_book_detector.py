@@ -159,7 +159,7 @@ class TestBookDetector:
 
     def test_default_confidence(self, detector: BookDetector):
         """Test default confidence."""
-        assert detector.default_confidence == 0.92
+        assert detector.default_confidence == 0.96
 
     def test_non_pdf_returns_none(self, detector: BookDetector, non_pdf_metadata: FileMetadata):
         """Test that non-PDF files return None."""
