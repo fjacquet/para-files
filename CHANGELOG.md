@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Pipeline reorder: book_detector before rules_engine**: Books with ISBN now get proper Thema classification
+  - Book Detector runs FIRST (96-100% confidence) before Rules Engine (95%)
+  - Fixes misclassification of books like "Microsoft Press Exam Ref..." being routed to exam materials
+  - Books are now classified via ISBN/metadata/Thema before pattern-based rules can capture them
+
+### Added
+
+- **Technical publisher books rule**: Routes known publishers to books before `*Exam*` pattern
+  - Microsoft Press, O'Reilly, Apress, Packt, Manning, Pragmatic, No Starch, Wiley, Pearson, etc.
+  - Routes to `3_Resources/livres/informatique` as fallback for books without ISBN
+- **Citrix/NetScaler documentation rule**: Prevents NetScaler docs from Microsoft certification routing
+  - Patterns: NetScaler, Citrix, XenServer, XenApp, XenDesktop, ADC
+  - Routes to `3_Resources/docs/Citrix/{YYYY}`
+- **Veeam documentation rule**: Prevents Veeam docs from being classified as insurance/pension
+  - Patterns: Veeam, "V 12...", Log Analyzer, Backup Replication, VBR Guide
+  - Routes to `3_Resources/docs/Veeam/{YYYY}`
+- **Case studies rule**: Marketing/technical case studies no longer route to invoices
+  - Patterns: CaseStudy, CustomerStory, SuccessStory
+  - Routes to `3_Resources/docs/case-studies`
+- **Fujitsu Storage documentation rule**: Prevents Fujitsu storage docs from AVS/pension routing
+  - Patterns: Fujitsu Storage, Eternus, Virtual Appliance, Primergy
+  - Routes to `3_Resources/IT/Storage/{YYYY}`
+
 ### Fixed
 
 - **HP-Technical pattern capturing donation files**: Fixed overly broad regex `[0-9A-Z]{4}-*` that matched year-prefixed files

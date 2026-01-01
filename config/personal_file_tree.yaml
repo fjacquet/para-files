@@ -1122,6 +1122,21 @@ routing_rules:
     destination: "3_Resources/docs/Citrix/{YYYY}"
     date_source: "file_modified"
 
+  # Veeam documentation (NOT insurance/pension docs)
+  veeam_docs:
+    patterns:
+      [
+        "*[Vv]eeam*",
+        "V [0-9]* *",
+        "V[0-9]* *",
+        "*[Ll]og [Aa]nalyzer*",
+        "*[Bb]ackup*[Rr]eplication*",
+        "*[Vv][Bb][Rr]*[Gg]uide*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx"]
+    destination: "3_Resources/docs/Veeam/{YYYY}"
+    date_source: "file_modified"
+
   # IT whitepapers and technical guides (NOT books)
   it_whitepapers:
     patterns:
