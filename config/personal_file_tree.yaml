@@ -1105,6 +1105,22 @@ routing_rules:
     destination: "3_Resources/docs/case-studies"
     date_source: "file_modified"
 
+  # Brochures and marketing materials (NOT financial documents)
+  brochures:
+    patterns:
+      [
+        "*[Bb]rochure*",
+        "*[Dd]atasheet*",
+        "*[Dd]ata[Ss]heet*",
+        "*[Pp]roduct[Gg]uide*",
+        "*[Ss]olution[Bb]rief*",
+        "*[Ss]olution[Gg]uide*",
+        "*[Oo]verview*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx"]
+    destination: "3_Resources/docs/brochures"
+    date_source: "file_modified"
+
   # Citrix/NetScaler documentation (NOT Microsoft certifications)
   citrix_netscaler_docs:
     patterns:
