@@ -231,7 +231,7 @@ def bookstore(
         bool,
         typer.Option(
             "--recursive",
-            "-r",
+            "-R",
             help="Scan subdirectories recursively",
         ),
     ] = False,
@@ -257,7 +257,7 @@ def bookstore(
         para-files bookstore /path/to/books
 
         # Recursive scan without renaming
-        para-files bookstore /path/to/books -r --no-rename
+        para-files bookstore /path/to/books -R --no-rename
     """
     setup_logging(verbose=verbose)
     validate_directory_or_exit(path)
