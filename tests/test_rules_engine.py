@@ -910,8 +910,8 @@ class TestConstants:
         assert MIN_YEAR == 1990
 
     def test_max_year(self) -> None:
-        """Test MAX_YEAR constant."""
-        assert MAX_YEAR == 2099
+        """Test MAX_YEAR constant (realistic limit to avoid false positives)."""
+        assert MAX_YEAR == 2040
 
     def test_min_modern_year(self) -> None:
         """Test MIN_MODERN_YEAR constant."""
