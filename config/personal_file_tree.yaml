@@ -2780,6 +2780,1452 @@ routing_rules:
   # IT & TECHNOLOGY DOCUMENTATION - Added 2025-12-30
   # =============================================================================
 
+  # Network device configurations (Cisco IOS, Juniper, etc.)
+  # NOTE: Priority rule to prevent misclassification (e.g., "2048" from crypto key modulus)
+  network_device_configs:
+    patterns:
+      [
+        "*site[0-9]*",
+        "*router*config*",
+        "*switch*config*",
+        "*[Cc]isco*[Cc]onfig*",
+        "*running-config*",
+        "*startup-config*",
+        "*backup-config*",
+        "*.confg",
+        "*[Jj]uniper*[Cc]onfig*",
+        "*[Aa]rista*[Cc]onfig*",
+        "*[Ff]ortigate*[Cc]onfig*",
+      ]
+    extensions: [".txt", ".conf", ".cfg", ".confg", ".log"]
+    destination: "3_Resources/IT/Networking/configs/{YYYY}"
+    date_source: "file_modified"
+
+  # ============================================
+  # NOUVEAUX VENDEURS MAJEURS - Added 2025-01-02
+  # Coverage: ~8,057 files (79%)
+  # ============================================
+
+  # ===== STORAGE VENDORS MAJEURS =====
+
+  # NetApp documentation (1189 files) - PAR PRODUIT
+  netapp_documentation:
+    patterns:
+      [
+        "*[Nn]et[Aa]pp*",
+        "*ONTAP*",
+        "*[Dd]ata*ONTAP*",
+        "*[Ss]torageGRID*",
+        "*[Ff]AS*",
+        "*[Aa]FF*",
+        "*[Ff]lex[Pp]od*",
+        "*[Ss]nap*[Mm]irror*",
+        "*[Ss]nap*[Vv]ault*",
+        "*[Ss]nap[Cc]enter*",
+        "*[Cc]lustered*[Dd]ata*",
+        "*cdot*",
+        "*[Oo]nCommand*",
+        "*[Aa]ctive*IQ*",
+        "*[Ee]-[Ss]eries*",
+        "*[Ss]olidFire*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/NetApp/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        ONTAP, Data ONTAP, cdot, AFF, AFF A-Series, AFF C-Series, ASA,
+        FAS, StorageGRID, SolidFire, Element, HCI, E-Series, SANtricity,
+        SnapMirror, SnapVault, SnapCenter, SnapManager, SnapDrive, SnapRestore,
+        FlexClone, FlexGroup, FlexCache, MetroCluster,
+        Cloud Volumes ONTAP, Cloud Volumes Service, Azure NetApp Files,
+        FSx for NetApp ONTAP, BlueXP, Cloud Insights, Spot,
+        Active IQ, OnCommand, System Manager, OCUM,
+        Trident, Astra, FlexPod, NCIE, NCDA, NetApp University,
+      ]
+
+  # IBM Storage documentation (168 files) - PAR PRODUIT
+  ibm_storage_documentation:
+    patterns:
+      [
+        "*IBM*[Ss]torage*",
+        "*IBM*[Ff]lash*",
+        "*[Ss]pectrum*[Ss]cale*",
+        "*[Ss]pectrum*[Vv]irtualize*",
+        "*[Ss]torwize*",
+        "*[Dd][Ss]8*",
+        "*[Xx]IV*",
+        "*[Cc]leversafe*",
+        "*[Gg]PFS*",
+        "*IBM*[Ss][Aa][Nn]*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/IBM-Storage/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        Storage Scale, Spectrum Scale, GPFS, Storage Virtualize, Spectrum Virtualize,
+        Storage Ceph, Storage Defender, Storage Protect, Spectrum Protect, Storage Fusion,
+        FlashSystem, FlashSystem 5000, FlashSystem 7300, FlashSystem 9500,
+        DS8000, DS8A10, DS8A50, Storwize, SAN Volume Controller, SVC, XIV,
+        Cloud Object Storage, Cleversafe, Cohesity DataProtect,
+        IBM TechU, IBM Think,
+      ]
+
+  # Nutanix documentation (126 files) - PAR PRODUIT
+  nutanix_documentation_v2:
+    patterns:
+      [
+        "*[Nn]utanix*",
+        "*[Aa]cropolis*",
+        "*[Pp]rism*",
+        "*[Aa]HV*",
+        "*[Ff]iles*[Nn]utanix*",
+        "*[Oo]bjects*[Nn]utanix*",
+        "*[Ee]ra*[Nn]utanix*",
+        "*[Ff]low*[Nn]utanix*",
+        "*[Cc]alm*[Nn]utanix*",
+        "*[Mm]ove*[Nn]utanix*",
+        "*[Ff]rame*[Nn]utanix*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Nutanix/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        AOS, Acropolis, AHV, Prism Element, Prism Central, Prism Pro, Prism Ultimate,
+        Files, Objects, Volumes, Block Services, Era, NDB,
+        Flow, Flow Network Security, Flow Virtual Networking, Microsegmentation,
+        Calm, Self-Service, Move, Frame, Xi Frame,
+        Leap, DR, Protection Domains, Xi Cloud, NC2, Nutanix Cloud Clusters,
+        NUS, Nutanix Unified Storage, Kubernetes Engine, NKE, Karbon,
+        GPT-in-a-Box, NCM, NCP, Next,
+      ]
+
+  # Pure Storage documentation (97 files) - PAR PRODUIT
+  purestorage_documentation:
+    patterns:
+      [
+        "*[Pp]ure*[Ss]torage*",
+        "*[Ff]lash[Aa]rray*",
+        "*[Ff]lash[Bb]lade*",
+        "*[Pp]ure1*",
+        "*Purity*",
+        "*[Pp]ortworx*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Pure-Storage/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        FlashArray, FlashArray X, FlashArray C, FlashArray XL,
+        FlashBlade, FlashBlade S, FlashBlade EXA,
+        Purity, Cloud Block Store, Pure Fusion,
+        Portworx, Portworx Enterprise, Portworx Data Services,
+        Pure1, Pure1 Meta, Evergreen, Pure Accelerate,
+      ]
+
+  # HPE Storage documentation (66 files) - PAR PRODUIT
+  hpe_storage_documentation:
+    patterns:
+      [
+        "*HPE*[Ss]torage*",
+        "*[Nn]imble*",
+        "*[Pp]rimera*",
+        "*[Aa]llegra*",
+        "*3PAR*",
+        "*[Ss]imple[Ii][Vv]ity*",
+        "*[Ss]tore[Oo]nce*",
+        "*[Ss]tore[Ee]ver*",
+        "*[Ss]tore[Ss]erv*",
+        "*HPE*MSA*",
+        "*[Gg]reen[Ll]ake*[Ss]torage*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/HPE-Storage/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        Alletra, Alletra MP, Alletra 5000, Alletra 6000, Alletra 9000, Alletra 10000,
+        Nimble, Nimble Storage, Primera, 3PAR, StoreServ,
+        StoreOnce, Zerto, StoreEver, MSA, MSA 2060, MSA 2062,
+        SimpliVity, dHCI, GreenLake, DSCC, HPE Discover, HPE Tech Pro,
+      ]
+
+  # FalconStor documentation (63 files)
+  falconstor_documentation:
+    patterns:
+      [
+        "*[Ff]alcon[Ss]tor*",
+        "*[Rr]ecovery[Tt]rac*",
+        "*[Nn]etwork*[Ss]torage*[Ss]erver*",
+        "*NSS*[Ff]alcon*",
+        "*[Cc]DP*[Ff]alcon*",
+        "*[Ss]torage[Ss]afe*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/FalconStor/{YYYY}"
+    date_source: "file_modified"
+
+  # Nexenta documentation (19 files)
+  nexenta_documentation:
+    patterns:
+      [
+        "*[Nn]exenta*",
+        "*[Nn]exentaStor*",
+        "*[Nn]exentaFusion*",
+        "*[Nn]exentaEdge*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Nexenta/{YYYY}"
+    date_source: "file_modified"
+
+  # Hitachi Storage documentation (17 files)
+  hitachi_documentation:
+    patterns:
+      [
+        "*[Hh]itachi*[Ss]torage*",
+        "*[Hh]itachi*[Vv]antara*",
+        "*VSP*[Hh]itachi*",
+        "*HDS*",
+        "*[Hh]itachi*[Cc]ontent*",
+        "*[Hh]itachi*[Nn]AS*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Hitachi/{YYYY}"
+    date_source: "file_modified"
+
+  # Quantum documentation (13 files)
+  quantum_documentation:
+    patterns:
+      [
+        "*[Qq]uantum*",
+        "*[Ss]calar*",
+        "*[Ss]tore[Nn]ext*",
+        "*[Dd]xi*",
+        "*[Aa]ctive[Ss]cale*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Quantum/{YYYY}"
+    date_source: "file_modified"
+
+  # ===== NETWORKING VENDORS MAJEURS =====
+
+  # Cisco documentation (2610 files) - PAR PRODUIT
+  cisco_documentation:
+    patterns:
+      [
+        "*[Cc]isco*",
+        "*UCS*",
+        "*[Nn]exus*",
+        "*[Cc]atalyst*",
+        "*[Mm]eraki*",
+        "*[Aa][Cc][Ii]*",
+        "*[Dd]NA*[Cc]enter*",
+        "*[Ii]ntersight*",
+        "*[Ww]ebex*",
+        "*[Ff]ire[Pp]ower*",
+        "*[Aa][Ss][Aa]*",
+        "*[Ii][Ss][Ee]*",
+        "*[Dd]uo*[Ss]ecurity*",
+        "*[Ss]tealthwatch*",
+        "*[Tt]hous[Aa]nd[Ee]yes*",
+        "*[Aa]pp[Dd]ynamics*",
+        "*[Hh]yper[Ff]lex*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Cisco/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        Nexus, Nexus 9000, Nexus 3000, Nexus 7000, Nexus Dashboard, ACI, APIC,
+        Catalyst, Catalyst 9000, Catalyst Center, DNA Center, Catalyst SD-WAN,
+        Meraki, Meraki Dashboard, MX, MS, MR, MV, MT,
+        UCS, UCS X-Series, UCS B-Series, UCS C-Series, Intersight, HyperFlex,
+        ASA, Firepower, FMC, FTD, ISE, Secure Network Analytics, Stealthwatch,
+        Umbrella, Duo, SecureX, Hypershield,
+        Webex, Webex Teams, Webex Calling, CUCM, Unity,
+        ThousandEyes, AppDynamics, ISR, ASR, SD-WAN, Viptela,
+        CCNA, CCNP, CCIE, DevNet, Cisco Live, Cisco Partner Summit,
+      ]
+
+  # Kemp documentation (17 files)
+  kemp_documentation:
+    patterns:
+      [
+        "*[Kk]emp*",
+        "*[Ll]oad[Mm]aster*",
+        "*[Ff]lowmon*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Kemp/{YYYY}"
+    date_source: "file_modified"
+
+  # Alcatel documentation (10 files)
+  alcatel_documentation:
+    patterns:
+      [
+        "*[Aa]lcatel*",
+        "*[Aa]lcatel-[Ll]ucent*",
+        "*[Oo]mni[Ss]witch*",
+        "*[Oo]mni[Vv]ista*",
+        "*ALE*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Alcatel/{YYYY}"
+    date_source: "file_modified"
+
+  # ===== CLOUD & HYPERSCALERS =====
+
+  # Microsoft documentation (272 files) - PAR PRODUIT
+  microsoft_documentation:
+    patterns:
+      [
+        "*[Mm]icrosoft*",
+        "*[Aa]zure*",
+        "*[Oo]ffice*365*",
+        "*M365*",
+        "*[Ww]indows*[Ss]erver*",
+        "*[Hh]yper-V*",
+        "*[Ss][Qq][Ll]*[Ss]erver*",
+        "*[Ss]hare[Pp]oint*",
+        "*[Ee]xchange*[Ss]erver*",
+        "*[Aa]ctive*[Dd]irectory*",
+        "*[Ii]ntune*",
+        "*[Dd]efender*",
+        "*[Ss]entinel*",
+        "*[Pp]ower[Ss]hell*",
+        "*[Vv]isual*[Ss]tudio*",
+        "*[Dd]ynamics*365*",
+        "*[Ii]gnite*",
+        # Office Apps with version year (2010-2029)
+        "*[Aa]ccess*201[0-9]*",
+        "*[Aa]ccess*202[0-9]*",
+        "*[Oo]ne[Nn]ote*201[0-9]*",
+        "*[Oo]ne[Nn]ote*202[0-9]*",
+        "*[Ee]xcel*201[0-9]*",
+        "*[Ee]xcel*202[0-9]*",
+        "*[Pp]ower[Pp]oint*201[0-9]*",
+        "*[Pp]ower[Pp]oint*202[0-9]*",
+        "*[Oo]utlook*201[0-9]*",
+        "*[Oo]utlook*202[0-9]*",
+        "*[Ww]ord*201[0-9]*[Ss]hortcut*",
+        "*[Ww]ord*202[0-9]*[Ss]hortcut*",
+        "*[Vv]isio*201[0-9]*",
+        "*[Vv]isio*202[0-9]*",
+        "*[Pp]roject*201[0-9]*[Mm]icrosoft*",
+        "*[Pp]roject*202[0-9]*[Mm]icrosoft*",
+        "*[Pp]ublisher*201[0-9]*",
+        "*[Pp]ublisher*202[0-9]*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Microsoft/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        # Azure Cloud
+        Azure, Azure Stack, Azure Arc, Azure Kubernetes Service, AKS,
+        Azure DevOps, Azure Functions, Azure Storage, Azure SQL, Azure Cosmos DB,
+        Azure VMware Solution, AVS, Azure Site Recovery, Azure Backup,
+        Azure Monitor, Azure Sentinel, Microsoft Sentinel,
+        # Microsoft 365 / Office 365
+        Office 365, Microsoft 365, M365, Teams, SharePoint, OneDrive, Exchange Online,
+        Power Platform, Power BI, Power Automate, Power Apps,
+        # Office Desktop Apps
+        Access, Access 2010, Access 2013, Access 2016, Access 2019, Access 2021,
+        Excel, Excel 2010, Excel 2013, Excel 2016, Excel 2019, Excel 2021,
+        OneNote, OneNote 2010, OneNote 2013, OneNote 2016,
+        Outlook, Outlook 2010, Outlook 2013, Outlook 2016, Outlook 2019, Outlook 2021,
+        PowerPoint, PowerPoint 2010, PowerPoint 2013, PowerPoint 2016, PowerPoint 2019, PowerPoint 2021,
+        Word, Word 2010, Word 2013, Word 2016, Word 2019, Word 2021,
+        Visio, Visio 2010, Visio 2013, Visio 2016, Visio 2019, Visio 2021,
+        Project, Project 2010, Project 2013, Project 2016, Project 2019, Project 2021,
+        Publisher, Publisher 2010, Publisher 2013, Publisher 2016, Publisher 2019, Publisher 2021,
+        Office, Office 2010, Office 2013, Office 2016, Office 2019, Office 2021,
+        # Windows Server
+        Windows Server, Windows Server 2022, Windows Server 2025, Hyper-V,
+        Active Directory, Entra ID, Azure AD, ADDS, Group Policy,
+        # Security
+        Defender, Defender for Endpoint, Defender for Cloud, Intune, Purview,
+        # Development
+        Visual Studio, Visual Studio Code, .NET, PowerShell,
+        # Data Platform
+        SQL Server, SQL Server 2022, Fabric, Microsoft Fabric, Synapse,
+        # Dynamics & AI
+        Dynamics 365, Business Central, Copilot, Azure OpenAI,
+        # Events
+        Ignite, Microsoft Ignite, Build, Microsoft Build,
+      ]
+
+  # AWS documentation (13 files) - PAR SERVICE
+  aws_documentation:
+    patterns:
+      [
+        "*AWS*",
+        "*[Aa]mazon*[Ww]eb*[Ss]ervices*",
+        "*EC2*",
+        "*S3*",
+        "*[Ll]ambda*[Aa]ws*",
+        "*[Cc]loud[Ff]ormation*",
+        "*[Ee]lastic*[Bb]eanstalk*",
+        "*[Aa]urora*[Aa]ws*",
+        "*[Rr][Dd][Ss]*[Aa]ws*",
+        "*[Ee][Kk][Ss]*",
+        "*[Ee][Cc][Ss]*[Aa]ws*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/AWS/{YYYY}"
+    date_source: "file_modified"
+
+  # ===== CONTAINERS & DEVOPS =====
+
+  # Docker documentation (38 files) - PAR PRODUIT
+  docker_documentation:
+    patterns:
+      [
+        "*[Dd]ocker*",
+        "*[Cc]ontainer*[Dd]ocker*",
+        "*[Dd]ocker*[Cc]ompose*",
+        "*[Dd]ocker*[Ss]warm*",
+        "*[Mm]irantis*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Docker/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        Docker Desktop, Docker Engine, Docker CE, Docker EE, containerd,
+        Docker Compose, Compose, Docker Swarm, Swarm Mode, Docker Stack,
+        Docker Hub, Docker Registry, Docker Trusted Registry, DTR,
+        Dockerfile, Docker Build, BuildKit, Buildx, Docker Build Cloud,
+        Docker Scout, Docker Content Trust, DCT, SBOM,
+        Mirantis Container Runtime, MCR, Mirantis Kubernetes Engine, MKE,
+        DCA, Docker Certified Associate, DockerCon,
+      ]
+
+  # Kubernetes documentation (4 files)
+  kubernetes_documentation:
+    patterns:
+      [
+        "*[Kk]ubernetes*",
+        "*[Kk]8s*",
+        "*kubectl*",
+        "*[Hh]elm*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Kubernetes/{YYYY}"
+    date_source: "file_modified"
+
+  # ===== SECURITY =====
+
+  # Centrify documentation (49 files)
+  centrify_documentation:
+    patterns:
+      [
+        "*[Cc]entrify*",
+        "*[Dd]elimark*",
+        "*[Ii]dentity*[Ss]ervice*",
+        "*[Pp]rivilege*[Ss]ervice*",
+        "*[Pp]AM*[Cc]entrify*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Centrify/{YYYY}"
+    date_source: "file_modified"
+
+  # ===== DATA PROTECTION VENDORS =====
+
+  # Veritas documentation (583 files) - PAR PRODUIT
+  veritas_documentation:
+    patterns:
+      [
+        "*[Vv]eritas*",
+        "*[Nn]et[Bb]ackup*",
+        "*NBU*",
+        "*[Bb]ackup*[Ee]xec*",
+        "*APTARE*",
+        "*[Ii]nfo[Ss]cale*",
+        "*[Oo]ps[Cc]enter*",
+        "*[Cc]loud[Pp]oint*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Veritas/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        NetBackup, NetBackup IT Analytics, Backup Exec, BackupExec,
+        InfoScale, InfoScale Availability, InfoScale Storage, VCS, Veritas Cluster Server, Storage Foundation,
+        APTARE, IT Analytics, OpsCenter, NetBackup OpsCenter,
+        CloudPoint, CloudMobility, NetBackup SaaS Protection, Alta,
+        Enterprise Vault, Data Insight, Resiliency Platform, NBU, BE,
+      ]
+
+  # DataCore documentation (552 files) - PAR PRODUIT
+  datacore_documentation:
+    patterns:
+      [
+        "*[Dd]ata[Cc]ore*",
+        "*[Ss][Aa][Nn]symphony*",
+        "*[Ss]wiftstack*",
+        "*[Bb]olt*",
+        "*[Pp]erifery*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/DataCore/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        SANsymphony, Hyperconverged Virtual SAN, Virtual SAN, SwiftStack,
+        Enterprise Edition, Standard Edition, Business Edition, Backup Repository,
+        Auto-Tiering, Caching, CDP, Continuous Data Protection, Synchronous Mirroring, Async Replication,
+        Perifery, vFilO, Bolt, Swarm, FileFly,
+      ]
+
+  # Symantec documentation (261 files) - PAR PRODUIT
+  symantec_documentation:
+    patterns:
+      [
+        "*[Ss]ymantec*",
+        "*[Ss]ep*[Ee]ndpoint*",
+        "*DLP*",
+        "*ITMS*",
+        "*[Gg]host*",
+        "*[Pp]ca[Aa]nywhere*",
+        "*[Aa]ltiris*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Symantec/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        SEP, Symantec Endpoint Security, SES Complete, Endpoint Protection, EDR,
+        DLP, Data Loss Prevention, DLP Endpoint, DLP Network, DLP Cloud,
+        Carbon Black, Carbon Black EDR, Carbon Black App Control,
+        ICD, Integrated Cyber Defense, ITMS, IT Management Suite, Altiris,
+        Deployment Solution, Client Management Suite, Ghost, Ghost Solution Suite, PcAnywhere,
+        Email Security.cloud, Web Security Service, WSS, VIP, SEC,
+      ]
+
+  # Rubrik documentation (12 files) - PAR PRODUIT
+  rubrik_documentation:
+    patterns:
+      [
+        "*[Rr]ubrik*",
+        "*CDM*",
+        "*Polaris*",
+        "*Mosaic*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Rubrik/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        Security Cloud, RSC, Rubrik Security Cloud, CDM, Cloud Data Management,
+        r6000, r500, r300, Polaris, Rubrik Polaris, Cloud Vault, Rubrik Cloud Vault,
+        Data Observability, Sensitive Data Monitoring, Anomaly Detection, Ransomware Recovery,
+        Cloud Native Protection, Microsoft 365 Protection, M365, Salesforce Protection,
+        Oracle Protection, SQL Server Protection, SAP HANA Protection, Kubernetes Protection,
+        NAS Cloud Direct, Mosaic, Cyber Recovery, Threat Hunting, Data Threat Analytics,
+        Rubrik Forward, Rubrik Certified Administrator, RCA,
+      ]
+
+  # ===== NETWORKING VENDORS =====
+
+  # Riverbed documentation (169 files) - PAR PRODUIT
+  riverbed_documentation:
+    patterns:
+      [
+        "*[Rr]iverbed*",
+        "*[Ss]teelhead*",
+        "*[Ss]teel[Cc]entral*",
+        "*[Ss]teel[Ff]usion*",
+        "*WAN*[Oo]pt*",
+        "*[Aa]irpcap*",
+        "*[Aa]pp[Rr]esponse*",
+        "*[Cc]ascade*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Riverbed/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        SteelHead, SteelHead CX, SteelHead EX, SteelHead Mobile, SteelHead Interceptor, Client Accelerator,
+        Alluvio, Alluvio Unified Observability, Alluvio IQ, Alluvio NetProfiler, Alluvio AppResponse,
+        Alluvio NetIM, Alluvio Portal, Alluvio Aternity, Alluvio Flow Gateway,
+        SteelFusion, SteelFusion Core, SteelFusion Edge,
+        SteelCentral, SteelCentral Controller, SteelCentral NetProfiler, SteelCentral NetShark,
+        SteelCentral AppResponse, SteelCentral NetIM, SteelCentral Flow Gateway,
+        AppResponse, Transaction Analyzer, NetShark, Packet Analyzer, NetProfiler, NetIM,
+        Cascade, Cascade Profiler, Cascade Shark, AirPcap, RCSP,
+      ]
+
+  # Brocade documentation (109 files) - PAR PRODUIT
+  brocade_documentation:
+    patterns:
+      [
+        "*[Bb]rocade*",
+        "*[Ff]ibre*[Cc]hannel*",
+        "*[Ss][Aa][Nn]*[Ss]witch*",
+        "*[Ff]abric*[Oo][Ss]*",
+        "*[Mm]LX*",
+        "*[Vv][Dd][Xx]*",
+        "*FC101*",
+        "*BASA*",
+        "*BPSA*",
+        "*CFA*",
+        "*CFP*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Brocade/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        Fabric OS, FOS, G710, G720, G730, G730S, G620, G610,
+        X7-8, X7-4, X7 Director, G630, "6520", "6510", "6505",
+        X6-8, X6-4, X6 Director, DCX 8510-8, DCX 8510-4, G820, X8 Director,
+        SANnav, SANnav Management Portal, SANnav Global View, Brocade Network Advisor, BNA,
+        Fabric Extension, FCR, Fabric Routing, FCIP,
+        DCX, MLX, VDX, "7840", "5600", "5500", "5300", "5100",
+        BCFA, BCFP, BASA, BPSA, CFA, CFP, FC101, Fibre Channel, FC, SAN Switch, FC Training,
+      ]
+
+  # F5 Networks documentation (43 files) - PAR PRODUIT
+  f5_documentation:
+    patterns:
+      [
+        "*[Ff]5*",
+        "*[Bb]ig-[Ii][Pp]*",
+        "*BIG-IP*",
+        "*[Ii][Rr]ule*",
+        "*[Aa][Ss][Mm]*",
+        "*[Gg][Tt][Mm]*",
+        "*[Ll][Tt][Mm]*",
+        "*[Aa][Pp][Mm]*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/F5/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        BIG-IP, BIG-IP Next, LTM, Local Traffic Manager, GTM, Global Traffic Manager, DNS, BIG-IP DNS,
+        ASM, Advanced WAF, AWAF, Application Security Manager, AFM, Advanced Firewall Manager,
+        Bot Defense, DDoS Hybrid Defender, APM, Access Policy Manager, PEM, Policy Enforcement Manager,
+        SSL Orchestrator, SSLO, iRules, iControl, iApps, AS3, DO, Declarative Onboarding, TS, Telemetry Streaming, FAST,
+        NGINX, NGINX Plus, NGINX App Protect, NGINX Ingress Controller, NGINX Unit, NGINX Management Suite,
+        F5 Distributed Cloud, XC, F5 Cloud Services, F5 Beacon,
+        ADSP, Application Delivery and Security Platform, WAAP,
+        i-Series, r-Series, VIPRION, VE, Virtual Edition,
+        CIS, Container Ingress Services, F5 Certified, F5-CA, F5-CTS, 301a, 301b,
+      ]
+
+  # A10 Networks documentation (35 files) - PAR PRODUIT
+  a10_documentation:
+    patterns:
+      [
+        "*[Aa]10*[Nn]etworks*",
+        "*[Tt]hunder*",
+        "*[Vv][Tt]hunder*",
+        "*A10*ADC*",
+        "*[Aa][Xx]*[Ss]eries*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/A10/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        Thunder ADC, Thunder CFW, Thunder CGN, Thunder TPS, Thunder SSLi,
+        Thunder Series, A10 Thunder, AX Series, vThunder, vThunder ADC, vThunder TPS,
+        A10 Cloud Services, TPS, Threat Protection System, DDoS Protection,
+        SSLi, SSL Insight, CGN, CGNAT, Carrier Grade NAT,
+        A10 Control, A10 Harmony Controller, aGalaxy, ACOS, Advanced Core Operating System,
+        AX 2500, AX 5200,
+      ]
+
+  # ===== SECURITY VENDORS =====
+
+  # Kaspersky documentation (29 files) - PAR PRODUIT
+  kaspersky_documentation:
+    patterns:
+      [
+        "*[Kk]aspersky*",
+        "*KES*",
+        "*KSC*",
+        "*[Ee]ndpoint*[Ss]ecurity*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Kaspersky/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        KES, Kaspersky Endpoint Security, Kaspersky Endpoint Security for Business,
+        Endpoint Security Cloud, Endpoint Security Cloud Plus, Endpoint Security Cloud Pro,
+        KSC, Kaspersky Security Center, Security Center Cloud Console,
+        EDR, EDR Optimum, EDR Expert, KATA, Kaspersky Anti Targeted Attack,
+        MDR, Managed Detection and Response, KICS, Kaspersky Industrial CyberSecurity,
+        Kaspersky Threat Intelligence, Threat Data Feeds,
+        Kaspersky Security for Mail Server, Kaspersky Security for Virtualization,
+        Light Agent, Agentless, Kaspersky Endpoint Security for Android,
+        Kaspersky Total Security, Kaspersky Internet Security, Kaspersky Anti-Virus,
+        Kaspersky Plus, Kaspersky Standard, Kaspersky Premium,
+        Kaspersky Expert Training, ASAP, Automated Security Awareness Platform,
+      ]
+
+  # Fortinet documentation (11 files) - PAR PRODUIT
+  fortinet_documentation:
+    patterns:
+      [
+        "*[Ff]ortinet*",
+        "*[Ff]orti[Gg]ate*",
+        "*[Ff]orti[Aa]nalyzer*",
+        "*[Ff]orti[Mm]anager*",
+        "*[Ff]orti[Ss][Ii][Ee][Mm]*",
+        "*[Ff]orti[Ww]eb*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Fortinet/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        FortiGate, FortiGate NGFW, FortiOS, FortiSASE, Fortinet SD-WAN, FortiGate SD-WAN, Secure SD-WAN,
+        FortiManager, FortiAnalyzer, FortiCloud, FortiMonitor,
+        FortiSIEM, FortiSOAR, FortiXDR, FortiNDR, FortiRecon, FortiDeceptor,
+        FortiClient, FortiEDR, FortiEMS, FortiWeb, FortiADC, FortiProxy, FortiDDoS,
+        FortiMail, FortiNAC, FortiAP, FortiSwitch, FortiExtender,
+        FortiTrust Identity, FortiAuthenticator, FortiToken, ZTNA,
+        FortiSandbox, FortiCNP, FortiCWP, FortiDevSec,
+        Security Fabric, FortiGuard, FortiGuard Labs,
+        NSE 1, NSE 2, NSE 3, NSE 4, NSE 5, NSE 6, NSE 7, NSE 8, Fortinet Xperts, Accelerate,
+      ]
+
+  # ===== APPLICATIONS VENDORS =====
+
+  # IceWarp documentation (96 files)
+  icewarp_documentation:
+    patterns:
+      [
+        "*[Ii]ce[Ww]arp*",
+        "*[Mm]erak*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/IceWarp/{YYYY}"
+    date_source: "file_modified"
+
+  # SAP documentation (68 files) - PAR PRODUIT
+  sap_documentation:
+    patterns:
+      [
+        "*SAP*",
+        "*[Hh][Aa][Nn][Aa]*",
+        "*S/4*",
+        "*[Bb]usiness*[Oo]ne*",
+        "*[Ss]uccess[Ff]actors*",
+        "*[Ff]iori*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/SAP/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        S/4HANA, S/4HANA Cloud, S/4HANA Private Cloud, S/4HANA On-Premise, SAP ERP, SAP ECC,
+        HANA, SAP HANA, HANA Cloud, SAP HANA Cloud, SAP BTP, Business Technology Platform,
+        Fiori, SAP Fiori, Fiori Elements, SAP GUI, SAP Build,
+        SuccessFactors, SAP SuccessFactors, HCM, Employee Central,
+        SAP Analytics Cloud, SAC, SAP BW, BW/4HANA, SAP Datasphere,
+        Ariba, SAP Ariba, SAP Fieldglass, SAP IBP, Integrated Business Planning,
+        SAP CX, SAP Customer Experience, SAP Sales Cloud, SAP Service Cloud, SAP Commerce Cloud, SAP Marketing Cloud,
+        SAP Integration Suite, SAP CPI, Cloud Platform Integration, SAP PI/PO,
+        Business One, SAP Business One, SAP Business ByDesign,
+        Joule, SAP Joule, SAP Signavio, SAP Build Process Automation,
+        SAP Learning Hub, SAP TechEd, SAP Sapphire, SAP Certified,
+      ]
+
+  # Zimbra documentation (16 files)
+  zimbra_documentation:
+    patterns:
+      [
+        "*[Zz]imbra*",
+        "*ZCS*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Zimbra/{YYYY}"
+    date_source: "file_modified"
+
+  # ===== MONITORING/OBSERVABILITY =====
+
+  # SolarWinds documentation (65 files) - PAR PRODUIT
+  solarwinds_documentation:
+    patterns:
+      [
+        "*[Ss]olar[Ww]inds*",
+        "*[Oo]rion*",
+        "*NPM*",
+        "*SAM*",
+        "*[Dd]ameware*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/SolarWinds/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        SolarWinds Platform, Hybrid Cloud Observability, SolarWinds Observability,
+        NPM, Network Performance Monitor, NCM, Network Configuration Manager,
+        NTA, NetFlow Traffic Analyzer, VNQM, VoIP Network Quality Manager,
+        UDT, User Device Tracker, IPAM, IP Address Manager,
+        SAM, Server Application Monitor, SRM, Storage Resource Monitor, VMAN, Virtualization Manager,
+        WPM, Web Performance Monitor, Orion, Orion Platform,
+        DPA, Database Performance Analyzer, DPM, Database Performance Monitor, SQL Sentry,
+        Web Help Desk, WHD, Service Desk,
+        Dameware, Dameware Remote Support, DRS, Dameware Remote Everywhere, DRE,
+        SEM, Security Event Manager, ARM, Access Rights Manager, Patch Manager,
+        Log Analyzer, Papertrail, Loggly, AppOptics, Pingdom,
+        Network Automation Manager, NAM, SolarWinds Academy, THWACK,
+      ]
+
+  # Nexthink documentation (54 files) - PAR PRODUIT
+  nexthink_documentation:
+    patterns:
+      [
+        "*[Nn]exthink*",
+        "*[Ff]inder*",
+        "*[Cc]ollector*",
+        "*DEX*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Nexthink/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        DEX, Digital Employee Experience, Nexthink Infinity, Nexthink Experience,
+        Collector, Nexthink Collector, Finder, Nexthink Finder, Portal, Nexthink Portal,
+        Flow, Nexthink Flow, Remote Actions, Automated Remediation,
+        Adopt, Nexthink Adopt, In-App Guidance, Digital Adoption,
+        Library, Nexthink Library, Experience Optimization, Application Experience,
+        Collaboration Experience, Device Experience, Mobile Experience,
+        ServiceNow Integration, Splunk Integration, Microsoft Integration, ITSM Integration,
+        Engine, Nexthink Engine, Appliance, Nexthink Appliance,
+        Nexthink University, DEX Summit,
+      ]
+
+  # ===== STORAGE VENDORS (autres) =====
+
+  # EfficientIP documentation (20 files)
+  efficientip_documentation:
+    patterns:
+      [
+        "*[Ee]fficient[Ii][Pp]*",
+        "*SOLIDserver*",
+        "*DDI*",
+        "*IPAM*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/EfficientIP/{YYYY}"
+    date_source: "file_modified"
+
+  # Caringo documentation (12 files)
+  caringo_documentation:
+    patterns:
+      [
+        "*[Cc]aringo*",
+        "*[Ss]warm*",
+        "*[Ff]ile[Ff]ly*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Caringo/{YYYY}"
+    date_source: "file_modified"
+
+  # ===== RÈGLES AMÉLIORÉES (remplacer existantes) =====
+
+  # VMware documentation (1063 files) - PAR PRODUIT (upgraded)
+  vmware_documentation_v2:
+    patterns:
+      [
+        "*[Vv][Mm]ware*",
+        "*vSphere*",
+        "*vSAN*",
+        "*NSX*",
+        "*Horizon*",
+        "*Tanzu*",
+        "*vRealize*",
+        "*vCenter*",
+        "*ESXi*",
+        "*vCloud*",
+        "*SRM*",
+        "*Airwatch*",
+        "*VMware*[Aa]ria*",
+        "*[Aa]ria*[Oo]perations*",
+        "*[Aa]ria*[Ss]uite*",
+        "*[Aa]ria*[Aa]utomation*",
+        "*[Ww]orkspace*ONE*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/VMware/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        VCF, VMware Cloud Foundation, VVF, VMware vSphere Foundation,
+        vSphere, vSphere 8, ESXi, ESXi 8, vCenter, vCenter Server, VCSA, vMotion, DRS, HA, FT,
+        vSAN, vSAN 8, vSAN ESA, vSAN OSA, vSAN Max, vVols, Virtual Volumes, VMFS,
+        NSX, NSX 4.x, NSX Data Center, NSX-T, NSX-V, vDefend, VMware vDefend, NSX Firewall, NSX ALB, Avi Networks,
+        Aria, Aria Suite, Aria Operations, Aria Automation, Aria Operations for Networks, Aria Operations for Logs,
+        vRealize, vRealize Operations, vROps, vRealize Automation, vRA, vRealize Network Insight, vRNI, vRealize Log Insight, vRLI,
+        Horizon, Horizon 8, Horizon Cloud, Horizon Universal Console, Workspace ONE, Workspace ONE UEM,
+        Workspace ONE Access, Workspace ONE Intelligence, App Volumes, Dynamic Environment Manager, DEM, View, UAG,
+        AirWatch, Tanzu, Tanzu Kubernetes Grid, TKG, Tanzu Application Platform, TAP, Tanzu Mission Control, TMC,
+        Tanzu Service Mesh, vSphere with Tanzu, Harbor,
+        SRM, Site Recovery Manager, vSphere Replication, VMware Live Recovery, Live Site Recovery, Live Cyber Recovery,
+        VMware Cloud, VMC, VMware Cloud on AWS, VMC on AWS, VMware Cloud Director, vCloud Director, VCD,
+        Azure VMware Solution, AVS, Google Cloud VMware Engine, GCVE, Oracle Cloud VMware Solution, OCVS,
+        HOL, Hands-on Labs, VMware Explore, VMworld, VCP, VCAP, VCDX,
+      ]
+
+  # Veeam documentation (102 files) - PAR PRODUIT/VERSION (upgraded)
+  veeam_documentation_v2:
+    patterns:
+      [
+        "*[Vv]eeam*",
+        "*VBR*",
+        "*[Vv]eeam*[Bb]ackup*",
+        "*[Vv]eeam*[Rr]eplication*",
+        "*[Vv]eeam*ONE*",
+        "*[Vv]eeam*[Aa]gent*",
+        "*[Kk]asten*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Veeam/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        VBR, Veeam Backup Replication, Backup Replication, VBR 12, VBR 13, v12, v13,
+        Veeam Data Platform, VDP, Foundation, Advanced, Premium,
+        Agent for Windows, VAW, Agent for Linux, VAL, Agent for Mac, Agent for Solaris, Agent for AIX,
+        VBO, Veeam Backup for Microsoft 365, Backup for O365, Backup for Microsoft 365, VB365,
+        Kasten, Kasten K10, Veeam Kasten, K10, Kubernetes Backup,
+        Veeam Backup for AWS, Veeam Backup for Azure, Veeam Backup for Google Cloud, VBA,
+        Cloud Connect, Veeam Cloud Connect, VCC, Service Provider Console, VSPC,
+        ONE, Veeam ONE, Reporter, Business View, Monitor,
+        Veeam Recovery Orchestrator, VRO, Disaster Recovery Orchestrator,
+        CDP, Continuous Data Protection, Instant Recovery, SureBackup, SureReplica,
+        Veeam Explorers, Explorer for Exchange, Explorer for SharePoint, Explorer for Active Directory,
+        Explorer for SQL, Explorer for Oracle, Explorer for Teams,
+        Scale-out Backup Repository, SOBR, Immutability, Hardened Repository, NAS Backup, Object Storage, Tape,
+        VMCE, Veeam Certified Engineer, VMCA, Veeam Certified Architect, VeeamON,
+        Availability Suite, Management Pack,
+      ]
+
+  # Citrix documentation - PAR PRODUIT (upgraded)
+  citrix_documentation_v2:
+    patterns:
+      [
+        "*[Cc]itrix*",
+        "*[Xx]en[Aa]pp*",
+        "*[Xx]en[Dd]esktop*",
+        "*[Xx]en[Ss]erver*",
+        "*[Nn]et[Ss]caler*",
+        "*[Ss]hare[Ff]ile*",
+        "*[Ww]orkspace*[Cc]itrix*",
+        "*[Pp]rovisioning*[Ss]ervices*",
+        "*[Ss]torefront*",
+        "*ADC*[Cc]itrix*",
+        "*CVAD*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Citrix/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        CVAD, Citrix Virtual Apps and Desktops, CVAD 2407, CVAD 2311, CVAD 2402,
+        Virtual Apps, Virtual Desktops, DaaS, Citrix DaaS, Citrix Cloud,
+        XenApp, XenDesktop, XenServer,
+        NetScaler, NetScaler ADC, NetScaler Gateway, NetScaler Console, NetScaler SDX, NetScaler MPX, NetScaler VPX, NetScaler CPX, ADC,
+        Secure Private Access, SPA, Gateway, Gateway Service, Secure Internet Access, Secure Web Gateway,
+        Workspace, Citrix Workspace, Citrix Workspace App,
+        Provisioning Services, PVS, MCS, Machine Creation Services, App Layering,
+        Profile Management, UPM, WEM, Workspace Environment Management,
+        Session Recording, ShareFile, Content Collaboration, Files, StoreFront,
+        Endpoint Management, XenMobile, Director, Citrix Director, Analytics, Citrix Analytics,
+        Hypervisor, Citrix Hypervisor, HDX, HDX Adaptive Transport, HDX Direct,
+        CCA, CCP, CCE, Citrix Summit, Citrix Synergy,
+      ]
+
+  # NVIDIA documentation - PAR PRODUIT (upgraded)
+  nvidia_documentation_v2:
+    patterns:
+      [
+        "*[Nn]vidia*",
+        "*[Vv]gpu*",
+        "*[Gg]pu*packaging*",
+        "*[Gg]pu*licensing*",
+        "*[Cc]uda*",
+        "*[Tt]ensor*",
+        "*[Dd]eep*[Ll]earning*[Nn]vidia*",
+        "*DGX*",
+        "*GRID*",
+      ]
+    extensions: [".pdf", ".pptx", ".psd"]
+    destination: "3_Resources/docs/NVIDIA/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        H100, H200, B100, B200, GB200, GH200, A100, A30, A40, A16, A10, A2, L40, L40S, L4,
+        DGX, DGX Spark, DGX Station, DGX SuperPOD, DGX Cloud, DGX BasePOD, DGX H100, DGX B200, DGX GB200 NVL72,
+        HGX, HGX H100, HGX B200,
+        RTX, RTX 6000, RTX 5000, RTX 4000, RTX A6000, RTX A5000, Quadro,
+        vGPU, GRID, NVIDIA vGPU, vApps, vPC, RTX Virtual Workstation, RTX vWS, Virtual Compute Server, vCS,
+        AI Enterprise, NVIDIA AI Enterprise,
+        CUDA, CUDA Toolkit, cuDNN, TensorRT, TensorRT-LLM, Triton Inference Server, NCCL, RAPIDS, NGC, NVIDIA GPU Cloud,
+        Mellanox, InfiniBand, ConnectX, BlueField, Spectrum,
+        NIM, NVIDIA Inference Microservices, NeMo, Omniverse, Omniverse Enterprise,
+        DRIVE, Isaac, Deep Learning,
+        DLI, NVIDIA Deep Learning Institute, NGC Catalog, GTC, GPU Technology Conference,
+      ]
+
+  # =============================================================================
+  # FACTURES CONSOLIDÉES - Added 2025-01-02
+  # =============================================================================
+
+  # Factures énergie (électricité, gaz, eau) - Consolidation avec {vendor}
+  factures_energie:
+    patterns:
+      [
+        "*[Rr]omande*[Ee]nergie*",
+        "*[Ss][Ii][Gg]*[Ee]nergie*",
+        "*[Ss]ervices*[Ii]ndustriels*",
+        "*[Aa]lpiq*",
+        "*[Gg]roupe*[Ee]*",
+        "*[Vv]iteos*",
+        "*[Rr]epower*",
+        "*EDF*",
+        "*[Ee]lectricité*[Ff]rance*",
+        "*GDF*",
+        "*[Gg]az*[Ff]rance*",
+        "*GRDF*",
+        "*[Ee]ngie*",
+        "*[Ee]nedis*",
+        "*ERDF*",
+        "*[Dd]irect*[Ee]nergie*",
+        "*[Tt]otal*[Ee]nergies*",
+        "*[Ee]au*[Ff]acture*",
+        "*[Ff]acture*[Ee]au*",
+        "*[Ss]ervices*[Ee]aux*",
+        "*SIG*[Ee]au*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/5y_factures/Energie/{vendor}/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+    known_vendors:
+      [
+        Romande Energie, SIG, Services Industriels Genève, Alpiq, Groupe E, Viteos, Repower, BKW, Axpo, EWZ,
+        EDF, Engie, TotalEnergies, Direct Energie, Eni, Mint Energie, Planète OUI, ekWateur,
+        GDF, GRDF, Gaz de France, Enedis, ERDF,
+        SIG Eau, Services des Eaux, Eau SMA, Veolia, Suez, Saur, Eau de Paris, Lyonnaise des Eaux,
+      ]
+
+  # Factures télécom - Consolidation avec {vendor}
+  factures_telecom:
+    patterns:
+      [
+        "*[Ss]wisscom*",
+        "*[Ss]unrise*",
+        "*[Ss]alt*",
+        "*UPC*",
+        "*[Cc]ablecom*",
+        "*[Ww]ingo*",
+        "*[Ll]yca*[Mm]obile*",
+        "*[Mm]igros*[Mm]obile*",
+        "*[Cc]oop*[Mm]obile*",
+        "*[Yy]allo*",
+        "*Talktalk*",
+        "*[Oo]range*",
+        "*SFR*",
+        "*[Bb]ouygues*[Tt]elecom*",
+        "*[Ff]ree*[Mm]obile*",
+        "*[Ss]osh*",
+        "*[Rr]ed*[Ss][Ff][Rr]*",
+        "*B&You*",
+        "Invoice_41010*",
+        "*[Ff]acture*[Tt]elecom*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/5y_factures/Telephonie/{vendor}/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+    known_vendors:
+      [
+        Swisscom, Sunrise, Salt, UPC, Cablecom, Wingo, Yallo, Talktalk, Lycamobile, Lebara,
+        Migros Mobile, M-Budget Mobile, Coop Mobile,
+        Orange, SFR, Bouygues Telecom, Free, Free Mobile, Sosh, Red by SFR, B&You,
+        Numericable, Videofutur, OVH Telecom,
+      ]
+
+  # Factures mobilité - Consolidation avec {vendor}
+  factures_mobilite:
+    patterns:
+      [
+        "*CFF*",
+        "*SBB*",
+        "*[Cc]hemins*[Ff]er*",
+        "*[Tt][Pp][Gg]*",
+        "*[Tt]ransports*[Pp]ublics*",
+        "*[Mm]obilis*",
+        "*[Bb][Ll][Ss]*",
+        "*[Mm]obility*",
+        "*[Ss]hare[Nn]ow*",
+        "*[Hh]ertz*",
+        "*[Ee]uropcar*",
+        "*[Ss]ixt*",
+        "*[Aa]vis*",
+        "*[Aa]utoroute*",
+        "*[Vv]ignette*",
+        "*[Pp]arkingpay*",
+        "*[Pp]arkmobile*",
+        "*[Ee]asypark*",
+        "C00*_1_*.pdf",
+        "*[Rr]eceipt*[Mm]obility*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/5y_factures/Mobilité/{vendor}/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+    known_vendors:
+      [
+        CFF, SBB, FFS, BLS, RegionAlps, SOB, Zentralbahn, RhB,
+        SNCF, TGV, Ouigo, Eurostar, Thalys,
+        TPG, TL, Mobilis, RATP, SNCF Transilien,
+        Mobility, ShareNow, Free2Move, Getaround,
+        Hertz, Europcar, Sixt, Avis, Budget, Enterprise,
+        BlaBlaCar, Uber, Bolt, Lyft,
+        Parkingpay, Parkmobile, EasyPark, Indigo,
+        Autoroutes, Vignette, APRR, Sanef, ASF,
+      ]
+
+  # Factures assurances - Consolidation avec {vendor}
+  factures_assurances:
+    patterns:
+      [
+        "*[Gg]roupe*[Mm]utuel*",
+        "*CSS*",
+        "*[Ss]anitas*",
+        "*[Hh]elsana*",
+        "*[Ss]wica*",
+        "*[Aa]ssura*",
+        "*[Vv]isana*",
+        "*[Cc]oncordia*",
+        "*[Aa]XA*",
+        "*[Mm]obilar*",
+        "*[Zz]urich*[Aa]ssurance*",
+        "*[Aa]llianz*",
+        "*[Gg]enerali*",
+        "*[Bb]aloise*",
+        "*[Hh]elvetia*",
+        "*TCS*",
+        "*[Pp]acifica*",
+        "*[Oo]rion*",
+        "*MAIF*",
+        "*MACIF*",
+        "*MAAF*",
+        "*[Mm]atmut*",
+        "*GMF*",
+        "*[Mm]utuelle*",
+        "*[Aa]ssurance*[Mm]aladie*",
+        "*CPAM*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/5y_factures/Assurances/{vendor}/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+    known_vendors:
+      [
+        Groupe Mutuel, CSS, Sanitas, Helsana, Swica, Assura, Visana, Concordia, KPT, ÖKK, Atupri, EGK, Sana24,
+        AXA, Mobiliar, Zurich, Allianz Suisse, Generali, Baloise, Helvetia, Vaudoise, La Mobilière, TCS,
+        Pacifica, Orion, MAIF, MACIF, MAAF, Matmut, GMF, Groupama, Crédit Agricole Assurances,
+        AXA France, Allianz France, Generali France, MMA, Covéa,
+        CPAM, Assurance Maladie, Mutuelle, Harmonie Mutuelle, AG2R, Malakoff Humanis,
+      ]
+
+  # Factures e-commerce - Consolidation avec {vendor}
+  factures_ecommerce:
+    patterns:
+      [
+        "*[Aa]pple*",
+        "*emailreceipt*",
+        "*[Aa]mazon*",
+        "*[Gg]alaxy*",
+        "*[Dd]igitec*",
+        "*[Bb]rack*",
+        "*[Mm]icrospot*",
+        "*[Ii]nterdiscount*",
+        "*[Mm]edia[Mm]arkt*",
+        "*[Ff]nac*",
+        "*[Dd]arty*",
+        "*[Bb]oulanger*",
+        "*[Cc]discount*",
+        "*[Zz]alando*",
+        "*[Ll]a[Rr]edoute*",
+        "*[Ss]arenza*",
+        "*[Aa]sos*",
+        "*[Mm]anor*",
+        "*[Gg]lobus*",
+        "*[Cc]oop*",
+        "*[Mm]igros*",
+        "*[Ll]icense*[Kk]ey*",
+        "*[Pp]roduct*[Kk]ey*",
+        "*[Aa]ctivation*[Kk]ey*",
+        "*[Oo]rder*[Ss]oftware*",
+        "*[Rr]eceipt*",
+        "*[Ff]acture*[Aa]chat*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/5y_factures/Shopping/{vendor}/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+    known_vendors:
+      [
+        Apple, Apple Store, App Store, iTunes,
+        Amazon, Amazon Prime, AWS,
+        Digitec, Galaxus, Brack, Microspot, Interdiscount, Fust,
+        Fnac, Darty, Boulanger, Cdiscount, LDLC, Materiel.net,
+        Zalando, La Redoute, Sarenza, Asos, HM, Zara,
+        Manor, Globus, Coop, Migros, Galeries Lafayette, Printemps,
+        IKEA, Conforama, But,
+        Microsoft Store, Adobe, Google Play, Steam, GOG, Humble Bundle,
+      ]
+
+  # =============================================================================
+  # BANQUES - Nouvelles règles 2025-01-02
+  # =============================================================================
+
+  # PostFinance (très répandue en Suisse)
+  postfinance_documents:
+    patterns:
+      [
+        "*[Pp]ost[Ff]inance*",
+        "*POFICHBE*",
+        "*[Ee]-[Ff]inance*[Pp]ost*",
+        "*[Aa]compte*[Pp]ost*",
+        "*[Rr]elevé*[Pp]ost[Ff]inance*",
+      ]
+    extensions: [".pdf", ".xml"]
+    destination: "4_Archives/10y_banques/PostFinance/{document_type}/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+    known_document_types:
+      [
+        Relevé de compte, Extrait, E-relevé, Relevé carte, PostFinance Card,
+        Confirmation paiement, Ordre permanent, LSV, Attestation fiscale, Certificat intérêts,
+        E-facture, Notification,
+      ]
+
+  # Raiffeisen (coopérative, très présente)
+  raiffeisen_documents:
+    patterns:
+      [
+        "*[Rr]aiffeisen*",
+        "*RAIFCH*",
+        "*[Rr]aiff*[Bb]anque*",
+        "*[Ee]-[Bb]anking*[Rr]aiff*",
+      ]
+    extensions: [".pdf", ".xml"]
+    destination: "4_Archives/10y_banques/Raiffeisen/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # ZKB (Zürcher Kantonalbank)
+  zkb_documents:
+    patterns:
+      [
+        "*ZKB*",
+        "*[Zz]ürcher*[Kk]antonalbank*",
+        "*ZKBKCHZZ*",
+      ]
+    extensions: [".pdf", ".xml"]
+    destination: "4_Archives/10y_banques/ZKB/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Julius Bär (private banking)
+  julius_baer_documents:
+    patterns:
+      [
+        "*[Jj]ulius*[Bb]aer*",
+        "*[Jj]ulius*[Bb]är*",
+        "*BAABORIS*",
+        "*[Pp]rivate*[Bb]anking*[Jj]ulius*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/10y_banques/Julius-Baer/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Lombard Odier (private banking)
+  lombard_odier_documents:
+    patterns:
+      [
+        "*[Ll]ombard*[Oo]dier*",
+        "*LODICHGG*",
+        "*[Ll]ombart*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/10y_banques/Lombard-Odier/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Pictet (private banking)
+  pictet_documents:
+    patterns:
+      [
+        "*[Pp]ictet*",
+        "*PICTCHGG*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/10y_banques/Pictet/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # BNP Paribas
+  bnp_documents:
+    patterns:
+      [
+        "*BNP*",
+        "*[Bb][Nn][Pp]*[Pp]aribas*",
+        "*BNPAFRPP*",
+        "*[Rr]elevé*BNP*",
+        "*[Cc]ompte*BNP*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/10y_banques/BNP-Paribas/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Société Générale
+  socgen_documents:
+    patterns:
+      [
+        "*[Ss]ociété*[Gg]énérale*",
+        "*[Ss]ociete*[Gg]enerale*",
+        "*SocGen*",
+        "*SOGEFRPP*",
+        "*[Rr]elevé*[Ss][Gg]*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/10y_banques/Societe-Generale/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # LCL
+  lcl_documents:
+    patterns:
+      [
+        "*LCL*",
+        "*[Ll][Cc][Ll]*[Bb]anque*",
+        "*CRLYFRPP*",
+        "*[Rr]elevé*LCL*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/10y_banques/LCL/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Banque Populaire
+  banque_populaire_documents:
+    patterns:
+      [
+        "*[Bb]anque*[Pp]opulaire*",
+        "*BPCE*",
+        "*CCBPFRPP*",
+        "*[Rr]elevé*[Bb][Pp]*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/10y_banques/Banque-Populaire/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Caisse d'Épargne
+  caisse_epargne_documents:
+    patterns:
+      [
+        "*[Cc]aisse*[Éé]pargne*",
+        "*[Cc]aisse*[Ee]pargne*",
+        "*CEPAFRPP*",
+        "*[Rr]elevé*[Cc][Ee]*",
+        "*[Éé]cureuil*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/10y_banques/Caisse-Epargne/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Boursorama (banque en ligne)
+  boursorama_documents:
+    patterns:
+      [
+        "*[Bb]oursorama*",
+        "*BOUSFRPP*",
+        "*[Bb]ourso*[Bb]anque*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/10y_banques/Boursorama/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Fortuneo (banque en ligne)
+  fortuneo_documents:
+    patterns:
+      [
+        "*[Ff]ortuneo*",
+        "*FTNOFRP1*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/10y_banques/Fortuneo/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # N26 (néobanque)
+  n26_documents:
+    patterns:
+      [
+        "*N26*",
+        "*[Nn]26*[Bb]ank*",
+        "*NTSBDEB1*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/10y_banques/N26/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Revolut (néobanque)
+  revolut_documents:
+    patterns:
+      [
+        "*[Rr]evolut*",
+        "*REVOGB21*",
+        "*[Ss]tatement*[Rr]evolut*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/10y_banques/Revolut/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
+  # Crédit Agricole - Tous les formats normalisés
+  credit_agricole_documents:
+    patterns:
+      [
+        "*[Cc]rédit*[Aa]gricole*",
+        "*[Cc]redit*[Aa]gricole*",
+        "*Credit_Agricole*",
+        "*Credit-Agricole*",
+        "*CA*Centre*Loire*",
+        "*CA*[Bb]anque*",
+        "*CRCAM*",
+        "*AGRIFRPP*",
+        "*CRLYFRPP*",
+        "*E-IFU*[Cc]redit*[Aa]gricole*",
+        "*IFU*CA*",
+      ]
+    extensions: [".pdf"]
+    destination: "4_Archives/10y_banques/Credit-Agricole/{YYYY}"
+    date_source: "filename"
+    date_pattern: "(\\d{4})"
+
   # Synology NAS documentation
   synology_docs:
     patterns:

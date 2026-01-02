@@ -28,7 +28,7 @@ from para_files.utils.technology_extractor import TechnologyExtractor
 
 # Date validation constants
 MIN_YEAR = 1990
-MAX_YEAR = 2099
+MAX_YEAR = 2040  # Realistic limit to avoid false positives (e.g., "2048" from crypto key)
 MIN_MODERN_YEAR = 2000  # For content extraction (avoid historical dates)
 MAX_MONTH = 12
 MAX_DAY = 31
