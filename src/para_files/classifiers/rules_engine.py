@@ -617,9 +617,9 @@ class RulesEngineClassifier(BaseClassifier):
         # Patterns to remove from filename (date prefixes)
         date_patterns = [
             r"^\d{4}-\d{2}-\d{2}[-_]?",  # YYYY-MM-DD- or YYYY-MM-DD_
-            r"^\d{4}-\d{2}[-_]?",         # YYYY-MM- or YYYY-MM_
-            r"^\d{8}[-_]?",               # YYYYMMDD- or YYYYMMDD_
-            r"^\d{6}[-_]?",               # YYYYMM- or YYYYMM_
+            r"^\d{4}-\d{2}[-_]?",  # YYYY-MM- or YYYY-MM_
+            r"^\d{8}[-_]?",  # YYYYMMDD- or YYYYMMDD_
+            r"^\d{6}[-_]?",  # YYYYMM- or YYYYMM_
         ]
 
         # Remove existing date prefix
