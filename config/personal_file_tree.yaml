@@ -165,6 +165,23 @@ routing_rules:
         "SDS*",
         "*[Ee][Bb]ook*[Pp]erformance*",
         "*[Ee][Bb]ook*[Ss]torage*",
+        # Additional products
+        "*[Pp]ower[Mm]ax*",
+        "*[Vv][Nn][Xx]*",
+        "*[Vv][Pp]lex*",
+        "*[Aa]vamar*",
+        "*[Nn]etworker*",
+        "*[Rr]ecoverpoint*",
+        "*[Aa]pp[Ss]ync*",
+        "*[Vv]i[Pp][Rr]*",
+        "*[Cc]loud[Ii][Qq]*",
+        "*[Cc]yber[Rr]ecovery*",
+        # VCE/Vblock (converged infrastructure)
+        "*[Vv]block*",
+        "*[Vv][Cc][Ee]*",
+        "*[Ss]cale[Ii][Oo]*",
+        "*[Vv]x[Ff]lex*",
+        "*[Vv]x[Rr]ack*",
       ]
     extensions: [".pdf", ".pptx", ".ppt", ".docx", ".doc"]
     destination: "3_Resources/docs/Dell-EMC/{technology}"
@@ -438,21 +455,6 @@ routing_rules:
     destination: "4_Archives/10y_immobilier/taxes/{YYYY}"
     date_source: "file_modified"
 
-  # French tax documents
-  impots_france:
-    patterns:
-      [
-        "Avis_d_impot_*",
-        "Avis*impot*",
-        "*impots.gouv*",
-        "*impôts fonciers*",
-        "*IMPÔTS LOCAUX*",
-      ]
-    extensions: [".pdf"]
-    destination: "4_Archives/10y_impots-france/{YYYY}"
-    date_source: "filename"
-    date_pattern: "(\\d{4})_sur_les_revenus"
-
   # French bank documents (IFU) - routed by bank issuer
   ifu_documents:
     patterns: ["*E-IFU*", "*IFU*", "*revenus mobiliers*"]
@@ -716,47 +718,42 @@ routing_rules:
     destination: "3_Resources/docs/Python/{YYYY}"
     date_source: "file_modified"
 
-  # IT Documentation - Dell EMC Products (includes VCE, converged/hyperconverged)
-  dell_emc_documentation:
+  # IBM Documentation (AIX, DB2, WebSphere, etc.)
+  ibm_documentation:
     patterns:
       [
-        "*[Cc]loud[Ii][Qq]*",
-        "*[Dd][Dd][Mm][Cc]*",
-        "*[Cc]yber[Rr]ecovery*",
-        "*[Pp]ower[Pp]rotect*",
-        "*[Pp]ower[Ss]cale*",
-        "*[Pp]ower[Ss]tore*",
-        "*[Pp]ower[Mm]ax*",
-        "*[Pp]ower[Ff]lex*",
-        "*[Ii]silon*",
-        "*[Uu]nity[Xx][Tt]*",
-        "*[Uu]nity[Vv][Ss][Aa]*",
-        "*[Vv][Nn][Xx]*",
-        "*[Vv][Pp]lex*",
-        "*[Rr]ecoverpoint*",
-        "*[Dd]ata[Dd]omain*",
-        "*[Aa]vamar*",
-        "*[Nn]etworker*",
-        "*[Oo]pen[Mm]anage*[Ee]nterprise*",
-        "*[Oo][Mm][Ee]*[Ss]torage*",
-        "*[Ss][Bb][Aa][Cc]*",
-        "*[Rr]edfish*[Ss]upport*",
-        # VCE/Vblock (converged infrastructure)
-        "*[Vv]block*",
-        "*[Vv][Cc][Ee]*",
-        "*[Cc]onverged*[Ii]nfrastructure*",
-        # Hyperconverged (SimpliVity/OmniCube, now HPE)
-        "*[Oo]mni[Cc]ube*",
-        "*[Ss]impli[Vv]ity*",
-        "*[Hh]yper*[Cc]onverg*",
-        # ScaleIO/VxFlex
-        "*[Ss]cale[Ii][Oo]*",
-        "*[Vv]x[Ff]lex*",
-        "*[Vv]x[Rr]ail*",
-        "*[Vv]x[Rr]ack*",
+        # AIX operating system
+        "aix*",
+        "*[Aa][Ii][Xx]*",
+        # IBM products
+        "*[Ii][Bb][Mm]*",
+        "*[Ww]eb[Ss]phere*",
+        "*[Dd][Bb]2*",
+        "*[Tt]ivoli*",
+        "*[Mm][Qq]*[Ss]eries*",
+        "*[Rr]ational*",
+        "*[Ii]nformix*",
+        "*[Ss]pec*[Ss]cale*",
+        "*[Gg]pfs*",
+        "*[Ff]lash[Ss]ystem*",
+        "*[Ss]torwize*",
+        "*[Ss][Vv][Cc]*[Ss]torage*",
       ]
     extensions: [".pdf"]
-    destination: "3_Resources/docs/Dell/{YYYY}"
+    destination: "3_Resources/docs/IBM/{YYYY}"
+    date_source: "file_modified"
+
+  # PostgreSQL Documentation
+  postgresql_documentation:
+    patterns:
+      [
+        "*[Pp]ostgre[Ss][Qq][Ll]*",
+        "*[Pp]ostgres*",
+        "pg_*",
+        "*psql*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/PostgreSQL/{YYYY}"
     date_source: "file_modified"
 
   # Diagnostic Immobilier (property diagnostics)
@@ -2976,6 +2973,12 @@ routing_rules:
         "*[Aa]ctive*IQ*",
         "*[Ee]-[Ss]eries*",
         "*[Ss]olidFire*",
+        # Disk Shelves (DS2246, DS4246, DS4486, DS4243)
+        "*[Dd][Ss]2246*",
+        "*[Dd][Ss]4246*",
+        "*[Dd][Ss]4486*",
+        "*[Dd][Ss]4243*",
+        "*[Dd]isk*[Ss]helf*",
       ]
     extensions: [".pdf", ".pptx", ".docx", ".doc"]
     destination: "3_Resources/docs/NetApp/{technology}"
@@ -3350,19 +3353,6 @@ routing_rules:
         Mirantis Container Runtime, MCR, Mirantis Kubernetes Engine, MKE,
         DCA, Docker Certified Associate, DockerCon,
       ]
-
-  # Kubernetes documentation (4 files)
-  kubernetes_documentation:
-    patterns:
-      [
-        "*[Kk]ubernetes*",
-        "*[Kk]8s*",
-        "*kubectl*",
-        "*[Hh]elm*",
-      ]
-    extensions: [".pdf", ".pptx", ".docx", ".doc"]
-    destination: "3_Resources/docs/Kubernetes/{YYYY}"
-    date_source: "file_modified"
 
   # ===== SECURITY =====
 
