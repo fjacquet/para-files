@@ -769,6 +769,11 @@ routing_rules:
         "prog*_pdf*",
         "ktech*_pdf*",
         "libs*_pdf*",
+        "rn*_pdf*",
+        "nis*_pdf*",
+        "nis*.pdf",
+        "ndaf*",
+        "nfs*_pdf*",
         # IBM Redbooks and Redpapers
         "redp*",
         "sg[0-9]*",
@@ -3255,6 +3260,9 @@ routing_rules:
         "*[Tt]hous[Aa]nd[Ee]yes*",
         "*[Aa]pp[Dd]ynamics*",
         "*[Hh]yper[Ff]lex*",
+        "*-hx-*",
+        "*-HX-*",
+        "*_hx_*",
         # Cisco Live session codes
         "LTR*",
         "BRK*",
