@@ -3011,6 +3011,8 @@ routing_rules:
         # NetApp Technical Reports (TR-xxxx format)
         "tr-[0-9]*",
         "TR-[0-9]*",
+        "*-tr-[0-9]*",
+        "*-TR-[0-9]*",
       ]
     extensions: [".pdf", ".pptx", ".docx", ".doc"]
     destination: "3_Resources/docs/NetApp/{technology}"
@@ -3113,6 +3115,9 @@ routing_rules:
     patterns:
       [
         "*HPE*[Ss]torage*",
+        "*HPE*[Ss][Ss][Dd]*",
+        "*HPE*[Pp]ro[Ll]iant*",
+        "*HPE*[Ss]ynergy*",
         "*[Nn]imble*",
         "*[Pp]rimera*",
         "*[Aa]llegra*",
@@ -3257,6 +3262,8 @@ routing_rules:
         "*ZS[0-9]*",
         "*[Tt]ape[Ll]ibrary*",
         "*StorageTek*",
+        # Sun/Oracle doc numbers (8xx-xxxx format)
+        "8[0-9][0-9]-[0-9]*",
       ]
     extensions: [".pdf", ".pptx", ".docx", ".doc"]
     destination: "3_Resources/docs/Oracle/{technology}"
@@ -3475,6 +3482,7 @@ routing_rules:
         "*NBU*",
         "*NBAC*",
         "*[Bb]ackup*[Ee]xec*",
+        "*BEAdmin*",
         "*APTARE*",
         "*[Ii]nfo[Ss]cale*",
         "*[Oo]ps[Cc]enter*",
@@ -3818,6 +3826,8 @@ routing_rules:
     patterns:
       [
         "*[Nn]exthink*",
+        "*[Nn][Ee][Xx][Tt]hink*",
+        "*NEXThink*",
         "*[Ff]inder*",
         "*[Cc]ollector*",
         "*DEX*",
