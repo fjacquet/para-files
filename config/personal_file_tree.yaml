@@ -676,9 +676,115 @@ routing_rules:
         "*[Vv]mware*horizon*",
         "*VMW_*",
         "*VSP-*",
+        # VMware products without VMware in filename
+        "*[Tt]hin[Aa]pp*",
+        "*[Ee][Ss][Xx]i*",
+        "*[Vv][Cc]enter*",
+        "*[Vv][Ss]phere*",
+        "*[Vv][Ss][Aa][Nn]*",
+        "*[Nn][Ss][Xx]*",
+        "*Horizon*[Vv]iew*",
+        "*[Vv]iew*[Tt]hin[Aa]pp*",
+        "*[Ww]orkstation*[Vv][Mm]ware*",
+        "*[Ff]usion*[Vv][Mm]ware*",
+        "*[Vv][Rr]ealize*",
+        "*[Aa]ria*[Oo]perations*",
+        "*[Vv][Rr][Oo]ps*",
+        "*[Vv][Rr][Nn][Ii]*",
+        "*[Vv][Rr][Ll][Ii]*",
+        "*[Vv][Rr][Aa]*",
+        "*[Hh][Cc][Xx]*",
       ]
     extensions: [".pdf", ".eps", ".psd"]
     destination: "3_Resources/docs/VMware/{YYYY}"
+    date_source: "file_modified"
+
+  # IT Documentation - Python
+  python_documentation:
+    patterns:
+      [
+        "howto-*.pdf",
+        "*[Pp]ython*[Dd]oc*",
+        "*[Pp]ython*[Gg]uide*",
+        "*[Pp]ython*[Tt]utorial*",
+        "*[Pp]ython*[Rr]eference*",
+        "*[Pp]ython*[Mm]anual*",
+        "*[Pp]ython*[Hh]owto*",
+        "*[Pp]y[Pp]i*[Gg]uide*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/Python/{YYYY}"
+    date_source: "file_modified"
+
+  # IT Documentation - Dell EMC Products
+  dell_emc_documentation:
+    patterns:
+      [
+        "*[Cc]loud[Ii][Qq]*",
+        "*[Dd][Dd][Mm][Cc]*",
+        "*[Cc]yber[Rr]ecovery*",
+        "*[Pp]ower[Pp]rotect*",
+        "*[Pp]ower[Ss]cale*",
+        "*[Pp]ower[Ss]tore*",
+        "*[Pp]ower[Mm]ax*",
+        "*[Pp]ower[Ff]lex*",
+        "*[Ii]silon*",
+        "*[Uu]nity[Xx][Tt]*",
+        "*[Uu]nity[Vv][Ss][Aa]*",
+        "*[Vv][Nn][Xx]*",
+        "*[Vv][Pp]lex*",
+        "*[Rr]ecoverpoint*",
+        "*[Dd]ata[Dd]omain*",
+        "*[Aa]vamar*",
+        "*[Nn]etworker*",
+        "*[Oo]pen[Mm]anage*[Ee]nterprise*",
+        "*[Oo][Mm][Ee]*[Ss]torage*",
+        "*[Ss][Bb][Aa][Cc]*",
+        "*[Rr]edfish*[Ss]upport*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/Dell/{YYYY}"
+    date_source: "file_modified"
+
+  # Diagnostic Immobilier (property diagnostics)
+  diagnostic_immobilier:
+    patterns:
+      [
+        "*[Aa][Mm][Ii][Aa][Nn][Tt][Ee]*",
+        "*AMIANTE*",
+        "*[Dd]iagnostic*[Ii]mmobilier*",
+        "*[Dd][Pp][Ee]*",
+        "*[Dd]iagnostic*[Ee]nergie*",
+        "*[Tt]ermites*",
+        "*[Pp]lomb*",
+        "*[Aa]ssainissement*",
+        "*[Ee]tat*[Rr]isques*",
+        "*[Cc]arrez*",
+        "*[Mm]esurage*",
+      ]
+    extensions: [".pdf"]
+    destination: "2_Areas/immobilier/diagnostics/{YYYY}"
+    date_source: "file_modified"
+
+  # Genealogy files
+  genealogy_files:
+    patterns: ["*"]
+    extensions: [".ged", ".gramps", ".gedcom"]
+    destination: "2_Areas/famille/genealogie"
+    date_source: "file_modified"
+
+  # Evernote exports
+  evernote_exports:
+    patterns: ["*"]
+    extensions: [".enex"]
+    destination: "4_Archives/evernote"
+    date_source: "file_modified"
+
+  # Mind maps
+  mind_maps:
+    patterns: ["*"]
+    extensions: [".xmind", ".mm", ".mmap"]
+    destination: "3_Resources/mindmaps"
     date_source: "file_modified"
 
   # IT Documentation - Unitrends/Backup
