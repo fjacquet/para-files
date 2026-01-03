@@ -156,11 +156,15 @@ routing_rules:
         "*[Ii]silon*",
         "*[Uu]nity*",
         "*[Dd]ata[Dd]omain*",
+        "*[Dd]ata-[Dd]omain*",
+        "*SRDF*",
+        "*[Ss]rdf*",
         "*[Ss]onic*",
         "*SONiC*",
         "*[Ee][Mm][Cc]*",
         "flex-*",
         "ddl-*",
+        "*DDMC*",
         "SLD*_*",
         "SDS*",
         "*[Ee][Bb]ook*[Pp]erformance*",
@@ -171,7 +175,7 @@ routing_rules:
         "*[Vv][Pp]lex*",
         "*[Aa]vamar*",
         "*[Nn]etworker*",
-        "*[Rr]ecoverpoint*",
+        "*[Rr]ecover[Pp]oint*",
         "*[Aa]pp[Ss]ync*",
         "*[Vv]i[Pp][Rr]*",
         "*[Cc]loud[Ii][Qq]*",
@@ -208,6 +212,7 @@ routing_rules:
         # Dell Legacy Storage
         VMAX,
         Symmetrix,
+        SRDF,
         VNX,
         CLARiiON,
         Isilon,
@@ -696,6 +701,9 @@ routing_rules:
         "*[Vv][Rr][Ll][Ii]*",
         "*[Vv][Rr][Aa]*",
         "*[Hh][Cc][Xx]*",
+        # VMware Hands-on Labs
+        "hol-*",
+        "HOL-*",
       ]
     extensions: [".pdf", ".eps", ".psd"]
     destination: "3_Resources/docs/VMware/{YYYY}"
@@ -738,6 +746,10 @@ routing_rules:
         "*[Ff]lash[Ss]ystem*",
         "*[Ss]torwize*",
         "*[Ss][Vv][Cc]*[Ss]torage*",
+        # IBM Redbooks and Redpapers
+        "redp*",
+        "sg[0-9]*",
+        "*[Rr]edbook*",
       ]
     extensions: [".pdf"]
     destination: "3_Resources/docs/IBM/{YYYY}"
@@ -754,6 +766,18 @@ routing_rules:
       ]
     extensions: [".pdf"]
     destination: "3_Resources/docs/PostgreSQL/{YYYY}"
+    date_source: "file_modified"
+
+  # MongoDB Documentation
+  mongodb_documentation:
+    patterns:
+      [
+        "*[Mm]ongo[Dd][Bb]*",
+        "*[Mm]ongo*",
+        "*10gen*",
+      ]
+    extensions: [".pdf"]
+    destination: "3_Resources/docs/MongoDB/{YYYY}"
     date_source: "file_modified"
 
   # Diagnostic Immobilier (property diagnostics)
@@ -2979,6 +3003,14 @@ routing_rules:
         "*[Dd][Ss]4486*",
         "*[Dd][Ss]4243*",
         "*[Dd]isk*[Ss]helf*",
+        # NetApp-specific concepts
+        "*[Qq][Tt]ree*",
+        "*[Vv][Ss]erver*",
+        "*[Ss]nap[Ll]ock*",
+        "*[Ff]abric[Pp]ool*",
+        # NetApp Technical Reports (TR-xxxx format)
+        "tr-[0-9]*",
+        "TR-[0-9]*",
       ]
     extensions: [".pdf", ".pptx", ".docx", ".doc"]
     destination: "3_Resources/docs/NetApp/{technology}"
@@ -3086,6 +3118,8 @@ routing_rules:
         "*[Aa]llegra*",
         "*3PAR*",
         "*[Ss]imple[Ii][Vv]ity*",
+        "*[Oo]mni[Cc]ube*",
+        "*[Oo]mni[Ss]tack*",
         "*[Ss]tore[Oo]nce*",
         "*[Ss]tore[Ee]ver*",
         "*[Ss]tore[Ss]erv*",
@@ -3183,6 +3217,14 @@ routing_rules:
         "*[Tt]hous[Aa]nd[Ee]yes*",
         "*[Aa]pp[Dd]ynamics*",
         "*[Hh]yper[Ff]lex*",
+        # Cisco Live session codes
+        "LTR*",
+        "BRK*",
+        "PSO*",
+        "DEVNET*",
+        "LTRCLD*",
+        "LTRSPG*",
+        "LTRDCN*",
       ]
     extensions: [".pdf", ".pptx", ".docx", ".doc"]
     destination: "3_Resources/docs/Cisco/{technology}"
@@ -3198,6 +3240,58 @@ routing_rules:
         Webex, Webex Teams, Webex Calling, CUCM, Unity,
         ThousandEyes, AppDynamics, ISR, ASR, SD-WAN, Viptela,
         CCNA, CCNP, CCIE, DevNet, Cisco Live, Cisco Partner Summit,
+      ]
+
+  # Oracle/Sun documentation - SPARC, Solaris, ZFS
+  oracle_documentation:
+    patterns:
+      [
+        "*[Oo]racle*",
+        "*[Ss][Pp][Aa][Rr][Cc]*",
+        "*[Ss]olaris*",
+        "*[Zz][Ff][Ss]*",
+        "*[Ss]un*[Ss]torage*",
+        "*[Ss]un*[Ff]ire*",
+        "*[Ee]xadata*",
+        "*[Ee]xalogic*",
+        "*ZS[0-9]*",
+        "*[Tt]ape[Ll]ibrary*",
+        "*StorageTek*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Oracle/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        SPARC, SPARC T-Series, SPARC M-Series, SPARC S-Series,
+        Solaris, Solaris 10, Solaris 11, OpenSolaris,
+        ZFS, ZFS Storage, ZS Series, ZFS Appliance,
+        Oracle Database, Oracle RAC, Oracle ASM,
+        Exadata, Exalogic, Exalytics,
+        StorageTek, SL3000, SL8500, T10000,
+        Sun Fire, Sun Storage,
+      ]
+
+  # Commvault documentation
+  commvault_documentation:
+    patterns:
+      [
+        "*[Cc]ommvault*",
+        "*[Ss]impana*",
+        "*[Mm]edia*[Aa]gent*",
+        "*[Cc]ommcell*",
+        "*[Cc]ommserve*",
+        "*[Ii]ntellisna*p*",
+      ]
+    extensions: [".pdf", ".pptx", ".docx", ".doc"]
+    destination: "3_Resources/docs/Commvault/{technology}"
+    date_source: "file_modified"
+    known_technologies:
+      [
+        Commvault Complete, Simpana, Command Center,
+        Media Agent, CommCell, CommServe, Content Store,
+        IntelliSnap, CV Orchestrate, Metallic,
+        CVFS, Data Management, Backup and Recovery,
       ]
 
   # Kemp documentation (17 files)
@@ -3379,6 +3473,7 @@ routing_rules:
         "*[Vv]eritas*",
         "*[Nn]et[Bb]ackup*",
         "*NBU*",
+        "*NBAC*",
         "*[Bb]ackup*[Ee]xec*",
         "*APTARE*",
         "*[Ii]nfo[Ss]cale*",
