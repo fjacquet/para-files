@@ -165,20 +165,27 @@ routing_rules:
         "flex-*",
         "ddl-*",
         "*DDMC*",
+        "DD-*",
+        "*CEE*CEPA*",
+        "*[Cc]ommon*[Ee]vent*",
         "SLD*_*",
         "SDS*",
+        # Dell EMC doc numbers (300-xxx-xxx, 302-xxx-xxx, etc.)
+        "30[0-9]-*-*",
         "*[Ee][Bb]ook*[Pp]erformance*",
         "*[Ee][Bb]ook*[Ss]torage*",
         # Additional products
         "*[Pp]ower[Mm]ax*",
         "*[Vv][Nn][Xx]*",
-        "*[Vv][Pp]lex*",
+        "*[Vv][Mm][Aa][Xx]*",
+        "*[Vv][Pp][Ll][Ee][Xx]*",
         "*[Aa]vamar*",
         "*[Nn]etworker*",
         "*[Rr]ecover[Pp]oint*",
         "*[Aa]pp[Ss]ync*",
         "*[Vv]i[Pp][Rr]*",
         "*[Cc]loud[Ii][Qq]*",
+        "*[Cc]loud*[Ii][Qq]*",
         "*[Cc]yber[Rr]ecovery*",
         # VCE/Vblock (converged infrastructure)
         "*[Vv]block*",
@@ -746,6 +753,15 @@ routing_rules:
         "*[Ff]lash[Ss]ystem*",
         "*[Ss]torwize*",
         "*[Ss][Vv][Cc]*[Ss]torage*",
+        # AIX documentation naming patterns
+        "comm*_pdf*",
+        "kern*_pdf*",
+        "base*_pdf*",
+        "security*_pdf*",
+        "network*_pdf*",
+        "cluster*_pdf*",
+        "files*_pdf*",
+        "devices*_pdf*",
         # IBM Redbooks and Redpapers
         "redp*",
         "sg[0-9]*",
@@ -3008,6 +3024,8 @@ routing_rules:
         "*[Vv][Ss]erver*",
         "*[Ss]nap[Ll]ock*",
         "*[Ff]abric[Pp]ool*",
+        "*[Ii][Pp][Ss]pace*",
+        "*[Bb]roadcast*[Dd]omain*",
         # NetApp Technical Reports (TR-xxxx format)
         "tr-[0-9]*",
         "TR-[0-9]*",
@@ -3130,6 +3148,9 @@ routing_rules:
         "*[Ss]tore[Ss]erv*",
         "*HPE*MSA*",
         "*[Gg]reen[Ll]ake*[Ss]torage*",
+        # HPE disk enclosures (D2xxx, D3xxx, etc.)
+        "*HPE*D[0-9]*",
+        "HPE D[0-9]*",
       ]
     extensions: [".pdf", ".pptx", ".docx", ".doc"]
     destination: "3_Resources/docs/HPE-Storage/{technology}"
@@ -3180,6 +3201,9 @@ routing_rules:
         "*HDS*",
         "*[Hh]itachi*[Cc]ontent*",
         "*[Hh]itachi*[Nn]AS*",
+        # Hitachi document numbers (MK-xxxxx)
+        "MK-*",
+        "mk-*",
       ]
     extensions: [".pdf", ".pptx", ".docx", ".doc"]
     destination: "3_Resources/docs/Hitachi/{YYYY}"
@@ -3614,6 +3638,9 @@ routing_rules:
         "*BPSA*",
         "*CFA*",
         "*CFP*",
+        # Brocade Network Advisor
+        "BNA_*",
+        "BNA-*",
       ]
     extensions: [".pdf", ".pptx", ".docx", ".doc"]
     destination: "3_Resources/docs/Brocade/{technology}"
@@ -3720,6 +3747,9 @@ routing_rules:
         "*[Ff]orti[Mm]anager*",
         "*[Ff]orti[Ss][Ii][Ee][Mm]*",
         "*[Ff]orti[Ww]eb*",
+        # Fortinet NSE certifications
+        "*NSE[0-9]*",
+        "*[Ff]orti[Cc]lient*",
       ]
     extensions: [".pdf", ".pptx", ".docx", ".doc"]
     destination: "3_Resources/docs/Fortinet/{technology}"
