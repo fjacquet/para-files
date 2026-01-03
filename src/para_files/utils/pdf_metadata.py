@@ -103,6 +103,15 @@ def extract_pdf_metadata(path: Path, max_pages_for_isbn: int = 5) -> PdfMetadata
     if not path.exists() or path.suffix.lower() != ".pdf":
         return None
 
+    # Check filename for ISBN FIRST (common pattern: "9781234567890-Title.pdf")
+    # This works even if the PDF is corrupted
+    filename_isbn = extract_isbn(path.stem)  # stem = filename without extension
+    if filename_isbn:
+        logger.debug("Found ISBN {} in filename of {}", filename_isbn, path.name)
+
+    # Calculate file size in MB (works even if PDF is corrupted)
+    file_size_mb = path.stat().st_size / (1024 * 1024)
+
     try:
         reader = PdfReader(path)
         meta: dict[str, object] = dict(reader.metadata) if reader.metadata else {}
@@ -115,24 +124,22 @@ def extract_pdf_metadata(path: Path, max_pages_for_isbn: int = 5) -> PdfMetadata
         producer = meta.get("/Producer")
         page_count = len(reader.pages)
 
-        # Calculate file size in MB
-        file_size_mb = path.stat().st_size / (1024 * 1024)
+        # Search for ISBN in content if not found in filename
+        isbn = filename_isbn
+        if not isbn:
+            pages_to_check = min(max_pages_for_isbn, page_count)
 
-        # Search for ISBN in first few pages
-        isbn = None
-        pages_to_check = min(max_pages_for_isbn, page_count)
-
-        for i in range(pages_to_check):
-            try:
-                page_text = reader.pages[i].extract_text() or ""
-                found_isbn = extract_isbn(page_text)
-                if found_isbn:
-                    isbn = found_isbn
-                    logger.debug("Found ISBN {} on page {} of {}", isbn, i + 1, path.name)
-                    break
-            except Exception:  # noqa: BLE001, S112
-                # Skip pages that fail to extract (corrupted/encrypted pages)
-                continue
+            for i in range(pages_to_check):
+                try:
+                    page_text = reader.pages[i].extract_text() or ""
+                    found_isbn = extract_isbn(page_text)
+                    if found_isbn:
+                        isbn = found_isbn
+                        logger.debug("Found ISBN {} on page {} of {}", isbn, i + 1, path.name)
+                        break
+                except Exception:  # noqa: BLE001, S112
+                    # Skip pages that fail to extract (corrupted/encrypted pages)
+                    continue
 
         return PdfMetadata(
             title=str(title) if title else None,
@@ -147,6 +154,19 @@ def extract_pdf_metadata(path: Path, max_pages_for_isbn: int = 5) -> PdfMetadata
 
     except Exception as e:  # noqa: BLE001
         logger.warning("Failed to extract PDF metadata from {}: {}", path, e)
+        # If we found ISBN in filename, return partial metadata
+        if filename_isbn:
+            logger.info("Returning partial metadata with filename ISBN for {}", path.name)
+            return PdfMetadata(
+                title=None,
+                author=None,
+                subject=None,
+                creator=None,
+                producer=None,
+                page_count=0,
+                isbn=filename_isbn,
+                file_size_mb=file_size_mb,
+            )
         return None
 
 

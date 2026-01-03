@@ -716,7 +716,7 @@ routing_rules:
     destination: "3_Resources/docs/Python/{YYYY}"
     date_source: "file_modified"
 
-  # IT Documentation - Dell EMC Products
+  # IT Documentation - Dell EMC Products (includes VCE, converged/hyperconverged)
   dell_emc_documentation:
     patterns:
       [
@@ -741,6 +741,19 @@ routing_rules:
         "*[Oo][Mm][Ee]*[Ss]torage*",
         "*[Ss][Bb][Aa][Cc]*",
         "*[Rr]edfish*[Ss]upport*",
+        # VCE/Vblock (converged infrastructure)
+        "*[Vv]block*",
+        "*[Vv][Cc][Ee]*",
+        "*[Cc]onverged*[Ii]nfrastructure*",
+        # Hyperconverged (SimpliVity/OmniCube, now HPE)
+        "*[Oo]mni[Cc]ube*",
+        "*[Ss]impli[Vv]ity*",
+        "*[Hh]yper*[Cc]onverg*",
+        # ScaleIO/VxFlex
+        "*[Ss]cale[Ii][Oo]*",
+        "*[Vv]x[Ff]lex*",
+        "*[Vv]x[Rr]ail*",
+        "*[Vv]x[Rr]ack*",
       ]
     extensions: [".pdf"]
     destination: "3_Resources/docs/Dell/{YYYY}"
@@ -764,6 +777,35 @@ routing_rules:
       ]
     extensions: [".pdf"]
     destination: "2_Areas/immobilier/diagnostics/{YYYY}"
+    date_source: "file_modified"
+
+  # Voting and elections documents
+  elections_vote:
+    patterns:
+      [
+        "*[Rr]ecepisse*[Vv]ote*",
+        "*[Rr]écépissé*[Vv]ote*",
+        "*[Vv]ote*[Ee]lectronique*",
+        "*[Ee]lection*",
+        "*[Éé]lection*",
+        "*[Ss]crutin*",
+        "*[Bb]ulletin*[Vv]ote*",
+        "*[Pp]rocuration*[Vv]ote*",
+        "*[Cc]arte*[Ee]lecteur*",
+        "*[Ll]egislatives*",
+        "*[Ll]égislatives*",
+        "*[Pp]residentielles*",
+        "*[Pp]résidentielles*",
+        "*[Mm]unicipales*",
+        "*[Ee]uropeennes*",
+        "*[Ee]uropéennes*",
+        "*[Rr]egionales*",
+        "*[Rr]égionales*",
+        "*[Rr]eferendum*",
+        "*[Rr]éférendum*",
+      ]
+    extensions: [".pdf", ".jpg", ".png"]
+    destination: "2_Areas/administratif/elections/{YYYY}"
     date_source: "file_modified"
 
   # Genealogy files
