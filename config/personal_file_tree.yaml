@@ -145,6 +145,8 @@ routing_rules:
     patterns:
       [
         "H[0-9]*_*",
+        "h[0-9]*-*",
+        "*[Cc]onnectrix*",
         "*[Dd]ell*",
         "*[Pp]ower[Ff]lex*",
         "*[Pp]ower[Ss]tore*",
@@ -3038,6 +3040,10 @@ routing_rules:
         "*[Ff]abric[Pp]ool*",
         "*[Ii][Pp][Ss]pace*",
         "*[Bb]roadcast*[Dd]omain*",
+        "*[Ff]lex[Cc]lone*",
+        "*[Ff]lex[Gg]roup*",
+        "*[Ff]lex[Cc]ache*",
+        "*[Mm]etro[Cc]luster*",
         # NetApp Technical Reports (TR-xxxx format)
         "tr-[0-9]*",
         "TR-[0-9]*",
@@ -3932,6 +3938,7 @@ routing_rules:
         "*[Vv][Mm]ware*",
         "*vSphere*",
         "*vSAN*",
+        "*[Vv]irtual*[Ss][Aa][Nn]*",
         "*NSX*",
         "*Horizon*",
         "*Tanzu*",
