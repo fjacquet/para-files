@@ -762,6 +762,13 @@ routing_rules:
         "cluster*_pdf*",
         "files*_pdf*",
         "devices*_pdf*",
+        "sys*_pdf*",
+        "install*_pdf*",
+        "perf*_pdf*",
+        "prf*_pdf*",
+        "prog*_pdf*",
+        "ktech*_pdf*",
+        "libs*_pdf*",
         # IBM Redbooks and Redpapers
         "redp*",
         "sg[0-9]*",
@@ -3140,6 +3147,8 @@ routing_rules:
         "*[Pp]rimera*",
         "*[Aa]llegra*",
         "*3PAR*",
+        "*[3]par*",
+        "*[3]PAR*",
         "*[Ss]imple[Ii][Vv]ity*",
         "*[Oo]mni[Cc]ube*",
         "*[Oo]mni[Ss]tack*",
@@ -3831,6 +3840,7 @@ routing_rules:
         "*NPM*",
         "*SAM*",
         "*[Dd]ameware*",
+        "*[Aa]pp[Ii]nsight*",
       ]
     extensions: [".pdf", ".pptx", ".docx", ".doc"]
     destination: "3_Resources/docs/SolarWinds/{technology}"
