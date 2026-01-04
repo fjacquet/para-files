@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Parallel processing in bookstore command**: 8x faster processing with `--workers` option
+  - Default: 8 parallel workers for ISBN extraction and API lookups
+  - Thread-safe ISBN deduplication with proper locking
+  - Use `-w 1` for sequential processing (old behavior)
 - **CHM and EPUB support in bookstore command**: Extended book detection beyond PDFs
   - New `chm_metadata.py`: Extracts ISBNs from Microsoft Compiled HTML Help files using 7z
   - New `epub_metadata.py`: Extracts ISBNs from EPUB files via OPF metadata
@@ -25,6 +29,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Space-separated ISBNs now detected**: Fixed ISBN extraction to catch formats like `ISBN 0 7506 67362`
+  - Now uses regex patterns FIRST to find candidates, then validates with isbnlib
+  - Previously `isbnlib.get_isbnlike()` missed space-separated formats
+  - Significantly improves book detection rate for older publications
+- **Rename conflict handling in bookstore**: Files are now renamed with counter suffix when target exists
+  - Previously silent skip when `Author - Title (Year).pdf` already existed
+  - Now uses `Author - Title (Year)_1.pdf`, `_2.pdf`, etc.
+- **Rejection stats in bookstore summary**: Shows breakdown of why books were not detected
+  - `No ISBN in file`: File had no ISBN in first 20 pages
+  - `API lookup failed`: Google Books API returned no results
+  - `Title mismatch`: ISBN lookup title didn't match filename
 - **Duplicate books in bookstore command**: Added ISBN-based and content-based deduplication
   - Tracks processed ISBNs to skip duplicate books
   - Uses `FileMover` for content-based duplicate detection

@@ -64,11 +64,11 @@ def extract_isbn(text: str) -> str | None:
     return isbns[0] if isbns else None
 
 
-def extract_all_isbns(text: str) -> list[str]:
+def extract_all_isbns(text: str) -> list[str]:  # noqa: C901
     """Extract all valid unique ISBNs from text.
 
-    Uses isbnlib for validation if available, otherwise uses regex patterns.
-    Returns ISBNs in the order they appear in the text, deduplicated.
+    Uses regex patterns to find candidates, then validates with isbnlib.
+    This catches ISBNs with unusual formatting that isbnlib.get_isbnlike() misses.
 
     Args:
         text: Text content to search for ISBNs.
@@ -79,12 +79,27 @@ def extract_all_isbns(text: str) -> list[str]:
     seen: set[str] = set()
     result: list[str] = []
 
+    # Step 1: Use regex patterns to find all candidates (catches unusual formats)
+    regex_candidates: list[str] = []
+    for pattern in ISBN_PATTERNS:
+        for match in pattern.finditer(text):
+            # Remove separators to get raw digits
+            candidate = re.sub(r"[-\s]", "", match.group(1)).upper()
+            if len(candidate) in (10, 13) and candidate not in regex_candidates:
+                regex_candidates.append(candidate)
+
     try:
         import isbnlib  # type: ignore[import-untyped]
 
-        # isbnlib has its own extraction function
-        candidates = isbnlib.get_isbnlike(text)
-        for candidate in candidates:
+        # Step 2: Also get candidates from isbnlib (may find some regex missed)
+        isbnlib_candidates = isbnlib.get_isbnlike(text)
+        for candidate in isbnlib_candidates:
+            canonical = isbnlib.canonical(candidate)
+            if canonical and canonical not in regex_candidates:
+                regex_candidates.append(canonical)
+
+        # Step 3: Validate all candidates with isbnlib
+        for candidate in regex_candidates:
             canonical = isbnlib.canonical(candidate)
             if canonical and (isbnlib.is_isbn10(canonical) or isbnlib.is_isbn13(canonical)):
                 isbn13: str | None = isbnlib.to_isbn13(canonical)
@@ -93,13 +108,11 @@ def extract_all_isbns(text: str) -> list[str]:
                     result.append(isbn13)
 
     except ImportError:
-        # Fallback to regex-based extraction
-        for pattern in ISBN_PATTERNS:
-            for match in pattern.finditer(text):
-                candidate = re.sub(r"[-\s]", "", match.group(1)).upper()
-                if len(candidate) in (10, 13) and candidate not in seen:
-                    seen.add(candidate)
-                    result.append(candidate)
+        # No isbnlib: just use regex candidates as-is
+        for candidate in regex_candidates:
+            if candidate not in seen:
+                seen.add(candidate)
+                result.append(candidate)
 
     return result
 

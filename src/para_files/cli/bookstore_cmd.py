@@ -9,7 +9,10 @@ Only books with confirmed ISBN are moved (100% confidence).
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
 from pathlib import Path
+from threading import Lock
 from typing import Annotated
 
 import typer
@@ -36,6 +39,7 @@ BOOK_EXTENSIONS = {".pdf", ".chm", ".epub"}
 # Constants
 MAX_AUTHOR_LENGTH = 30
 MAX_TITLE_LENGTH = 60
+MAX_RENAME_ATTEMPTS = 1000
 
 
 def _sanitize_book_title(title: str, max_length: int = 80) -> str:
@@ -264,6 +268,34 @@ def _handle_isbn_duplicate(
             logger.warning("Failed to delete duplicate {}: {}", book_file, e)
 
 
+def _find_unique_rename_path(base_path: Path) -> Path:
+    """Find a unique filename by adding a counter suffix.
+
+    Args:
+        base_path: Original destination path.
+
+    Returns:
+        Unique path with counter suffix if needed.
+    """
+    if not base_path.exists():
+        return base_path
+
+    stem = base_path.stem
+    suffix = base_path.suffix
+    parent = base_path.parent
+
+    counter = 1
+    while counter < MAX_RENAME_ATTEMPTS:
+        new_name = f"{stem}_{counter}{suffix}"
+        new_path = parent / new_name
+        if not new_path.exists():
+            return new_path
+        counter += 1
+
+    # Exhausted counter, return original (will fail)
+    return base_path
+
+
 def _rename_after_move(
     move_result: MoveResult,
     new_filename: str,
@@ -285,8 +317,14 @@ def _rename_after_move(
     actual_dest = move_result.destination
     if not dry_run and move_result.success and actual_dest and new_filename != original_name:
         renamed_dest = actual_dest.parent / new_filename
-        if not renamed_dest.exists():
+        # Find unique name if target already exists
+        renamed_dest = _find_unique_rename_path(renamed_dest)
+        try:
             actual_dest.rename(renamed_dest)
+        except OSError as e:
+            logger.warning("Failed to rename {} to {}: {}", actual_dest.name, renamed_dest.name, e)
+            return actual_dest
+        else:
             return renamed_dest
     return actual_dest
 
@@ -321,10 +359,25 @@ def _display_summary(
     *,
     dry_run: bool,
     keep_duplicates: bool,
+    no_isbn_in_file: int = 0,
+    api_lookup_failed: int = 0,
+    coherence_rejected: int = 0,
 ) -> None:
     """Display summary of bookstore operation."""
     typer.echo("─" * 60)
     typer.echo(f"📚 Found {books_found} unique books with ISBN out of {total_files} files")
+
+    # Show rejection breakdown if any files were rejected
+    rejected_total = no_isbn_in_file + api_lookup_failed + coherence_rejected
+    if rejected_total > 0:
+        typer.echo(f"📊 Rejection breakdown ({rejected_total} files):")
+        if no_isbn_in_file > 0:
+            typer.echo(f"   • No ISBN in file: {no_isbn_in_file}")
+        if api_lookup_failed > 0:
+            typer.echo(f"   • API lookup failed: {api_lookup_failed}")
+        if coherence_rejected > 0:
+            typer.echo(f"   • Title mismatch: {coherence_rejected}")
+
     if duplicates_skipped > 0:
         if keep_duplicates:
             typer.echo(f"⏭️  Skipped {duplicates_skipped} ISBN duplicate(s)")
@@ -361,6 +414,139 @@ def _find_book_files(path: Path, *, recursive: bool) -> list[Path]:
             book_files.extend(path.glob(pattern))
             book_files.extend(path.glob(pattern.upper()))
     return book_files
+
+
+@dataclass
+class _BookstoreContext:
+    """Thread-safe shared context for parallel bookstore processing."""
+
+    para_root: Path
+    mover: FileMover
+    dry_run: bool
+    rename: bool
+    keep_duplicates: bool
+    verbose: bool
+
+    # Thread-safe state
+    lock: Lock = field(default_factory=Lock)
+    processed_isbns: dict[str, Path] = field(default_factory=dict)
+
+    # Counters (protected by lock)
+    books_found: int = 0
+    books_moved: int = 0
+    duplicates_skipped: int = 0
+    content_duplicates: int = 0
+
+    # Rejection stats (protected by lock)
+    no_isbn_in_file: int = 0
+    api_lookup_failed: int = 0
+    coherence_rejected: int = 0
+
+
+def _check_and_register_isbn(
+    isbn: str,
+    book_file: Path,
+    ctx: _BookstoreContext,
+) -> tuple[bool, Path | None]:
+    """Thread-safe check and register ISBN, handling duplicates.
+
+    Args:
+        isbn: The ISBN to check and register.
+        book_file: Path to the book file.
+        ctx: Shared context with thread-safe state.
+
+    Returns:
+        Tuple of (is_duplicate, first_file_if_duplicate).
+    """
+    with ctx.lock:
+        if isbn in ctx.processed_isbns:
+            ctx.duplicates_skipped += 1
+            return True, ctx.processed_isbns[isbn]
+        ctx.processed_isbns[isbn] = book_file
+        ctx.books_found += 1
+        return False, None
+
+
+def _process_book_file(book_file: Path, ctx: _BookstoreContext) -> None:
+    """Process a single book file (thread-safe).
+
+    Args:
+        book_file: Path to the book file.
+        ctx: Shared context with thread-safe state.
+    """
+    # Step 1: Extract ISBNs from file
+    isbns = _extract_isbns_from_file(book_file)
+    if not isbns:
+        with ctx.lock:
+            ctx.no_isbn_in_file += 1
+        return
+
+    # Step 2: Look up book info via API (with coherence check)
+    book_info, _matched_isbn = find_matching_book_info(
+        isbns,
+        book_file.name,
+        require_coherence=True,
+    )
+
+    if book_info is None:
+        # Determine if it was API failure or coherence rejection
+        book_info_no_check, _ = find_matching_book_info(
+            isbns, book_file.name, require_coherence=False
+        )
+        with ctx.lock:
+            if book_info_no_check is None:
+                ctx.api_lookup_failed += 1
+            else:
+                ctx.coherence_rejected += 1
+        return
+
+    # Step 3: Build full detection result
+    result = _detect_book(book_file, ctx.para_root, rename=ctx.rename)
+    if not result:
+        return
+
+    isbn = str(result["isbn"])
+
+    # Thread-safe ISBN check and registration
+    is_duplicate, first_file = _check_and_register_isbn(isbn, book_file, ctx)
+    if is_duplicate and first_file:
+        _handle_isbn_duplicate(
+            book_file, first_file, isbn,
+            keep_duplicates=ctx.keep_duplicates,
+            dry_run=ctx.dry_run,
+            verbose=ctx.verbose,
+        )
+        return
+
+    # Build destination path
+    dest_dir = Path(result["dest_dir"])
+    new_filename = str(result["new_filename"])
+    final_dest = dest_dir / new_filename
+
+    # Move file using FileMover (handles content deduplication)
+    move_result = ctx.mover.move(book_file, dest_dir)
+
+    # Check if it was a content duplicate
+    if move_result.action and "duplicate" in move_result.action:
+        with ctx.lock:
+            ctx.content_duplicates += 1
+        if ctx.verbose:
+            typer.echo(f"🔄 Content duplicate: {book_file.name}")
+            typer.echo(f"   Identical to: {final_dest}")
+            typer.echo()
+        return
+
+    # Rename file if move succeeded and rename is requested
+    actual_dest = _rename_after_move(move_result, new_filename, book_file.name, dry_run=ctx.dry_run)
+
+    _display_book_info(
+        result, book_file.name, actual_dest or final_dest,
+        dry_run=ctx.dry_run, rename=ctx.rename,
+    )
+
+    if not ctx.dry_run and move_result.success:
+        with ctx.lock:
+            ctx.books_moved += 1
 
 
 @app.command()
@@ -413,6 +599,16 @@ def bookstore(
             help="Keep ISBN duplicate files instead of deleting them",
         ),
     ] = False,
+    workers: Annotated[
+        int,
+        typer.Option(
+            "--workers",
+            "-w",
+            help="Number of parallel workers (1=sequential)",
+            min=1,
+            max=16,
+        ),
+    ] = 8,
 ) -> None:
     """Scan directory for books with ISBN and organize by Thema classification.
 
@@ -429,6 +625,9 @@ def bookstore(
 
         # Recursive scan without renaming
         para-files bookstore /path/to/books -R --no-rename
+
+        # Sequential processing (1 worker)
+        para-files bookstore /path/to/books -w 1
     """
     setup_logging(verbose=verbose)
     validate_directory_or_exit(path)
@@ -447,87 +646,52 @@ def bookstore(
     typer.echo(f"📚 Scanning {len(book_files)} book files for ISBN...")
     if dry_run:
         typer.echo("   (dry-run mode - no files will be moved)")
+    if workers > 1:
+        typer.echo(f"   (using {workers} parallel workers)")
     typer.echo()
 
     # Create FileMover for deduplication and conflict handling
     mover = FileMover(dry_run=dry_run, deduplicate=True)
 
-    # Process files with ISBN deduplication
-    books_found = 0
-    books_moved = 0
-    duplicates_skipped = 0
-    content_duplicates = 0
-    processed_isbns: dict[str, Path] = {}  # ISBN -> first file path
+    # Create shared context for thread-safe processing
+    ctx = _BookstoreContext(
+        para_root=para_root,
+        mover=mover,
+        dry_run=dry_run,
+        rename=not no_rename,
+        keep_duplicates=keep_duplicates,
+        verbose=verbose,
+    )
 
-    for book_file in book_files:
-        # Detect book metadata
-        result = _detect_book(
-            book_file,
-            para_root,
-            rename=not no_rename,
-        )
-
-        if result:
-            isbn = str(result["isbn"])
-
-            # Check for duplicate ISBN (same book, different file)
-            if isbn in processed_isbns:
-                duplicates_skipped += 1
-                _handle_isbn_duplicate(
-                    book_file,
-                    processed_isbns[isbn],
-                    isbn,
-                    keep_duplicates=keep_duplicates,
-                    dry_run=dry_run,
-                    verbose=verbose,
-                )
-                continue
-
-            # Track this ISBN
-            processed_isbns[isbn] = book_file
-            books_found += 1
-
-            # Build destination path
-            dest_dir = Path(result["dest_dir"])
-            new_filename = str(result["new_filename"])
-            final_dest = dest_dir / new_filename
-
-            # Move file using FileMover (handles content deduplication)
-            # Pass directory only - mover expects a directory, not a file path
-            move_result = mover.move(book_file, dest_dir)
-
-            # Check if it was a content duplicate
-            if move_result.action and "duplicate" in move_result.action:
-                content_duplicates += 1
-                if verbose:
-                    typer.echo(f"🔄 Content duplicate: {book_file.name}")
-                    typer.echo(f"   Identical to: {final_dest}")
-                    typer.echo()
-                continue
-
-            # Rename file if move succeeded and rename is requested
-            actual_dest = _rename_after_move(
-                move_result, new_filename, book_file.name, dry_run=dry_run
-            )
-
-            _display_book_info(
-                result,
-                book_file.name,
-                actual_dest or final_dest,
-                dry_run=dry_run,
-                rename=not no_rename,
-            )
-
-            if not dry_run and move_result.success:
-                books_moved += 1
+    # Process files in parallel
+    if workers == 1:
+        # Sequential processing
+        for book_file in book_files:
+            _process_book_file(book_file, ctx)
+    else:
+        # Parallel processing with ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {
+                executor.submit(_process_book_file, book_file, ctx): book_file
+                for book_file in book_files
+            }
+            for future in as_completed(futures):
+                book_file = futures[future]
+                try:
+                    future.result()
+                except Exception as e:  # noqa: BLE001
+                    logger.warning("Failed to process {}: {}", book_file.name, e)
 
     # Summary
     _display_summary(
         len(book_files),
-        books_found,
-        books_moved,
-        duplicates_skipped,
-        content_duplicates,
+        ctx.books_found,
+        ctx.books_moved,
+        ctx.duplicates_skipped,
+        ctx.content_duplicates,
         dry_run=dry_run,
         keep_duplicates=keep_duplicates,
+        no_isbn_in_file=ctx.no_isbn_in_file,
+        api_lookup_failed=ctx.api_lookup_failed,
+        coherence_rejected=ctx.coherence_rejected,
     )

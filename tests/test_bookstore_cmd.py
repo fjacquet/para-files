@@ -324,8 +324,8 @@ class TestRenameAfterMove:
 
         assert result == tmp_path / "original.pdf"
 
-    def test_no_rename_when_destination_exists(self, tmp_path: Path):
-        """Test doesn't overwrite existing file."""
+    def test_rename_uses_counter_when_destination_exists(self, tmp_path: Path):
+        """Test uses counter suffix when destination exists."""
         moved_file = tmp_path / "original.pdf"
         moved_file.write_bytes(b"%PDF-1.4")
         existing_file = tmp_path / "renamed.pdf"
@@ -345,9 +345,15 @@ class TestRenameAfterMove:
             dry_run=False,
         )
 
-        # Should return the original file since rename was skipped
-        assert result == moved_file
-        assert (tmp_path / "original.pdf").exists()
+        # Should rename to renamed_1.pdf since renamed.pdf exists
+        expected = tmp_path / "renamed_1.pdf"
+        assert result == expected
+        assert expected.exists()
+        # Original moved file should be renamed (no longer at original path)
+        assert not (tmp_path / "original.pdf").exists()
+        # Existing file should be untouched
+        assert existing_file.exists()
+        assert existing_file.read_bytes() == b"%PDF-existing"
 
 
 class TestBookExtensions:
