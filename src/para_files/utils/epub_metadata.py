@@ -14,6 +14,8 @@ from xml.etree import ElementTree as ET
 
 from loguru import logger
 
+from para_files.utils.pdf_metadata import extract_all_isbns
+
 
 # ISBN regex pattern
 ISBN_PATTERN = re.compile(r"\b(?:97[89])?\d{9}[\dXx]\b")
@@ -148,6 +150,17 @@ def _extract_metadata_from_opf(opf_content: bytes) -> dict[str, str | None]:
     return metadata
 
 
+def _create_partial_metadata(filename_isbns: list[str], file_size_mb: float) -> EpubMetadata | None:
+    """Create partial metadata from filename ISBNs only."""
+    if filename_isbns:
+        return EpubMetadata(
+            isbn=filename_isbns[0],
+            isbns=filename_isbns,
+            file_size_mb=file_size_mb,
+        )
+    return None
+
+
 def extract_epub_metadata(path: Path) -> EpubMetadata | None:
     """Extract metadata from an EPUB file.
 
@@ -157,29 +170,38 @@ def extract_epub_metadata(path: Path) -> EpubMetadata | None:
     Returns:
         EpubMetadata object, or None if extraction fails.
     """
-    if not path.exists():
-        logger.debug("EPUB file not found: {}", path)
+    if not path.exists() or path.suffix.lower() != ".epub":
         return None
 
-    if path.suffix.lower() != ".epub":
-        logger.debug("Not an EPUB file: {}", path)
-        return None
+    # Check filename for ISBN FIRST (common pattern: "9781234567890_Title.epub")
+    filename_isbns = extract_all_isbns(path.stem)
+    if filename_isbns:
+        logger.debug("Found ISBN(s) {} in filename of {}", filename_isbns, path.name)
+
+    # Calculate file size
+    file_size_mb = path.stat().st_size / (1024 * 1024)
 
     try:
-        file_size_mb = path.stat().st_size / (1024 * 1024)
-
         with zipfile.ZipFile(path, "r") as zf:
             # Find OPF file
             opf_path = _find_opf_path(zf)
             if not opf_path:
                 logger.debug("No OPF file found in EPUB: {}", path)
-                return None
+                return _create_partial_metadata(filename_isbns, file_size_mb)
 
             # Read and parse OPF
             opf_content = zf.read(opf_path)
 
-            # Extract ISBNs
-            isbns = _extract_isbns_from_opf(opf_content)
+            # Extract ISBNs from OPF
+            opf_isbns = _extract_isbns_from_opf(opf_content)
+
+            # Combine: filename ISBNs first, then OPF ISBNs
+            all_isbns = list(filename_isbns)
+            seen_isbns = set(filename_isbns)
+            for isbn in opf_isbns:
+                if isbn not in seen_isbns:
+                    seen_isbns.add(isbn)
+                    all_isbns.append(isbn)
 
             # Extract other metadata
             meta = _extract_metadata_from_opf(opf_content)
@@ -187,8 +209,8 @@ def extract_epub_metadata(path: Path) -> EpubMetadata | None:
             return EpubMetadata(
                 title=meta["title"],
                 author=meta["author"],
-                isbn=isbns[0] if isbns else None,
-                isbns=isbns,
+                isbn=all_isbns[0] if all_isbns else None,
+                isbns=all_isbns,
                 language=meta["language"],
                 publisher=meta["publisher"],
                 file_size_mb=file_size_mb,
@@ -199,4 +221,4 @@ def extract_epub_metadata(path: Path) -> EpubMetadata | None:
     except Exception as e:  # noqa: BLE001
         logger.debug("Failed to extract EPUB metadata from {}: {}", path, e)
 
-    return None
+    return _create_partial_metadata(filename_isbns, file_size_mb)
