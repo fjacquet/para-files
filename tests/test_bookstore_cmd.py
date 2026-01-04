@@ -11,6 +11,7 @@ from para_files.cli.bookstore_cmd import (
     _detect_book,
     _extract_isbns_from_file,
     _find_book_files,
+    _handle_isbn_duplicate,
     _rename_after_move,
     _sanitize_book_title,
 )
@@ -404,3 +405,82 @@ class TestDetectBook:
         ):
             result = _detect_book(pdf_file, tmp_path)
             assert result is None
+
+
+class TestHandleIsbnDuplicate:
+    """Tests for _handle_isbn_duplicate function."""
+
+    def test_deletes_duplicate_by_default(self, tmp_path: Path):
+        """Test deletes duplicate file when keep_duplicates=False."""
+        duplicate_file = tmp_path / "duplicate.pdf"
+        duplicate_file.write_bytes(b"%PDF-1.4")
+        first_file = tmp_path / "first.pdf"
+        first_file.write_bytes(b"%PDF-1.4")
+
+        _handle_isbn_duplicate(
+            duplicate_file,
+            first_file,
+            "9780134685991",
+            keep_duplicates=False,
+            dry_run=False,
+            verbose=False,
+        )
+
+        assert not duplicate_file.exists()
+        assert first_file.exists()
+
+    def test_keeps_duplicate_when_flag_set(self, tmp_path: Path):
+        """Test keeps duplicate file when keep_duplicates=True."""
+        duplicate_file = tmp_path / "duplicate.pdf"
+        duplicate_file.write_bytes(b"%PDF-1.4")
+        first_file = tmp_path / "first.pdf"
+        first_file.write_bytes(b"%PDF-1.4")
+
+        _handle_isbn_duplicate(
+            duplicate_file,
+            first_file,
+            "9780134685991",
+            keep_duplicates=True,
+            dry_run=False,
+            verbose=False,
+        )
+
+        assert duplicate_file.exists()
+        assert first_file.exists()
+
+    def test_no_delete_on_dry_run(self, tmp_path: Path):
+        """Test doesn't delete in dry run mode."""
+        duplicate_file = tmp_path / "duplicate.pdf"
+        duplicate_file.write_bytes(b"%PDF-1.4")
+        first_file = tmp_path / "first.pdf"
+        first_file.write_bytes(b"%PDF-1.4")
+
+        _handle_isbn_duplicate(
+            duplicate_file,
+            first_file,
+            "9780134685991",
+            keep_duplicates=False,
+            dry_run=True,
+            verbose=False,
+        )
+
+        assert duplicate_file.exists()
+        assert first_file.exists()
+
+    def test_handles_delete_error_gracefully(self, tmp_path: Path):
+        """Test handles file deletion errors gracefully."""
+        duplicate_file = tmp_path / "duplicate.pdf"
+        duplicate_file.write_bytes(b"%PDF-1.4")
+        first_file = tmp_path / "first.pdf"
+        first_file.write_bytes(b"%PDF-1.4")
+
+        with patch.object(Path, "unlink", side_effect=OSError("Permission denied")):
+            # Should not raise, just log warning
+            _handle_isbn_duplicate(
+                duplicate_file,
+                first_file,
+                "9780134685991",
+                keep_duplicates=False,
+                dry_run=False,
+                verbose=False,
+            )

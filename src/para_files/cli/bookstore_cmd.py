@@ -225,6 +225,45 @@ def _detect_book(
     }
 
 
+def _handle_isbn_duplicate(
+    book_file: Path,
+    first_file: Path,
+    isbn: str,
+    *,
+    keep_duplicates: bool,
+    dry_run: bool,
+    verbose: bool,
+) -> None:
+    """Handle ISBN duplicate file.
+
+    Args:
+        book_file: The duplicate file to handle.
+        first_file: The first file with this ISBN (already processed).
+        isbn: The ISBN that is duplicated.
+        keep_duplicates: If True, skip without deleting.
+        dry_run: If True, don't actually delete.
+        verbose: If True, show detailed output.
+    """
+    if keep_duplicates:
+        if verbose:
+            typer.echo(f"⏭️  Skipping duplicate: {book_file.name}")
+            typer.echo(f"   ISBN {isbn} already processed from: {first_file.name}")
+            typer.echo()
+    elif dry_run:
+        typer.echo(f"🗑️  Would delete duplicate: {book_file.name}")
+        typer.echo(f"   ISBN {isbn} already moved from: {first_file.name}")
+        typer.echo()
+    else:
+        try:
+            book_file.unlink()
+            if verbose:
+                typer.echo(f"🗑️  Deleted duplicate: {book_file.name}")
+                typer.echo(f"   ISBN {isbn} already moved from: {first_file.name}")
+                typer.echo()
+        except OSError as e:
+            logger.warning("Failed to delete duplicate {}: {}", book_file, e)
+
+
 def _rename_after_move(
     move_result: MoveResult,
     new_filename: str,
@@ -281,12 +320,18 @@ def _display_summary(
     content_duplicates: int,
     *,
     dry_run: bool,
+    keep_duplicates: bool,
 ) -> None:
     """Display summary of bookstore operation."""
     typer.echo("─" * 60)
     typer.echo(f"📚 Found {books_found} unique books with ISBN out of {total_files} files")
     if duplicates_skipped > 0:
-        typer.echo(f"⏭️  Skipped {duplicates_skipped} ISBN duplicate(s)")
+        if keep_duplicates:
+            typer.echo(f"⏭️  Skipped {duplicates_skipped} ISBN duplicate(s)")
+        elif dry_run:
+            typer.echo(f"🗑️  Would delete {duplicates_skipped} ISBN duplicate(s)")
+        else:
+            typer.echo(f"🗑️  Deleted {duplicates_skipped} ISBN duplicate(s)")
     if content_duplicates > 0:
         typer.echo(f"🔄 Removed {content_duplicates} content duplicate(s)")
     if not dry_run:
@@ -361,6 +406,13 @@ def bookstore(
             help="Show detailed output",
         ),
     ] = False,
+    keep_duplicates: Annotated[
+        bool,
+        typer.Option(
+            "--keep-duplicates",
+            help="Keep ISBN duplicate files instead of deleting them",
+        ),
+    ] = False,
 ) -> None:
     """Scan directory for books with ISBN and organize by Thema classification.
 
@@ -421,11 +473,14 @@ def bookstore(
             # Check for duplicate ISBN (same book, different file)
             if isbn in processed_isbns:
                 duplicates_skipped += 1
-                if verbose:
-                    typer.echo(f"⏭️  Skipping duplicate: {book_file.name}")
-                    first_file = processed_isbns[isbn].name
-                    typer.echo(f"   ISBN {isbn} already processed from: {first_file}")
-                    typer.echo()
+                _handle_isbn_duplicate(
+                    book_file,
+                    processed_isbns[isbn],
+                    isbn,
+                    keep_duplicates=keep_duplicates,
+                    dry_run=dry_run,
+                    verbose=verbose,
+                )
                 continue
 
             # Track this ISBN
@@ -474,4 +529,5 @@ def bookstore(
         duplicates_skipped,
         content_duplicates,
         dry_run=dry_run,
+        keep_duplicates=keep_duplicates,
     )
