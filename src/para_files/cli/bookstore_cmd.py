@@ -1,8 +1,8 @@
 """Bookstore command for para-files CLI.
 
 This module provides the 'bookstore' command which scans a directory
-for PDF books with ISBN and moves them to the appropriate Thema-classified
-location in the PARA structure.
+for books (PDF, CHM, EPUB) with ISBN and moves them to the appropriate
+Thema-classified location in the PARA structure.
 
 Only books with confirmed ISBN are moved (100% confidence).
 """
@@ -22,9 +22,15 @@ from para_files.cli.shared import (
     validate_directory_or_exit,
 )
 from para_files.mover import FileMover
+from para_files.utils.chm_metadata import extract_chm_metadata
+from para_files.utils.epub_metadata import extract_epub_metadata
 from para_files.utils.isbn_lookup import BookInfo, find_matching_book_info
 from para_files.utils.pdf_metadata import extract_pdf_metadata
 from para_files.utils.thema_lookup import get_thema_lookup
+
+
+# Supported book file extensions
+BOOK_EXTENSIONS = {".pdf", ".chm", ".epub"}
 
 
 # Constants
@@ -62,14 +68,15 @@ def _sanitize_book_title(title: str, max_length: int = 80) -> str:
     return result
 
 
-def _build_book_filename(book_info: BookInfo, original_name: str) -> str:
+def _build_book_filename(book_info: BookInfo, original_name: str, extension: str) -> str:
     """Build a clean filename for a book.
 
-    Format: "Author - Title (Year).pdf"
+    Format: "Author - Title (Year).ext"
 
     Args:
         book_info: Book information from ISBN lookup.
         original_name: Original filename as fallback.
+        extension: File extension to use (e.g., ".pdf", ".epub").
 
     Returns:
         Clean filename for the book.
@@ -97,7 +104,8 @@ def _build_book_filename(book_info: BookInfo, original_name: str) -> str:
     elif parts:
         filename = parts[0]
     else:
-        filename = original_name.replace(".pdf", "")
+        # Remove extension from original name for base filename
+        filename = Path(original_name).stem
 
     # Add year if available
     if book_info.publish_date:
@@ -105,7 +113,37 @@ def _build_book_filename(book_info: BookInfo, original_name: str) -> str:
         if year.isdigit():
             filename = f"{filename} ({year})"
 
-    return f"{filename}.pdf"
+    # Ensure extension starts with dot
+    if not extension.startswith("."):
+        extension = f".{extension}"
+
+    return f"{filename}{extension}"
+
+
+def _extract_isbns_from_file(file_path: Path) -> list[str] | None:
+    """Extract ISBNs from a book file based on its type.
+
+    Args:
+        file_path: Path to the book file (PDF, CHM, or EPUB).
+
+    Returns:
+        List of ISBNs found, or None if extraction fails.
+    """
+    ext = file_path.suffix.lower()
+
+    if ext == ".pdf":
+        pdf_meta = extract_pdf_metadata(file_path)
+        return pdf_meta.isbns if pdf_meta else None
+
+    if ext == ".chm":
+        chm_meta = extract_chm_metadata(file_path)
+        return chm_meta.isbns if chm_meta else None
+
+    if ext == ".epub":
+        epub_meta = extract_epub_metadata(file_path)
+        return epub_meta.isbns if epub_meta else None
+
+    return None
 
 
 def _detect_book(
@@ -114,24 +152,29 @@ def _detect_book(
     *,
     rename: bool = True,
 ) -> dict[str, str | Path] | None:
-    """Detect book metadata from a PDF file.
+    """Detect book metadata from a book file (PDF, CHM, or EPUB).
 
     Args:
-        file_path: Path to the PDF file.
+        file_path: Path to the book file.
         para_root: PARA root directory.
         rename: If True, build new filename using book title.
 
     Returns:
         Dict with book info and destination paths, or None if not a book.
     """
-    # Extract PDF metadata
-    pdf_meta = extract_pdf_metadata(file_path)
-    if pdf_meta is None or not pdf_meta.isbns:
+    # Check supported extension
+    ext = file_path.suffix.lower()
+    if ext not in BOOK_EXTENSIONS:
+        return None
+
+    # Extract ISBNs based on file type
+    isbns = _extract_isbns_from_file(file_path)
+    if not isbns:
         return None
 
     # Find matching book info with ISBN coherence validation
     book_info, matched_isbn = find_matching_book_info(
-        pdf_meta.isbns,
+        isbns,
         file_path.name,
         require_coherence=True,
     )
@@ -163,9 +206,9 @@ def _detect_book(
     category = thema_lookup.build_para_path(thema_code)
     dest_dir = para_root / category
 
-    # Build filename
+    # Build filename (preserve original extension)
     if rename and book_info.title:
-        new_filename = _build_book_filename(book_info, file_path.name)
+        new_filename = _build_book_filename(book_info, file_path.name, ext)
     else:
         new_filename = file_path.name
 
@@ -214,7 +257,7 @@ def _display_summary(
 ) -> None:
     """Display summary of bookstore operation."""
     typer.echo("─" * 60)
-    typer.echo(f"📚 Found {books_found} unique books with ISBN out of {total_files} PDFs")
+    typer.echo(f"📚 Found {books_found} unique books with ISBN out of {total_files} files")
     if duplicates_skipped > 0:
         typer.echo(f"⏭️  Skipped {duplicates_skipped} ISBN duplicate(s)")
     if content_duplicates > 0:
@@ -223,6 +266,29 @@ def _display_summary(
         typer.echo(f"✅ Moved {books_moved} books to PARA structure")
     else:
         typer.echo("(i) Run without --dry-run to move files")
+
+
+def _find_book_files(path: Path, *, recursive: bool) -> list[Path]:
+    """Find all book files (PDF, CHM, EPUB) in a directory.
+
+    Args:
+        path: Directory to search.
+        recursive: Whether to search subdirectories.
+
+    Returns:
+        List of paths to book files.
+    """
+    book_files: list[Path] = []
+    for ext in BOOK_EXTENSIONS:
+        pattern = f"*{ext}"
+        if recursive:
+            book_files.extend(path.rglob(pattern))
+            # Also handle uppercase extensions
+            book_files.extend(path.rglob(pattern.upper()))
+        else:
+            book_files.extend(path.glob(pattern))
+            book_files.extend(path.glob(pattern.upper()))
+    return book_files
 
 
 @app.command()
@@ -271,8 +337,9 @@ def bookstore(
 ) -> None:
     """Scan directory for books with ISBN and organize by Thema classification.
 
-    Only moves PDF files that have a confirmed ISBN. Uses Google Books API
-    to lookup book metadata and Thema codes for classification.
+    Supports PDF, CHM (Microsoft Help), and EPUB files. Only moves files that
+    have a confirmed ISBN. Uses Google Books API to lookup book metadata and
+    Thema codes for classification.
 
     Examples:
         # Preview books in Downloads folder
@@ -290,15 +357,15 @@ def bookstore(
 
     para_root = Path(config.para_root).expanduser()
 
-    # Find PDF files
-    pattern = "*.pdf"
-    pdf_files = list(path.rglob(pattern) if recursive else path.glob(pattern))
+    # Find book files (PDF, CHM, EPUB)
+    book_files = _find_book_files(path, recursive=recursive)
 
-    if not pdf_files:
-        typer.echo(f"No PDF files found in {path}")
+    if not book_files:
+        exts = ", ".join(BOOK_EXTENSIONS)
+        typer.echo(f"No book files ({exts}) found in {path}")
         raise typer.Exit(0)
 
-    typer.echo(f"📚 Scanning {len(pdf_files)} PDF files for books with ISBN...")
+    typer.echo(f"📚 Scanning {len(book_files)} book files for ISBN...")
     if dry_run:
         typer.echo("   (dry-run mode - no files will be moved)")
     typer.echo()
@@ -313,10 +380,10 @@ def bookstore(
     content_duplicates = 0
     processed_isbns: dict[str, Path] = {}  # ISBN -> first file path
 
-    for pdf_file in pdf_files:
+    for book_file in book_files:
         # Detect book metadata
         result = _detect_book(
-            pdf_file,
+            book_file,
             para_root,
             rename=not no_rename,
         )
@@ -328,14 +395,14 @@ def bookstore(
             if isbn in processed_isbns:
                 duplicates_skipped += 1
                 if verbose:
-                    typer.echo(f"⏭️  Skipping duplicate: {pdf_file.name}")
+                    typer.echo(f"⏭️  Skipping duplicate: {book_file.name}")
                     first_file = processed_isbns[isbn].name
                     typer.echo(f"   ISBN {isbn} already processed from: {first_file}")
                     typer.echo()
                 continue
 
             # Track this ISBN
-            processed_isbns[isbn] = pdf_file
+            processed_isbns[isbn] = book_file
             books_found += 1
 
             # Build destination path
@@ -344,20 +411,20 @@ def bookstore(
             dest_path = Path(dest_dir) / new_filename
 
             # Move file using FileMover (handles content deduplication)
-            move_result = mover.move(pdf_file, dest_path)
+            move_result = mover.move(book_file, dest_path)
 
             # Check if it was a content duplicate
             if move_result.action and "duplicate" in move_result.action:
                 content_duplicates += 1
                 if verbose:
-                    typer.echo(f"🔄 Content duplicate: {pdf_file.name}")
+                    typer.echo(f"🔄 Content duplicate: {book_file.name}")
                     typer.echo(f"   Identical to: {dest_path}")
                     typer.echo()
                 continue
 
             _display_book_info(
                 result,
-                pdf_file.name,
+                book_file.name,
                 move_result.destination or dest_path,
                 dry_run=dry_run,
                 rename=not no_rename,
@@ -368,7 +435,7 @@ def bookstore(
 
     # Summary
     _display_summary(
-        len(pdf_files),
+        len(book_files),
         books_found,
         books_moved,
         duplicates_skipped,

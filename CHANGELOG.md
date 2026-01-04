@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **CHM and EPUB support in bookstore command**: Extended book detection beyond PDFs
+  - New `chm_metadata.py`: Extracts ISBNs from Microsoft Compiled HTML Help files using 7z
+  - New `epub_metadata.py`: Extracts ISBNs from EPUB files via OPF metadata
+  - Bookstore now scans `.pdf`, `.chm`, and `.epub` files automatically
+  - Renamed files preserve original extension (e.g., `Author - Title (Year).epub`)
 - **Auto-correct date in filenames**: New `auto_correct_date` option for routing rules
   - Detects when filename date (e.g., `201304-Expense.pdf`) differs from content date
   - Automatically suggests corrected filename in ISO format (e.g., `2014-04-Expense.pdf`)
