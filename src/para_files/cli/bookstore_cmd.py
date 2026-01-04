@@ -9,7 +9,6 @@ Only books with confirmed ISBN are moved (100% confidence).
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 from typing import Annotated
 
@@ -22,6 +21,7 @@ from para_files.cli.shared import (
     setup_logging,
     validate_directory_or_exit,
 )
+from para_files.mover import FileMover
 from para_files.utils.isbn_lookup import BookInfo, find_matching_book_info
 from para_files.utils.pdf_metadata import extract_pdf_metadata
 from para_files.utils.thema_lookup import get_thema_lookup
@@ -108,23 +108,21 @@ def _build_book_filename(book_info: BookInfo, original_name: str) -> str:
     return f"{filename}.pdf"
 
 
-def _process_book(
+def _detect_book(
     file_path: Path,
     para_root: Path,
     *,
-    dry_run: bool = False,
     rename: bool = True,
-) -> dict[str, str] | None:
-    """Process a single PDF file for book detection.
+) -> dict[str, str | Path] | None:
+    """Detect book metadata from a PDF file.
 
     Args:
         file_path: Path to the PDF file.
         para_root: PARA root directory.
-        dry_run: If True, don't actually move files.
-        rename: If True, rename files using book title.
+        rename: If True, build new filename using book title.
 
     Returns:
-        Dict with book info if ISBN found and processed, None otherwise.
+        Dict with book info and destination paths, or None if not a book.
     """
     # Extract PDF metadata
     pdf_meta = extract_pdf_metadata(file_path)
@@ -171,37 +169,60 @@ def _process_book(
     else:
         new_filename = file_path.name
 
-    dest_path = dest_dir / new_filename
-
-    # Result info
-    result = {
-        "source": str(file_path),
+    # Return detection info (no move yet)
+    return {
+        "source": file_path,
         "isbn": matched_isbn,
         "title": book_info.title or "Unknown",
         "authors": ", ".join(book_info.authors) if book_info.authors else "Unknown",
         "thema": thema_code,
         "category": category,
-        "destination": str(dest_path),
+        "dest_dir": dest_dir,
         "new_filename": new_filename,
     }
 
+
+def _display_book_info(
+    result: dict[str, str | Path],
+    original_name: str,
+    destination: Path,
+    *,
+    dry_run: bool,
+    rename: bool,
+) -> None:
+    """Display book information to the user."""
+    action = "Would move" if dry_run else "Moved"
+    typer.echo(f"📖 {result['title']}")
+    typer.echo(f"   ISBN: {result['isbn']}")
+    typer.echo(f"   Authors: {result['authors']}")
+    typer.echo(f"   Thema: {result['thema']} → {result['category']}")
+    new_filename = str(result["new_filename"])
+    if rename and new_filename != original_name:
+        typer.echo(f"   Renamed: {new_filename}")
+    typer.echo(f"   {action}: {destination}")
+    typer.echo()
+
+
+def _display_summary(
+    total_files: int,
+    books_found: int,
+    books_moved: int,
+    duplicates_skipped: int,
+    content_duplicates: int,
+    *,
+    dry_run: bool,
+) -> None:
+    """Display summary of bookstore operation."""
+    typer.echo("─" * 60)
+    typer.echo(f"📚 Found {books_found} unique books with ISBN out of {total_files} PDFs")
+    if duplicates_skipped > 0:
+        typer.echo(f"⏭️  Skipped {duplicates_skipped} ISBN duplicate(s)")
+    if content_duplicates > 0:
+        typer.echo(f"🔄 Removed {content_duplicates} content duplicate(s)")
     if not dry_run:
-        # Create destination directory
-        dest_dir.mkdir(parents=True, exist_ok=True)
-
-        # Handle conflicts
-        if dest_path.exists():
-            # Add ISBN to filename to make unique
-            stem = dest_path.stem
-            dest_path = dest_dir / f"{stem}_{matched_isbn}.pdf"
-            result["destination"] = str(dest_path)
-            result["new_filename"] = dest_path.name
-
-        # Move file
-        shutil.move(str(file_path), str(dest_path))
-        logger.info("Moved: {} → {}", file_path.name, dest_path)
-
-    return result
+        typer.echo(f"✅ Moved {books_moved} books to PARA structure")
+    else:
+        typer.echo("(i) Run without --dry-run to move files")
 
 
 @app.command()
@@ -282,38 +303,75 @@ def bookstore(
         typer.echo("   (dry-run mode - no files will be moved)")
     typer.echo()
 
-    # Process files
+    # Create FileMover for deduplication and conflict handling
+    mover = FileMover(dry_run=dry_run, deduplicate=True)
+
+    # Process files with ISBN deduplication
     books_found = 0
     books_moved = 0
+    duplicates_skipped = 0
+    content_duplicates = 0
+    processed_isbns: dict[str, Path] = {}  # ISBN -> first file path
 
     for pdf_file in pdf_files:
-        result = _process_book(
+        # Detect book metadata
+        result = _detect_book(
             pdf_file,
             para_root,
-            dry_run=dry_run,
             rename=not no_rename,
         )
 
         if result:
+            isbn = str(result["isbn"])
+
+            # Check for duplicate ISBN (same book, different file)
+            if isbn in processed_isbns:
+                duplicates_skipped += 1
+                if verbose:
+                    typer.echo(f"⏭️  Skipping duplicate: {pdf_file.name}")
+                    first_file = processed_isbns[isbn].name
+                    typer.echo(f"   ISBN {isbn} already processed from: {first_file}")
+                    typer.echo()
+                continue
+
+            # Track this ISBN
+            processed_isbns[isbn] = pdf_file
             books_found += 1
-            action = "Would move" if dry_run else "Moved"
 
-            typer.echo(f"📖 {result['title']}")
-            typer.echo(f"   ISBN: {result['isbn']}")
-            typer.echo(f"   Authors: {result['authors']}")
-            typer.echo(f"   Thema: {result['thema']} → {result['category']}")
-            if not no_rename and result["new_filename"] != pdf_file.name:
-                typer.echo(f"   Renamed: {result['new_filename']}")
-            typer.echo(f"   {action}: {result['destination']}")
-            typer.echo()
+            # Build destination path
+            dest_dir = result["dest_dir"]
+            new_filename = str(result["new_filename"])
+            dest_path = Path(dest_dir) / new_filename
 
-            if not dry_run:
+            # Move file using FileMover (handles content deduplication)
+            move_result = mover.move(pdf_file, dest_path)
+
+            # Check if it was a content duplicate
+            if move_result.action and "duplicate" in move_result.action:
+                content_duplicates += 1
+                if verbose:
+                    typer.echo(f"🔄 Content duplicate: {pdf_file.name}")
+                    typer.echo(f"   Identical to: {dest_path}")
+                    typer.echo()
+                continue
+
+            _display_book_info(
+                result,
+                pdf_file.name,
+                move_result.destination or dest_path,
+                dry_run=dry_run,
+                rename=not no_rename,
+            )
+
+            if not dry_run and move_result.success:
                 books_moved += 1
 
     # Summary
-    typer.echo("─" * 60)
-    typer.echo(f"📚 Found {books_found} books with ISBN out of {len(pdf_files)} PDFs")
-    if not dry_run:
-        typer.echo(f"✅ Moved {books_moved} books to PARA structure")
-    else:
-        typer.echo("(i) Run without --dry-run to move files")
+    _display_summary(
+        len(pdf_files),
+        books_found,
+        books_moved,
+        duplicates_skipped,
+        content_duplicates,
+        dry_run=dry_run,
+    )

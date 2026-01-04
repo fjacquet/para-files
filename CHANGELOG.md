@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Duplicate books in bookstore command**: Added ISBN-based and content-based deduplication
+  - Tracks processed ISBNs to skip duplicate books
+  - Uses `FileMover` for content-based duplicate detection
+  - Shows summary of skipped duplicates
 - **ISBN false positives in bookstore command**: Consolidated ISBN validation logic (DRY)
   - Created shared `find_matching_book_info()` function in `isbn_lookup.py`
   - Both `BookDetector` and `bookstore` command now use the same ISBN coherence validation
