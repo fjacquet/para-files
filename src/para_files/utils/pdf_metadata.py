@@ -104,10 +104,11 @@ def extract_all_isbns(text: str) -> list[str]:
     return result
 
 
-def extract_pdf_metadata(path: Path, max_pages_for_isbn: int = 5) -> PdfMetadata | None:  # noqa: C901
+def extract_pdf_metadata(path: Path, max_pages_for_isbn: int = 20) -> PdfMetadata | None:  # noqa: C901
     """Extract metadata from a PDF file.
 
-    Reads PDF metadata fields and searches the first few pages for all ISBNs.
+    Reads PDF metadata fields and searches the first pages for all ISBNs.
+    ISBN typically appears on copyright page which can be up to page 15.
 
     Args:
         path: Path to the PDF file.
