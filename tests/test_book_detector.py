@@ -185,13 +185,14 @@ class TestBookDetectorClassify:
 
     def test_classify_with_isbn_success(self, detector: BookDetector, tmp_path: Path):
         """Test classification when ISBN lookup succeeds."""
-        # Create a dummy PDF file
-        pdf_file = tmp_path / "test_book.pdf"
+        # Create a dummy PDF file with filename matching the book title
+        # This is important because ISBN coherence validation checks filename-title match
+        pdf_file = tmp_path / "Python_Programming_Guide.pdf"
         pdf_file.write_bytes(b"%PDF-1.4\n")  # Minimal PDF header
 
         metadata = FileMetadata(
             path=pdf_file,
-            filename="test_book.pdf",
+            filename="Python_Programming_Guide.pdf",
             extension=".pdf",
             size_bytes=10_000_000,
         )
@@ -203,6 +204,7 @@ class TestBookDetectorClassify:
             author="John Doe",
             page_count=300,
             isbn="9781234567890",
+            isbns=["9781234567890"],  # New field: list of all ISBNs found
             file_size_mb=10.0,
         )
 
@@ -231,6 +233,134 @@ class TestBookDetectorClassify:
             # Now uses THEMA codes instead of custom technology categories
             assert "thema_code" in result.extracted_params
             assert "livres" in result.category
+
+    def test_classify_isbn_false_positive_rejected(
+        self, detector: BookDetector, tmp_path: Path
+    ):
+        """Test that ISBN lookups with mismatched titles are rejected as false positives.
+
+        This prevents cases where an ISBN from an ad/promotion in the PDF content
+        is mistakenly used to classify the book.
+        """
+        # Create a PDF with a filename that doesn't match the lookup result
+        pdf_file = tmp_path / "London_For_Dummies.pdf"
+        pdf_file.write_bytes(b"%PDF-1.4\n")
+
+        metadata = FileMetadata(
+            path=pdf_file,
+            filename="London_For_Dummies.pdf",
+            extension=".pdf",
+            size_bytes=10_000_000,
+        )
+
+        from para_files.utils.pdf_metadata import PdfMetadata
+
+        # PDF has an ISBN that points to a completely different book
+        mock_pdf_meta = PdfMetadata(
+            title="London For Dummies",
+            author="Donald Olson",
+            page_count=400,
+            isbn="9789786468600",  # ISBN from ads/promotions in the PDF
+            isbns=["9789786468600"],  # Only one ISBN found (the wrong one)
+            file_size_mb=15.0,
+        )
+
+        # ISBN lookup returns a completely different book
+        mock_book_info = BookInfo(
+            title="In Justice - Inside The Scandal That Rocked The Bush Administration",
+            authors=["David Iglesias", "Davin Seay"],
+            subjects=["Politics"],
+            isbn_13="9789786468600",
+        )
+
+        with (
+            patch(
+                "para_files.classifiers.book_detector.extract_pdf_metadata",
+                return_value=mock_pdf_meta,
+            ),
+            patch(
+                "para_files.classifiers.book_detector.lookup_isbn",
+                return_value=mock_book_info,
+            ),
+        ):
+            content = "Chapter 1: London Basics\nChapter 2: Getting Around"
+            result = detector.classify(content, metadata)
+
+            # The ISBN should be rejected as a false positive due to title mismatch
+            # The book might still be detected via other signals, but not with ISBN confidence
+            if result is not None:
+                # If detected via other signals, should NOT have the wrong suggested name
+                assert result.extracted_params.get("suggested_name") != sanitize_title(
+                    "In Justice - Inside The Scandal That Rocked The Bush Administration"
+                )
+
+    def test_classify_isbn_finds_correct_among_multiple(
+        self, detector: BookDetector, tmp_path: Path
+    ):
+        """Test that when multiple ISBNs exist, we find the one matching the filename.
+
+        Simulates the case where a PDF contains the correct ISBN plus ISBNs
+        from advertisements/promotions for other books.
+        """
+        pdf_file = tmp_path / "London_For_Dummies.pdf"
+        pdf_file.write_bytes(b"%PDF-1.4\n")
+
+        metadata = FileMetadata(
+            path=pdf_file,
+            filename="London_For_Dummies.pdf",
+            extension=".pdf",
+            size_bytes=10_000_000,
+        )
+
+        from para_files.utils.pdf_metadata import PdfMetadata
+
+        # PDF contains multiple ISBNs: one wrong (from ad), one correct
+        mock_pdf_meta = PdfMetadata(
+            title="London For Dummies",
+            author="Donald Olson",
+            page_count=400,
+            isbn="9789786468600",  # First ISBN (wrong - from ad)
+            isbns=[
+                "9789786468600",  # Wrong ISBN (from ad in content)
+                "9780470193389",  # Correct ISBN for London For Dummies
+            ],
+            file_size_mb=15.0,
+        )
+
+        # Mock lookup_isbn to return different books for different ISBNs
+        def mock_lookup(isbn: str) -> BookInfo | None:
+            if isbn == "9789786468600":
+                return BookInfo(
+                    title="In Justice - Inside The Scandal",
+                    authors=["David Iglesias"],
+                    isbn_13="9789786468600",
+                )
+            elif isbn == "9780470193389":
+                return BookInfo(
+                    title="London For Dummies",
+                    authors=["Donald Olson"],
+                    isbn_13="9780470193389",
+                )
+            return None
+
+        with (
+            patch(
+                "para_files.classifiers.book_detector.extract_pdf_metadata",
+                return_value=mock_pdf_meta,
+            ),
+            patch(
+                "para_files.classifiers.book_detector.lookup_isbn",
+                side_effect=mock_lookup,
+            ),
+        ):
+            content = "Chapter 1: London Basics\nChapter 2: Getting Around"
+            result = detector.classify(content, metadata)
+
+            # Should find the book with the correct ISBN
+            assert result is not None
+            assert result.confidence.value == 1.0  # Full confidence from ISBN match
+            # Should use the correct title for suggested name
+            assert "London" in result.extracted_params.get("suggested_name", "")
 
     def test_classify_non_pdf_rejected(self, detector: BookDetector, tmp_path: Path):
         """Test that non-PDF files are rejected."""
