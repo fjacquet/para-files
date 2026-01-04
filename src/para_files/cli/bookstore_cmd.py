@@ -244,12 +244,7 @@ def _rename_after_move(
         Final destination path after rename, or None.
     """
     actual_dest = move_result.destination
-    if (
-        not dry_run
-        and move_result.success
-        and actual_dest
-        and new_filename != original_name
-    ):
+    if not dry_run and move_result.success and actual_dest and new_filename != original_name:
         renamed_dest = actual_dest.parent / new_filename
         if not renamed_dest.exists():
             actual_dest.rename(renamed_dest)
