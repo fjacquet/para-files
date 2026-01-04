@@ -29,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **ISBN lookup now prefers Open Library**: Changed service order from `goob→openl→wiki` to `openl→wiki→goob`
+  - Google Books API often returns wrong metadata for valid ISBNs
+  - Open Library has more reliable book data
+  - Significantly improves coherence matching accuracy
 - **Space-separated ISBNs now detected**: Fixed ISBN extraction to catch formats like `ISBN 0 7506 67362`
   - Now uses regex patterns FIRST to find candidates, then validates with isbnlib
   - Previously `isbnlib.get_isbnlike()` missed space-separated formats

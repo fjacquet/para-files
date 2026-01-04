@@ -65,8 +65,9 @@ def lookup_isbn(isbn: str, service: str = "default") -> BookInfo | None:  # noqa
     isbn_10 = isbnlib.to_isbn10(canonical) if len(canonical) == ISBN_10_LENGTH else None
 
     # Try to get metadata
+    # Order: Open Library (best for books), Wikipedia, Google Books (often has wrong data)
     meta = None
-    services_to_try = ["goob", "openl", "wiki"] if service == "default" else [service]
+    services_to_try = ["openl", "wiki", "goob"] if service == "default" else [service]
 
     for svc in services_to_try:
         try:
