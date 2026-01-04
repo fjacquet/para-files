@@ -21,7 +21,7 @@ from para_files.cli.shared import (
     setup_logging,
     validate_directory_or_exit,
 )
-from para_files.mover import FileMover
+from para_files.mover import FileMover, MoveResult
 from para_files.utils.chm_metadata import extract_chm_metadata
 from para_files.utils.epub_metadata import extract_epub_metadata
 from para_files.utils.isbn_lookup import BookInfo, find_matching_book_info
@@ -225,6 +225,38 @@ def _detect_book(
     }
 
 
+def _rename_after_move(
+    move_result: MoveResult,
+    new_filename: str,
+    original_name: str,
+    *,
+    dry_run: bool,
+) -> Path | None:
+    """Rename file after successful move if needed.
+
+    Args:
+        move_result: Result from FileMover.move().
+        new_filename: Desired new filename.
+        original_name: Original filename.
+        dry_run: If True, don't actually rename.
+
+    Returns:
+        Final destination path after rename, or None.
+    """
+    actual_dest = move_result.destination
+    if (
+        not dry_run
+        and move_result.success
+        and actual_dest
+        and new_filename != original_name
+    ):
+        renamed_dest = actual_dest.parent / new_filename
+        if not renamed_dest.exists():
+            actual_dest.rename(renamed_dest)
+            return renamed_dest
+    return actual_dest
+
+
 def _display_book_info(
     result: dict[str, str | Path],
     original_name: str,
@@ -406,26 +438,32 @@ def bookstore(
             books_found += 1
 
             # Build destination path
-            dest_dir = result["dest_dir"]
+            dest_dir = Path(result["dest_dir"])
             new_filename = str(result["new_filename"])
-            dest_path = Path(dest_dir) / new_filename
+            final_dest = dest_dir / new_filename
 
             # Move file using FileMover (handles content deduplication)
-            move_result = mover.move(book_file, dest_path)
+            # Pass directory only - mover expects a directory, not a file path
+            move_result = mover.move(book_file, dest_dir)
 
             # Check if it was a content duplicate
             if move_result.action and "duplicate" in move_result.action:
                 content_duplicates += 1
                 if verbose:
                     typer.echo(f"🔄 Content duplicate: {book_file.name}")
-                    typer.echo(f"   Identical to: {dest_path}")
+                    typer.echo(f"   Identical to: {final_dest}")
                     typer.echo()
                 continue
+
+            # Rename file if move succeeded and rename is requested
+            actual_dest = _rename_after_move(
+                move_result, new_filename, book_file.name, dry_run=dry_run
+            )
 
             _display_book_info(
                 result,
                 book_file.name,
-                move_result.destination or dest_path,
+                actual_dest or final_dest,
                 dry_run=dry_run,
                 rename=not no_rename,
             )
