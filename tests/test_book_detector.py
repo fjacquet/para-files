@@ -221,8 +221,8 @@ class TestBookDetectorClassify:
                 return_value=mock_pdf_meta,
             ),
             patch(
-                "para_files.classifiers.book_detector.lookup_isbn",
-                return_value=mock_book_info,
+                "para_files.classifiers.book_detector.find_matching_book_info",
+                return_value=(mock_book_info, "9781234567890"),
             ),
         ):
             content = "Chapter 1: Introduction\nChapter 2: Basics"
@@ -265,22 +265,15 @@ class TestBookDetectorClassify:
             file_size_mb=15.0,
         )
 
-        # ISBN lookup returns a completely different book
-        mock_book_info = BookInfo(
-            title="In Justice - Inside The Scandal That Rocked The Bush Administration",
-            authors=["David Iglesias", "Davin Seay"],
-            subjects=["Politics"],
-            isbn_13="9789786468600",
-        )
-
         with (
             patch(
                 "para_files.classifiers.book_detector.extract_pdf_metadata",
                 return_value=mock_pdf_meta,
             ),
             patch(
-                "para_files.classifiers.book_detector.lookup_isbn",
-                return_value=mock_book_info,
+                # find_matching_book_info returns (None, None) when no ISBN matches
+                "para_files.classifiers.book_detector.find_matching_book_info",
+                return_value=(None, None),
             ),
         ):
             content = "Chapter 1: London Basics\nChapter 2: Getting Around"
@@ -327,21 +320,12 @@ class TestBookDetectorClassify:
             file_size_mb=15.0,
         )
 
-        # Mock lookup_isbn to return different books for different ISBNs
-        def mock_lookup(isbn: str) -> BookInfo | None:
-            if isbn == "9789786468600":
-                return BookInfo(
-                    title="In Justice - Inside The Scandal",
-                    authors=["David Iglesias"],
-                    isbn_13="9789786468600",
-                )
-            elif isbn == "9780470193389":
-                return BookInfo(
-                    title="London For Dummies",
-                    authors=["Donald Olson"],
-                    isbn_13="9780470193389",
-                )
-            return None
+        # Mock find_matching_book_info to return the correct book
+        mock_book_info = BookInfo(
+            title="London For Dummies",
+            authors=["Donald Olson"],
+            isbn_13="9780470193389",
+        )
 
         with (
             patch(
@@ -349,8 +333,9 @@ class TestBookDetectorClassify:
                 return_value=mock_pdf_meta,
             ),
             patch(
-                "para_files.classifiers.book_detector.lookup_isbn",
-                side_effect=mock_lookup,
+                # find_matching_book_info iterates and finds the correct ISBN
+                "para_files.classifiers.book_detector.find_matching_book_info",
+                return_value=(mock_book_info, "9780470193389"),
             ),
         ):
             content = "Chapter 1: London Basics\nChapter 2: Getting Around"

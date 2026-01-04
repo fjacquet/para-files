@@ -22,7 +22,7 @@ from para_files.cli.shared import (
     setup_logging,
     validate_directory_or_exit,
 )
-from para_files.utils.isbn_lookup import BookInfo, lookup_isbn
+from para_files.utils.isbn_lookup import BookInfo, find_matching_book_info
 from para_files.utils.pdf_metadata import extract_pdf_metadata
 from para_files.utils.thema_lookup import get_thema_lookup
 
@@ -128,13 +128,17 @@ def _process_book(
     """
     # Extract PDF metadata
     pdf_meta = extract_pdf_metadata(file_path)
-    if pdf_meta is None or not pdf_meta.isbn:
+    if pdf_meta is None or not pdf_meta.isbns:
         return None
 
-    # Lookup ISBN
-    book_info = lookup_isbn(pdf_meta.isbn)
-    if book_info is None:
-        logger.debug("ISBN {} lookup failed for {}", pdf_meta.isbn, file_path.name)
+    # Find matching book info with ISBN coherence validation
+    book_info, matched_isbn = find_matching_book_info(
+        pdf_meta.isbns,
+        file_path.name,
+        require_coherence=True,
+    )
+    if book_info is None or matched_isbn is None:
+        logger.debug("No matching ISBN found for {}", file_path.name)
         return None
 
     # Get Thema classification
@@ -172,7 +176,7 @@ def _process_book(
     # Result info
     result = {
         "source": str(file_path),
-        "isbn": pdf_meta.isbn,
+        "isbn": matched_isbn,
         "title": book_info.title or "Unknown",
         "authors": ", ".join(book_info.authors) if book_info.authors else "Unknown",
         "thema": thema_code,
@@ -189,7 +193,7 @@ def _process_book(
         if dest_path.exists():
             # Add ISBN to filename to make unique
             stem = dest_path.stem
-            dest_path = dest_dir / f"{stem}_{pdf_meta.isbn}.pdf"
+            dest_path = dest_dir / f"{stem}_{matched_isbn}.pdf"
             result["destination"] = str(dest_path)
             result["new_filename"] = dest_path.name
 

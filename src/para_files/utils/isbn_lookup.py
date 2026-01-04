@@ -229,6 +229,119 @@ def isbn_to_isbn13(isbn: str) -> str | None:
     return None
 
 
+# Minimum overlap ratio for title coherence validation
+MIN_TITLE_OVERLAP_RATIO = 0.3
+
+
+def _normalize_for_comparison(text: str) -> set[str]:
+    """Normalize text for title comparison.
+
+    Extracts significant words (3+ chars, lowercased) from text.
+
+    Args:
+        text: Text to normalize.
+
+    Returns:
+        Set of normalized words.
+    """
+    import re
+
+    # Remove common file extensions and suffixes
+    text = re.sub(r"\.(pdf|epub|mobi)$", "", text, flags=re.IGNORECASE)
+    # Replace punctuation and separators with spaces
+    text = re.sub(r"[_\-\.\[\]\(\)\{\}]", " ", text)
+    # Extract words (3+ chars) and lowercase
+    words = {w.lower() for w in re.findall(r"\b[a-zA-Z]{3,}\b", text)}
+    # Remove very common words
+    stopwords = {"the", "and", "for", "with", "from", "this", "that", "pdf", "book"}
+    return words - stopwords
+
+
+def is_title_coherent_with_filename(lookup_title: str, filename: str) -> bool:
+    """Check if an ISBN lookup title matches the filename.
+
+    Detects false positive ISBNs by verifying title coherence.
+    For example, if filename is "Python_For_Dummies.pdf" but lookup returns
+    "In Justice - David Iglesias", it's a false positive.
+
+    Args:
+        lookup_title: Title from ISBN lookup.
+        filename: Original PDF filename.
+
+    Returns:
+        True if titles are coherent, False if likely false positive.
+    """
+    if not lookup_title or not filename:
+        return False
+
+    title_words = _normalize_for_comparison(lookup_title)
+    filename_words = _normalize_for_comparison(filename)
+
+    if not title_words or not filename_words:
+        return False
+
+    # Calculate word overlap
+    common_words = title_words & filename_words
+    # Need at least 1 significant word in common
+    # OR the filename contains at least 30% of title words
+    if common_words:
+        return True
+
+    # Check if filename is a partial match (e.g., abbreviations)
+    overlap_ratio = len(common_words) / min(len(title_words), len(filename_words))
+    return overlap_ratio >= MIN_TITLE_OVERLAP_RATIO
+
+
+def find_matching_book_info(
+    isbns: list[str],
+    filename: str,
+    *,
+    require_coherence: bool = True,
+) -> tuple[BookInfo | None, str | None]:
+    """Find the first ISBN that returns a book matching the filename.
+
+    Iterates through ISBNs and validates each lookup result against the filename
+    to avoid false positives from promotional ISBNs embedded in PDFs.
+
+    Args:
+        isbns: List of ISBNs to try (in order of priority).
+        filename: Original filename to validate against.
+        require_coherence: If True, reject ISBNs with mismatched titles.
+
+    Returns:
+        Tuple of (BookInfo, matched_isbn) if found, (None, None) otherwise.
+    """
+    if not isbns:
+        return None, None
+
+    for candidate_isbn in isbns:
+        book_info = lookup_isbn(candidate_isbn)
+        if book_info is None or not book_info.title:
+            continue
+
+        # Validate title coherence with filename
+        if require_coherence:
+            if is_title_coherent_with_filename(book_info.title, filename):
+                logger.debug(
+                    "ISBN {} matches filename {} (title: {})",
+                    candidate_isbn,
+                    filename,
+                    book_info.title,
+                )
+                return book_info, candidate_isbn
+            logger.debug(
+                "ISBN {} rejected - title '{}' doesn't match filename '{}'",
+                candidate_isbn,
+                book_info.title,
+                filename,
+            )
+        else:
+            # Accept first successful lookup
+            return book_info, candidate_isbn
+
+    return None, None
+
+
 def infer_technology_from_subjects(
     subjects: list[str], known_technologies: list[str]
 ) -> str | None:

@@ -20,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **ISBN false positives in bookstore command**: Consolidated ISBN validation logic (DRY)
+  - Created shared `find_matching_book_info()` function in `isbn_lookup.py`
+  - Both `BookDetector` and `bookstore` command now use the same ISBN coherence validation
+  - Prevents false positives from promotional ISBNs embedded in PDFs (e.g., all books getting ISBN 9789786468600)
+  - Iterates through all ISBNs found to match filename with lookup title
 - **Expense reports routing to wrong year**: Changed `notes_frais` rule from `date_source: "file_modified"` to `date_source: "content"`
   - Files now route based on document content date, not filesystem date
   - Prevents old documents from routing to current year when copied/touched
@@ -29,6 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **ISBN lookup logic refactored (DRY)**: Single source of truth for ISBN validation
+  - Moved `is_title_coherent_with_filename()` to `isbn_lookup.py`
+  - New `find_matching_book_info()` encapsulates iteration and validation
+  - Removed duplicate logic from `book_detector.py` and `bookstore_cmd.py`
 - **Pipeline reorder: book_detector before rules_engine**: Books with ISBN now get proper Thema classification
   - Book Detector runs FIRST (96-100% confidence) before Rules Engine (95%)
   - Fixes misclassification of books like "Microsoft Press Exam Ref..." being routed to exam materials

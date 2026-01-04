@@ -23,7 +23,7 @@ from para_files.types import (
     FileMetadata,
 )
 from para_files.utils.filename_sanitizer import sanitize_filename
-from para_files.utils.isbn_lookup import BookInfo, lookup_isbn
+from para_files.utils.isbn_lookup import BookInfo, find_matching_book_info
 from para_files.utils.pdf_metadata import (
     PdfMetadata,
     contains_book_keywords,
@@ -50,7 +50,6 @@ BOOK_STRUCTURE_PATTERNS = [
 # Minimum thresholds
 MIN_PAGES_FOR_BOOK = 50
 MIN_SIZE_MB_FOR_BOOK = 5.0
-MIN_TITLE_OVERLAP_RATIO = 0.3  # Minimum word overlap for ISBN title validation
 DETECTION_THRESHOLD = 0.7  # Strict threshold
 SMART_RENAME_THRESHOLD = 0.9  # Minimum confidence to suggest renaming with title
 MIN_FINANCIAL_PATTERN_MATCHES = 2  # Minimum pattern matches to identify financial document
@@ -335,63 +334,6 @@ def is_telecom_document(content: str, filename: str) -> bool:
     return any(pattern.search(content) for pattern in TELECOM_EXCLUSION_PATTERNS)
 
 
-def _normalize_for_comparison(text: str) -> set[str]:
-    """Normalize text for title comparison.
-
-    Extracts significant words (3+ chars, lowercased) from text.
-
-    Args:
-        text: Text to normalize.
-
-    Returns:
-        Set of normalized words.
-    """
-    # Remove common file extensions and suffixes
-    text = re.sub(r"\.(pdf|epub|mobi)$", "", text, flags=re.IGNORECASE)
-    # Replace punctuation and separators with spaces
-    text = re.sub(r"[_\-\.\[\]\(\)\{\}]", " ", text)
-    # Extract words (3+ chars) and lowercase
-    words = {w.lower() for w in re.findall(r"\b[a-zA-Z]{3,}\b", text)}
-    # Remove very common words
-    stopwords = {"the", "and", "for", "with", "from", "this", "that", "pdf", "book"}
-    return words - stopwords
-
-
-def is_title_coherent_with_filename(lookup_title: str, filename: str) -> bool:
-    """Check if an ISBN lookup title matches the filename.
-
-    Detects false positive ISBNs by verifying title coherence.
-    For example, if filename is "Python_For_Dummies.pdf" but lookup returns
-    "In Justice - David Iglesias", it's a false positive.
-
-    Args:
-        lookup_title: Title from ISBN lookup.
-        filename: Original PDF filename.
-
-    Returns:
-        True if titles are coherent, False if likely false positive.
-    """
-    if not lookup_title or not filename:
-        return False
-
-    title_words = _normalize_for_comparison(lookup_title)
-    filename_words = _normalize_for_comparison(filename)
-
-    if not title_words or not filename_words:
-        return False
-
-    # Calculate word overlap
-    common_words = title_words & filename_words
-    # Need at least 1 significant word in common
-    # OR the filename contains at least 30% of title words
-    if common_words:
-        return True
-
-    # Check if filename is a partial match (e.g., abbreviations)
-    overlap_ratio = len(common_words) / min(len(title_words), len(filename_words))
-    return overlap_ratio >= MIN_TITLE_OVERLAP_RATIO
-
-
 def sanitize_title(title: str, max_length: int = 80) -> str:
     """Convert a book title to a valid filename.
 
@@ -598,38 +540,22 @@ class BookDetector(BaseClassifier):
         # Try all ISBNs found in the PDF to find one that matches the filename
         if pdf_meta.isbns:
             signals.append(f"isbns_found={len(pdf_meta.isbns)}")
-            matched_isbn: str | None = None
 
             if self._enable_isbn_lookup:
-                for candidate_isbn in pdf_meta.isbns:
-                    candidate_info = lookup_isbn(candidate_isbn)
-                    if candidate_info and candidate_info.title:
-                        # Validate ISBN coherence to avoid false positives
-                        if is_title_coherent_with_filename(candidate_info.title, metadata.filename):
-                            # Found a matching ISBN!
-                            matched_isbn = candidate_isbn
-                            book_info = candidate_info
-                            title = candidate_info.title  # Already checked not None
-                            signals.append(f"isbn={candidate_isbn}")
-                            signals.append("isbn_lookup=success")
-                            score = 1.0
-                            suggested_name = sanitize_title(title)
-                            logger.debug(
-                                "ISBN {} matches filename '{}' with title '{}'",
-                                candidate_isbn,
-                                metadata.filename,
-                                title[:50],
-                            )
-                            break
-                        # This ISBN doesn't match - try next one
-                        logger.debug(
-                            "ISBN {} title '{}' doesn't match filename '{}' - trying next",
-                            candidate_isbn,
-                            candidate_info.title[:50],
-                            metadata.filename,
-                        )
+                # Use shared function to find matching ISBN
+                book_info, matched_isbn = find_matching_book_info(
+                    pdf_meta.isbns,
+                    metadata.filename,
+                    require_coherence=True,
+                )
 
-                if not matched_isbn:
+                if book_info and matched_isbn:
+                    signals.append(f"isbn={matched_isbn}")
+                    signals.append("isbn_lookup=success")
+                    score = 1.0
+                    if book_info.title:
+                        suggested_name = sanitize_title(book_info.title)
+                else:
                     # No ISBN matched the filename - use first ISBN as fallback
                     # but don't trust the lookup metadata
                     signals.append(f"isbn={pdf_meta.isbn}")
