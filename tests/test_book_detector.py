@@ -234,9 +234,7 @@ class TestBookDetectorClassify:
             assert "thema_code" in result.extracted_params
             assert "livres" in result.category
 
-    def test_classify_isbn_false_positive_rejected(
-        self, detector: BookDetector, tmp_path: Path
-    ):
+    def test_classify_isbn_false_positive_rejected(self, detector: BookDetector, tmp_path: Path):
         """Test that ISBN lookups with mismatched titles are rejected as false positives.
 
         This prevents cases where an ISBN from an ad/promotion in the PDF content
