@@ -17,12 +17,17 @@ from loguru import logger
 from para_files.utils.pdf_metadata import extract_all_isbns
 
 
-# ISBN regex pattern
+# ISBN regex patterns
 ISBN_PATTERN = re.compile(r"\b(?:97[89])?\d{9}[\dXx]\b")
+# Pattern for ISBNs with dashes/spaces (common in copyright pages)
+ISBN_CONTENT_PATTERN = re.compile(r"97[89][-\s]?\d[-\s]?\d{3,4}[-\s]?\d{3,5}[-\s]?\d{1,2}[-\s]?\d")
 
 # OPF namespaces
 DC_NS = "{http://purl.org/dc/elements/1.1/}"
 OPF_NS = "{http://www.idpf.org/2007/opf}"
+
+# ISBN length constants
+ISBN_13_LENGTH = 13
 
 
 @dataclass
@@ -150,6 +155,53 @@ def _extract_metadata_from_opf(opf_content: bytes) -> dict[str, str | None]:
     return metadata
 
 
+def _extract_isbns_from_content(zf: zipfile.ZipFile, max_files: int = 5) -> list[str]:
+    """Extract ISBNs from XHTML content files (copyright pages, etc.).
+
+    Args:
+        zf: Open ZipFile object.
+        max_files: Maximum number of content files to scan.
+
+    Returns:
+        List of ISBNs found in content.
+    """
+    isbns: list[str] = []
+    files_scanned = 0
+
+    for name in zf.namelist():
+        if files_scanned >= max_files:
+            break
+        if not name.endswith((".html", ".xhtml", ".htm")):
+            continue
+
+        try:
+            content = zf.read(name).decode("utf-8", errors="ignore")
+            # Search for ISBN patterns with dashes/spaces
+            for match in ISBN_CONTENT_PATTERN.finditer(content):
+                isbn_raw = match.group()
+                # Normalize: remove dashes and spaces
+                isbn_clean = re.sub(r"[-\s]", "", isbn_raw)
+                if isbn_clean not in isbns and len(isbn_clean) == ISBN_13_LENGTH:
+                    isbns.append(isbn_clean)
+            files_scanned += 1
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Failed to read content file {}: {}", name, e)
+            continue
+
+    return isbns
+
+
+def _is_valid_isbn(isbn: str) -> bool:
+    """Check if ISBN is valid (not a placeholder like 0000000000000)."""
+    if not isbn:
+        return False
+    clean = re.sub(r"[^\dXx]", "", isbn)
+    # Reject all-zeros or mostly zeros
+    if clean.count("0") > len(clean) - 2:
+        return False
+    return len(clean) in (10, 13)
+
+
 def _create_partial_metadata(filename_isbns: list[str], file_size_mb: float) -> EpubMetadata | None:
     """Create partial metadata from filename ISBNs only."""
     if filename_isbns:
@@ -194,11 +246,20 @@ def extract_epub_metadata(path: Path) -> EpubMetadata | None:
 
             # Extract ISBNs from OPF
             opf_isbns = _extract_isbns_from_opf(opf_content)
+            # Filter out invalid/placeholder ISBNs
+            opf_isbns = [isbn for isbn in opf_isbns if _is_valid_isbn(isbn)]
 
-            # Combine: filename ISBNs first, then OPF ISBNs
+            # If no valid OPF ISBNs, scan content files (copyright pages)
+            content_isbns: list[str] = []
+            if not opf_isbns and not filename_isbns:
+                content_isbns = _extract_isbns_from_content(zf)
+                if content_isbns:
+                    logger.debug("Found ISBN(s) {} in content of {}", content_isbns, path.name)
+
+            # Combine: filename ISBNs first, then content, then OPF
             all_isbns = list(filename_isbns)
             seen_isbns = set(filename_isbns)
-            for isbn in opf_isbns:
+            for isbn in content_isbns + opf_isbns:
                 if isbn not in seen_isbns:
                     seen_isbns.add(isbn)
                     all_isbns.append(isbn)
