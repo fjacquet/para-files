@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Smart renaming for CHM and MOBI files**: Files are now renamed using their document title during classification
+  - BookDetector now processes `.pdf`, `.chm`, and `.mobi` files
+  - **CHM files**: Extracts title from HTML content using 7z extraction
+  - **MOBI files**: Extracts title from metadata using PyMuPDF
+  - ISBN lookup works for CHM and MOBI files just like PDFs
+  - CHM files get base confidence of 0.8 as documentation/help files
+  - MOBI files get base confidence of 0.8 as ebook files
+  - Extracted titles are sanitized and used as `suggested_name` for file renaming
 - **Parallel processing in bookstore command**: 8x faster processing with `--workers` option
   - Default: 8 parallel workers for ISBN extraction and API lookups
   - Thread-safe ISBN deduplication with proper locking

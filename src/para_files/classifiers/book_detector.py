@@ -22,8 +22,10 @@ from para_files.types import (
     Confidence,
     FileMetadata,
 )
+from para_files.utils.chm_metadata import ChmMetadata, extract_chm_metadata
 from para_files.utils.filename_sanitizer import sanitize_filename
 from para_files.utils.isbn_lookup import BookInfo, find_matching_book_info
+from para_files.utils.mobi_metadata import MobiMetadata, extract_mobi_metadata
 from para_files.utils.pdf_metadata import (
     PdfMetadata,
     contains_book_keywords,
@@ -482,69 +484,135 @@ class BookDetector(BaseClassifier):
         content: str,
         metadata: FileMetadata | None = None,
     ) -> ClassificationResult | None:
-        """Detect if the file is a technical book.
+        """Detect if the file is a technical book (PDF, CHM, or MOBI).
 
         Args:
-            content: Text content from the PDF.
+            content: Text content from the file.
             metadata: File metadata including path.
 
         Returns:
             ClassificationResult if book detected, None otherwise.
         """
-        # Only process PDFs
-        if metadata is None or metadata.extension.lower() != ".pdf":
+        # Only process PDFs, CHM, and MOBI files
+        if metadata is None:
+            return None
+
+        ext = metadata.extension.lower()
+        if ext not in (".pdf", ".chm", ".mobi"):
             return None
 
         file_path = metadata.path
         if not file_path or not file_path.exists():
             return None
 
-        # IMPORTANT: Exclude financial/bank documents to avoid false ISBN matches
-        # Bank account numbers and other financial identifiers can look like ISBNs
-        if is_financial_document(content, metadata.filename):
-            logger.debug("Skipping book detection for financial document: {}", file_path.name)
-            return None
-
-        # Exclude tax/government documents (reference numbers look like ISBNs)
-        if is_tax_document(content, metadata.filename):
-            logger.debug("Skipping book detection for tax document: {}", file_path.name)
-            return None
-
-        # Exclude insurance documents (policy/claim numbers look like ISBNs)
-        if is_insurance_document(content, metadata.filename):
-            logger.debug("Skipping book detection for insurance document: {}", file_path.name)
-            return None
-
-        # Exclude transport/travel documents (ticket IDs look like ISBNs)
-        if is_transport_document(content, metadata.filename):
-            logger.debug("Skipping book detection for transport document: {}", file_path.name)
-            return None
-
-        # Exclude telecom/contract documents (DocIDs/ContractIDs look like ISBNs)
-        if is_telecom_document(content, metadata.filename):
-            logger.debug("Skipping book detection for telecom document: {}", file_path.name)
-            return None
-
-        # Extract PDF metadata
-        pdf_meta = extract_pdf_metadata(file_path, max_pages_for_isbn=10)
-        if pdf_meta is None:
-            logger.debug("Could not extract PDF metadata from {}", file_path.name)
-            return None
-
+        # Initialize common variables
         score = 0.0
         signals: list[str] = []
         book_info: BookInfo | None = None
         suggested_name: str | None = None
+        pdf_meta: PdfMetadata | None = None
+        chm_meta: ChmMetadata | None = None
+        mobi_meta: MobiMetadata | None = None
+        isbns: list[str] = []
+        title: str | None = None
+        file_size_mb: float = 0.0
 
-        # Signal 1: ISBN (highest confidence)
-        # Try all ISBNs found in the PDF to find one that matches the filename
-        if pdf_meta.isbns:
-            signals.append(f"isbns_found={len(pdf_meta.isbns)}")
+        # Handle CHM files
+        if ext == ".chm":
+            chm_meta = extract_chm_metadata(file_path)
+            if chm_meta is None:
+                logger.debug("Could not extract CHM metadata from {}", file_path.name)
+                return None
+
+            isbns = chm_meta.isbns
+            title = chm_meta.title
+            file_size_mb = chm_meta.file_size_mb
+            signals.append("format=chm")
+
+            # CHM files are always books (help documentation)
+            score = 0.8  # Base score for CHM
+            signals.append("type=help_file")
+
+            # Use title for suggested name if available
+            if title:
+                suggested_name = sanitize_title(title)
+                signals.append("title_extracted=yes")
+
+        # Handle MOBI files
+        elif ext == ".mobi":
+            mobi_meta = extract_mobi_metadata(file_path)
+            if mobi_meta is None:
+                logger.debug("Could not extract MOBI metadata from {}", file_path.name)
+                return None
+
+            isbns = mobi_meta.isbns
+            title = mobi_meta.title
+            file_size_mb = mobi_meta.file_size_mb
+            signals.append("format=mobi")
+
+            # MOBI files are always ebooks
+            score = 0.8  # Base score for MOBI
+            signals.append("type=ebook")
+
+            # Use title for suggested name if available
+            if title:
+                suggested_name = sanitize_title(title)
+                signals.append("title_extracted=yes")
+
+        # Handle PDF files
+        else:
+            # IMPORTANT: Exclude financial/bank documents to avoid false ISBN matches
+            # Bank account numbers and other financial identifiers can look like ISBNs
+            if is_financial_document(content, metadata.filename):
+                logger.debug(
+                    "Skipping book detection for financial document: {}", file_path.name
+                )
+                return None
+
+            # Exclude tax/government documents (reference numbers look like ISBNs)
+            if is_tax_document(content, metadata.filename):
+                logger.debug("Skipping book detection for tax document: {}", file_path.name)
+                return None
+
+            # Exclude insurance documents (policy/claim numbers look like ISBNs)
+            if is_insurance_document(content, metadata.filename):
+                logger.debug(
+                    "Skipping book detection for insurance document: {}", file_path.name
+                )
+                return None
+
+            # Exclude transport/travel documents (ticket IDs look like ISBNs)
+            if is_transport_document(content, metadata.filename):
+                logger.debug(
+                    "Skipping book detection for transport document: {}", file_path.name
+                )
+                return None
+
+            # Exclude telecom/contract documents (DocIDs/ContractIDs look like ISBNs)
+            if is_telecom_document(content, metadata.filename):
+                logger.debug(
+                    "Skipping book detection for telecom document: {}", file_path.name
+                )
+                return None
+
+            # Extract PDF metadata
+            pdf_meta = extract_pdf_metadata(file_path, max_pages_for_isbn=10)
+            if pdf_meta is None:
+                logger.debug("Could not extract PDF metadata from {}", file_path.name)
+                return None
+
+            isbns = pdf_meta.isbns
+            title = pdf_meta.title
+            file_size_mb = pdf_meta.file_size_mb
+
+        # Signal 1: ISBN (highest confidence) - common for both PDF and CHM
+        if isbns:
+            signals.append(f"isbns_found={len(isbns)}")
 
             if self._enable_isbn_lookup:
                 # Use shared function to find matching ISBN
                 book_info, matched_isbn = find_matching_book_info(
-                    pdf_meta.isbns,
+                    isbns,
                     metadata.filename,
                     require_coherence=True,
                 )
@@ -558,21 +626,21 @@ class BookDetector(BaseClassifier):
                 else:
                     # No ISBN matched the filename - use first ISBN as fallback
                     # but don't trust the lookup metadata
-                    signals.append(f"isbn={pdf_meta.isbn}")
+                    signals.append(f"isbn={isbns[0]}")
                     signals.append("isbn_lookup=no_match")
-                    score = 0.5  # Lower confidence - ISBN exists but doesn't match
+                    score = max(score, 0.5)  # Keep CHM base score if higher
                     logger.info(
                         "No ISBN matched filename '{}' out of {} candidates",
                         metadata.filename,
-                        len(pdf_meta.isbns),
+                        len(isbns),
                     )
             else:
                 # ISBN lookup disabled - just note presence
-                signals.append(f"isbn={pdf_meta.isbn}")
-                score = 0.9  # ISBN alone is strong indicator
+                signals.append(f"isbn={isbns[0]}")
+                score = max(score, 0.9)  # ISBN alone is strong indicator
 
-        # Signal 2: PDF metadata (if not already at max score)
-        if score < 1.0:
+        # Signal 2: PDF-specific metadata (if not already at max score)
+        if score < 1.0 and pdf_meta:
             # Page count
             if pdf_meta.page_count and pdf_meta.page_count >= MIN_PAGES_FOR_BOOK:
                 score += 0.2
@@ -596,9 +664,9 @@ class BookDetector(BaseClassifier):
                 signals.append(f"structure={structure_score:.2f}")
 
         # Signal 4: File size
-        if score < 1.0 and pdf_meta.file_size_mb >= MIN_SIZE_MB_FOR_BOOK:
+        if score < 1.0 and file_size_mb >= MIN_SIZE_MB_FOR_BOOK:
             score += 0.15
-            signals.append(f"size={pdf_meta.file_size_mb:.1f}MB")
+            signals.append(f"size={file_size_mb:.1f}MB")
 
         # Check against threshold
         if score < DETECTION_THRESHOLD:
@@ -629,8 +697,8 @@ class BookDetector(BaseClassifier):
             category = "3_Resources/livres/Informatique"
 
         # Determine suggested name if not already set from ISBN
-        if not suggested_name and score >= SMART_RENAME_THRESHOLD and pdf_meta.title:
-            suggested_name = sanitize_title(pdf_meta.title)
+        if not suggested_name and score >= SMART_RENAME_THRESHOLD and title:
+            suggested_name = sanitize_title(title)
 
         # Cap confidence
         confidence_value = min(score, 1.0) if score >= 1.0 else 0.92

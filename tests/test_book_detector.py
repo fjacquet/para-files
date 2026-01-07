@@ -459,3 +459,287 @@ class TestBookDetectorEdgeCases:
             # Should still work, with "misc" as default technology
             if result is not None:
                 assert "misc" in result.extracted_params.get("technology", "misc")
+
+
+class TestBookDetectorChmFiles:
+    """Tests for CHM file classification and renaming."""
+
+    @pytest.fixture
+    def detector(self) -> BookDetector:
+        """Create a BookDetector instance with ISBN lookup enabled."""
+        return BookDetector(
+            technologies=["Python", "JavaScript"],
+            enable_isbn_lookup=True,
+        )
+
+    def test_chm_file_detected_with_title(self, detector: BookDetector, tmp_path: Path):
+        """Test that CHM files are detected and get suggested_name from title."""
+        chm_file = tmp_path / "help.chm"
+        chm_file.write_bytes(b"ITSF")  # Minimal CHM header
+
+        metadata = FileMetadata(
+            path=chm_file,
+            filename="help.chm",
+            extension=".chm",
+            size_bytes=5_000_000,
+        )
+
+        from para_files.utils.chm_metadata import ChmMetadata
+
+        mock_chm_meta = ChmMetadata(
+            title="Python 3.12 Documentation",
+            isbn=None,
+            isbns=[],
+            file_size_mb=5.0,
+        )
+
+        with patch(
+            "para_files.classifiers.book_detector.extract_chm_metadata",
+            return_value=mock_chm_meta,
+        ):
+            result = detector.classify("", metadata)
+
+            assert result is not None
+            assert result.confidence.source == ClassificationSource.BOOK_DETECTOR
+            # CHM files should get suggested_name from title
+            assert "suggested_name" in result.extracted_params
+            assert result.extracted_params["suggested_name"] == "Python_3.12_Documentation"
+            assert "format=chm" in str(result.extracted_params) or result is not None
+
+    def test_chm_file_with_isbn(self, detector: BookDetector, tmp_path: Path):
+        """Test CHM file with ISBN gets high confidence and book lookup."""
+        chm_file = tmp_path / "python_cookbook.chm"
+        chm_file.write_bytes(b"ITSF")
+
+        metadata = FileMetadata(
+            path=chm_file,
+            filename="python_cookbook.chm",
+            extension=".chm",
+            size_bytes=10_000_000,
+        )
+
+        from para_files.utils.chm_metadata import ChmMetadata
+
+        mock_chm_meta = ChmMetadata(
+            title="Python Cookbook",
+            isbn="9780596007973",
+            isbns=["9780596007973"],
+            file_size_mb=10.0,
+        )
+
+        mock_book_info = BookInfo(
+            title="Python Cookbook, 2nd Edition",
+            authors=["Alex Martelli", "Anna Ravenscroft"],
+            isbn_13="9780596007973",
+        )
+
+        with (
+            patch(
+                "para_files.classifiers.book_detector.extract_chm_metadata",
+                return_value=mock_chm_meta,
+            ),
+            patch(
+                "para_files.classifiers.book_detector.find_matching_book_info",
+                return_value=(mock_book_info, "9780596007973"),
+            ),
+        ):
+            result = detector.classify("", metadata)
+
+            assert result is not None
+            # ISBN match gives 1.0 confidence
+            assert result.confidence.value == 1.0
+            # Should use title from ISBN lookup for suggested name
+            assert "Python_Cookbook" in result.extracted_params.get("suggested_name", "")
+
+    def test_chm_extraction_fails_returns_none(
+        self, detector: BookDetector, tmp_path: Path
+    ):
+        """Test that CHM files with failed extraction return None."""
+        chm_file = tmp_path / "broken.chm"
+        chm_file.write_bytes(b"not a chm")
+
+        metadata = FileMetadata(
+            path=chm_file,
+            filename="broken.chm",
+            extension=".chm",
+            size_bytes=1000,
+        )
+
+        with patch(
+            "para_files.classifiers.book_detector.extract_chm_metadata",
+            return_value=None,
+        ):
+            result = detector.classify("", metadata)
+            assert result is None
+
+    def test_chm_uppercase_extension(self, detector: BookDetector, tmp_path: Path):
+        """Test that uppercase .CHM extension is handled."""
+        chm_file = tmp_path / "help.CHM"
+        chm_file.write_bytes(b"ITSF")
+
+        metadata = FileMetadata(
+            path=chm_file,
+            filename="help.CHM",
+            extension=".CHM",
+            size_bytes=5_000_000,
+        )
+
+        from para_files.utils.chm_metadata import ChmMetadata
+
+        mock_chm_meta = ChmMetadata(
+            title="Windows Help File",
+            file_size_mb=5.0,
+        )
+
+        with patch(
+            "para_files.classifiers.book_detector.extract_chm_metadata",
+            return_value=mock_chm_meta,
+        ):
+            result = detector.classify("", metadata)
+            assert result is not None
+            assert result.confidence.source == ClassificationSource.BOOK_DETECTOR
+
+
+class TestBookDetectorMobiFiles:
+    """Tests for MOBI file classification and renaming."""
+
+    @pytest.fixture
+    def detector(self) -> BookDetector:
+        """Create a BookDetector instance with ISBN lookup enabled."""
+        return BookDetector(
+            technologies=["Python", "JavaScript"],
+            enable_isbn_lookup=True,
+        )
+
+    def test_mobi_file_detected_with_title(self, detector: BookDetector, tmp_path: Path):
+        """Test that MOBI files are detected and get suggested_name from title."""
+        mobi_file = tmp_path / "book.mobi"
+        mobi_file.write_bytes(b"MOBI")  # Minimal MOBI header
+
+        metadata = FileMetadata(
+            path=mobi_file,
+            filename="book.mobi",
+            extension=".mobi",
+            size_bytes=5_000_000,
+        )
+
+        from para_files.utils.mobi_metadata import MobiMetadata
+
+        mock_mobi_meta = MobiMetadata(
+            title="The Pragmatic Programmer",
+            author="Hunt and Thomas",
+            isbn=None,
+            isbns=[],
+            file_size_mb=5.0,
+        )
+
+        with patch(
+            "para_files.classifiers.book_detector.extract_mobi_metadata",
+            return_value=mock_mobi_meta,
+        ):
+            result = detector.classify("", metadata)
+
+            assert result is not None
+            assert result.confidence.source == ClassificationSource.BOOK_DETECTOR
+            # MOBI files should get suggested_name from title
+            assert "suggested_name" in result.extracted_params
+            assert (
+                result.extracted_params["suggested_name"]
+                == "The_Pragmatic_Programmer"
+            )
+
+    def test_mobi_file_with_isbn(self, detector: BookDetector, tmp_path: Path):
+        """Test MOBI file with ISBN gets high confidence and book lookup."""
+        mobi_file = tmp_path / "eloquent_javascript.mobi"
+        mobi_file.write_bytes(b"MOBI")
+
+        metadata = FileMetadata(
+            path=mobi_file,
+            filename="eloquent_javascript.mobi",
+            extension=".mobi",
+            size_bytes=3_000_000,
+        )
+
+        from para_files.utils.mobi_metadata import MobiMetadata
+
+        mock_mobi_meta = MobiMetadata(
+            title="Eloquent JavaScript",
+            author="Marijn Haverbeke",
+            isbn="9781593275846",
+            isbns=["9781593275846"],
+            file_size_mb=3.0,
+        )
+
+        mock_book_info = BookInfo(
+            title="Eloquent JavaScript, 3rd Edition",
+            authors=["Marijn Haverbeke"],
+            isbn_13="9781593275846",
+        )
+
+        with (
+            patch(
+                "para_files.classifiers.book_detector.extract_mobi_metadata",
+                return_value=mock_mobi_meta,
+            ),
+            patch(
+                "para_files.classifiers.book_detector.find_matching_book_info",
+                return_value=(mock_book_info, "9781593275846"),
+            ),
+        ):
+            result = detector.classify("", metadata)
+
+            assert result is not None
+            # ISBN match gives 1.0 confidence
+            assert result.confidence.value == 1.0
+            # Should use title from ISBN lookup for suggested name
+            assert "Eloquent_JavaScript" in result.extracted_params.get(
+                "suggested_name", ""
+            )
+
+    def test_mobi_extraction_fails_returns_none(
+        self, detector: BookDetector, tmp_path: Path
+    ):
+        """Test that MOBI files with failed extraction return None."""
+        mobi_file = tmp_path / "broken.mobi"
+        mobi_file.write_bytes(b"not a mobi")
+
+        metadata = FileMetadata(
+            path=mobi_file,
+            filename="broken.mobi",
+            extension=".mobi",
+            size_bytes=1000,
+        )
+
+        with patch(
+            "para_files.classifiers.book_detector.extract_mobi_metadata",
+            return_value=None,
+        ):
+            result = detector.classify("", metadata)
+            assert result is None
+
+    def test_mobi_uppercase_extension(self, detector: BookDetector, tmp_path: Path):
+        """Test that uppercase .MOBI extension is handled."""
+        mobi_file = tmp_path / "book.MOBI"
+        mobi_file.write_bytes(b"MOBI")
+
+        metadata = FileMetadata(
+            path=mobi_file,
+            filename="book.MOBI",
+            extension=".MOBI",
+            size_bytes=4_000_000,
+        )
+
+        from para_files.utils.mobi_metadata import MobiMetadata
+
+        mock_mobi_meta = MobiMetadata(
+            title="Clean Code",
+            file_size_mb=4.0,
+        )
+
+        with patch(
+            "para_files.classifiers.book_detector.extract_mobi_metadata",
+            return_value=mock_mobi_meta,
+        ):
+            result = detector.classify("", metadata)
+            assert result is not None
+            assert result.confidence.source == ClassificationSource.BOOK_DETECTOR
