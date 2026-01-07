@@ -5,10 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from para_files.utils.mobi_metadata import (
-    MIN_TITLE_LENGTH,
     MobiMetadata,
     _extract_title_from_mobi_metadata,
     _scan_mobi_pages_for_isbns,

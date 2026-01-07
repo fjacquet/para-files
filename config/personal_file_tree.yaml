@@ -140,6 +140,497 @@ routing_rules:
     destination: "3_Resources/livres/{YYYY}"
     date_source: "file_modified"
 
+  # ==========================================================================
+  # EBOOKS BY PUBLISHER/SERIES - Learning materials classification
+  # ==========================================================================
+
+  # Beginner-friendly series
+  ebooks_dummies:
+    patterns: ["*[Ff]or [Dd]ummies*", "*For Dummies*"]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/series/For-Dummies"
+
+  ebooks_head_first:
+    patterns: ["*[Hh]ead [Ff]irst*", "*Head First*"]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/series/Head-First"
+
+  # Major IT publishers
+  ebooks_oreilly:
+    patterns: ["*O'Reilly*", "*(O'Reilly*", "*OReilly*"]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/editeurs/OReilly"
+
+  ebooks_packt:
+    patterns: ["*[Pp]ackt*"]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/editeurs/Packt"
+
+  ebooks_manning:
+    patterns: ["*[Mm]anning*", "*(Manning*"]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/editeurs/Manning"
+
+  ebooks_apress:
+    patterns: ["*[Aa]press*", "*(Apress*"]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/editeurs/Apress"
+
+  ebooks_wiley:
+    patterns: ["*[Ww]iley*", "*(Wiley*", "*[Ww]rox*"]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/editeurs/Wiley"
+
+  ebooks_sybex:
+    patterns: ["*[Ss]ybex*", "*(Sybex*"]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/editeurs/Sybex"
+
+  # Vendor-specific technical books
+  ebooks_cisco:
+    patterns:
+      [
+        "*[Cc]isco*[Pp]ress*",
+        "*Cisco.Press*",
+        "*CCNA*",
+        "*CCNP*",
+        "*CCIE*",
+        "*[Cc]isco*[Nn]etwork*",
+      ]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/vendors/Cisco"
+
+  ebooks_microsoft:
+    patterns:
+      [
+        "*[Mm]icrosoft*[Pp]ress*",
+        "*Microsoft Press*",
+        "*MICROSOFT_PRESS_EBOOK*",
+        "*[Ee]xam [Rr]ef*",
+        "*MCSA*",
+        "*MCSE*",
+        "*Azure*[Ee]xam*",
+        "*[Ss]ystem*[Cc]enter*",
+        "*[Ww]indows*[Ss]erver*",
+        "*[Pp]ower[Ss]hell*",
+      ]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/vendors/Microsoft"
+
+  ebooks_vmware:
+    patterns:
+      [
+        "*[Vv][Mm]ware*[Pp]ress*",
+        "*VCP*",
+        "*VCAP*",
+        "*[Vv][Ss]phere*",
+        "*[Pp]ower[Cc][Ll][Ii]*",
+        "*[Vv][Rr]ealize*",
+        "*[Ee][Ss][Xx]i*",
+        "*MASTERING_VMWARE*",
+      ]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/vendors/VMware"
+
+  ebooks_redhat:
+    patterns: ["*[Rr]ed*[Hh]at*", "*RHEL*", "*RHCE*", "*RHCSA*"]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/vendors/RedHat"
+
+  # Academic publishers
+  ebooks_academic:
+    patterns:
+      [
+        "*(Springer*",
+        "*(Cambridge*",
+        "*(Oxford*",
+        "*(MIT*",
+        "*(Elsevier*",
+        "*(McGraw*",
+        "*(Pearson*",
+        "*(Prentice*",
+        "*(Academic Press*",
+        "*(AP,*",
+        "*(AW,*",
+      ]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/editeurs/Academic"
+
+  # IBM Redbooks
+  ebooks_ibm_redbooks:
+    patterns:
+      [
+        "sg[0-9]*",
+        "*[Ii][Bb][Mm]*[Rr]edbook*",
+        "*[Rr]edbook*",
+      ]
+    extensions: [".pdf", ".epub", ".mobi"]
+    destination: "3_Resources/livres/vendors/IBM"
+
+  # Psychology / Self-Help (Thema VS)
+  ebooks_psychology:
+    patterns:
+      [
+        "*[Pp]sychology*",
+        "*[Ss]elf-[Hh]elp*",
+        "*[Ss]elf [Hh]elp*",
+        "*[Mm]indset*",
+        "*[Oo]verthinking*",
+        "*[Dd]iscipline*",
+        "*[Mm]otivation*",
+        "*[Hh]abits*",
+        "*[Pp]roductivity*",
+        "*[Mm]editation*",
+        "*[Mm]indfulness*",
+        "*[Cc]ognitive*[Bb]ehavior*",
+        "*[Cc][Bb][Tt]*",
+      ]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/V_Sante_et_developpement/VS_Developpement_personnel"
+
+  # Video courses (MP4)
+  video_courses:
+    patterns:
+      [
+        "*CBT*[Nn]uggets*",
+        "*[Pp]luralsight*",
+        "*[Uu]demy*",
+        "*[Ll]inked[Ii]n*[Ll]earning*",
+        "*[Ll]ynda*",
+        "*[Cc]oursera*",
+        "*[Oo][Rr]eilly*",
+      ]
+    extensions: [".mp4", ".mkv", ".avi"]
+    destination: "3_Resources/formations/video/{platform}"
+
+  # ==========================================================================
+  # SCIENCE SUBJECTS - Thema P* (Mathematiques et sciences)
+  # ==========================================================================
+
+  # Mathematics (Thema PB)
+  ebooks_mathematics:
+    patterns:
+      [
+        "*[Mm]athematics*",
+        "*[Cc]alculus*",
+        "*[Aa]lgebra*",
+        "*[Tt]rigonometry*",
+        "*[Gg]eometry*",
+        "*[Ss]tatistics*",
+        "*[Pp]robability*",
+        "*[Ll]inear [Aa]lgebra*",
+        "*[Dd]ifferential [Ee]quations*",
+        "*[Dd]iscrete [Mm]ath*",
+      ]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/P_Mathematiques_et_sciences/PB_Mathematiques"
+
+  # Physics (Thema PH)
+  ebooks_physics:
+    patterns:
+      [
+        "*[Pp]hysics*",
+        "*[Pp]hysique*",
+        "*[Qq]uantum*",
+        "*[Rr]elativity*",
+        "*[Tt]hermodynamics*",
+        "*[Mm]echanics*",
+        "*[Ee]lectrodynamics*",
+        "*[Oo]ptics*",
+      ]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/P_Mathematiques_et_sciences/PH_Physique"
+
+  # Chemistry (Thema PN)
+  ebooks_chemistry:
+    patterns:
+      [
+        "*[Cc]hemistry*",
+        "*[Cc]himie*",
+        "*[Oo]rganic*[Cc]hem*",
+        "*[Bb]iochemistry*",
+        "*[Mm]olecular*",
+      ]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/P_Mathematiques_et_sciences/PN_Chimie"
+
+  # Biology (Thema PS)
+  ebooks_biology:
+    patterns:
+      [
+        "*[Bb]iology*",
+        "*[Bb]iologie*",
+        "*[Nn]euroscience*",
+        "*[Gg]enetics*",
+        "*[Ee]cology*",
+        "*[Bb]otany*",
+        "*[Zz]oology*",
+        "*[Aa]natomy*",
+        "*[Pp]hysiology*",
+        "*[Mm]icrobiology*",
+        "*[Ee]volution*",
+        "*[Cc]ell [Bb]iology*",
+      ]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/P_Mathematiques_et_sciences/PS_Biologie_sciences_de_la_vie"
+
+  # Geology / Earth Sciences (Thema RB)
+  ebooks_geology:
+    patterns:
+      [
+        "*[Gg]eology*",
+        "*[Gg]eophysics*",
+        "*[Ee]arth [Ss]cience*",
+        "*[Mm]ineralogy*",
+        "*[Pp]aleontology*",
+        "*[Vv]olcano*",
+        "*[Ss]eismology*",
+        "*[Oo]ceanography*",
+        "*[Mm]eteorology*",
+        "*[Cc]limat*",
+      ]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/R_Sciences_de_la_Terre_geographie/RB_Sciences_de_la_Terre"
+
+  # Electronics (Thema TJ)
+  ebooks_electronics:
+    patterns:
+      [
+        "*[Ee]lectronics*",
+        "*[Ee]lectronique*",
+        "*[Cc]ircuit*",
+        "*[Aa]rduino*",
+        "*[Rr]aspberry*[Pp]i*",
+        "*[Mm]icrocontroller*",
+        "*[Ee]mbedded*",
+        "*[Ss]ignal [Pp]rocessing*",
+        "*DSP*",
+        "*FPGA*",
+        "*VHDL*",
+      ]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/T_Technologie_ingenierie/TJ_Ingenierie_electronique"
+
+  # ==========================================================================
+  # COMPUTER SCIENCE TOPICS - IT/Programming by specialty
+  # ==========================================================================
+
+  # Operating Systems
+  ebooks_os:
+    patterns:
+      [
+        "*[Oo]perating [Ss]ystem*",
+        "*[Ll]inux*",
+        "*[Uu]nix*",
+        "*[Ww]indows*[Ss]erver*",
+        "*[Ww]indows*[Aa]dmin*",
+        "*[Uu]buntu*",
+        "*[Ff]edora*",
+        "*[Dd]ebian*",
+        "*[Cc]ent[Oo][Ss]*",
+        "*[Ff]ree[Bb][Ss][Dd]*",
+        "*[Mm]ac[Oo][Ss]*",
+        "*[Ss]olaris*",
+        "*[Aa][Ii][Xx]*",
+        "*[Kk]ernel*",
+      ]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/U_Informatique_et_technologies_de/UL_Systemes_d'exploitation"
+
+  # Programming / Development
+  ebooks_programming:
+    patterns:
+      [
+        "*[Pp]rogramming*",
+        "*[Pp]ython*",
+        "*[Jj]ava*",
+        "*[Cc]#*",
+        "*[Cc][+][+]*",
+        "*[Jj]ava[Ss]cript*",
+        "*[Rr]uby*",
+        "*[Gg]o [Ll]ang*",
+        "*[Rr]ust*",
+        "*[Ss]wift*",
+        "*[Kk]otlin*",
+        "*[Ss]cala*",
+        "*[Pp][Hh][Pp]*",
+        "*[Pp]erl*",
+        "*[Ss][Qq][Ll]*",
+        "*[Aa]lgorithm*",
+        "*[Dd]ata [Ss]tructure*",
+        "*[Ss]oftware [Ee]ngineering*",
+        "*[Dd]esign [Pp]attern*",
+        "*[Aa]gile*",
+        "*[Dd]ev[Oo]ps*",
+      ]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/U_Informatique_et_technologies_de/UM_Programmation_informatique"
+
+  # Databases
+  ebooks_databases:
+    patterns:
+      [
+        "*[Dd]atabase*",
+        "*[Oo]racle*[Dd][Bb]*",
+        "*[Mm]y[Ss][Qq][Ll]*",
+        "*[Pp]ostgre[Ss][Qq][Ll]*",
+        "*[Mm]ongo[Dd][Bb]*",
+        "*[Rr]edis*",
+        "*[Cc]assandra*",
+        "*[Ee]lasticsearch*",
+        "*[Ss][Qq][Ll]*[Ss]erver*",
+        "*[Nn]o[Ss][Qq][Ll]*",
+      ]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/U_Informatique_et_technologies_de/UN_Bases_de_donnees"
+
+  # Networking
+  ebooks_networking:
+    patterns:
+      [
+        "*[Nn]etwork*",
+        "*[Tt][Cc][Pp]/[Ii][Pp]*",
+        "*[Tt][Cc][Pp][Ii][Pp]*",
+        "*[Ww]ireshark*",
+        "*[Pp]rotocol*",
+        "*[Rr]outing*",
+        "*[Ss]witching*",
+        "*[Ff]irewall*",
+        "*[Vv][Pp][Nn]*",
+        "*[Dd][Nn][Ss]*",
+        "*[Dd][Hh][Cc][Pp]*",
+        "*[Ww]i-[Ff]i*",
+        "*[Ww]ireless*",
+        "*[Ss][Dd][Nn]*",
+      ]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/U_Informatique_et_technologies_de/UT_Gestion_de_reseaux"
+
+  # Security / Cybersecurity
+  ebooks_security:
+    patterns:
+      [
+        "*[Ss]ecurity*",
+        "*[Ss]ecurite*",
+        "*[Hh]acking*",
+        "*[Pp]enetration*[Tt]est*",
+        "*[Pp]entest*",
+        "*[Cc]rypto*",
+        "*[Mm]alware*",
+        "*[Ff]orensic*",
+        "*[Cc][Ee][Hh]*",
+        "*[Cc][Ii][Ss][Ss][Pp]*",
+        "*[Oo][Ss][Cc][Pp]*",
+        "*[Ss]hellcode*",
+        "*[Ee]xploit*",
+        "*[Kk]ali*[Ll]inux*",
+        "*[Bb]ack[Tt]rack*",
+      ]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/U_Informatique_et_technologies_de/UR_Securite_informatique"
+
+  # Cloud / Virtualization
+  ebooks_cloud:
+    patterns:
+      [
+        "*[Cc]loud*",
+        "*[Aa][Ww][Ss]*",
+        "*[Aa]mazon*[Ww]eb*",
+        "*[Aa]zure*",
+        "*[Gg]oogle*[Cc]loud*",
+        "*[Gg][Cc][Pp]*",
+        "*[Kk]ubernetes*",
+        "*[Dd]ocker*",
+        "*[Cc]ontainer*",
+        "*[Oo]pen[Ss]tack*",
+        "*[Tt]erraform*",
+        "*[Aa]nsible*",
+        "*[Pp]uppet*",
+        "*[Cc]hef*",
+        "*[Vv]irtualization*",
+        "*[Vv][Mm]ware*",
+        "*[Hh]yper-[Vv]*",
+        "*[Kk][Vv][Mm]*",
+        "*[Xx]en*",
+      ]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/U_Informatique_et_technologies_de/UT_Cloud_et_virtualisation"
+
+  # Web Development
+  ebooks_web:
+    patterns:
+      [
+        "*[Ww]eb*[Dd]ev*",
+        "*[Hh][Tt][Mm][Ll]*",
+        "*[Cc][Ss][Ss]*",
+        "*[Rr]eact*",
+        "*[Aa]ngular*",
+        "*[Vv]ue*[Jj][Ss]*",
+        "*[Nn]ode*[Jj][Ss]*",
+        "*[Dd]jango*",
+        "*[Ff]lask*",
+        "*[Rr]ails*",
+        "*[Ss]pring*[Bb]oot*",
+        "*[Rr][Ee][Ss][Tt]*[Aa][Pp][Ii]*",
+        "*[Gg]raph[Qq][Ll]*",
+      ]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/U_Informatique_et_technologies_de/UM_Developpement_web"
+
+  # AI / Machine Learning
+  ebooks_ai:
+    patterns:
+      [
+        "*[Aa]rtificial*[Ii]ntelligence*",
+        "*[Mm]achine*[Ll]earning*",
+        "*[Dd]eep*[Ll]earning*",
+        "*[Nn]eural*[Nn]etwork*",
+        "*[Tt]ensor[Ff]low*",
+        "*[Pp]y[Tt]orch*",
+        "*[Nn][Ll][Pp]*",
+        "*[Nn]atural*[Ll]anguage*",
+        "*[Cc]omputer*[Vv]ision*",
+        "*[Dd]ata*[Ss]cience*",
+        "*[Bb]ig*[Dd]ata*",
+      ]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/U_Informatique_et_technologies_de/UY_Intelligence_artificielle"
+
+  # ==========================================================================
+  # OTHER TOPICS
+  # ==========================================================================
+
+  # Photography
+  ebooks_photography:
+    patterns:
+      [
+        "*[Pp]hotograph*",
+        "*[Pp]hoto*[Ee]dit*",
+        "*[Pp]hotoshop*",
+        "*[Ll]ightroom*",
+        "*[Cc]amera*",
+        "*[Dd][Ss][Ll][Rr]*",
+        "*[Ee]xposure*",
+        "*[Cc]omposition*",
+      ]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/A_Arts/AJ_Photographie_et_photographes"
+
+  # Reference / Encyclopedia
+  ebooks_reference:
+    patterns:
+      [
+        "*[Ee]ncyclop*",
+        "*[Bb]ritannica*",
+        "*[Hh]andbook*",
+        "*[Rr]eference*",
+        "*[Dd]ictionary*",
+        "*[Gg]uide*[Cc]omplete*",
+        "*[Cc]omplete*[Gg]uide*",
+      ]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
+    destination: "3_Resources/livres/G_Reference_information/GB_Encyclopedies_et_ouvrages"
+
   # Dell-EMC technical documentation
   dell_emc_documentation:
     patterns:
@@ -2169,7 +2660,7 @@ routing_rules:
         "*[Pp]rogrammation*",
       ]
     extensions: [".pdf"]
-    destination: "3_Resources/livres/informatique"
+    destination: "3_Resources/livres/U_Informatique_et_technologies_de/UY_Informatique"
 
   # Travel ICS calendar files
   travel_ics_files:
@@ -2585,7 +3076,7 @@ routing_rules:
         "*[Mm]cGraw[- ][Hh]ill*",
       ]
     extensions: [".pdf", ".epub", ".mobi"]
-    destination: "3_Resources/livres/informatique"
+    destination: "3_Resources/livres/U_Informatique_et_technologies_de/UY_Informatique"
     date_source: "file_modified"
 
   # Exam materials
