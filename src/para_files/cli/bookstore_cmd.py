@@ -511,7 +511,9 @@ def _process_book_file(book_file: Path, ctx: _BookstoreContext) -> None:
     is_duplicate, first_file = _check_and_register_isbn(isbn, book_file, ctx)
     if is_duplicate and first_file:
         _handle_isbn_duplicate(
-            book_file, first_file, isbn,
+            book_file,
+            first_file,
+            isbn,
             keep_duplicates=ctx.keep_duplicates,
             dry_run=ctx.dry_run,
             verbose=ctx.verbose,
@@ -540,8 +542,11 @@ def _process_book_file(book_file: Path, ctx: _BookstoreContext) -> None:
     actual_dest = _rename_after_move(move_result, new_filename, book_file.name, dry_run=ctx.dry_run)
 
     _display_book_info(
-        result, book_file.name, actual_dest or final_dest,
-        dry_run=ctx.dry_run, rename=ctx.rename,
+        result,
+        book_file.name,
+        actual_dest or final_dest,
+        dry_run=ctx.dry_run,
+        rename=ctx.rename,
     )
 
     if not ctx.dry_run and move_result.success:
