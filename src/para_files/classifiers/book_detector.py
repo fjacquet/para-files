@@ -564,9 +564,7 @@ class BookDetector(BaseClassifier):
             # IMPORTANT: Exclude financial/bank documents to avoid false ISBN matches
             # Bank account numbers and other financial identifiers can look like ISBNs
             if is_financial_document(content, metadata.filename):
-                logger.debug(
-                    "Skipping book detection for financial document: {}", file_path.name
-                )
+                logger.debug("Skipping book detection for financial document: {}", file_path.name)
                 return None
 
             # Exclude tax/government documents (reference numbers look like ISBNs)
@@ -576,23 +574,17 @@ class BookDetector(BaseClassifier):
 
             # Exclude insurance documents (policy/claim numbers look like ISBNs)
             if is_insurance_document(content, metadata.filename):
-                logger.debug(
-                    "Skipping book detection for insurance document: {}", file_path.name
-                )
+                logger.debug("Skipping book detection for insurance document: {}", file_path.name)
                 return None
 
             # Exclude transport/travel documents (ticket IDs look like ISBNs)
             if is_transport_document(content, metadata.filename):
-                logger.debug(
-                    "Skipping book detection for transport document: {}", file_path.name
-                )
+                logger.debug("Skipping book detection for transport document: {}", file_path.name)
                 return None
 
             # Exclude telecom/contract documents (DocIDs/ContractIDs look like ISBNs)
             if is_telecom_document(content, metadata.filename):
-                logger.debug(
-                    "Skipping book detection for telecom document: {}", file_path.name
-                )
+                logger.debug("Skipping book detection for telecom document: {}", file_path.name)
                 return None
 
             # Extract PDF metadata

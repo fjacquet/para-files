@@ -551,9 +551,7 @@ class TestBookDetectorChmFiles:
             # Should use title from ISBN lookup for suggested name
             assert "Python_Cookbook" in result.extracted_params.get("suggested_name", "")
 
-    def test_chm_extraction_fails_returns_none(
-        self, detector: BookDetector, tmp_path: Path
-    ):
+    def test_chm_extraction_fails_returns_none(self, detector: BookDetector, tmp_path: Path):
         """Test that CHM files with failed extraction return None."""
         chm_file = tmp_path / "broken.chm"
         chm_file.write_bytes(b"not a chm")
@@ -643,10 +641,7 @@ class TestBookDetectorMobiFiles:
             assert result.confidence.source == ClassificationSource.BOOK_DETECTOR
             # MOBI files should get suggested_name from title
             assert "suggested_name" in result.extracted_params
-            assert (
-                result.extracted_params["suggested_name"]
-                == "The_Pragmatic_Programmer"
-            )
+            assert result.extracted_params["suggested_name"] == "The_Pragmatic_Programmer"
 
     def test_mobi_file_with_isbn(self, detector: BookDetector, tmp_path: Path):
         """Test MOBI file with ISBN gets high confidence and book lookup."""
@@ -692,13 +687,9 @@ class TestBookDetectorMobiFiles:
             # ISBN match gives 1.0 confidence
             assert result.confidence.value == 1.0
             # Should use title from ISBN lookup for suggested name
-            assert "Eloquent_JavaScript" in result.extracted_params.get(
-                "suggested_name", ""
-            )
+            assert "Eloquent_JavaScript" in result.extracted_params.get("suggested_name", "")
 
-    def test_mobi_extraction_fails_returns_none(
-        self, detector: BookDetector, tmp_path: Path
-    ):
+    def test_mobi_extraction_fails_returns_none(self, detector: BookDetector, tmp_path: Path):
         """Test that MOBI files with failed extraction return None."""
         mobi_file = tmp_path / "broken.mobi"
         mobi_file.write_bytes(b"not a mobi")
