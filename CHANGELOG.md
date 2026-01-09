@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Comprehensive subject mappings for book classification**: Expanded THEMA code mappings to cover all major subject areas
+  - Added humanities (philosophy, ethics, religion, aesthetics, logic, metaphysics)
+  - Added social sciences (sociology, anthropology, politics, education, psychology)
+  - Added arts & literature (visual arts, music, cinema, theatre, poetry, fiction, creative writing)
+  - Added history & geography (ancient, medieval, modern history, biographies)
+  - 100+ new subject keywords with accurate THEMA classification codes
+  - Enables proper classification of educational materials across all disciplines
+
+### Fixed
+
+- **Book detection threshold architecture**: THEMA subject detection now contributes to book scoring
+  - THEMA detection moved BEFORE threshold check instead of after
+  - Subject identification now adds +0.4 to detection score as a strong signal
+  - Fixes issue where low-scoring educational PDFs were rejected before subject analysis
+  - Great Courses PDFs now correctly classified by subject matter (Philosophy, Political Science, etc.)
+- **Default book classification**: Changed fallback from Computing to Reference/Interdisciplinary
+  - Previously all unmatched books defaulted to "U" (Informatique)
+  - Now defaults to "G" (Reference/General) for better semantic accuracy
+- **Electronics & engineering keywords**: Corrected THEMA codes for electronics subjects
+  - Changed from TH (Energy Engineering) to TJ/TJF (Electronic Engineering)
+  - Added specific terms: microprocessor, microcontroller, digital logic, circuits, embedded systems
+  - Prevents electronics books from misclassifying as philosophy/logic
+
+### Added
+
 - **Smart renaming for CHM and MOBI files**: Files are now renamed using their document title during classification
   - BookDetector now processes `.pdf`, `.chm`, and `.mobi` files
   - **CHM files**: Extracts title from HTML content using 7z extraction

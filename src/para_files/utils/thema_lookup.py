@@ -134,13 +134,184 @@ BUSINESS_SUBJECT_MAP: dict[str, str] = {
 
 # Science & Technology (P*, T* codes)
 SCIENCE_SUBJECT_MAP: dict[str, str] = {
+    # Mathematics
     "mathematics": "PB",
+    "mathématiques": "PB",
+    # Physics
     "physics": "PH",
+    "physique": "PH",
+    # Chemistry
     "chemistry": "PN",
+    "chimie": "PN",
+    # Biology
     "biology": "PS",
+    "biologie": "PS",
+    # Engineering & Technology
     "engineering": "T",
-    "electronics": "TH",
-    "electrical engineering": "TH",
+    "ingénierie": "T",
+    # Electronics & Electrical Engineering (TJ codes)
+    "electronics": "TJ",
+    "électronique": "TJ",
+    "electronic engineering": "TJF",
+    "génie électronique": "TJF",
+    "microprocessor": "TJF",  # Digital electronics
+    "microprocessors": "TJF",
+    "microcontroller": "TJF",
+    "microcontrollers": "TJF",
+    "digital logic": "TJFC",
+    "circuit": "TJFC",
+    "circuits": "TJFC",
+    "embedded systems": "TJF",
+    "semiconductor": "TJF",
+    # Electrical Engineering (THR code)
+    "electrical engineering": "THR",
+    "electrotechnique": "THR",
+}
+
+# Humanities & Philosophy (Q* codes)  # noqa: ERA001
+HUMANITIES_SUBJECT_MAP: dict[str, str] = {
+    # Philosophy
+    "philosophy": "QD",
+    "philosophie": "QD",
+    "ethics": "QDTQ",
+    "éthique": "QDTQ",
+    "moral philosophy": "QDTQ",
+    "metaphysics": "QDTJ",
+    "métaphysique": "QDTJ",
+    "epistemology": "QDTK",
+    "épistémologie": "QDTK",
+    "logic": "QDTL",
+    "logique": "QDTL",
+    "aesthetics": "QDTN",
+    "esthétique": "QDTN",
+    "political philosophy": "QDTS",
+    "philosophie politique": "QDTS",
+    "ancient philosophy": "QDHA",
+    "greek philosophy": "QDHA",
+    "western philosophy": "QDHR",
+    # Religion
+    "religion": "Q",
+    "theology": "QR",
+    "théologie": "QR",
+}
+
+# Social Sciences & Politics (J* codes)
+SOCIAL_SCIENCE_SUBJECT_MAP: dict[str, str] = {
+    # Social Sciences
+    "social science": "J",
+    "social sciences": "J",
+    "sciences sociales": "J",
+    "sociology": "JH",
+    "sociologie": "JH",
+    "anthropology": "JH",
+    "anthropologie": "JH",
+    "cultural studies": "JBCC",
+    "études culturelles": "JBCC",
+    "popular culture": "JBCC1",
+    # Politics
+    "politics": "JP",
+    "politique": "JP",
+    "political": "JP",  # Broad match for political topics
+    "political science": "JPA",
+    "science politique": "JPA",
+    "political theory": "JPA",
+    "théorie politique": "JPA",
+    "political thought": "JPA",
+    "political philosophy": "QDTS",
+    "government": "JP",
+    "gouvernement": "JP",
+    "political tradition": "JPA",
+    "political history": "JPA",
+    "public policy": "JPP",
+    "international relations": "JPS",
+    "relations internationales": "JPS",
+    # Famous political philosophers (helps classify books by these thinkers)
+    "hobbes": "JPA",
+    "locke": "JPA",
+    "rousseau": "JPA",
+    "machiavelli": "JPA",
+    "habermas": "JPA",
+    "rawls": "JPA",
+    "marx": "JPA",
+    "montesquieu": "JPA",
+    # Education
+    "education": "JN",
+    "éducation": "JN",
+    "pedagogy": "JN",
+    "pédagogie": "JN",
+    # Psychology
+    "psychology": "JM",
+    "psychologie": "JM",
+    "social psychology": "JMH",
+    "psychologie sociale": "JMH",
+    "communication": "JMHC",
+}
+
+# Arts & Literature (A*, D*, F* codes)
+ARTS_LITERATURE_SUBJECT_MAP: dict[str, str] = {
+    # Arts
+    "art": "A",
+    "arts": "A",
+    "art history": "AGA",
+    "histoire de l'art": "AGA",
+    "visual arts": "AF",
+    "arts visuels": "AF",
+    "performing arts": "AFKP",
+    "arts du spectacle": "AFKP",
+    "photography": "AJ",
+    "photographie": "AJ",
+    "design": "AK",
+    "architecture": "AM",
+    "music": "AV",
+    "musique": "AV",
+    "cinema": "ATFN",
+    "cinéma": "ATFN",
+    "film": "ATFN",
+    "television": "ATFN",
+    "télévision": "ATFN",
+    "theatre": "AT",
+    "théâtre": "AT",
+    # Literature & Writing
+    "literature": "D",
+    "littérature": "D",
+    "literary studies": "DS",
+    "études littéraires": "DS",
+    "creative writing": "WQ",
+    "écriture créative": "WQ",
+    "storytelling": "DN",  # True stories / narrative
+    "narration": "DN",
+    "narrative": "DN",
+    "récit": "DN",
+    "poetry": "DC",
+    "poésie": "DC",
+    "drama": "DD",
+    # Fiction
+    "fiction": "F",
+    "novel": "F",
+    "roman": "F",
+    "science fiction": "FL",
+    "science-fiction": "FL",
+    "sci-fi": "FL",
+    "fantasy": "FM",
+    "thriller": "FH",
+    "historical fiction": "FV",
+}
+
+# History & Geography (N* codes)  # noqa: ERA001
+HISTORY_SUBJECT_MAP: dict[str, str] = {
+    "history": "NH",
+    "histoire": "NH",
+    "world history": "NH",
+    "ancient history": "NHC",
+    "medieval history": "NHCC",
+    "modern history": "NHD",
+    "military history": "NHW",
+    "biography": "DN",
+    "biographie": "DN",
+    "autobiography": "DNB",
+    "autobiographie": "DNB",
+    "geography": "RG",
+    "géographie": "RG",
 }
 
 # Combined mapping
@@ -148,6 +319,10 @@ SUBJECT_TO_THEMA: dict[str, str] = {
     **COMPUTING_SUBJECT_MAP,
     **BUSINESS_SUBJECT_MAP,
     **SCIENCE_SUBJECT_MAP,
+    **HUMANITIES_SUBJECT_MAP,
+    **SOCIAL_SCIENCE_SUBJECT_MAP,
+    **ARTS_LITERATURE_SUBJECT_MAP,
+    **HISTORY_SUBJECT_MAP,
 }
 
 

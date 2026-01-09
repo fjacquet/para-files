@@ -660,6 +660,19 @@ class BookDetector(BaseClassifier):
             score += 0.15
             signals.append(f"size={file_size_mb:.1f}MB")
 
+        # Signal 5: THEMA subject classification (before threshold check)
+        # If we can identify the subject, that's a strong indicator it's a book
+        thema_code = self._detect_thema_code(
+            content, book_info, pdf_meta, filename=metadata.filename
+        )
+        if thema_code:
+            # THEMA detection is a strong signal (+0.4 points)
+            score += 0.4
+            signals.append(f"thema={thema_code}")
+            code_info = self._thema_lookup.get_code_info(thema_code)
+            if code_info:
+                signals.append(f"thema_desc={code_info.CodeDescription[:30]}")
+
         # Check against threshold
         if score < DETECTION_THRESHOLD:
             logger.debug(
@@ -670,23 +683,16 @@ class BookDetector(BaseClassifier):
             )
             return None
 
-        # Detect THEMA classification code
-        thema_code = self._detect_thema_code(
-            content, book_info, pdf_meta, filename=metadata.filename
-        )
-
         # Build category path using THEMA hierarchy
         if thema_code:
-            signals.append(f"thema={thema_code}")
-            code_info = self._thema_lookup.get_code_info(thema_code)
-            if code_info:
-                signals.append(f"thema_desc={code_info.CodeDescription[:30]}")
+            # THEMA code already detected and added to signals above
             category = self._thema_lookup.build_para_path(thema_code)
         else:
-            # Fallback to generic books category
-            thema_code = "U"  # Default to Computing/IT
-            signals.append("thema=U(default)")
-            category = "3_Resources/livres/Informatique"
+            # Fallback to generic reference/interdisciplinary category
+            # G = "Références, informations et sujets interdisciplinaires"  # noqa: ERA001
+            thema_code = "G"  # Generic reference (not Computing)
+            signals.append("thema=G(default)")
+            category = "3_Resources/livres/Divers"
 
         # Determine suggested name if not already set from ISBN
         if not suggested_name and score >= SMART_RENAME_THRESHOLD and title:

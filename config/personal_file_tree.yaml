@@ -155,6 +155,33 @@ routing_rules:
     extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3"]
     destination: "3_Resources/livres/series/Head-First"
 
+  # Educational course materials - VIDEO ONLY (PDFs classified by subject via book detector)
+  # Great Courses videos go to formations, but PDFs/ebooks are classified by their subject
+  great_courses_video:
+    patterns: ["*[Gg]reat [Cc]ourses*", "*The Great Courses*", "*Great Courses*"]
+    extensions: [".mp4", ".mkv", ".avi"]
+    destination: "3_Resources/formations/great-courses"
+
+  teaching_company_video:
+    patterns: ["*[Tt]eaching [Cc]ompany*", "*The Teaching Company*"]
+    extensions: [".mp4", ".mkv", ".avi"]
+    destination: "3_Resources/formations/great-courses"
+
+  # Broader educational course materials (lectures, seminars, workshops)
+  educational_lectures:
+    patterns:
+      [
+        "*[Ll]ecture [Ss]eries*",
+        "*[Ll]ectures on*",
+        "*[Mm]asterclass*",
+        "*[Mm]aster [Cc]lass*",
+        "*[Ww]orkshop*",
+        "*[Ss]eminar*",
+        "*[Tt]utorial [Ss]eries*",
+      ]
+    extensions: [".pdf", ".epub", ".chm", ".djvu", ".mobi", ".azw3", ".mp4", ".mkv"]
+    destination: "3_Resources/formations/educational-courses"
+
   # Major IT publishers
   ebooks_oreilly:
     patterns: ["*O'Reilly*", "*(O'Reilly*", "*OReilly*"]
