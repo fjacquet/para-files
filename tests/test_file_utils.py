@@ -19,6 +19,35 @@ from para_files.utils.file_utils import (
 )
 
 
+class TestExtensionNormalization:
+    """Tests for extension case normalization in FileMetadata."""
+
+    def test_extension_stored_lowercase(self, tmp_path: Path):
+        """FileMetadata.extension is always lowercase regardless of filename case."""
+        f = tmp_path / "document.PDF"
+        f.write_bytes(b"%PDF-1.4 fake")
+        meta = extract_file_metadata(f, extract_exif=False)
+        assert meta.extension == ".pdf"
+
+    def test_extension_lowercase_epub(self, tmp_path: Path):
+        f = tmp_path / "book.EPUB"
+        f.write_bytes(b"PK fake epub")
+        meta = extract_file_metadata(f, extract_exif=False)
+        assert meta.extension == ".epub"
+
+    def test_extension_lowercase_chm(self, tmp_path: Path):
+        f = tmp_path / "manual.CHM"
+        f.write_bytes(b"ITSF fake chm")
+        meta = extract_file_metadata(f, extract_exif=False)
+        assert meta.extension == ".chm"
+
+    def test_mixed_case_extension(self, tmp_path: Path):
+        f = tmp_path / "file.TxT"
+        f.write_text("hello")
+        meta = extract_file_metadata(f, extract_exif=False)
+        assert meta.extension == ".txt"
+
+
 class TestTextExtensions:
     """Tests for TEXT_EXTENSIONS constant."""
 

@@ -169,7 +169,7 @@ def extract_file_metadata(file_path: Path, *, extract_exif: bool = True) -> File
     return FileMetadata(
         path=file_path,
         filename=file_path.name,
-        extension=file_path.suffix,
+        extension=file_path.suffix.lower(),
         size_bytes=stat.st_size,
         modified_at=modified_at,
         created_at=created_at,
