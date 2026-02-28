@@ -112,7 +112,8 @@ class TestMLXEncoderZeroVectorGuard:
             # First call (batch) raises IndexError
             # Subsequent calls (per-text via _encode_single) succeed with 200-char prefix
             if call_count == 1:
-                raise IndexError("sequence length exceeds maximum")
+                msg = "sequence length exceeds maximum"
+                raise IndexError(msg)
             import numpy as np
 
             return np.array([[0.1] * 768 for _ in texts])
@@ -140,7 +141,8 @@ class TestMLXEncoderZeroVectorGuard:
         def side_effect(texts):
             attempts.append(len(texts[0]))
             if len(texts[0]) > 200:
-                raise IndexError("too long")
+                msg = "too long"
+                raise IndexError(msg)
             import numpy as np
 
             return np.array([[0.5] * 768])

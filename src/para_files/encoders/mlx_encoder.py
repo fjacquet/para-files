@@ -84,7 +84,7 @@ class MLXEncoder(DenseEncoder):
         for candidate in candidates:
             try:
                 arr = self._model.encode([candidate])
-                return cast(list[float], arr.tolist()[0])
+                return cast("list[float]", arr.tolist()[0])
             except IndexError:
                 continue
         # Absolute last resort: encode just the first sentence or 100 chars
@@ -92,7 +92,7 @@ class MLXEncoder(DenseEncoder):
         last_chance = text[:100] if text else "document"
         try:
             arr = self._model.encode([last_chance])
-            return cast(list[float], arr.tolist()[0])
+            return cast("list[float]", arr.tolist()[0])
         except Exception:  # noqa: BLE001
             logger.exception("MLX encoder failed on 100-char text — model may be broken")
             # Only now do we return a zero vector, and we log it as an error
@@ -121,9 +121,7 @@ class MLXEncoder(DenseEncoder):
             embeddings_array = self._model.encode(truncated_texts)
         except IndexError as e:
             # Batch failed — likely one problematic text. Retry per-text.
-            logger.warning(
-                "Batch encode failed (token limit), retrying per-text: {}", e
-            )
+            logger.warning("Batch encode failed (token limit), retrying per-text: {}", e)
             return [self._encode_single(t) for t in texts]
 
         # Convert to list of lists
