@@ -21,6 +21,7 @@ from para_files.types import (
     Confidence,
     FileMetadata,
 )
+from para_files.utils.placeholder_resolver import clean_unreplaced_placeholders
 
 
 if TYPE_CHECKING:
@@ -501,12 +502,7 @@ class TaxonomyClassifier(BaseClassifier):
             result = result.replace("{day}", f"{date.day:02d}")
             result = result.replace("{DD}", f"{date.day:02d}")
 
-        # Remove any unresolved placeholders
-        result = re.sub(r"\{[^}]+\}", "", result)
-
-        # Clean up double slashes and trailing slashes
-        result = re.sub(r"/+", "/", result)
-        return result.rstrip("/")
+        return clean_unreplaced_placeholders(result)
 
     def classify(
         self,

@@ -15,6 +15,7 @@ from para_files.classifiers.rules_engine import (
     RulesEngineClassifier,
 )
 from para_files.types import ClassificationSource, FileMetadata, RoutingRule, RuleIssuer
+from para_files.utils.placeholder_resolver import clean_unreplaced_placeholders
 
 
 def make_metadata(**kwargs: object) -> FileMetadata:
@@ -509,64 +510,55 @@ class TestCreateResult:
 
 
 class TestCleanUnreplacedLocation:
-    """Test _clean_unreplaced_location method."""
+    """Test clean_unreplaced_placeholders for location placeholders."""
 
     def test_removes_location_placeholder(self) -> None:
         """Test removes {location} placeholder."""
-        classifier = RulesEngineClassifier({})
-        result = classifier._clean_unreplaced_location("photos/{location}/2024")
+        result = clean_unreplaced_placeholders("photos/{location}/2024")
         assert result == "photos/2024"
 
     def test_removes_country_placeholder(self) -> None:
         """Test removes {country} placeholder."""
-        classifier = RulesEngineClassifier({})
-        result = classifier._clean_unreplaced_location("photos/{country}/2024")
+        result = clean_unreplaced_placeholders("photos/{country}/2024")
         assert result == "photos/2024"
 
     def test_removes_both_placeholders(self) -> None:
         """Test removes both {country} and {location}."""
-        classifier = RulesEngineClassifier({})
-        result = classifier._clean_unreplaced_location("photos/{country}/{location}/2024")
+        result = clean_unreplaced_placeholders("photos/{country}/{location}/2024")
         assert result == "photos/2024"
 
     def test_cleans_double_slashes(self) -> None:
         """Test cleans up double slashes."""
-        classifier = RulesEngineClassifier({})
-        result = classifier._clean_unreplaced_location("photos//2024")
+        result = clean_unreplaced_placeholders("photos//2024")
         assert result == "photos/2024"
 
     def test_removes_trailing_slash(self) -> None:
         """Test removes trailing slash."""
-        classifier = RulesEngineClassifier({})
-        result = classifier._clean_unreplaced_location("photos/2024/")
+        result = clean_unreplaced_placeholders("photos/2024/")
         assert result == "photos/2024"
 
 
 class TestCleanUnreplacedDate:
-    """Test _clean_unreplaced_date method."""
+    """Test clean_unreplaced_placeholders for date placeholders."""
 
     def test_removes_yyyy_placeholder(self) -> None:
         """Test removes {YYYY} placeholder."""
-        classifier = RulesEngineClassifier({})
-        result = classifier._clean_unreplaced_date("photos/{YYYY}/images")
+        result = clean_unreplaced_placeholders("photos/{YYYY}/images")
         assert result == "photos/images"
 
     def test_removes_year_placeholder(self) -> None:
         """Test removes {year} placeholder."""
-        classifier = RulesEngineClassifier({})
-        result = classifier._clean_unreplaced_date("photos/{year}/images")
+        result = clean_unreplaced_placeholders("photos/{year}/images")
         assert result == "photos/images"
 
     def test_removes_mm_placeholder(self) -> None:
         """Test removes {MM} placeholder."""
-        classifier = RulesEngineClassifier({})
-        result = classifier._clean_unreplaced_date("photos/2024/{MM}/images")
+        result = clean_unreplaced_placeholders("photos/2024/{MM}/images")
         assert result == "photos/2024/images"
 
     def test_removes_dd_placeholder(self) -> None:
         """Test removes {DD} placeholder."""
-        classifier = RulesEngineClassifier({})
-        result = classifier._clean_unreplaced_date("photos/2024/06/{DD}")
+        result = clean_unreplaced_placeholders("photos/2024/06/{DD}")
         assert result == "photos/2024/06"
 
 

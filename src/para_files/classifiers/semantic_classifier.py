@@ -22,6 +22,7 @@ from para_files.types import (
     Confidence,
     FileMetadata,
 )
+from para_files.utils.placeholder_resolver import clean_unreplaced_placeholders
 
 
 # Minimum content length for semantic matching
@@ -84,10 +85,7 @@ def _resolve_pattern(para_pattern: str, extracted_params: dict[str, str]) -> str
     for key, value in extracted_params.items():
         category_path = category_path.replace(f"{{{key}}}", value)
 
-    # Remove remaining placeholders
-    category_path = re.sub(r"\{[^}]+\}", "", category_path)
-    # Clean up double slashes
-    return re.sub(r"/+", "/", category_path).rstrip("/")
+    return clean_unreplaced_placeholders(category_path)
 
 
 class SemanticClassifier(BaseClassifier):

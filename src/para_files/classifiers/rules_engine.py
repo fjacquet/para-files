@@ -23,6 +23,7 @@ from para_files.types import (
     RuleIssuer,
 )
 from para_files.utils.geolocation import LocationInfo, reverse_geocode
+from para_files.utils.placeholder_resolver import clean_unreplaced_placeholders
 from para_files.utils.technology_extractor import TechnologyExtractor
 
 
@@ -253,8 +254,7 @@ class RulesEngineClassifier(BaseClassifier):
             category = category.replace(f"{{{key}}}", value)
 
         # Clean up unreplaced placeholders
-        category = self._clean_unreplaced_location(category)
-        category = self._clean_unreplaced_date(category)
+        category = clean_unreplaced_placeholders(category)
 
         return ClassificationResult(
             category=category,
@@ -288,50 +288,6 @@ class RulesEngineClassifier(BaseClassifier):
                 location_info.city or location_info.region,
             )
         return location_info
-
-    def _clean_unreplaced_location(self, category: str) -> str:
-        """Remove unreplaced {location} and {country} placeholders and clean up path.
-
-        Handles patterns like:
-        - "path/{country}/{location}/more" → "path/more"
-        - "path/{location}" → "path"
-
-        Args:
-            category: Category path possibly containing {location} or {country}.
-
-        Returns:
-            Cleaned category path without empty segments.
-        """
-        # Remove {location} and {country} placeholders if still present
-        category = category.replace("{location}", "")
-        category = category.replace("{country}", "")
-        # Clean up double slashes
-        category = re.sub(r"/+", "/", category)
-        # Remove trailing slash
-        return category.rstrip("/")
-
-    def _clean_unreplaced_date(self, category: str) -> str:
-        """Remove unreplaced date placeholders and clean up path.
-
-        Handles patterns like:
-        - "path/{YYYY}/more" → "path/more"
-        - "path/{year}" → "path"
-
-        Args:
-            category: Category path possibly containing {YYYY}, {year}, {MM}, {DD}.
-
-        Returns:
-            Cleaned category path without empty segments.
-        """
-        # Remove date placeholders if still present
-        category = category.replace("{YYYY}", "")
-        category = category.replace("{year}", "")
-        category = category.replace("{MM}", "")
-        category = category.replace("{DD}", "")
-        # Clean up double slashes
-        category = re.sub(r"/+", "/", category)
-        # Remove trailing slash
-        return category.rstrip("/")
 
     def _get_date(
         self,
