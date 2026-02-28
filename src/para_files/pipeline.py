@@ -30,6 +30,7 @@ from para_files.types import (
     ClassificationSource,
     Confidence,
     FileMetadata,
+    SignalResult,
 )
 from para_files.utils.filename_detector import is_generic_filename
 from para_files.utils.ocr_metadata import extract_metadata
@@ -191,21 +192,58 @@ class ClassificationPipeline:
         """
         self._ensure_initialized()
 
-        # Try each classifier in order
+        signals: list[SignalResult] = []
+        winner: ClassificationResult | None = None
+
+        # Run all classifiers, recording each result, winner is first match
         for classifier in self._classifiers:
+            raw_source = getattr(classifier, "source", ClassificationSource.DEFAULT)
+            signal_source = (
+                raw_source
+                if isinstance(raw_source, ClassificationSource)
+                else ClassificationSource.DEFAULT
+            )
             try:
                 result = classifier.classify(content, metadata)
                 if result is not None:
-                    logger.debug(
-                        "Classified by {}: {} ({:.0f}%)",
-                        classifier.name,
-                        result.category,
-                        result.confidence.value * 100,
+                    signals.append(
+                        SignalResult(
+                            source=signal_source,
+                            name=classifier.name,
+                            score=result.confidence.value,
+                            matched=True,
+                        )
                     )
-                    return result
+                    if winner is None:
+                        winner = result
+                        logger.debug(
+                            "Classified by {}: {} ({:.0f}%)",
+                            classifier.name,
+                            result.category,
+                            result.confidence.value * 100,
+                        )
+                else:
+                    signals.append(
+                        SignalResult(
+                            source=signal_source,
+                            name=classifier.name,
+                            score=0.0,
+                            matched=False,
+                        )
+                    )
             except Exception:  # noqa: BLE001
                 logger.exception("Classifier {} failed", classifier.name)
-                continue
+                signals.append(
+                    SignalResult(
+                        source=signal_source,
+                        name=classifier.name,
+                        score=0.0,
+                        matched=False,
+                    )
+                )
+
+        if winner is not None:
+            return winner.model_copy(update={"signals": signals})
 
         # Default to 0_Inbox
         logger.debug("No classifier matched, defaulting to 0_Inbox")
@@ -215,6 +253,7 @@ class ClassificationPipeline:
                 value=0.0,
                 source=ClassificationSource.DEFAULT,
             ),
+            signals=signals,
         )
 
     def classify_file(self, file_path: Path) -> ClassificationResult:
