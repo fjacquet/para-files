@@ -63,6 +63,11 @@ def _format_move_result_json(
     }
     if move_result.message:
         output["message"] = move_result.message
+    if result.signals:
+        output["signals"] = [
+            {"source": s.source.value, "name": s.name, "score": s.score, "matched": s.matched}
+            for s in result.signals
+        ]
     if result.route_name:
         output["route_name"] = result.route_name
     return output
@@ -115,6 +120,8 @@ def _print_move_result(
     result: ClassificationResult,
     move_result: MoveResult,
     action_verb: str,
+    *,
+    verbose: bool = False,
 ) -> None:
     """Print move result to console.
 
@@ -125,12 +132,17 @@ def _print_move_result(
         result: The classification result.
         move_result: The result of the move operation.
         action_verb: Verb to use in output ("Moved", "Copied", etc.)
+        verbose: If True, show per-classifier signal breakdown.
     """
     if move_result.success:
         typer.echo(f"{action_verb}: {file_path.name}")
         typer.echo(f"  -> {move_result.destination}")
         conf = result.confidence
         typer.echo(f"  Classification: {result.category} ({conf.value:.0%})")
+        if verbose and result.signals:
+            for s in result.signals:
+                marker = "[matched]" if s.matched else "[      ]"
+                typer.echo(f"    {marker} {s.name}: {s.score:.0%}")
     else:
         typer.echo(f"Failed: {file_path.name} - {move_result.message}", err=True)
 
@@ -148,6 +160,7 @@ def _handle_move_file(
     smart_rename: bool,
     skip_unclassifiable: bool = False,
     output_json: bool,
+    verbose: bool = False,
 ) -> tuple[bool, bool]:
     """Handle a single file in move command.
 
@@ -166,6 +179,7 @@ def _handle_move_file(
         smart_rename: If True, use intelligent naming.
         skip_unclassifiable: If True, skip files that can't be classified.
         output_json: If True, collect results for JSON output.
+        verbose: If True, show per-classifier signal breakdown.
 
     Returns:
         Tuple of (success, skipped) - skipped is True if file was skipped
@@ -211,7 +225,7 @@ def _handle_move_file(
             target_dir = pipeline.get_target_path(result)
             results.append(_format_move_result_json(file_path, result, target_dir, move_result))
         else:
-            _print_move_result(file_path, result, move_result, action_verb)
+            _print_move_result(file_path, result, move_result, action_verb, verbose=verbose)
 
     except Exception:  # noqa: BLE001
         logger.exception("Failed to process {}", file_path)
@@ -366,6 +380,7 @@ def move(
             smart_rename=smart_rename,
             skip_unclassifiable=skip_unclassifiable,
             output_json=output_json,
+            verbose=verbose,
         )
         if skipped:
             skip_count += 1

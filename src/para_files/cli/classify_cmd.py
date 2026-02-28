@@ -237,13 +237,16 @@ def classify(
     # Use parallel or sequential processing based on max_workers
     if max_workers > 1 and len(expanded_files) > 1:
         results = _classify_files_parallel(
-            expanded_files, pipeline, max_workers, output_json=output_json,
-            verbose=verbose, dry_run=dry_run
+            expanded_files,
+            pipeline,
+            max_workers,
+            output_json=output_json,
+            verbose=verbose,
+            dry_run=dry_run,
         )
     else:
         results = _classify_files_sequential(
-            expanded_files, pipeline, output_json=output_json,
-            verbose=verbose, dry_run=dry_run
+            expanded_files, pipeline, output_json=output_json, verbose=verbose, dry_run=dry_run
         )
 
     if output_json:

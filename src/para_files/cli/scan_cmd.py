@@ -32,6 +32,7 @@ def _classify_file_for_scan(
     stats: dict[str, int],
     *,
     output_json: bool,
+    verbose: bool = False,
 ) -> dict[str, Any] | None:
     """Classify a single file for scan command.
 
@@ -43,6 +44,7 @@ def _classify_file_for_scan(
         pipeline: The classification pipeline.
         stats: Dictionary to update with classification source counts.
         output_json: If True, return dict for JSON output.
+        verbose: If True, show per-classifier signal breakdown.
 
     Returns:
         Classification result dict if output_json is True, else None.
@@ -64,11 +66,25 @@ def _classify_file_for_scan(
             }
             if result.route_name:
                 output["route_name"] = result.route_name
+            if result.signals:
+                output["signals"] = [
+                    {
+                        "source": s.source.value,
+                        "name": s.name,
+                        "score": s.score,
+                        "matched": s.matched,
+                    }
+                    for s in result.signals
+                ]
             return output
 
         confidence_pct = f"{result.confidence.value:.0%}"
         typer.echo(f"📄 {file_path.name}")
         typer.echo(f"   → {result.category} ({confidence_pct} {source})")
+        if verbose and result.signals:
+            for s in result.signals:
+                marker = "[matched]" if s.matched else "[      ]"
+                typer.echo(f"      {marker} {s.name}: {s.score:.0%}")
     except Exception as e:  # noqa: BLE001
         logger.warning("Failed to classify {}: {}", file_path.name, e)
         if output_json:
@@ -78,6 +94,51 @@ def _classify_file_for_scan(
                 "error": str(e),
             }
     return None
+
+
+def _scan_files_parallel(
+    files: list[Path],
+    pipeline: ClassificationPipeline,
+    stats: dict[str, int],
+    max_workers: int,
+    *,
+    output_json: bool,
+    verbose: bool = False,
+) -> list[dict[str, Any]]:
+    """Classify files in parallel for the scan command.
+
+    Args:
+        files: List of file paths to scan.
+        pipeline: The classification pipeline.
+        stats: Dictionary to update with classification source counts.
+        max_workers: Maximum number of concurrent workers.
+        output_json: If True, suppress console output (for JSON mode).
+        verbose: If True, show per-classifier signal breakdown.
+
+    Returns:
+        List of classification result dictionaries.
+    """
+    results: list[dict[str, Any]] = []
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(_classify_single_file, f, pipeline): f for f in files}
+        for future in as_completed(futures):
+            file_path = futures[future]
+            result_dict = future.result()
+            if "error" not in result_dict:
+                source = result_dict.get("source", "unknown")
+                stats[source] = stats.get(source, 0) + 1
+                results.append(result_dict)
+                if not output_json:
+                    conf_pct = f"{result_dict['confidence']:.0%}"
+                    typer.echo(f"📄 {file_path.name}")
+                    typer.echo(f"   → {result_dict['category']} ({conf_pct} {source})")
+                    if verbose and result_dict.get("signals"):
+                        for s in result_dict["signals"]:
+                            marker = "[matched]" if s["matched"] else "[      ]"
+                            typer.echo(f"      {marker} {s['name']}: {s['score']:.0%}")
+            elif not output_json:
+                typer.echo(f"⚠️ {file_path.name}: {result_dict.get('error')}")
+    return results
 
 
 def _print_scan_summary(
@@ -165,28 +226,14 @@ def scan(
 
     # Use parallel processing if max_workers > 1
     if max_workers > 1 and len(files) > 1:
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {executor.submit(_classify_single_file, f, pipeline): f for f in files}
-            for future in as_completed(futures):
-                file_path = futures[future]
-                result_dict = future.result()
-                if "error" not in result_dict:
-                    # Update stats
-                    source = result_dict.get("source", "unknown")
-                    stats[source] = stats.get(source, 0) + 1
-                    results.append(result_dict)
-                    # Print result immediately if not JSON mode
-                    if not output_json:
-                        conf_pct = f"{result_dict['confidence']:.0%}"
-                        typer.echo(f"📄 {file_path.name}")
-                        typer.echo(f"   → {result_dict['category']} ({conf_pct} {source})")
-                elif not output_json:
-                    typer.echo(f"⚠️ {file_path.name}: {result_dict.get('error')}")
+        results = _scan_files_parallel(
+            files, pipeline, stats, max_workers, output_json=output_json, verbose=verbose
+        )
     else:
         # Sequential processing (original behavior)
         for file_path in files:
             file_result = _classify_file_for_scan(
-                file_path, pipeline, stats, output_json=output_json
+                file_path, pipeline, stats, output_json=output_json, verbose=verbose
             )
             if file_result is not None:
                 results.append(file_result)
