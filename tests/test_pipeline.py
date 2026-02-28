@@ -153,6 +153,76 @@ class TestClassificationPipeline:
         pipeline._ensure_initialized()
         assert pipeline._classifiers == first_classifiers
 
+    def test_pipeline_skips_failing_classifier_and_continues(self, mock_config: Config):
+        """Test that a failing classifier is skipped and the next classifier runs."""
+        pipeline = ClassificationPipeline(mock_config)
+        pipeline._ensure_initialized()
+
+        failing = MagicMock()
+        failing.name = "failing_classifier"
+        failing.classify.side_effect = RuntimeError("boom")
+
+        passing = MagicMock()
+        passing.name = "passing_classifier"
+        passing.classify.return_value = ClassificationResult(
+            category="3_Resources/test",
+            confidence=Confidence(value=0.85, source=ClassificationSource.TAXONOMY_CLASSIFIER),
+        )
+
+        # Replace (not insert) — only these two classifiers run
+        pipeline._classifiers = [failing, passing]
+
+        result = pipeline.classify("any content")
+
+        assert result.category == "3_Resources/test"
+        assert result.confidence.source == ClassificationSource.TAXONOMY_CLASSIFIER
+        assert failing.classify.call_count == 1
+        assert passing.classify.call_count == 1
+
+    def test_pipeline_returns_default_when_only_classifier_fails(self, mock_config: Config):
+        """Test that pipeline returns 0_Inbox when the only classifier raises."""
+        pipeline = ClassificationPipeline(mock_config)
+        pipeline._ensure_initialized()
+
+        failing = MagicMock()
+        failing.name = "failing_classifier"
+        failing.classify.side_effect = RuntimeError("boom")
+
+        pipeline._classifiers = [failing]
+
+        result = pipeline.classify("any content")
+
+        assert result.category == "0_Inbox"
+        assert result.confidence.source == ClassificationSource.DEFAULT
+        assert result.confidence.value == 0.0
+
+    def test_pipeline_returns_default_when_all_classifiers_fail(self, mock_config: Config):
+        """Test that pipeline returns 0_Inbox when all classifiers raise, without crashing."""
+        pipeline = ClassificationPipeline(mock_config)
+        pipeline._ensure_initialized()
+
+        failing_1 = MagicMock()
+        failing_1.name = "failing_classifier_1"
+        failing_1.classify.side_effect = ValueError("classifier 1 failed")
+
+        failing_2 = MagicMock()
+        failing_2.name = "failing_classifier_2"
+        failing_2.classify.side_effect = ValueError("classifier 2 failed")
+
+        failing_3 = MagicMock()
+        failing_3.name = "failing_classifier_3"
+        failing_3.classify.side_effect = ValueError("classifier 3 failed")
+
+        pipeline._classifiers = [failing_1, failing_2, failing_3]
+
+        result = pipeline.classify("any content")
+
+        assert result.category == "0_Inbox"
+        assert result.confidence.source == ClassificationSource.DEFAULT
+        assert failing_1.classify.call_count == 1
+        assert failing_2.classify.call_count == 1
+        assert failing_3.classify.call_count == 1
+
 
 class TestClassificationPipelineWithMocks:
     """Tests for pipeline with mocked classifiers."""
