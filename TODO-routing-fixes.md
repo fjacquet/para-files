@@ -3,6 +3,7 @@
 ## Problem Summary
 
 Images/photos are being misrouted to fiscal folders during rescan:
+
 - `20140314204821-Honey Moon.png` → should be in photos
 - `2022-01-17 20.58.20.heic` → should be in photos
 - `acl-add.png`, `acl1.png`, `acl2.png` → should be in screenshots
@@ -25,6 +26,7 @@ Images/photos are being misrouted to fiscal folders during rescan:
 **Problem:** Uses `TaxonomyClassifier` directly, bypassing rules engine.
 
 **Solution:** Use `ClassificationPipeline` which includes all classifiers in order:
+
 1. ValidatedDBClassifier (100%)
 2. RulesEngineClassifier (95%) ← This handles photo extensions
 3. BookDetector (92%)
@@ -43,6 +45,7 @@ Images/photos are being misrouted to fiscal folders during rescan:
 **Problem:** `source: "0_Inbox"` is defined in YAML but never checked.
 
 **Solution:** Add source path validation in `_matches_extension_and_pattern()`:
+
 ```python
 def _matches_extension_and_pattern(self, rule: RoutingRule, metadata: FileMetadata) -> bool:
     # Check source constraint if defined
@@ -74,6 +77,7 @@ def _matches_extension_and_pattern(self, rule: RoutingRule, metadata: FileMetada
 **File:** `config/personal_file_tree.yaml`
 
 **Duplicates found:**
+
 - `credit_agricole` (2x)
 - `vmware_documentation` (3x)
 - `bleu_marine_immobilier` (2x)

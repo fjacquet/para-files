@@ -3,6 +3,7 @@
 ## Résumé
 
 Simplifier et centraliser la classification para-files:
+
 - **documents.json** - Source unique pour classification sémantique (catégories + keywords + issuers)
 - **thema.json** - Classification internationale des livres (Thema v1.6)
 - **personal_file_tree.yaml** - Réduit à ~100 lignes (config technique + routing par extension)
@@ -56,6 +57,7 @@ Après (4 signaux): Rules → BookDetector+Thema → DocumentTaxonomy → LLM (o
 ## Logique de Routage
 
 ### 1. Livres (ISBN présent)
+
 ```
 ISBN → OpenLibrary subjects → Thema code → Hiérarchie
 → 3_Resources/livres/{TopLevel}/{Child}
@@ -63,6 +65,7 @@ Exemple: 3_Resources/livres/Informatique/Programmation
 ```
 
 ### 2. Documents (keywords + issuers)
+
 ```
 Content → Match keywords/issuers → para_pattern + retention
 → {para_pattern} avec placeholders résolus
@@ -70,6 +73,7 @@ Exemple: 4_Archives/banques/UBS/2025
 ```
 
 ### 3. Règles techniques (YAML)
+
 ```
 Extension/Pattern → routing_rules
 → 4_Archives/photos/{YYYY}/{MM}/{DD}
@@ -80,10 +84,13 @@ Extension/Pattern → routing_rules
 ## Fichiers à Créer (5 fichiers)
 
 ### 1. `src/para_files/taxonomies/__init__.py`
+
 Package + exports
 
 ### 2. `src/para_files/taxonomies/models.py`
+
 Pydantic models (DRY - un seul fichier):
+
 ```python
 class Issuer(BaseModel):
     name: str
@@ -108,6 +115,7 @@ class ThemaCode(BaseModel):
 ```
 
 ### 3. `src/para_files/taxonomies/loader.py`
+
 ```python
 class TaxonomyLoader:
     def load_documents(path: Path) -> list[DocumentCategory]
@@ -115,7 +123,9 @@ class TaxonomyLoader:
 ```
 
 ### 4. `src/para_files/classifiers/taxonomy_classifier.py`
+
 Classifier unique qui gère documents + issuers:
+
 ```python
 class TaxonomyClassifier(BaseClassifier):
     """Remplace DomainKB + SemanticRouter."""
@@ -126,7 +136,9 @@ class TaxonomyClassifier(BaseClassifier):
 ```
 
 ### 5. `src/para_files/classifiers/mlx_llm_classifier.py`
+
 Remplace LLMFallback (Ollama) par MLX-LM natif:
+
 ```python
 class MLXLLMClassifier(BaseClassifier):
     """LLM fallback via mlx-lm (pas Ollama)."""
@@ -149,7 +161,9 @@ class MLXLLMClassifier(BaseClassifier):
 ## Fichiers à Modifier
 
 ### 1. `config/documents.json` - Étendre avec issuers
+
 Migrer tous les known_issuers du YAML:
+
 ```json
 {
   "categories": [{
@@ -167,7 +181,9 @@ Migrer tous les known_issuers du YAML:
 ```
 
 ### 2. `config/personal_file_tree.yaml` - Simplifier (~100 lignes)
+
 Garder uniquement:
+
 ```yaml
 version: "2.0"
 config:
@@ -189,6 +205,7 @@ routing_rules:
 **Supprimer**: known_issuers, routes/utterances, inbox/projects/areas/resources/archives
 
 ### 3. `src/para_files/pipeline.py` - Simplifier
+
 ```python
 # Avant: 6 classifiers
 # Après: 3 classifiers
@@ -200,13 +217,16 @@ self._classifiers = [
 ```
 
 ### 4. `src/para_files/classifiers/book_detector.py`
+
 Ajouter support Thema pour générer le path hiérarchique.
 
 ### 5. `src/para_files/reference_tree.py` - Simplifier
+
 Charger uniquement config + routing_rules depuis YAML.
 Les taxonomies viennent du TaxonomyLoader.
 
 ### 6. `pyproject.toml` - Ajouter mlx-lm
+
 ```toml
 dependencies = [
     "mlx-lm>=0.19",  # Pour LLM fallback natif
@@ -215,6 +235,7 @@ dependencies = [
 ```
 
 ### 7. Supprimer (plus utilisés)
+
 - `src/para_files/classifiers/domain_kb.py` → remplacé par TaxonomyClassifier
 - `src/para_files/classifiers/semantic_router.py` → remplacé par TaxonomyClassifier
 - `src/para_files/classifiers/validated_db.py` → plus nécessaire
@@ -239,22 +260,26 @@ Fixtures: `tests/fixtures/test_documents.json`, `tests/fixtures/test_thema.json`
 ## Séquence d'Implémentation (4 phases)
 
 ### Phase 1: Migration données (config/)
+
 1. Étendre `documents.json` avec issuers du YAML
 2. Simplifier `personal_file_tree.yaml` (~100 lignes)
 3. Valider que les 2 fichiers sont cohérents
 
 ### Phase 2: Nouveau code (src/)
+
 1. Créer `taxonomies/models.py` (Pydantic)
 2. Créer `taxonomies/loader.py`
 3. Créer `classifiers/taxonomy_classifier.py`
 4. Modifier `book_detector.py` pour Thema
 
 ### Phase 3: Simplifier pipeline
+
 1. Modifier `pipeline.py` (3 classifiers)
 2. Modifier `reference_tree.py` (YAML minimal)
 3. Supprimer `domain_kb.py`, `semantic_router.py`, `validated_db.py`
 
 ### Phase 4: Documentation
+
 1. Mettre à jour `SKILL.md`
 2. Mettre à jour `docs/`
 3. Mettre à jour `CHANGELOG.md`
@@ -278,6 +303,7 @@ config:
 ```
 
 **Modèles recommandés** (tous via mlx-lm):
+
 - `mlx-community/Qwen2.5-1.5B-Instruct-4bit` - Rapide, petit (~1GB)
 - `mlx-community/Phi-3.5-mini-instruct-4bit` - Bon équilibre (~2GB)
 - `mlx-community/Llama-3.2-3B-Instruct-4bit` - Plus capable (~2GB)

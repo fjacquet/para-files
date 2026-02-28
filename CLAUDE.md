@@ -302,4 +302,3 @@ uv run pytest -vv tests/
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
 - **[CHANGELOG.md](CHANGELOG.md)** - Version history
 - **[docs/](docs/)** - Complete user documentation
-

@@ -5,6 +5,7 @@
 ## APIs & External Services
 
 **ISBN Metadata Lookup:**
+
 - Google Books API (via isbnlib)
   - SDK/Client: `isbnlib` 3.10.14+
   - Usage: `src/para_files/utils/isbn_lookup.py` - BookInfo lookup via lookup_isbn()
@@ -12,6 +13,7 @@
   - Credentials: None required (public API)
 
 **Book Classification:**
+
 - Thema (international book classification system)
   - Data source: `config/thema.json` - Pre-loaded 9,187 classification codes
   - Usage: `src/para_files/taxonomies/models.py` - ThemaTaxonomy model
@@ -19,6 +21,7 @@
   - Credentials: None (offline data)
 
 **Reverse Geocoding:**
+
 - geopy (OSM Nominatim, fallback providers)
   - SDK/Client: `geopy` 2.4.1+
   - Usage: `src/para_files/utils/geolocation.py` - reverse_geocode() function
@@ -30,15 +33,18 @@
 ## Data Storage
 
 **Databases:**
+
 - None (no persistent relational database)
 
 **File Storage:**
+
 - Local filesystem only
   - PARA folder structure: `$PARA_ROOT/0_Inbox, 1_Projects, 2_Areas, 3_Resources, 4_Archives`
   - Cache: `~/.cache/para-files/` - Geolocation SQLite DB, HuggingFace model cache
   - Logs: `$PARA_ROOT/logs/operations.log` (JSON format with rotation)
 
 **Caching:**
+
 - HuggingFace transformers cache: `~/.cache/huggingface/` (MLX models)
 - In-memory: LRU caches for YAML parsing, geolocation lookups
 - Persistent: SQLite geolocation cache at ~/.cache/para-files/geolocation.db
@@ -46,6 +52,7 @@
 ## Machine Learning Models
 
 **Embedding Models:**
+
 - MLX embedding models (mlx-community registry)
   - Default: `mlx-community/nomic-embed-text-v1.5` (768-dimensional)
   - Configurable via: PARA_FILES_MLX_MODEL_NAME environment variable
@@ -57,6 +64,7 @@
   - Used by: `src/para_files/classifiers/semantic_classifier.py` - Signal 4 semantic routing
 
 **Language Models (Optional LLM Fallback):**
+
 - MLX-LM native models (recommended):
   - Default: `mlx-community/Qwen2.5-1.5B-Instruct-4bit` (1-2GB)
   - Alternatives: Phi-3.5-mini, Llama-3.2-3B (all 4-bit quantized)
@@ -71,6 +79,7 @@
 ## Authentication & Identity
 
 **Auth Provider:**
+
 - None (no authentication required)
 - ISBN/book lookup: Public APIs (no credentials)
 - Geocoding: Public APIs (no authentication, but rate-limited)
@@ -79,9 +88,11 @@
 ## Monitoring & Observability
 
 **Error Tracking:**
+
 - None (no external service integration)
 
 **Logs:**
+
 - Local file-based: `$PARA_ROOT/logs/operations.log` (JSON format)
   - Framework: loguru
   - Rotation: Size-based (default: 10 MB)
@@ -92,14 +103,17 @@
 ## CI/CD & Deployment
 
 **Hosting:**
+
 - None (local macOS application only)
 
 **CI Pipeline:**
+
 - GitHub Actions (defined in .github/workflows/)
 - Triggered on: Pull requests, pushes to maincd
 - Jobs: Lint (Ruff), Type check (mypy), Test (pytest)
 
 **Code Quality Gates:**
+
 - Linting: Ruff (pre-commit hook + CI)
 - Type checking: mypy strict mode (pre-commit hook + CI)
 - Security: bandit + gitleaks (pre-commit hooks)
@@ -109,14 +123,17 @@
 ## Webhooks & Callbacks
 
 **Incoming:**
+
 - None
 
 **Outgoing:**
+
 - None
 
 ## Validated Database
 
 **Manual Mappings:**
+
 - Path: PARA_FILES_VALIDATED_DB_PATH (optional JSON file)
 - Format: `{"sender@domain.com": "2_Areas/Category/Path"}`
 - Purpose: Manual overrides for known senders (highest priority in classification pipeline)
@@ -128,6 +145,7 @@
 **File:** `config/personal_file_tree.yaml`
 
 **Sections:**
+
 1. `config:` - Settings overrides (PARA root, MLX model, LLM settings, etc.)
 2. `routes:` - Semantic routes (category descriptions for embedding similarity)
 3. `rules:` - Glob pattern matching rules (filename/path patterns → categories)
@@ -136,6 +154,7 @@
 6. `categories:` - PARA folder descriptions and metadata
 
 **Integration Points:**
+
 - Loaded by: `src/para_files/reference_tree.py` - ReferenceTree class
 - Configuration layer: `src/para_files/config.py` - load_config() uses YAML config section
 - Used by: All classifiers (RulesEngineClassifier, SemanticClassifier, DomainClassifier)
@@ -143,6 +162,7 @@
 ## External Files & Taxonomies
 
 **Document Taxonomy:**
+
 - File: `config/documents.json` (69.6KB)
 - Source: Swiss administrative document taxonomy
 - Format: JSON
@@ -150,6 +170,7 @@
 - Integration: `src/para_files/taxonomies/loader.py` - TaxonomyLoader.load_documents()
 
 **Book Taxonomy:**
+
 - File: `config/thema.json` (3.6MB)
 - Source: Thema Classification Editorial Board (v1.6, 9,187 codes)
 - Format: JSON with nested hierarchies
@@ -160,6 +181,7 @@
 ## Platform-Specific Integrations
 
 **macOS Vision Framework:**
+
 - Framework: Vision (PyObjC binding)
 - Package: `pyobjc-framework-vision` 12.1+
 - Usage: OCR text extraction from images/PDFs
@@ -168,12 +190,14 @@
 - Features: Language detection, confidence scoring
 
 **macOS Cocoa Framework:**
+
 - Framework: Cocoa
 - Package: `pyobjc-framework-cocoa` 12.1+
 - Usage: macOS-specific file system operations
 - Platform constraint: macOS only
 
 **macOS Quartz Framework:**
+
 - Framework: Quartz/CoreGraphics
 - Package: `pyobjc-framework-quartz` 12.1+
 - Usage: Low-level graphics/PDF rendering operations
@@ -182,12 +206,13 @@
 ## Async HTTP Client
 
 **Library:** httpx 0.28.1+
+
 - Purpose: Async HTTP requests for ISBN/metadata lookups
 - Integration: Used by isbnlib indirectly for API calls
 - Credentials: None (public APIs)
 - Timeout: Varies by integration (5 seconds for geopy)
 
-## No External Integrations For:
+## No External Integrations For
 
 - **Email:** Not integrated
 - **Cloud storage:** Not integrated (local filesystem only)

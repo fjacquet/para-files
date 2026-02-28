@@ -7,6 +7,7 @@
 **Overall:** 5-Signal Classification Pipeline with Cascade Matching
 
 **Key Characteristics:**
+
 - Deterministic multi-stage classifier pipeline: first match wins
 - Content-agnostic classification: abstracts away file type complexities
 - Configuration-driven routing rules: YAML-based PARA taxonomy definition
@@ -16,6 +17,7 @@
 ## Layers
 
 **CLI Layer:**
+
 - Purpose: Command dispatcher and user interface
 - Location: `src/para_files/cli/`
 - Contains: Command modules (classify, scan, move, learn, etc.), shared utilities, app setup
@@ -23,6 +25,7 @@
 - Used by: End users via typer CLI
 
 **Pipeline Layer:**
+
 - Purpose: Orchestrates the 5-signal classification cascade
 - Location: `src/para_files/pipeline.py`
 - Contains: ClassificationPipeline coordinator, signal initialization, lazy loading
@@ -30,6 +33,7 @@
 - Used by: All CLI commands for file classification
 
 **Classification Signals (Strategy Pattern):**
+
 - Purpose: Implement individual classification strategies
 - Location: `src/para_files/classifiers/`
 - Contains: BaseClassifier abstract interface + 5 concrete implementations
@@ -37,6 +41,7 @@
 - Used by: Pipeline in priority order
 
 **Taxonomy Layer:**
+
 - Purpose: Loads and manages classification taxonomies
 - Location: `src/para_files/taxonomies/`
 - Contains: Taxonomy loaders (documents.json, thema.json), model definitions
@@ -44,6 +49,7 @@
 - Used by: Classifiers for domain knowledge
 
 **Configuration Layer:**
+
 - Purpose: Manages application settings and secrets
 - Location: `src/para_files/config.py`
 - Contains: Pydantic settings models with env var override support
@@ -51,6 +57,7 @@
 - Used by: Pipeline, CLI, logging setup
 
 **Utilities Layer:**
+
 - Purpose: Cross-cutting concerns and file handling
 - Location: `src/para_files/utils/`
 - Contains: File operations, metadata extraction, validation, OCR, ISBN lookup, etc.
@@ -58,6 +65,7 @@
 - Used by: Classifiers, pipeline, mover
 
 **Reference Tree Layer:**
+
 - Purpose: Loads PARA folder structure and routing rules
 - Location: `src/para_files/reference_tree.py`
 - Contains: YAML parsing, routing rule extraction, issuer database
@@ -121,12 +129,14 @@
    - RENAME_WITH_DATE: prepend date (2025-01-15_file.txt)
 
 **Learning Flow** (`learn_cmd.py`, `learner.py`):
+
 - User provides file and destination
 - Stores mapping: issuer/domain → category
 - Extracts patterns from filename/content
 - Updates validated database for future matching
 
 **State Management:**
+
 - **Stateless Pipeline:** No state held between classifications
 - **Configuration State:** Loaded once at CLI startup, passed to pipeline
 - **ML Model State:** Models loaded on first use, cached in memory (or HuggingFace cache)
@@ -135,6 +145,7 @@
 ## Key Abstractions
 
 **BaseClassifier Interface:**
+
 - Purpose: Define contract for all classification signals
 - Location: `src/para_files/classifiers/base.py`
 - Pattern: Strategy pattern with uniform interface
@@ -142,24 +153,28 @@
 - Methods: `classify(content, metadata) → ClassificationResult | None`
 
 **ClassificationResult Type:**
+
 - Purpose: Encapsulates classification output
 - Location: `src/para_files/types.py`
 - Fields: category, confidence (value + source), route_name, extracted_params, raw_score
 - Used everywhere: returned by classifiers, processed by CLI commands
 
 **FileMetadata Type:**
+
 - Purpose: Standardized metadata extraction across file types
 - Location: `src/para_files/types.py`
 - Fields: path, filename, extension, size, dates (created/modified/EXIF), EXIF GPS/camera, PDF metadata
 - Pattern: Data class for passing between components
 
 **Config Models (Pydantic):**
+
 - Purpose: Configuration with type validation and env var override
 - Location: `src/para_files/config.py`
 - Classes: Config (root), MLXConfig, LLMConfig, LoggingConfig, OCRRenameConfig
 - Pattern: Nested settings with priority: overrides > env vars > .env > YAML > defaults
 
 **RoutingRule Type:**
+
 - Purpose: Special routing for photos, videos, courses with date extraction
 - Location: `src/para_files/types.py`
 - Fields: extensions, patterns, destination, date_source, issuers, platforms
@@ -168,22 +183,26 @@
 ## Entry Points
 
 **`main()` / `cli()`:**
+
 - Location: `src/para_files/main.py`
 - Triggers: Package entry point (via pyproject.toml)
 - Responsibilities: Imports all commands, calls `app()` (Typer)
 
 **CLI Commands (Typer app):**
+
 - Location: `src/para_files/cli/`
 - Triggers: User invokes `para-files <command>`
 - Modules: app.py (Typer instance), individual command modules
 - Commands: classify, scan, move, learn, bookstore, tree, routes, config, dedupe, clean, init, migrate, rescan
 
 **`ClassificationPipeline.classify_file()`:**
+
 - Location: `src/para_files/pipeline.py`
 - Triggers: Called by CLI commands (classify, scan, move, bookstore)
 - Responsibilities: Extract metadata, read content, orchestrate cascade
 
 **Test Entry Points:**
+
 - Location: `tests/` (conftest.py for fixtures, individual test_*.py modules)
 - Fixtures: project_root, fixtures_dir, mocked components
 - Pattern: pytest with standard discovery (test_*.py files)
@@ -222,17 +241,20 @@
 ## Cross-Cutting Concerns
 
 **Logging:**
+
 - Framework: `loguru` (from `para_files/logging.py`)
 - Pattern: Import `logger` from loguru, not standard logging
 - Output: Console (colored, human-readable) + File (JSON format with rotation)
 - Configuration: Via `LoggingConfig` in settings
 
 **Validation:**
+
 - Framework: `pydantic` for data models, custom functions for paths
 - Pattern: Type-annotated models with Field() constraints
 - Location: `src/para_files/utils/validation.py` for file/directory checks
 
 **Authentication:**
+
 - Strategy: External APIs (ISBN lookup, geocoding) use direct HTTP calls
 - Secrets: Stored in `.env` file (not in YAML)
 - Pattern: Config loads from env vars with `PARA_FILES_*` prefix
@@ -240,29 +262,34 @@
 ## Classifier Signal Details
 
 **Signal 1: BookDetector** (`src/para_files/classifiers/book_detector.py`)
+
 - Confidence: 96% (100% if ISBN found)
 - Detection: PDF file with book metadata or MOBI/EPUB format
 - Classification: Thema codes (international book classification)
 - Lookup: ISBN lookup to get Thema classification
 
 **Signal 2: RulesEngineClassifier** (`src/para_files/classifiers/rules_engine.py`)
+
 - Confidence: 95%
 - Matching: Glob patterns on filename, extension, directory
 - Routing: Special rules for photos (EXIF date), videos, courses, screenshots
 - Placeholder Resolution: {year}, {month}, {day} from EXIF/content/filename
 
 **Signal 3: TaxonomyClassifier** (`src/para_files/classifiers/taxonomy_classifier.py`)
+
 - Confidence: 90%
 - Data Source: documents.json (administrative docs) + learned patterns
 - Matching: Issuer patterns + keywords from domain knowledge
 
 **Signal 4: SemanticClassifier** (`src/para_files/classifiers/semantic_classifier.py`)
+
 - Confidence: 85%
 - Engine: MLX embedding similarity (nomic-text-v1.5 by default)
 - Input: Content preview (2000 chars by default)
 - Matching: Cosine similarity against category descriptions
 
 **Signal 5: MLXLLMClassifier** (`src/para_files/classifiers/mlx_llm_classifier.py`)
+
 - Confidence: 60% (configurable)
 - Model: Qwen2.5-1.5B (or configurable)
 - Engine: Native MLX-LM (macOS Apple Neural Engine)

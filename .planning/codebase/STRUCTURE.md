@@ -133,36 +133,43 @@
 ## Directory Purposes
 
 **`src/para_files/`:**
+
 - Purpose: Main application package
 - Contains: All Python source code
 - Key files: `main.py` (entry), `pipeline.py` (core), `config.py` (settings)
 
 **`src/para_files/cli/`:**
+
 - Purpose: Command-line interface commands
 - Contains: Individual command modules, shared utilities
 - Key files: `app.py` (Typer instance), `shared.py` (utilities), `classify_cmd.py` (main command)
 
 **`src/para_files/classifiers/`:**
+
 - Purpose: Implement 5-signal classification strategy
 - Contains: BaseClassifier interface + 5 concrete implementations
 - Key files: `base.py` (interface), `book_detector.py`, `rules_engine.py`, `semantic_classifier.py`
 
 **`src/para_files/utils/`:**
+
 - Purpose: Cross-cutting utilities and external integrations
 - Contains: File handling, metadata extraction, external API calls
 - Key files: `file_utils.py` (metadata), `exiftool.py` (EXIF), `pdf_metadata.py`, `isbn_lookup.py`
 
 **`tests/`:**
+
 - Purpose: Automated test suite
 - Contains: Unit tests, integration tests, test fixtures
 - Pattern: One test file per source module (test_classifiers.py for classifiers/)
 
 **`config/`:**
+
 - Purpose: Configuration and data files
 - Contains: Example reference tree, Thema classification codes
 - Files: `personal_file_tree.yaml` (PARA structure), `thema.json` (book classification)
 
 **`docs/`:**
+
 - Purpose: User-facing documentation
 - Contains: How-to guides, API reference, architecture documentation
 - Pattern: Organized by audience/task (getting-started, configuration, troubleshooting)
@@ -170,27 +177,33 @@
 ## Key File Locations
 
 **Entry Points:**
+
 - `src/para_files/main.py`: Main function (called by pyproject.toml entry point)
 - `src/para_files/cli/app.py`: Typer application instance (all commands register here)
 
 **Configuration:**
+
 - `src/para_files/config.py`: Config models, load_config() function
 - `config/personal_file_tree.yaml`: PARA reference tree (example)
 
 **Core Logic:**
+
 - `src/para_files/pipeline.py`: ClassificationPipeline orchestrator
 - `src/para_files/classifiers/`: 5-signal classification implementations
 - `src/para_files/reference_tree.py`: YAML tree parsing
 
 **File Operations:**
+
 - `src/para_files/mover.py`: FileMover for file movement
 - `src/para_files/utils/file_utils.py`: Metadata extraction + content reading
 
 **Learning System:**
+
 - `src/para_files/learner.py`: Learner for manual mappings
 - `src/para_files/learning/pattern_extractor.py`: Pattern extraction
 
 **Testing:**
+
 - `tests/conftest.py`: Pytest fixtures
 - `tests/test_pipeline.py`: Pipeline tests
 - `tests/test_classifiers.py`: Classifier tests
@@ -199,47 +212,56 @@
 ## Naming Conventions
 
 **Files:**
+
 - `*_cmd.py`: CLI command modules (classify_cmd.py, scan_cmd.py)
 - `test_*.py`: Test files (test_classifiers.py, test_pipeline.py)
 - `*.yaml`: Configuration files
 - `*.json`: Data files (thema.json)
 
 **Directories:**
+
 - Plural nouns for module collections: `classifiers/`, `utils/`, `taxonomies/`
 - Lowercase with underscores: `para_files/`, `cli/`, `learning/`
 
 **Functions:**
+
 - `camelCase` for private/internal: `_ensure_initialized()`, `_classify_single_file()`
 - `snake_case` for public: `classify()`, `classify_file()`, `load_config()`
 
 **Classes:**
+
 - `PascalCase` for all classes: `ClassificationPipeline`, `BaseClassifier`, `FileMetadata`
 - Abstract base classes prefixed: `BaseClassifier`, `BaseEncoder`
 
 **Constants:**
+
 - `UPPER_CASE` with underscores: `_MIN_CONTENT_FOR_RENAME`, `MAX_PATTERNS_SHOWN`
 - Prefixed with underscore if module-private: `_MAX_RENAME_ATTEMPTS`
 
 ## Where to Add New Code
 
 **New CLI Command:**
+
 - Create: `src/para_files/cli/new_cmd.py`
 - Implement: Function decorated with `@app.command()`
 - Register: Import in `src/para_files/cli/__init__.py`
 - Tests: `tests/test_new_cmd.py`
 
 **New Classification Signal:**
+
 - Create: `src/para_files/classifiers/new_classifier.py`
 - Implement: Class inheriting from `BaseClassifier`
 - Register: Add to pipeline in `src/para_files/pipeline.py::_ensure_initialized()`
 - Tests: `tests/test_classifiers.py` (add test case)
 
 **New Utility Function:**
+
 - Create: In appropriate `src/para_files/utils/*.py` file
 - Pattern: Pure function, no side effects, comprehensive type hints
 - Tests: Corresponding `tests/test_*.py` file
 
 **New Data Type:**
+
 - Add: `src/para_files/types.py` (Pydantic model)
 - Pattern: Use Field() with description, constraints, defaults
 - Import: From `para_files.types` in consumers
@@ -247,33 +269,39 @@
 ## Special Directories
 
 **`.planning/codebase/`:**
+
 - Purpose: Generated analysis documents for GSD orchestrator
 - Contents: ARCHITECTURE.md, STRUCTURE.md, CONVENTIONS.md, TESTING.md, CONCERNS.md, STACK.md, INTEGRATIONS.md
 - Generated: By `/gsd:map-codebase` command
 - Committed: Yes (tracked in git)
 
 **`.venv/`:**
+
 - Purpose: Python virtual environment
 - Generated: Yes (created by `uv sync`)
 - Committed: No (.gitignore)
 
 **`.mypy_cache/`, `.ruff_cache/`, `.pytest_cache/`:**
+
 - Purpose: Tool caches
 - Generated: Yes
 - Committed: No (.gitignore)
 
 **`docs/`:**
+
 - Purpose: User documentation
 - Committed: Yes (tracked in git)
 - Pattern: Markdown files, cross-linked
 
 **`config/`:**
+
 - Purpose: Example/bundled configuration files
 - `thema.json`: Bundled (all 9,187 Thema codes)
 - `personal_file_tree.yaml`: Example (not personalized data)
 - Committed: Yes
 
 **`.serena/`, `.vscode/`:**
+
 - Purpose: Editor configuration
 - Generated: Partially (VS Code creates)
 - Committed: Yes (track project settings, not personal config)

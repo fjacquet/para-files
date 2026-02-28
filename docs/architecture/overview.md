@@ -71,6 +71,7 @@ Example: `3_Resources/livres/U_Informatique/UB_Programmation`
 | `Arts : généralités` | `AB_Generalites` |
 
 **Rules applied:**
+
 - Max 2 hierarchy levels after `livres/`
 - Accents removed (é→e, ç→c)
 - Colons: take part after (`:` → specific term)

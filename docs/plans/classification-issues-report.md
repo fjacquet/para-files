@@ -16,6 +16,7 @@ Generated: 2024-12-29
 All ~40 orphan year folders have been consolidated into issuer-based structure.
 
 ### Energie (3 folders) - COMPLETED 2025-12-29
+
 | Original Folder | Files | Action Taken |
 |----------------|-------|--------------|
 | Energie/2022 | 1 | → divers (unidentified) |
@@ -23,27 +24,32 @@ All ~40 orphan year folders have been consolidated into issuer-based structure.
 | Energie/2016 | 1 | → Eau/2016 (water bill) |
 
 ### Assurances (11 folders) - COMPLETED 2025-12-29
+
 | Original Folder | Files | Action Taken |
 |----------------|-------|--------------|
 | Assurances/2008-2022 | 14 | → Pacifica, Orion, banques, divers |
 
 Key reclassifications:
+
 - Pacifica insurance documents → Assurances/Pacifica/{YYYY}
 - Orion legal protection → Assurances/Orion/{YYYY}
 - Bank statements → banques/Credit Agricole/{YYYY}
 
 ### Santé (8 folders, 16 files) - COMPLETED 2025-12-29
+
 | Original Folder | Files | Action Taken |
 |----------------|-------|--------------|
 | Santé/2011-2025 | 16 | → AVS, CAF, Kuoni, impots, divers |
 
 Key reclassifications:
+
 - AVS documents → administratif/AVS/{YYYY}
 - CAF allocations → administratif/CAF/{YYYY}
 - Kuoni travel → voyages/Kuoni/{YYYY}
 - Tax documents → impots-suisse/{YYYY}
 
 ### Materiels (18 folders, 76 files) - COMPLETED 2025-12-30
+
 | Category | Files | Destination |
 |----------|-------|-------------|
 | 5àSec tickets | ~20 | Services/5aSec/{YYYY} |
@@ -63,21 +69,25 @@ Key reclassifications:
 ### Mobilité Issues - COMPLETED 2025-12-29
 
 #### ByJuno → CFF (17 files)
+
 - **Problem:** `C00*_1_*.pdf` files were CFF invoices misclassified as ByJuno
 - **Solution:** Moved to `CFF/{YYYY}` based on filename date
 - **Status:** ✅ Completed
 
 #### SNCF/CFF International Tickets (4 files)
+
 - **Decision:** Keep in SNCF (vendor-based classification)
 - **Reason:** These are SNCF purchases for international routes
 - **Status:** ✅ No action needed
 
 #### EasyPark - VERIFIED CORRECT
+
 - `Receipt_BI_1022743311.pdf` correctly classified
 - "Mobility Hub Parkservice GmbH" is parking operator, not Mobility car-sharing
 - **Status:** ✅ Verified
 
 #### MOB folder - CLEANED
+
 - Train ticket correctly classified
 - 3 CV files moved to `2_Areas/carriere/CV/`
 - **Status:** ✅ Completed
@@ -85,6 +95,7 @@ Key reclassifications:
 ### Energie Issues - COMPLETED 2025-12-29
 
 #### Crédit Agricole Bank Statements (6 files)
+
 - **Problem:** `Compte_23316454000_*` files were in EDF, GDF, Maif folders
 - **Solution:** Moved to `banques/Credit Agricole/{YYYY}`
 - **Status:** ✅ Completed
@@ -92,6 +103,7 @@ Key reclassifications:
 ### Assurances Issues - COMPLETED 2025-12-29
 
 #### Maif folder bank statement
+
 - **Problem:** Crédit Agricole statement misclassified as Pacifica
 - **Solution:** Moved to `banques/Credit Agricole/2013`
 - **Status:** ✅ Completed
@@ -127,12 +139,15 @@ Key reclassifications:
 ## Remaining Items
 
 ### Low Priority
+
 1. [ ] Review `Invoice_*` pattern (generic, may catch multiple issuers)
 2. [ ] Consider OCR for scanned documents in `divers/scans-non-classes/`
 3. [ ] SNCF/CFF international tickets - consider `Transport International` category
 
 ### Manual Review Needed
+
 7 scanned PDFs in `Materiels/divers/scans-non-classes/` have no extractable text:
+
 - `200506-2007.pdf`
 - `20110926-blackcaviar.pdf`
 - `20111027.pdf`

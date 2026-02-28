@@ -112,7 +112,7 @@ The **main context file** - it becomes part of every prompt Claude receives.
 
 ## When to Use Claude Code vs. Other Tools
 
-### Use Claude Code For:
+### Use Claude Code For
 
 - Multi-step processes
 - Starting new projects
@@ -123,7 +123,7 @@ The **main context file** - it becomes part of every prompt Claude receives.
 - Generating files requiring info from many sources (README, Postman collections)
 - Generating tests with feedback loops
 
-### Use Cursor/Other IDE Tools For:
+### Use Cursor/Other IDE Tools For
 
 - Specific problems in specific files/lines
 - One-step tasks

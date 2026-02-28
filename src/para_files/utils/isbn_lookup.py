@@ -99,16 +99,26 @@ def lookup_isbn(isbn: str, service: str = "default") -> BookInfo | None:  # noqa
         desc = isbnlib.desc(canonical)
         if desc:
             info.description = desc
-    except Exception:  # noqa: BLE001, S110
-        pass  # Description is optional, fail silently
+    except Exception as e:  # noqa: BLE001
+        logger.warning(
+            "ISBN description enrichment failed for {}: {} {}",
+            canonical,
+            type(e).__name__,
+            e,
+        )
 
     # Try to get cover URL (optional enrichment)
     try:
         cover = isbnlib.cover(canonical)
         if cover and "thumbnail" in cover:
             info.cover_url = cover["thumbnail"]
-    except Exception:  # noqa: BLE001, S110
-        pass  # Cover URL is optional, fail silently
+    except Exception as e:  # noqa: BLE001
+        logger.warning(
+            "ISBN cover URL enrichment failed for {}: {} {}",
+            canonical,
+            type(e).__name__,
+            e,
+        )
 
     # Extract subjects from description if available
     if info.description:
@@ -188,7 +198,8 @@ def validate_isbn(isbn: str) -> bool:
 
         canonical = isbnlib.canonical(isbn)
         return bool(canonical and (isbnlib.is_isbn10(canonical) or isbnlib.is_isbn13(canonical)))
-    except Exception:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001
+        logger.debug("validate_isbn failed for {!r}: {} {}", isbn, type(e).__name__, e)
         return False
 
 
@@ -205,7 +216,8 @@ def normalize_isbn(isbn: str) -> str | None:
         import isbnlib
 
         return isbnlib.canonical(isbn) or None
-    except Exception:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001
+        logger.debug("normalize_isbn failed for {!r}: {} {}", isbn, type(e).__name__, e)
         return None
 
 
@@ -225,8 +237,8 @@ def isbn_to_isbn13(isbn: str) -> str | None:
         if canonical:
             result: str | None = isbnlib.to_isbn13(canonical)
             return result
-    except Exception:  # noqa: BLE001, S110
-        pass  # Invalid ISBN, return None
+    except Exception as e:  # noqa: BLE001
+        logger.debug("isbn_to_isbn13 failed for {!r}: {} {}", isbn, type(e).__name__, e)
     return None
 
 
