@@ -289,6 +289,16 @@ def format_result_json(
         "source": result.confidence.source.value,
         "target_path": str(target_path),
     }
+    if result.signals:
+        output["signals"] = [
+            {
+                "source": s.source.value,
+                "name": s.name,
+                "score": s.score,
+                "matched": s.matched,
+            }
+            for s in result.signals
+        ]
     if result.route_name:
         output["route_name"] = result.route_name
     if result.extracted_params:
@@ -300,6 +310,9 @@ def print_classification_result(
     file_path: Path,
     result: ClassificationResult,
     target_path: Path,
+    *,
+    verbose: bool = False,
+    dry_run: bool = False,
 ) -> None:
     """Print classification result to console.
 
@@ -310,11 +323,21 @@ def print_classification_result(
         file_path: Path to the source file.
         result: The classification result object.
         target_path: The computed target destination path.
+        verbose: If True, show per-classifier signal breakdown.
+        dry_run: If True, label the target line as a dry run preview.
     """
     typer.echo(f"\n📄 {file_path.name}")
     typer.echo(f"   Category: {result.category}")
     conf = result.confidence
     typer.echo(f"   Confidence: {conf.value:.0%} ({conf.source.value})")
-    typer.echo(f"   Target: {target_path}")
+    if dry_run:
+        typer.echo(f"   Target (dry run — no files moved): {target_path}")
+    else:
+        typer.echo(f"   Target: {target_path}")
+    if verbose and result.signals:
+        typer.echo("   Signals:")
+        for s in result.signals:
+            marker = "[matched]" if s.matched else "[      ]"
+            typer.echo(f"      {marker} {s.name}: {s.score:.0%}")
     if result.route_name:
         typer.echo(f"   Route: {result.route_name}")

@@ -56,7 +56,13 @@ def _classify_single_file(
         return {"source_file": str(file_path), "error": "classification failed"}
 
 
-def _print_parallel_result(file_path: Path, result_dict: dict[str, Any]) -> None:
+def _print_parallel_result(
+    file_path: Path,
+    result_dict: dict[str, Any],
+    *,
+    verbose: bool = False,
+    dry_run: bool = False,
+) -> None:
     """Print classification result from parallel processing.
 
     Displays the classification result for a single file that was
@@ -65,13 +71,23 @@ def _print_parallel_result(file_path: Path, result_dict: dict[str, Any]) -> None
     Args:
         file_path: Path to the classified file.
         result_dict: Dictionary containing the classification result or error.
+        verbose: If True, show per-classifier signal breakdown.
+        dry_run: If True, label the target line as a dry run preview.
     """
     if "error" not in result_dict:
         typer.echo(f"\n📄 {file_path.name}")
         typer.echo(f"   Category: {result_dict['category']}")
         conf = result_dict["confidence"]
         typer.echo(f"   Confidence: {conf:.0%} ({result_dict['source']})")
-        typer.echo(f"   Target: {result_dict['target_path']}")
+        if dry_run:
+            typer.echo(f"   Target (dry run — no files moved): {result_dict['target_path']}")
+        else:
+            typer.echo(f"   Target: {result_dict['target_path']}")
+        if verbose and result_dict.get("signals"):
+            typer.echo("   Signals:")
+            for s in result_dict["signals"]:
+                marker = "[matched]" if s["matched"] else "[      ]"
+                typer.echo(f"      {marker} {s['name']}: {s['score']:.0%}")
     else:
         typer.echo(f"\n⚠️ {file_path.name}: {result_dict.get('error', 'unknown error')}")
 
@@ -82,6 +98,8 @@ def _classify_files_parallel(
     max_workers: int,
     *,
     output_json: bool,
+    verbose: bool = False,
+    dry_run: bool = False,
 ) -> list[dict[str, Any]]:
     """Classify files in parallel using ThreadPoolExecutor.
 
@@ -93,6 +111,8 @@ def _classify_files_parallel(
         pipeline: The classification pipeline to use.
         max_workers: Maximum number of concurrent workers.
         output_json: If True, suppress console output (for JSON mode).
+        verbose: If True, show per-classifier signal breakdown.
+        dry_run: If True, label target as dry run preview.
 
     Returns:
         List of classification result dictionaries.
@@ -105,7 +125,7 @@ def _classify_files_parallel(
             result_dict = future.result()
             results.append(result_dict)
             if not output_json:
-                _print_parallel_result(file_path, result_dict)
+                _print_parallel_result(file_path, result_dict, verbose=verbose, dry_run=dry_run)
     return results
 
 
@@ -114,6 +134,8 @@ def _classify_files_sequential(
     pipeline: ClassificationPipeline,
     *,
     output_json: bool,
+    verbose: bool = False,
+    dry_run: bool = False,
 ) -> list[dict[str, Any]]:
     """Classify files sequentially (original behavior).
 
@@ -124,6 +146,9 @@ def _classify_files_sequential(
         expanded_files: List of file paths to classify.
         pipeline: The classification pipeline to use.
         output_json: If True, collect results for JSON output.
+        verbose: If True, show per-classifier signal breakdown.
+        dry_run: If True, label target as dry run preview (classify never moves files;
+            dry_run suppresses OCR rename side effects only).
 
     Returns:
         List of classification result dictionaries.
@@ -140,7 +165,9 @@ def _classify_files_sequential(
             if output_json:
                 results.append(format_result_json(file_path, result, target_path))
             else:
-                print_classification_result(file_path, result, target_path)
+                print_classification_result(
+                    file_path, result, target_path, verbose=verbose, dry_run=dry_run
+                )
         except Exception:  # noqa: BLE001
             logger.exception("Failed to classify {}", file_path)
             if output_json:
@@ -169,7 +196,11 @@ def classify(
         bool, typer.Option("--json", "-j", help="Output result as JSON")
     ] = False,
     verbose: Annotated[
-        bool, typer.Option("--verbose", "-v", help="Enable verbose logging")
+        bool, typer.Option("--verbose", "-v", help="Show per-classifier signal breakdown")
+    ] = False,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", "-n", help="Preview classification without renaming files"),
     ] = False,
 ) -> None:
     """Classify one or more files using the PARA method.
@@ -188,6 +219,10 @@ def classify(
     if reference_tree:
         config.reference_tree_path = reference_tree
 
+    # classify never moves files; dry_run suppresses OCR rename side effects only
+    if dry_run:
+        config.ocr_rename.dry_run = True
+
     # Expand directories to file lists
     ext_filter = parse_extensions_filter(extensions)
     expanded_files, _ = expand_paths_to_files(files, recursive=recursive, ext_filter=ext_filter)
@@ -202,10 +237,14 @@ def classify(
     # Use parallel or sequential processing based on max_workers
     if max_workers > 1 and len(expanded_files) > 1:
         results = _classify_files_parallel(
-            expanded_files, pipeline, max_workers, output_json=output_json
+            expanded_files, pipeline, max_workers, output_json=output_json,
+            verbose=verbose, dry_run=dry_run
         )
     else:
-        results = _classify_files_sequential(expanded_files, pipeline, output_json=output_json)
+        results = _classify_files_sequential(
+            expanded_files, pipeline, output_json=output_json,
+            verbose=verbose, dry_run=dry_run
+        )
 
     if output_json:
         typer.echo(json.dumps(results, indent=2))
