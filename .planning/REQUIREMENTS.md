@@ -27,7 +27,7 @@
 
 - [ ] **FEAT-01**: `classify` command supports `--dry-run` flag (preview classification without moving files)
 - [ ] **FEAT-02**: `classify`, `move`, and `scan` commands support `--verbose` flag showing which classifier matched and its score
-- [ ] **FEAT-03**: JSON output includes `signals` array with per-classifier results (source, score, matched)
+- [x] **FEAT-03**: JSON output includes `signals` array with per-classifier results (source, score, matched)
 
 ## v2 Requirements
 
@@ -66,7 +66,7 @@
 | TEST-03 | Phase 3 | Pending |
 | FEAT-01 | Phase 4 | Pending |
 | FEAT-02 | Phase 4 | Pending |
-| FEAT-03 | Phase 4 | Pending |
+| FEAT-03 | Phase 4 | Complete |
 
 **Coverage:**
 - v1 requirements: 12 total

@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-28)
 
 **Core value:** Files are classified correctly and transparently — users understand why, and failures surface loudly.
-**Current focus:** Phase 3 — Test Coverage
+**Current focus:** Phase 4 — User Features
 
 ## Current Position
 
-Phase: 3 of 4 (Test Coverage)
-Plan: 3 of 3 in current phase
-Status: Phase 3 Plan 03 complete
-Last activity: 2026-02-28 — Phase 3 Plan 03 executed
+Phase: 4 of 4 (User Features)
+Plan: 1 of 2 in current phase
+Status: Phase 4 Plan 01 complete
+Last activity: 2026-02-28 — Phase 4 Plan 01 executed
 
-Progress: [███████░░░] 70%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 6 minutes
-- Total execution time: 0.3 hours
+- Total plans completed: 7
+- Average duration: 6.3 minutes
+- Total execution time: 0.35 hours
 
 **By Phase:**
 
@@ -30,9 +30,10 @@ Progress: [███████░░░] 70%
 | 01-bug-fixes | 1 | 6 min | 6 min |
 | 02-code-quality | 2 | 13 min | 6.5 min |
 | 03-test-coverage | 3 | 18 min | 6 min |
+| 04-user-features | 1 | 12 min | 12 min |
 
 **Recent Trend:**
-- Last 5 plans: 5-8 min
+- Last 5 plans: 5-12 min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -59,6 +60,9 @@ Recent decisions affecting current work:
 - [Phase 03-test-coverage]: Annotate concurrent test result lists with explicit types for strict mypy var-annotated compliance
 - [Phase 03-test-coverage]: Named test method test_unicode_naive_pattern_match (ASCII) while filename under test uses full Unicode accents
 - [Phase 03-test-coverage]: Pre-existing 6 mypy errors on make_metadata helper are out-of-scope — confirmed identical before and after changes
+- [Phase 04-user-features]: Run all classifiers (not first-match-return) so every signal is recorded; winner is still first match
+- [Phase 04-user-features]: signals field has default_factory=list for backward compatibility with existing ClassificationResult construction
+- [Phase 04-user-features]: Use getattr + isinstance guard to safely extract ClassificationSource from classifier, fallback to DEFAULT for mocks/invalid
 
 ### Pending Todos
 
@@ -66,11 +70,10 @@ None yet.
 
 ### Blockers/Concerns
 
-- Phase 4: JSON signals output requires ClassificationResult type extension — verify downstream consumers before changing type
-- Deferred: pipeline.py:235 has pre-existing TRY003/EM102 ruff errors (out of scope)
+- Deferred: pipeline.py:274 has pre-existing TRY003/EM102 ruff errors (out of scope — confirmed pre-existing before Plan 04-01)
 
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 03-test-coverage-03-PLAN.md
+Stopped at: Completed 04-user-features-01-PLAN.md
 Resume file: None
