@@ -56,7 +56,13 @@ Plans:
   1. A test proves the pipeline classifies a file when one classifier raises an unhandled exception — no crash, next classifier runs
   2. A test proves concurrent bookstore workers moving files to the same destination resolve conflicts without data loss or silent failure
   3. Tests cover overlapping glob patterns, Unicode filenames, and special-character filenames in the rules engine
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+
+- [ ] 03-01-PLAN.md — Strengthen pipeline classifier exception isolation tests (TEST-01)
+- [ ] 03-02-PLAN.md — Add concurrent bookstore ISBN deduplication and FileMover conflict tests (TEST-02)
+- [ ] 03-03-PLAN.md — Add Unicode filenames, special-character filenames, and overlapping pattern tests to rules engine (TEST-03)
 
 ### Phase 4: User Features
 
@@ -76,5 +82,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Bug Fixes | 1/1 | Complete    | 2026-02-28 |
 | 2. Code Quality | 2/2 | Complete    | 2026-02-28 |
-| 3. Test Coverage | 0/? | Not started | - |
+| 3. Test Coverage | 0/3 | Not started | - |
 | 4. User Features | 0/? | Not started | - |
