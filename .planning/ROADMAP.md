@@ -74,7 +74,12 @@ Plans:
   1. Running `classify --dry-run` prints the predicted destination for each file without moving anything
   2. Running `classify --verbose` (or `scan --verbose`, `move --verbose`) shows which classifier matched and its confidence score
   3. JSON output for any classified file includes a `signals` array listing each classifier's result (source, score, matched)
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+
+- [ ] 04-01-PLAN.md — Add SignalResult type and collect all classifier signals in pipeline (FEAT-03 foundation)
+- [ ] 04-02-PLAN.md — Add classify --dry-run, verbose signal display, and signals in JSON output (FEAT-01, FEAT-02, FEAT-03)
 
 ## Progress
 
@@ -83,4 +88,4 @@ Plans:
 | 1. Bug Fixes | 1/1 | Complete    | 2026-02-28 |
 | 2. Code Quality | 2/2 | Complete    | 2026-02-28 |
 | 3. Test Coverage | 3/3 | Complete    | 2026-02-28 |
-| 4. User Features | 0/? | Not started | - |
+| 4. User Features | 0/2 | Not started | - |
