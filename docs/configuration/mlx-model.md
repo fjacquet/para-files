@@ -170,6 +170,12 @@ export PARA_FILES_MLX_SCORE_THRESHOLD=0.80
 uv run para-files add-utterance route "specific phrase"
 ```
 
+## High-Density Text Handling
+
+Documents with symbol-dense content (source code, chemical formulas, technical specifications) can exceed the model's token limit. The encoder uses progressive truncation — it retries at 700, 400, 200, and 100 characters before giving up. This means dense documents still receive a real semantic embedding rather than a zero vector.
+
+If you see `"Batch encode failed (token limit), retrying per-text"` in logs, this is expected behaviour — the retry succeeded.
+
 ## Model Loading
 
 The MLX model downloads automatically on first use:

@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Placeholder resolver utility** (`para_files/utils/placeholder_resolver.py`): New shared `clean_unreplaced_placeholders()` function replaces three divergent implementations across `rules_engine.py`, `semantic_classifier.py`, and `taxonomy_classifier.py` — eliminates 43 lines of duplicated regex logic and ensures consistent cleanup of `{year}`, `{issuer}`, `{location}`, and other template tokens
+- **Pipeline exception isolation tests**: New `TestClassificationPipeline` methods prove that a classifier raising `RuntimeError` or `ValueError` is skipped and the next classifier runs, rather than crashing the entire pipeline
+- **Concurrent bookstore conflict resolution tests**: `TestConcurrentIsbnDeduplication` and `TestFileMoverConcurrentConflicts` prove that 5 concurrent workers registering the same ISBN produce exactly 1 winner with no data loss, and that `ConflictStrategy.RENAME` produces unique filenames under concurrent writes
+- **Rules engine edge case tests**: 14 new tests in `TestUnicodeAndSpecialCharFilenames` and `TestOverlappingPatterns` cover accented Latin filenames (Résumé, Décompte), CJK filenames, glob metacharacters in filenames (`[`, `]`, `*`), parentheses, ampersand, first-rule-wins ordering, and AND logic (extension + pattern must both match)
+- **MLX encoder per-text progressive truncation** (`_encode_single`): Replaces the silent zero-vector batch fallback with a 4-level retry (700 / 400 / 200 / 100 chars) — technical specifications, source code, and symbol-dense documents now receive a real semantic embedding instead of a zero vector
+
+### Fixed
+
+- **File extension case sensitivity** (`file_utils.py`): `FileMetadata.extension` is now normalized to lowercase at construction time — files named `.PDF`, `.EPUB`, `.CHM` are now classified correctly instead of falling through extension checks
+- **OCR rename confidence threshold** (`config.py`): Default `OCRRenameConfig.min_confidence` raised from `0.3` to `0.7` — bank statement headers and other low-signal text no longer trigger erroneous file renames
+- **Silent ISBN enrichment failures** (`isbn_lookup.py`): Bare `pass` statements replaced with `logger.warning("ISBN description/cover URL enrichment failed for {isbn}: {ExcType} {msg}")` — enrichment failures are now visible in logs with the specific step (description vs. cover URL) that failed
+- **Silent PDF page extraction failures** (`pdf_metadata.py`): Bare `except` in the page loop now calls `logger.debug("Failed to extract text from page {N} of {file}: {ExcType} {msg}")` — corrupted or encrypted pages are traceable without flooding logs
+- **Missing file misreported as OCR failure** (`pipeline.py`, `file_utils.py`): `FileNotFoundError` in `_ocr_pdf_first_page` is now re-raised instead of swallowed, and `classify_file` checks file existence upfront — OneDrive TOCTOU failures now surface as `FileNotFoundError` rather than a misleading "OCR failed for PDF" log entry
+
+### Added
+
 - **Comprehensive subject mappings for book classification**: Expanded THEMA code mappings to cover all major subject areas
   - Added humanities (philosophy, ethics, religion, aesthetics, logic, metaphysics)
   - Added social sciences (sociology, anthropology, politics, education, psychology)

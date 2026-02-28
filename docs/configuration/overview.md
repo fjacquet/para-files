@@ -91,6 +91,10 @@ config:
 - **`LLM_API_BASE`** - API endpoint (e.g., <http://localhost:11434>)
 - **`LLM_CONFIDENCE_THRESHOLD`** - Min LLM confidence (default: 0.6)
 
+### OCR Rename
+
+- **`OCR_RENAME_MIN_CONFIDENCE`** - Minimum confidence for OCR-based file renaming (default: 0.7). Only renames files when OCR metadata extraction confidence exceeds this threshold — prevents bank statement headers and other weak signals from triggering renames.
+
 ### Other
 
 - **`CONTENT_PREVIEW_CHARS`** - How much of file to read (default: 2000)
