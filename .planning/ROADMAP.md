@@ -21,7 +21,10 @@ This milestone eliminates known bugs, tightens code quality, fills test coverage
   1. A file named `document.PDF` is classified correctly (not skipped due to uppercase extension)
   2. OCR renaming only triggers when confidence exceeds 0.7 — a bank statement header does not rename the file
   3. A technical specification or source code file with high symbol density receives a real embedding, not a zero vector
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [x] 01-bug-fixes-01-PLAN.md — Fix extension normalization, OCR confidence threshold, and MLX encoder zero-vector
 
 ### Phase 2: Code Quality
 **Goal**: Failures surface with specific context instead of being silently swallowed
@@ -31,7 +34,11 @@ This milestone eliminates known bugs, tightens code quality, fills test coverage
   1. A network timeout in ISBN lookup produces a log entry naming the exception type, not a silent pass
   2. Placeholder cleanup (`{year}`, `{issuer}`, `{location}`) runs from a single function across all classifiers — no duplication
   3. ISBN enrichment failures are logged with the specific enrichment step that failed (description vs. cover URL)
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Centralize placeholder cleanup into placeholder_resolver.py (QUAL-02)
+- [ ] 02-02-PLAN.md — Replace silent ISBN enrichment and PDF page extraction failures with targeted log messages (QUAL-01, QUAL-03)
 
 ### Phase 3: Test Coverage
 **Goal**: Automated tests verify pipeline resilience in the three highest-risk scenarios
@@ -58,6 +65,6 @@ This milestone eliminates known bugs, tightens code quality, fills test coverage
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Bug Fixes | 1/1 | Complete    | 2026-02-28 |
-| 2. Code Quality | 0/? | Not started | - |
+| 2. Code Quality | 0/2 | Not started | - |
 | 3. Test Coverage | 0/? | Not started | - |
 | 4. User Features | 0/? | Not started | - |
