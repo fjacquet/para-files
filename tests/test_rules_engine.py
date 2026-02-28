@@ -1113,4 +1113,223 @@ class TestAutoCorrectDateIntegration:
             metadata=metadata,
         )
         assert result is not None
+
+
+class TestUnicodeAndSpecialCharFilenames:
+    """Test rules engine handles non-ASCII and special-character filenames."""
+
+    def test_unicode_accented_extension_match(self) -> None:
+        """Accented Latin filename matches extension-only rule."""
+        rules = {"docs": RoutingRule(extensions=[".pdf"], destination="3_Resources/docs")}
+        classifier = RulesEngineClassifier(rules)
+        metadata = make_metadata(
+            path=Path("/test/Résumé_2024.pdf"),
+            filename="Résumé_2024.pdf",
+            extension=".pdf",
+        )
+        result = classifier.classify("", metadata)
+        assert result is not None
+        assert result.category == "3_Resources/docs"
+
+    def test_unicode_cjk_extension_match(self) -> None:
+        """CJK filename matches extension-only rule."""
+        rules = {"docs": RoutingRule(extensions=[".pdf"], destination="3_Resources/docs")}
+        classifier = RulesEngineClassifier(rules)
+        metadata = make_metadata(
+            path=Path("/test/职业简历.pdf"),
+            filename="职业简历.pdf",
+            extension=".pdf",
+        )
+        result = classifier.classify("", metadata)
+        assert result is not None
+        assert result.category == "3_Resources/docs"
+
+    def test_unicode_pattern_match(self) -> None:
+        """Accented Latin filename matches glob pattern with accents."""
+        rules = {
+            "payslips": RoutingRule(
+                patterns=["Décompte*"], destination="2_Areas/finance/payslips"
+            )
+        }
+        classifier = RulesEngineClassifier(rules)
+        metadata = make_metadata(
+            path=Path("/test/Décompte_salaire.pdf"),
+            filename="Décompte_salaire.pdf",
+            extension=".pdf",
+        )
+        result = classifier.classify("", metadata)
+        assert result is not None
+        assert result.category == "2_Areas/finance/payslips"
+
+    def test_unicode_extension_no_match_wrong_ext(self) -> None:
+        """Accented Latin filename does NOT match when extension differs."""
+        rules = {"docs": RoutingRule(extensions=[".pdf"], destination="3_Resources/docs")}
+        classifier = RulesEngineClassifier(rules)
+        metadata = make_metadata(
+            path=Path("/test/Résumé_2024.docx"),
+            filename="Résumé_2024.docx",
+            extension=".docx",
+        )
+        result = classifier.classify("", metadata)
+        assert result is None
+
+    def test_special_chars_parentheses_brackets_extension_match(self) -> None:
+        """Filename with parens/brackets does not crash fnmatch when rule is extension-only."""
+        rules = {"docs": RoutingRule(extensions=[".txt"], destination="3_Resources/misc")}
+        classifier = RulesEngineClassifier(rules)
+        metadata = make_metadata(
+            path=Path("/test/file (1) [draft] #final.txt"),
+            filename="file (1) [draft] #final.txt",
+            extension=".txt",
+        )
+        result = classifier.classify("", metadata)
+        assert result is not None
+        assert result.category == "3_Resources/misc"
+
+    def test_special_chars_ampersand_extension_match(self) -> None:
+        """Filename with ampersand matches extension-only rule."""
+        rules = {"docs": RoutingRule(extensions=[".pdf"], destination="3_Resources/docs")}
+        classifier = RulesEngineClassifier(rules)
+        metadata = make_metadata(
+            path=Path("/test/report & summary.pdf"),
+            filename="report & summary.pdf",
+            extension=".pdf",
+        )
+        result = classifier.classify("", metadata)
+        assert result is not None
+
+    def test_special_chars_wildcards_in_filename_do_not_crash(self) -> None:
+        """Filename containing glob metacharacters does not raise when matched by extension rule."""
+        rules = {"docs": RoutingRule(extensions=[".txt"], destination="3_Resources/misc")}
+        classifier = RulesEngineClassifier(rules)
+        metadata = make_metadata(
+            path=Path("/test/file!@#$%.txt"),
+            filename="file!@#$%.txt",
+            extension=".txt",
+        )
+        # Should not raise — extension matching does not use fnmatch on filename
+        result = classifier.classify("", metadata)
+        assert result is not None
+
+    def test_unicode_naive_pattern_match(self) -> None:
+        """Filename with multiple Unicode accents matches glob pattern."""
+        rules = {"tagged": RoutingRule(patterns=["naïve*"], destination="3_Resources/misc")}
+        classifier = RulesEngineClassifier(rules)
+        metadata = make_metadata(
+            path=Path("/test/naïve café résumé.pdf"),
+            filename="naïve café résumé.pdf",
+            extension=".pdf",
+        )
+        result = classifier.classify("", metadata)
+        assert result is not None
+        assert result.category == "3_Resources/misc"
+
+
+class TestOverlappingPatterns:
+    """Test first-rule-wins semantics and AND logic for extension+pattern rules."""
+
+    def test_broad_rule_wins_when_first(self) -> None:
+        """When broad rule comes first, it wins over specific rule for overlapping files."""
+        broad_rule = RoutingRule(extensions=[".pdf"], destination="3_Resources/docs")
+        specific_rule = RoutingRule(
+            extensions=[".pdf"],
+            patterns=["invoice*"],
+            destination="2_Areas/finance",
+        )
+        classifier = RulesEngineClassifier({"broad": broad_rule, "specific": specific_rule})
+        metadata = make_metadata(
+            path=Path("/test/invoice_2024.pdf"),
+            filename="invoice_2024.pdf",
+            extension=".pdf",
+        )
+        result = classifier.classify("", metadata)
+        assert result is not None
+        assert result.category == "3_Resources/docs"
+        assert result.route_name == "broad"
+
+    def test_specific_rule_wins_when_first(self) -> None:
+        """When specific rule comes first, it wins over broad rule."""
+        broad_rule = RoutingRule(extensions=[".pdf"], destination="3_Resources/docs")
+        specific_rule = RoutingRule(
+            extensions=[".pdf"],
+            patterns=["invoice*"],
+            destination="2_Areas/finance",
+        )
+        classifier = RulesEngineClassifier({"specific": specific_rule, "broad": broad_rule})
+        metadata = make_metadata(
+            path=Path("/test/invoice_2024.pdf"),
+            filename="invoice_2024.pdf",
+            extension=".pdf",
+        )
+        result = classifier.classify("", metadata)
+        assert result is not None
+        assert result.category == "2_Areas/finance"
+        assert result.route_name == "specific"
+
+    def test_extension_and_pattern_both_required_wrong_extension(self) -> None:
+        """Rule with both extension AND pattern: wrong extension → no match."""
+        rule = RoutingRule(
+            extensions=[".pdf"],
+            patterns=["invoice*"],
+            destination="2_Areas/finance",
+        )
+        classifier = RulesEngineClassifier({"invoices": rule})
+        metadata = make_metadata(
+            path=Path("/test/invoice_2024.txt"),
+            filename="invoice_2024.txt",
+            extension=".txt",
+        )
+        result = classifier.classify("", metadata)
+        assert result is None
+
+    def test_extension_and_pattern_both_required_wrong_pattern(self) -> None:
+        """Rule with both extension AND pattern: wrong pattern → no match."""
+        rule = RoutingRule(
+            extensions=[".pdf"],
+            patterns=["invoice*"],
+            destination="2_Areas/finance",
+        )
+        classifier = RulesEngineClassifier({"invoices": rule})
+        metadata = make_metadata(
+            path=Path("/test/report_2024.pdf"),
+            filename="report_2024.pdf",
+            extension=".pdf",
+        )
+        result = classifier.classify("", metadata)
+        assert result is None
+
+    def test_extension_and_pattern_both_required_both_match(self) -> None:
+        """Rule with both extension AND pattern: both conditions met → match."""
+        rule = RoutingRule(
+            extensions=[".pdf"],
+            patterns=["invoice*"],
+            destination="2_Areas/finance",
+        )
+        classifier = RulesEngineClassifier({"invoices": rule})
+        metadata = make_metadata(
+            path=Path("/test/invoice_2024.pdf"),
+            filename="invoice_2024.pdf",
+            extension=".pdf",
+        )
+        result = classifier.classify("", metadata)
+        assert result is not None
+        assert result.category == "2_Areas/finance"
+
+    def test_three_overlapping_rules_first_matching_wins(self) -> None:
+        """Three rules all matching same file: rule iteration order determines winner."""
+        rule_a = RoutingRule(extensions=[".pdf"], destination="dest_a")
+        rule_b = RoutingRule(extensions=[".pdf"], destination="dest_b")
+        rule_c = RoutingRule(extensions=[".pdf"], destination="dest_c")
+        classifier = RulesEngineClassifier(
+            {"rule_a": rule_a, "rule_b": rule_b, "rule_c": rule_c}
+        )
+        metadata = make_metadata(
+            path=Path("/test/document.pdf"),
+            filename="document.pdf",
+            extension=".pdf",
+        )
+        result = classifier.classify("", metadata)
+        assert result is not None
+        assert result.category == "dest_a"
+        assert result.route_name == "rule_a"
         assert "suggested_name" not in result.extracted_params
