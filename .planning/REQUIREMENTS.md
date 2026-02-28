@@ -7,9 +7,9 @@
 
 ### Bug Fixes
 
-- [ ] **BUG-01**: File extension detection handles uppercase extensions (.PDF, .EPUB, .CHM) correctly
-- [ ] **BUG-02**: OCR rename default confidence threshold raised to 0.7 (was 0.3)
-- [ ] **BUG-03**: MLX encoder handles high token-density text without silently returning zero vectors
+- [x] **BUG-01**: File extension detection handles uppercase extensions (.PDF, .EPUB, .CHM) correctly
+- [x] **BUG-02**: OCR rename default confidence threshold raised to 0.7 (was 0.3)
+- [x] **BUG-03**: MLX encoder handles high token-density text without silently returning zero vectors
 
 ### Code Quality
 
@@ -55,9 +55,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUG-01 | Phase 1 | Pending |
-| BUG-02 | Phase 1 | Pending |
-| BUG-03 | Phase 1 | Pending |
+| BUG-01 | Phase 1 | Complete |
+| BUG-02 | Phase 1 | Complete |
+| BUG-03 | Phase 1 | Complete |
 | QUAL-01 | Phase 2 | Pending |
 | QUAL-02 | Phase 2 | Pending |
 | QUAL-03 | Phase 2 | Pending |
