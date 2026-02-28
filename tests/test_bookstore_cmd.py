@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from para_files.cli.bookstore_cmd import (
     BOOK_EXTENSIONS,
+    _BookstoreContext,
     _build_book_filename,
+    _check_and_register_isbn,
     _detect_book,
     _extract_isbns_from_file,
     _find_book_files,
@@ -15,7 +18,7 @@ from para_files.cli.bookstore_cmd import (
     _rename_after_move,
     _sanitize_book_title,
 )
-from para_files.mover import MoveResult
+from para_files.mover import ConflictStrategy, FileMover, MoveResult
 from para_files.utils.isbn_lookup import BookInfo
 
 
@@ -490,3 +493,100 @@ class TestHandleIsbnDuplicate:
                 dry_run=False,
                 verbose=False,
             )
+
+
+class TestConcurrentIsbnDeduplication:
+    """Tests for concurrent ISBN deduplication atomicity via _check_and_register_isbn."""
+
+    def test_concurrent_isbn_duplicate_detection_is_atomic(self, tmp_path: Path) -> None:
+        """Five simultaneous registrations of same ISBN: exactly 1 winner."""
+        para_root = tmp_path / "para"
+        para_root.mkdir()
+        mover = FileMover(dry_run=True)
+        ctx = _BookstoreContext(
+            para_root=para_root,
+            mover=mover,
+            dry_run=True,
+            rename=False,
+            keep_duplicates=False,
+            verbose=False,
+        )
+        isbn = "978-3-16-148410-0"
+        book_path = tmp_path / "book.pdf"
+        book_path.write_bytes(b"fake content")
+
+        results: list[tuple[bool, Path | None]] = []
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = [
+                executor.submit(_check_and_register_isbn, isbn, book_path, ctx)
+                for _ in range(5)
+            ]
+            results.extend(future.result() for future in as_completed(futures))
+
+        winners = [r for r in results if r[0] is False]
+        duplicates = [r for r in results if r[0] is True]
+        assert len(winners) == 1, f"Expected 1 winner, got {len(winners)}"
+        assert len(duplicates) == 4, f"Expected 4 duplicates, got {len(duplicates)}"
+        assert ctx.books_found == 1
+        assert ctx.duplicates_skipped == 4
+
+
+class TestFileMoverConcurrentConflicts:
+    """Tests for FileMover concurrent conflict resolution."""
+
+    def test_concurrent_move_to_same_dir_produces_unique_filenames(self, tmp_path: Path) -> None:
+        """Three files moved concurrently to same dir with RENAME strategy land at unique paths."""
+        dest_dir = tmp_path / "dest"
+        dest_dir.mkdir()
+        # Pre-existing file to force conflicts
+        (dest_dir / "book.pdf").write_bytes(b"existing")
+
+        sources = []
+        for i in range(3):
+            src = tmp_path / f"source_{i}.pdf"
+            src.write_bytes(f"content {i}".encode())
+            sources.append(src)
+
+        mover = FileMover(copy_mode=True, conflict_strategy=ConflictStrategy.RENAME)
+
+        move_results: list[MoveResult] = []
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            # All three files have the SAME filename after _build_filename → force rename
+            futures = [executor.submit(mover.move, src, dest_dir) for src in sources]
+            move_results.extend(future.result() for future in as_completed(futures))
+
+        assert all(r.success for r in move_results), (
+            f"Some moves failed: {[r for r in move_results if not r.success]}"
+        )
+        # Count actual files in dest_dir (pre-existing + 3 moved)
+        dest_files = list(dest_dir.iterdir())
+        assert len(dest_files) >= 3, f"Expected >=3 files, got {len(dest_files)}: {dest_files}"
+
+    def test_concurrent_identical_content_deduplication(self, tmp_path: Path) -> None:
+        """Two workers moving identical files: exactly one file survives, no crash."""
+        dest_dir = tmp_path / "dest"
+        dest_dir.mkdir()
+        content = b"identical book content"
+
+        sources = []
+        for i in range(2):
+            src = tmp_path / f"identical_{i}.pdf"
+            src.write_bytes(content)
+            sources.append(src)
+
+        # Pre-populate dest so both workers face a conflict with identical content
+        (dest_dir / "identical_0.pdf").write_bytes(content)
+
+        mover = FileMover(deduplicate=True, conflict_strategy=ConflictStrategy.RENAME)
+
+        move_results: list[MoveResult] = []
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            futures = [executor.submit(mover.move, src, dest_dir) for src in sources]
+            move_results.extend(future.result() for future in as_completed(futures))
+
+        # No crash — all results returned
+        assert len(move_results) == 2
+        # All succeeded (either moved, skipped, or deduplicated)
+        assert all(r.success for r in move_results), (
+            f"Unexpected failure: {[r for r in move_results if not r.success]}"
+        )
