@@ -11,6 +11,13 @@ For detailed project information, see the full documentation at [docs/index.md](
 ## Build & Development Commands
 
 ```bash
+# Makefile shortcuts (one-shot alternatives)
+make fix           # Auto-fix ruff issues + format in one step
+make quality       # Lint + typecheck only (skip tests)
+make test-cov      # Tests with missing-line coverage report
+make clean         # Remove .pytest_cache, .mypy_cache, dist, etc.
+make all           # Full pipeline: setup, lint, format, typecheck, test
+
 # Install dependencies (includes dev tools)
 uv sync --all-extras
 
@@ -56,9 +63,13 @@ pre-commit run --all-files         # Run manually
 
 | File | Purpose |
 |------|---------|
-| `src/para_files/main.py` | CLI entry point |
+| `src/para_files/main.py` | CLI entry point (re-exports; commands live in `cli/`) |
+| `src/para_files/cli/` | All CLI commands (scan, move, classify, bookstore, learn, routes, etc.) |
 | `src/para_files/config.py` | Configuration management |
 | `src/para_files/pipeline.py` | 6-signal classification orchestrator |
+| `src/para_files/types.py` | Domain type definitions |
+| `src/para_files/mover.py` | File move orchestration |
+| `src/para_files/learner.py` | Feedback-based learning |
 | `src/para_files/reference_tree.py` | YAML reference tree loader |
 | `src/para_files/classifiers/` | Classification signal implementations |
 | `src/para_files/encoders/mlx_encoder.py` | MLX embedding encoder with lazy loading |
@@ -67,6 +78,7 @@ pre-commit run --all-files         # Run manually
 | `tests/` | Test suite |
 | `config/personal_file_tree.yaml` | PARA reference tree (example) |
 | `config/thema.json` | Thema v1.6 book classification (9,187 codes) |
+| `config/documents.json` | Document type taxonomy for classification |
 
 ## Filename Sanitization
 
@@ -120,7 +132,7 @@ For detailed architecture, see [docs/architecture/overview.md](docs/architecture
 
 - **MLX** - Optimized embeddings on Apple Neural Engine
 - **Pydantic** - Configuration and data validation
-- **Click** - CLI framework
+- **Typer** - CLI framework (built on Click)
 - **YAML** - Configuration format
 - **Pytest** - Testing framework
 
@@ -291,52 +303,3 @@ uv run pytest -vv tests/
 - **[CHANGELOG.md](CHANGELOG.md)** - Version history
 - **[docs/](docs/)** - Complete user documentation
 
-## Claude Code Best Practices
-
-### Context is Everything
-
-Provide maximum context for best results:
-
-- Use **planning mode** before complex tasks
-- Reference sub-folder CLAUDE.md files for detailed context
-- Use `/add-dir` to include relevant directories
-- Keep context fresh with sub-agents for summarization
-
-### Available MCPs
-
-| MCP | Purpose |
-|-----|---------|
-| **Context7** | Documentation lookup for libraries |
-| **Serena** | Semantic code navigation and analysis |
-| **GitHub** | Repository operations via `gh` CLI |
-
-### When to Use Claude Code
-
-**Best for:**
-- Multi-step processes and complex refactors
-- Exploring/ramping up on codebases
-- Generating files requiring info from many sources
-- Running tests with feedback loops
-
-**Less ideal for:**
-- Single-line fixes (use direct editing)
-- One-step tasks in specific files
-
-### Effective Prompting
-
-1. **Plan first** - Use `/plan` or think through steps
-2. **Be specific** - Include file paths, function names, expected behavior
-3. **Provide examples** - Show good/bad outputs when relevant
-4. **Set acceptance criteria** - Define what "done" looks like
-
-### Sub-agents and Parallel Work
-
-- Use `git worktree` for parallel Claude Code instances on different branches
-- Spawn sub-agents for independent tasks
-- Let sub-agents summarize large contexts
-
-### Resources
-
-- [Claude Code Best Practices](https://www.anthropic.com/engineering/claude-code-best-practices)
-- [Mastering Claude Code (Video)](https://www.youtube.com/watch?v=6eBSHbLKuN0)
-- [Claude Code Commands Directory](https://claudecodecommands.directory)

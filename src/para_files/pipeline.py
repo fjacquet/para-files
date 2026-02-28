@@ -231,6 +231,9 @@ class ClassificationPipeline:
         """
         from para_files.utils.file_utils import extract_file_metadata, read_content_preview
 
+        if not file_path.exists():
+            raise FileNotFoundError(f"File not found: {file_path}")
+
         # Pre-classification renaming for generic PDFs
         file_path = self._maybe_rename_generic_pdf(file_path)
 

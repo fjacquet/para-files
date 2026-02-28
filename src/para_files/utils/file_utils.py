@@ -537,6 +537,8 @@ def _ocr_pdf_first_page(file_path: Path, max_chars: int) -> str:
         finally:
             tmp_path.unlink(missing_ok=True)
 
+    except FileNotFoundError:
+        raise
     except Exception:  # noqa: BLE001
         logger.exception("OCR failed for PDF: {}", file_path)
         return ""
