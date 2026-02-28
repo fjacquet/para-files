@@ -289,7 +289,7 @@ class TestReadPdfFile:
 
         pypdf_backup = sys.modules.get("pypdf")
         try:
-            sys.modules["pypdf"] = None
+            sys.modules["pypdf"] = None  # type: ignore[assignment]
             # We can't easily test ImportError since pypdf is already imported
             # Just verify the function handles missing PDFs gracefully
             content = _read_pdf_file(test_file, max_chars=1000)
