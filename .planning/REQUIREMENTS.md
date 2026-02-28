@@ -19,7 +19,7 @@
 
 ### Test Coverage
 
-- [ ] **TEST-01**: Pipeline exception handling tested — classifiers that raise exceptions don't crash entire pipeline
+- [x] **TEST-01**: Pipeline exception handling tested — classifiers that raise exceptions don't crash entire pipeline
 - [x] **TEST-02**: Concurrent bookstore processing conflict resolution tested (multiple workers, same destination)
 - [ ] **TEST-03**: Rules engine edge cases tested (overlapping patterns, Unicode filenames, special characters)
 
@@ -61,7 +61,7 @@
 | QUAL-01 | Phase 2 | Complete |
 | QUAL-02 | Phase 2 | Complete |
 | QUAL-03 | Phase 2 | Complete |
-| TEST-01 | Phase 3 | Pending |
+| TEST-01 | Phase 3 | Complete |
 | TEST-02 | Phase 3 | Complete |
 | TEST-03 | Phase 3 | Pending |
 | FEAT-01 | Phase 4 | Pending |
