@@ -78,8 +78,8 @@ Plans:
 
 Plans:
 
-- [ ] 04-01-PLAN.md — Add SignalResult type and collect all classifier signals in pipeline (FEAT-03 foundation)
-- [ ] 04-02-PLAN.md — Add classify --dry-run, verbose signal display, and signals in JSON output (FEAT-01, FEAT-02, FEAT-03)
+- [x] 04-01-PLAN.md — Add SignalResult type and collect all classifier signals in pipeline (FEAT-03 foundation)
+- [x] 04-02-PLAN.md — Add classify --dry-run, verbose signal display, and signals in JSON output (FEAT-01, FEAT-02, FEAT-03)
 
 ## Progress
 
@@ -88,4 +88,4 @@ Plans:
 | 1. Bug Fixes | 1/1 | Complete    | 2026-02-28 |
 | 2. Code Quality | 2/2 | Complete    | 2026-02-28 |
 | 3. Test Coverage | 3/3 | Complete    | 2026-02-28 |
-| 4. User Features | 1/2 | In Progress|  |
+| 4. User Features | 2/2 | Complete    | 2026-02-28 |

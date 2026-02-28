@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-28)
 ## Current Position
 
 Phase: 4 of 4 (User Features)
-Plan: 1 of 2 in current phase
-Status: Phase 4 Plan 01 complete
-Last activity: 2026-02-28 — Phase 4 Plan 01 executed
+Plan: 2 of 2 in current phase
+Status: Phase 4 Plan 02 complete — all plans complete
+Last activity: 2026-02-28 — Phase 4 Plan 02 executed
 
-Progress: [████████░░] 80%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -30,7 +30,7 @@ Progress: [████████░░] 80%
 | 01-bug-fixes | 1 | 6 min | 6 min |
 | 02-code-quality | 2 | 13 min | 6.5 min |
 | 03-test-coverage | 3 | 18 min | 6 min |
-| 04-user-features | 1 | 12 min | 12 min |
+| 04-user-features | 2 | 19 min | 9.5 min |
 
 **Recent Trend:**
 - Last 5 plans: 5-12 min
@@ -63,6 +63,9 @@ Recent decisions affecting current work:
 - [Phase 04-user-features]: Run all classifiers (not first-match-return) so every signal is recorded; winner is still first match
 - [Phase 04-user-features]: signals field has default_factory=list for backward compatibility with existing ClassificationResult construction
 - [Phase 04-user-features]: Use getattr + isinstance guard to safely extract ClassificationSource from classifier, fallback to DEFAULT for mocks/invalid
+- [Phase 04-user-features]: Extract _scan_files_parallel helper from scan() inline parallel code to satisfy ruff C901 cyclomatic complexity limit
+- [Phase 04-user-features]: classify --dry-run suppresses OCR rename only (no file moves); dry_run label appears in Target line output
+- [Phase 04-user-features]: signals array positioned before route_name in JSON for logical ordering
 
 ### Pending Todos
 
@@ -75,5 +78,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 04-user-features-01-PLAN.md
+Stopped at: Completed 04-user-features-02-PLAN.md
 Resume file: None
