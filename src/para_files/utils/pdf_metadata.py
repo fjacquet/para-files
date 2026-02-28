@@ -175,8 +175,14 @@ def extract_pdf_metadata(path: Path, max_pages_for_isbn: int = 20) -> PdfMetadat
                         seen_isbns.add(found_isbn)
                         all_isbns.append(found_isbn)
                         logger.debug("Found ISBN {} on page {} of {}", found_isbn, i + 1, path.name)
-            except Exception:  # noqa: BLE001, S112
-                # Skip pages that fail to extract (corrupted/encrypted pages)
+            except Exception as e:  # noqa: BLE001
+                logger.debug(
+                    "Failed to extract text from page {} of {}: {} {}",
+                    i + 1,
+                    path.name,
+                    type(e).__name__,
+                    e,
+                )
                 continue
 
         if all_isbns:
