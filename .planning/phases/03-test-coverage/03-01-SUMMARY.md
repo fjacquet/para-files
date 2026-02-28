@@ -61,7 +61,7 @@ Each task was committed atomically:
 
 1. **Task 1: Pipeline exception isolation tests** - `5bfa771` (test)
 
-**Plan metadata:** (docs commit — to follow)
+**Plan metadata:** `244d7c3` (docs: complete pipeline-exception-isolation plan)
 
 ## Files Created/Modified
 
@@ -89,3 +89,10 @@ None - no external service configuration required.
 
 - Pipeline exception isolation is now verifiably tested — a regression that re-raises would fail these tests
 - Ready to continue Phase 03 test coverage plans
+
+## Self-Check: PASSED
+
+- FOUND: tests/test_pipeline.py
+- FOUND: .planning/phases/03-test-coverage/03-01-SUMMARY.md
+- FOUND: commit 5bfa771 (test commit)
+- FOUND: commit 244d7c3 (docs metadata commit)
