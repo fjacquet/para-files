@@ -14,7 +14,7 @@
 ### Code Quality
 
 - [ ] **QUAL-01**: All bare `except Exception` (BLE001) blocks replaced with typed handlers or improved fallback logging
-- [ ] **QUAL-02**: Placeholder cleanup logic (`{year}`, `{issuer}`, `{location}`) centralized into `para_files/utils/placeholder_resolver.py`
+- [x] **QUAL-02**: Placeholder cleanup logic (`{year}`, `{issuer}`, `{location}`) centralized into `para_files/utils/placeholder_resolver.py`
 - [ ] **QUAL-03**: Silent failures in ISBN enrichment (`pass` statements) replaced with targeted log messages
 
 ### Test Coverage
@@ -59,7 +59,7 @@
 | BUG-02 | Phase 1 | Complete |
 | BUG-03 | Phase 1 | Complete |
 | QUAL-01 | Phase 2 | Pending |
-| QUAL-02 | Phase 2 | Pending |
+| QUAL-02 | Phase 2 | Complete |
 | QUAL-03 | Phase 2 | Pending |
 | TEST-01 | Phase 3 | Pending |
 | TEST-02 | Phase 3 | Pending |
