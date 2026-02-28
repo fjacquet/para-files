@@ -2,6 +2,12 @@
 
 This module defines all Pydantic models used throughout the classification pipeline,
 ensuring strict typing and validation for the 5-signal classification system.
+
+Key models:
+- ``ClassificationSource``: Enum of classifier names
+- ``Confidence``: Score + source tracking
+- ``SignalResult``: Per-classifier signal captured during pipeline execution
+- ``ClassificationResult``: Final classification outcome with all signals attached
 """
 
 from __future__ import annotations
@@ -126,6 +132,15 @@ class CategoryNode(BaseModel):
     routes: list[Route] = Field(default_factory=list, description="Routes under this category")
 
 
+class SignalResult(BaseModel):
+    """Per-classifier signal result captured during pipeline execution."""
+
+    source: ClassificationSource = Field(description="Which classifier produced this entry")
+    name: str = Field(description="Human-readable classifier name, e.g., 'rules_engine'")
+    score: float = Field(description="Confidence score returned (0.0 if classifier skipped)")
+    matched: bool = Field(description="True if this classifier returned a non-None result")
+
+
 class ClassificationResult(BaseModel):
     """Result of classifying a file or content through the pipeline."""
 
@@ -144,6 +159,10 @@ class ClassificationResult(BaseModel):
     raw_score: float | None = Field(
         default=None,
         description="Raw similarity score from semantic router",
+    )
+    signals: list[SignalResult] = Field(
+        default_factory=list,
+        description="Per-classifier signal results collected during pipeline execution",
     )
 
 
