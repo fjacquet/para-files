@@ -182,7 +182,7 @@ class OCRRenameConfig(BaseModel):
         description="Enable OCR-based renaming of generic filenames before classification",
     )
     min_confidence: float = Field(
-        default=0.3,
+        default=0.7,
         ge=0.0,
         le=1.0,
         description="Minimum confidence score to perform rename",

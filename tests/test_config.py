@@ -76,6 +76,31 @@ class TestLLMConfig:
         assert config.api_base == "https://api.openai.com/v1"
 
 
+class TestOCRRenameConfig:
+    """Tests for OCRRenameConfig."""
+
+    def test_ocr_rename_min_confidence_default(self):
+        """Default min_confidence is 0.7 — only high-confidence metadata triggers rename."""
+        from para_files.config import OCRRenameConfig
+
+        cfg = OCRRenameConfig()
+        assert cfg.min_confidence == 0.7
+
+    def test_ocr_rename_min_confidence_accepts_low_value(self):
+        """Users can override to a lower threshold explicitly."""
+        from para_files.config import OCRRenameConfig
+
+        cfg = OCRRenameConfig(min_confidence=0.3)
+        assert cfg.min_confidence == 0.3
+
+    def test_ocr_rename_min_confidence_rejects_out_of_range(self):
+        """Values outside [0.0, 1.0] are rejected by pydantic."""
+        from para_files.config import OCRRenameConfig
+
+        with pytest.raises(ValidationError):
+            OCRRenameConfig(min_confidence=1.5)
+
+
 class TestConfig:
     """Tests for Config."""
 
