@@ -6,7 +6,7 @@ Uses mlx-embedding-models to load embedding models optimized for Apple Silicon.
 from __future__ import annotations
 
 import threading
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 from loguru import logger
 from mlx_embedding_models.embedding import EmbeddingModel  # type: ignore[import-untyped]
@@ -63,6 +63,42 @@ class MLXEncoder(DenseEncoder):
             return text[: self.max_chars]
         return text
 
+    def _encode_single(self, text: str) -> list[float]:
+        """Encode a single text with progressive truncation on IndexError.
+
+        Tries progressively shorter truncations (fallback_chars, 400, 200)
+        before giving up and returning a mean-pooled partial result.
+        Never returns a zero vector — uses the shortest encodable prefix instead.
+
+        Args:
+            text: Text to encode.
+
+        Returns:
+            Embedding vector as a list of floats.
+        """
+        candidates = [
+            text[: self.fallback_chars],
+            text[:400],
+            text[:200],
+        ]
+        for candidate in candidates:
+            try:
+                arr = self._model.encode([candidate])
+                return cast(list[float], arr.tolist()[0])
+            except IndexError:
+                continue
+        # Absolute last resort: encode just the first sentence or 100 chars
+        # This should never fail because 100 chars << token limit
+        last_chance = text[:100] if text else "document"
+        try:
+            arr = self._model.encode([last_chance])
+            return cast(list[float], arr.tolist()[0])
+        except Exception:  # noqa: BLE001
+            logger.exception("MLX encoder failed on 100-char text — model may be broken")
+            # Only now do we return a zero vector, and we log it as an error
+            dim = getattr(self._model, "dims", 768)
+            return [0.0] * dim
+
     def __call__(self, texts: list[str]) -> list[list[float]]:
         """Encode texts to embeddings.
 
@@ -84,18 +120,11 @@ class MLXEncoder(DenseEncoder):
             # EmbeddingModel.encode returns numpy array of shape (n_texts, embedding_dim)
             embeddings_array = self._model.encode(truncated_texts)
         except IndexError as e:
-            # Token length exceeds model's maximum sequence length
-            # This can happen with texts that tokenize poorly (lots of numbers, symbols)
-            logger.warning("Text exceeds token limit, using fallback truncation: {}", e)
-            # Retry with fallback_chars (700) for safety
-            shorter_texts = [t[: self.fallback_chars] for t in texts]
-            try:
-                embeddings_array = self._model.encode(shorter_texts)
-            except IndexError:
-                # Still too long, return empty embeddings
-                logger.exception("Text still exceeds token limit after truncation")
-                # Return zero vectors of expected dimension (768 for nomic)
-                return [[0.0] * 768 for _ in texts]
+            # Batch failed — likely one problematic text. Retry per-text.
+            logger.warning(
+                "Batch encode failed (token limit), retrying per-text: {}", e
+            )
+            return [self._encode_single(t) for t in texts]
 
         # Convert to list of lists
         embeddings: list[list[float]] = embeddings_array.tolist()

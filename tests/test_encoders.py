@@ -97,6 +97,68 @@ class TestMLXEncoder:
         mock_from_registry.assert_called_once()
 
 
+class TestMLXEncoderZeroVectorGuard:
+    """Tests for per-text retry logic — must not return zero vectors when retry succeeds."""
+
+    @patch("para_files.encoders.mlx_encoder.EmbeddingModel.from_registry")
+    def test_no_zero_vector_for_dense_text(self, mock_from_registry: MagicMock):
+        """Per-text retry must not return a zero vector when a shorter prefix succeeds."""
+        mock_model = MagicMock()
+        call_count = 0
+
+        def side_effect(texts):
+            nonlocal call_count
+            call_count += 1
+            # First call (batch) raises IndexError
+            # Subsequent calls (per-text via _encode_single) succeed with 200-char prefix
+            if call_count == 1:
+                raise IndexError("sequence length exceeds maximum")
+            import numpy as np
+
+            return np.array([[0.1] * 768 for _ in texts])
+
+        mock_model.encode.side_effect = side_effect
+        mock_from_registry.return_value = mock_model
+
+        encoder = MLXEncoder()
+        encoder._model = mock_model
+        encoder._loaded = True
+
+        dense_text = "x" * 2000  # Simulates symbol-dense / token-heavy text
+        result = encoder([dense_text])
+
+        assert len(result) == 1
+        assert result[0] != [0.0] * 768, "Must not return zero vector when retry succeeds"
+        assert any(v != 0.0 for v in result[0])
+
+    @patch("para_files.encoders.mlx_encoder.EmbeddingModel.from_registry")
+    def test_encode_single_progressive_truncation(self, mock_from_registry: MagicMock):
+        """_encode_single tries shorter and shorter prefixes on IndexError."""
+        mock_model = MagicMock()
+        attempts = []
+
+        def side_effect(texts):
+            attempts.append(len(texts[0]))
+            if len(texts[0]) > 200:
+                raise IndexError("too long")
+            import numpy as np
+
+            return np.array([[0.5] * 768])
+
+        mock_model.encode.side_effect = side_effect
+        mock_from_registry.return_value = mock_model
+
+        encoder = MLXEncoder()
+        encoder._model = mock_model
+        encoder._loaded = True
+
+        result = encoder._encode_single("a" * 1000)
+
+        # Must have tried multiple lengths before succeeding at 200
+        assert len(attempts) >= 2
+        assert result != [0.0] * 768
+
+
 class TestMLXEncoderIntegration:
     """Integration tests for MLXEncoder (require model download).
 
