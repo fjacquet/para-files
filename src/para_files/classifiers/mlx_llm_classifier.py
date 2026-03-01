@@ -182,13 +182,15 @@ class MLXLLMClassifier(BaseClassifier):
         # Build prompt
         prompt = self._build_prompt(content, metadata)
 
-        # Generate response
+        # Generate response (mlx-lm >=0.22 uses sampler instead of temp kwarg)
+        from mlx_lm.sample_utils import make_sampler
+
         response: str = generate(
             self._model,
             self._tokenizer,
             prompt=prompt,
             max_tokens=self._max_tokens,
-            temp=0.0,  # Deterministic
+            sampler=make_sampler(temp=0.0),  # Deterministic (greedy)
         )
 
         return self._parse_response(response)
