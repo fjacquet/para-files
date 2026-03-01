@@ -212,9 +212,7 @@ class RulesEngineClassifier(BaseClassifier):
 
         # Try to extract technology from filename, then content if {technology} in destination
         if "{technology}" in rule.destination:
-            tech_extractor = TechnologyExtractor(
-                technologies=rule.known_technologies if rule.known_technologies else None
-            )
+            tech_extractor = TechnologyExtractor(technologies=rule.known_technologies or None)
             tech = tech_extractor.extract_from_filename(metadata.filename)
             if tech:
                 params["technology"] = tech

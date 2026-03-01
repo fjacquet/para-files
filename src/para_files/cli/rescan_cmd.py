@@ -455,7 +455,7 @@ def rescan(
     setup_logging(verbose=verbose)
     config = load_config_or_exit()
 
-    effective_path = base_path if base_path else config.para_root
+    effective_path = base_path or config.para_root
 
     results = _run_rescan(
         effective_path,

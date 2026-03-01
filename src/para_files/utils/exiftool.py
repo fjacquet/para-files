@@ -116,7 +116,7 @@ def _normalize_date_string(date_str: str) -> str:
     """
     # Remove timezone suffix like +00:00 or -05:00
     if "+" in date_str:
-        date_str = date_str.split("+")[0]
+        date_str = date_str.split("+", maxsplit=1)[0]
     # Handle ISO format with T separator
     date_str = date_str.replace("T", " ")
     return date_str.strip()

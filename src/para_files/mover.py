@@ -8,7 +8,7 @@ from __future__ import annotations
 import hashlib
 import shutil
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -61,7 +61,7 @@ def files_are_identical(file1: Path, file2: Path) -> bool:
     return _compute_file_hash(file1) == _compute_file_hash(file2)
 
 
-class ConflictStrategy(str, Enum):
+class ConflictStrategy(StrEnum):
     """Strategy for handling filename conflicts."""
 
     SKIP = "skip"  # Skip if file exists

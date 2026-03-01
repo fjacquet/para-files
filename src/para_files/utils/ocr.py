@@ -262,7 +262,7 @@ def _extract_regions_from_results(
                 }
             )
 
-    return regions if regions else None
+    return regions or None
 
 
 def extract_text_with_regions(

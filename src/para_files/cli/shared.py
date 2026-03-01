@@ -7,7 +7,7 @@ code reuse and maintainability.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -33,7 +33,7 @@ MAX_PATTERNS_SHOWN = 3
 MAX_UTTERANCES_SHOWN = 5
 
 
-class ConflictChoice(str, Enum):
+class ConflictChoice(StrEnum):
     """CLI choices for conflict strategy.
 
     Defines the available options for handling file conflicts when

@@ -13,14 +13,14 @@ Key models:
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class ClassificationSource(str, Enum):
+class ClassificationSource(StrEnum):
     """Source of a classification decision in the 4-signal pipeline."""
 
     VALIDATED_DB = "validated_db"  # Signal 1: 100% confidence (deprecated)

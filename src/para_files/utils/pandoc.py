@@ -123,7 +123,7 @@ def _run_pandoc_to_plain(file_path: Path, fmt: str) -> str | None:
         logger.exception("Failed to extract text with pandoc from: {}", file_path)
         return None
 
-    return result.stdout if result.stdout else None
+    return result.stdout or None
 
 
 def extract_text(
@@ -229,4 +229,4 @@ def extract_metadata(file_path: Path) -> dict[str, str] | None:
             key, value = line.split(": ", 1)
             metadata[key.strip()] = value.strip()
 
-    return metadata if metadata else None
+    return metadata or None
