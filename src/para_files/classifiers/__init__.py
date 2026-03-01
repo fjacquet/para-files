@@ -14,7 +14,7 @@ First match wins. Default to 0_Inbox if no match.
 from para_files.classifiers.base import BaseClassifier
 from para_files.classifiers.book_detector import BookDetector
 from para_files.classifiers.extension_router import ExtensionRouterClassifier
-from para_files.classifiers.mlx_llm_classifier import LLMClassifier
+from para_files.classifiers.llm_classifier import LLMClassifier
 from para_files.classifiers.rules_engine import RulesEngineClassifier
 from para_files.classifiers.semantic_classifier import SemanticClassifier
 from para_files.classifiers.taxonomy_classifier import TaxonomyClassifier

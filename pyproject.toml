@@ -184,7 +184,7 @@ ignore = [
     "FBT002",   # Boolean default positional arguments are standard for Typer CLI
     "PLR0913",  # CLI commands naturally have many parameters
 ]
-"src/para_files/classifiers/mlx_llm_classifier.py" = [
+"src/para_files/classifiers/llm_classifier.py" = [
     "PLR0913",  # LLMClassifier.__init__ has many config parameters
 ]
 
