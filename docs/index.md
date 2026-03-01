@@ -50,6 +50,7 @@ Welcome to para-files! This documentation is organized by how you want to use it
 - **[Developer Guide](CLAUDE.md)** - Building & contributing (in CLAUDE.md)
 - **[Python API](advanced/programmatic-usage.md)** - Use para-files in your code
 - **[Product Requirements (PRD)](prd.md)** - Goals, features, and success metrics
+- **[Product Vision & Opportunities](vision.md)** - Future features and strategic direction
 - **[Architecture Decision Records (ADR)](adr/README.md)** - Key design decisions and rationale
 
 ## Quick Commands Reference
