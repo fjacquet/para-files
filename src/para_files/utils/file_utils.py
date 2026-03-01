@@ -468,9 +468,38 @@ def _read_pdf_file(file_path: Path, max_chars: int) -> str:
     return text if text.strip() else f"Filename: {file_path.name}"
 
 
+def _extract_pdf_with_pymupdf(file_path: Path, max_chars: int) -> str:
+    """Extract text directly with pymupdf (handles old/non-standard PDFs).
+
+    Useful for files that pypdf cannot parse (e.g. pre-PDF/1.4, custom Boolean
+    encoding). pymupdf's parser is more permissive than pypdf's.
+    """
+    try:
+        import fitz  # type: ignore[import-untyped]  # pymupdf
+
+        doc = fitz.open(str(file_path))
+        text_parts = []
+        chars_read = 0
+        for page in doc:
+            page_text: str = page.get_text()
+            remaining = max_chars - chars_read
+            if remaining <= 0:
+                break
+            chunk = page_text[:remaining]
+            text_parts.append(chunk)
+            chars_read += len(chunk)
+        result = "".join(text_parts)
+        if result.strip():
+            logger.debug("pymupdf extracted {} chars: {}", len(result), file_path.name)
+            return result
+    except Exception:  # noqa: BLE001
+        logger.debug("pymupdf text extraction failed: {}", file_path)
+    return ""
+
+
 def _extract_pdf_with_pypdf(file_path: Path, max_chars: int) -> str:
-    """Extract text from PDF using pypdf, with pdftotext fallback."""
-    # Try pypdf first
+    """Extract text from PDF using pypdf → pdftotext → pymupdf fallback chain."""
+    # 1. Try pypdf first
     try:
         from pypdf import PdfReader
 
@@ -491,10 +520,9 @@ def _extract_pdf_with_pypdf(file_path: Path, max_chars: int) -> str:
     except ImportError:
         logger.debug("pypdf not installed: {}", file_path)
     except Exception:  # noqa: BLE001
-        # pypdf can fail on various PDF formats - try pdftotext fallback
         logger.debug("pypdf failed, trying pdftotext: {}", file_path)
 
-    # Fallback to pdftotext (poppler-utils)
+    # 2. Fallback to pdftotext (poppler-utils)
     try:
         import subprocess
 
@@ -512,7 +540,8 @@ def _extract_pdf_with_pypdf(file_path: Path, max_chars: int) -> str:
     except Exception:  # noqa: BLE001
         logger.debug("pdftotext failed: {}", file_path)
 
-    return ""
+    # 3. Fallback to pymupdf direct extraction (handles pre-PDF/1.4 files)
+    return _extract_pdf_with_pymupdf(file_path, max_chars)
 
 
 def _ocr_pdf_first_page(file_path: Path, max_chars: int) -> str:
