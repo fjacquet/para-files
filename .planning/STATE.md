@@ -2,19 +2,19 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-28)
+See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Files are classified correctly and transparently — users understand why, and failures surface loudly.
-**Current focus:** Phase 4 — User Features
+**Current focus:** Milestone v1.1 — Inbox Throughput (defining requirements)
 
 ## Current Position
 
-Phase: 4 of 4 (User Features)
-Plan: 2 of 2 in current phase
-Status: Phase 4 Plan 02 complete — all plans complete
-Last activity: 2026-02-28 — Phase 4 Plan 02 executed
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements for milestone v1.1
+Last activity: 2026-03-01 — Milestone v1.1 Inbox Throughput started
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
