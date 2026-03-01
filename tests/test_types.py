@@ -37,8 +37,8 @@ class TestClassificationSource:
         assert ClassificationSource.SEMANTIC_ROUTER == "semantic_router"
 
     def test_source_count(self):
-        """Verify we have exactly 8 sources (v2.0 pipeline with TAXONOMY_CLASSIFIER)."""
-        assert len(ClassificationSource) == 8
+        """Verify we have exactly 9 sources (v2.1 pipeline with ExtensionRouterClassifier)."""
+        assert len(ClassificationSource) == 9
 
 
 class TestConfidence:
