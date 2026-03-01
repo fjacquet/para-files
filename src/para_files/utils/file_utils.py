@@ -74,6 +74,13 @@ TEXT_EXTENSIONS = frozenset(
 )
 
 
+# Spreadsheet extensions with extractable content
+EXCEL_EXTENSIONS = frozenset({".xlsx", ".xlsm", ".xls"})
+
+# Maximum cells to extract per spreadsheet (prevents runaway on huge sheets)
+_SPREADSHEET_MAX_CELLS = 200
+
+
 # Media-only extensions that should NEVER be OCR'd for classification
 # These are pure photo/video files - their content (if any text) is irrelevant
 # OCR'ing these files can lead to misclassification (e.g., photo of certificate → certifications)
@@ -210,6 +217,14 @@ def read_content_preview(
     # For PDF files, try to extract text with pypdf
     if extension == ".pdf":
         return _read_pdf_file(file_path, max_chars)
+
+    # For Excel spreadsheets, extract sheet names and cell values
+    if extension in EXCEL_EXTENSIONS:
+        return _read_excel_file(file_path, max_chars)
+
+    # For ODS spreadsheets, extract sheet names and cell values
+    if extension == ".ods":
+        return _read_ods_file(file_path, max_chars)
 
     # For document formats, try pandoc extraction
     from para_files.utils.pandoc import PANDOC_EXTENSIONS, extract_text
@@ -594,3 +609,173 @@ def _read_image_file(
 
     logger.debug("OCR extraction failed, using filename: {}", file_path)
     return f"Filename: {file_path.name}"
+
+
+def _extract_xlsx_content(file_path: Path, max_chars: int) -> list[str]:
+    """Extract text parts from an xlsx/xlsm workbook using openpyxl.
+
+    Args:
+        file_path: Path to xlsx/xlsm file.
+        max_chars: Maximum total characters to collect.
+
+    Returns:
+        List of text parts (sheet names and cell values).
+    """
+    import openpyxl
+
+    parts: list[str] = []
+    wb = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
+    for sheet_name in wb.sheetnames:
+        parts.append(f"Sheet: {sheet_name}")
+        ws = wb[sheet_name]
+        cell_count = 0
+        for row in ws.iter_rows(values_only=True):
+            for cell in row:
+                if cell is not None and str(cell).strip():
+                    parts.append(str(cell).strip())
+                    cell_count += 1
+                    if cell_count >= _SPREADSHEET_MAX_CELLS:
+                        break
+            if cell_count >= _SPREADSHEET_MAX_CELLS:
+                break
+            if sum(len(p) for p in parts) >= max_chars:
+                break
+    wb.close()
+    return parts
+
+
+def _extract_xls_content(file_path: Path, max_chars: int) -> list[str]:
+    """Extract text parts from a legacy .xls workbook using xlrd.
+
+    Args:
+        file_path: Path to xls file.
+        max_chars: Maximum total characters to collect.
+
+    Returns:
+        List of text parts (sheet names and cell values).
+    """
+    import xlrd
+
+    parts: list[str] = []
+    wb = xlrd.open_workbook(str(file_path))
+    for sheet_name in wb.sheet_names():
+        parts.append(f"Sheet: {sheet_name}")
+        ws = wb.sheet_by_name(sheet_name)
+        cell_count = 0
+        for row_idx in range(ws.nrows):
+            for col_idx in range(ws.ncols):
+                cell_val = ws.cell_value(row_idx, col_idx)
+                if cell_val and str(cell_val).strip():
+                    parts.append(str(cell_val).strip())
+                    cell_count += 1
+                    if cell_count >= _SPREADSHEET_MAX_CELLS:
+                        break
+            if cell_count >= _SPREADSHEET_MAX_CELLS:
+                break
+            if sum(len(p) for p in parts) >= max_chars:
+                break
+    return parts
+
+
+def _read_excel_file(file_path: Path, max_chars: int) -> str:
+    """Extract text from Excel file using openpyxl (xlsx/xlsm) or xlrd (xls).
+
+    Reads sheet names and first N cell values from each sheet.
+    Handles encrypted/corrupt files gracefully.
+
+    Args:
+        file_path: Path to Excel file.
+        max_chars: Maximum characters to return.
+
+    Returns:
+        Extracted text or filename fallback.
+    """
+    extension = file_path.suffix.lower()
+    parts: list[str] = []
+
+    try:
+        if extension in {".xlsx", ".xlsm"}:
+            parts = _extract_xlsx_content(file_path, max_chars)
+        elif extension == ".xls":
+            # xlrd is only used for legacy .xls; prefer openpyxl for newer formats
+            parts = _extract_xls_content(file_path, max_chars)
+
+    except ImportError as e:
+        logger.warning("Excel library not available for {}: {}", file_path, e)
+        return f"Filename: {file_path.name}"
+    except Exception:  # noqa: BLE001
+        logger.warning("Failed to read Excel file (corrupt or encrypted?): {}", file_path)
+        return f"Filename: {file_path.name}"
+
+    text = "\n".join(parts)
+    return text[:max_chars] if text.strip() else f"Filename: {file_path.name}"
+
+
+def _extract_ods_content(file_path: Path, max_chars: int) -> list[str]:
+    """Extract text parts from an ODS document using odfpy.
+
+    Args:
+        file_path: Path to ODS file.
+        max_chars: Maximum total characters to collect.
+
+    Returns:
+        List of text parts (sheet names and cell values).
+    """
+    from odf.opendocument import load
+    from odf.table import Table, TableCell, TableRow
+    from odf.text import P
+
+    doc = load(str(file_path))
+    parts: list[str] = []
+    cell_count = 0
+    done = False
+
+    for sheet in doc.spreadsheet.getElementsByType(Table):
+        if done:
+            break
+        sheet_name = sheet.getAttribute("name") or "Sheet"
+        parts.append(f"Sheet: {sheet_name}")
+
+        for row in sheet.getElementsByType(TableRow):
+            if done:
+                break
+            for cell in row.getElementsByType(TableCell):
+                for p in cell.getElementsByType(P):
+                    text = str(p)
+                    if text.strip():
+                        parts.append(text.strip())
+                        cell_count += 1
+                        if cell_count >= _SPREADSHEET_MAX_CELLS:
+                            done = True
+                            break
+                if done or sum(len(p) for p in parts) >= max_chars:
+                    done = True
+                    break
+
+    return parts
+
+
+def _read_ods_file(file_path: Path, max_chars: int) -> str:
+    """Extract text from ODS file using odfpy.
+
+    Reads sheet names and first N cell values from each sheet.
+    Handles corrupt files gracefully.
+
+    Args:
+        file_path: Path to ODS file.
+        max_chars: Maximum characters to return.
+
+    Returns:
+        Extracted text or filename fallback.
+    """
+    try:
+        parts = _extract_ods_content(file_path, max_chars)
+    except ImportError as e:
+        logger.warning("odfpy not available for {}: {}", file_path, e)
+        return f"Filename: {file_path.name}"
+    except Exception:  # noqa: BLE001
+        logger.warning("Failed to read ODS file (corrupt?): {}", file_path)
+        return f"Filename: {file_path.name}"
+
+    text = "\n".join(parts)
+    return text[:max_chars] if text.strip() else f"Filename: {file_path.name}"
