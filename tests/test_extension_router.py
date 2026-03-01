@@ -17,7 +17,11 @@ from pathlib import Path
 
 import pytest
 
-from para_files.classifiers.extension_router import EXTENSION_GROUPS, ExtensionRouterClassifier
+from para_files.classifiers.extension_router import (
+    EXTENSION_GROUPS,
+    PASSTHROUGH_EXTENSIONS,
+    ExtensionRouterClassifier,
+)
 from para_files.config import ExtensionRoutingConfig
 from para_files.types import ClassificationSource, FileMetadata
 
@@ -242,6 +246,47 @@ class TestEdgeCases:
 
         assert result is not None
         assert result.category == default_config.media_video_folder
+
+
+# ---------------------------------------------------------------------------
+# ROUTE-07: Document extensions → passthrough (return None)
+# ---------------------------------------------------------------------------
+
+
+class TestDocumentPassthrough:
+    """ROUTE-07: Document extensions must return None so downstream classifiers can handle them."""
+
+    @pytest.mark.parametrize("ext", [".pdf", ".docx", ".doc", ".xlsx", ".xls", ".epub"])
+    def test_document_extension_returns_none(
+        self,
+        classifier: ExtensionRouterClassifier,
+        ext: str,
+    ) -> None:
+        """Document extensions in PASSTHROUGH_EXTENSIONS must return None."""
+        metadata = _make_metadata(ext)
+        result = classifier.classify("", metadata=metadata)
+
+        assert result is None
+
+    def test_pdf_uppercase_returns_none(
+        self,
+        classifier: ExtensionRouterClassifier,
+    ) -> None:
+        """Passthrough matching must be case-insensitive."""
+        metadata = _make_metadata(".PDF")
+        result = classifier.classify("", metadata=metadata)
+
+        assert result is None
+
+    def test_all_passthrough_extensions_return_none(
+        self,
+        classifier: ExtensionRouterClassifier,
+    ) -> None:
+        """Every extension in PASSTHROUGH_EXTENSIONS must return None."""
+        for ext in PASSTHROUGH_EXTENSIONS:
+            metadata = _make_metadata(ext)
+            result = classifier.classify("", metadata=metadata)
+            assert result is None, f"Expected None for {ext}, got {result}"
 
 
 # ---------------------------------------------------------------------------

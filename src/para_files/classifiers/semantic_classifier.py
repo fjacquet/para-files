@@ -26,7 +26,7 @@ from para_files.utils.placeholder_resolver import clean_unreplaced_placeholders
 
 
 # Minimum content length for semantic matching
-MIN_CONTENT_LENGTH = 50
+MIN_CONTENT_LENGTH = 10
 
 # Maximum content length to encode
 MAX_CONTENT_LENGTH = 2000

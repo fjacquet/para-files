@@ -19,6 +19,25 @@ from para_files.types import (
 )
 
 
+# Document extensions that should NOT go to catch-all — they have rich content
+# that deserves classification by SemanticClassifier or LLM fallback.
+PASSTHROUGH_EXTENSIONS = frozenset(
+    {
+        ".pdf",
+        ".docx",
+        ".doc",
+        ".xlsx",
+        ".xls",
+        ".pptx",
+        ".ppt",
+        ".odt",
+        ".ods",
+        ".odp",
+        ".rtf",
+        ".epub",
+    }
+)
+
 # Mapping: extension (lowercase with dot) -> (config_attr_name, confidence)
 EXTENSION_GROUPS: dict[str, tuple[str, float]] = {
     ".3gp": ("media_video_folder", 0.97),
@@ -110,6 +129,13 @@ class ExtensionRouterClassifier(BaseClassifier):
             )
 
         if ext:
+            if ext in PASSTHROUGH_EXTENSIONS:
+                logger.debug(
+                    "ExtensionRouter passthrough for document extension {ext} (let LLM handle)",
+                    ext=ext,
+                )
+                return None
+
             # File has an extension but it is not in the known groups — send to misc.
             destination = self._config.catchall_folder
             logger.debug(

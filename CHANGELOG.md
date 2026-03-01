@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **PDF classification pipeline bypass**: PDFs (and other document formats) were all routing to `0_Inbox (80% extension_router)` instead of being classified. Three compounding bugs fixed:
+  - **ExtensionRouter catch-all blocked LLM** (`extension_router.py`): Added `PASSTHROUGH_EXTENSIONS` frozenset for document formats (`.pdf`, `.docx`, `.xlsx`, `.epub`, etc.) — these now return `None` so downstream classifiers (Semantic/LLM) can handle them instead of being swallowed by the catch-all
+  - **SemanticClassifier MIN_CONTENT_LENGTH too high** (`semantic_classifier.py`): Lowered from 50 to 10 — filename fallback content (`"Filename: file.pdf"` ≈ 30 chars) was being rejected
+  - **MLX native LLM disabled** (`.env`): Enabled `PARA_FILES_MLX_LLM_ENABLED=true` to activate the local Qwen2.5 LLM fallback via `mlx-lm`
 - **File extension case sensitivity** (`file_utils.py`): `FileMetadata.extension` is now normalized to lowercase at construction time — files named `.PDF`, `.EPUB`, `.CHM` are now classified correctly instead of falling through extension checks
 - **OCR rename confidence threshold** (`config.py`): Default `OCRRenameConfig.min_confidence` raised from `0.3` to `0.7` — bank statement headers and other low-signal text no longer trigger erroneous file renames
 - **Silent ISBN enrichment failures** (`isbn_lookup.py`): Bare `pass` statements replaced with `logger.warning("ISBN description/cover URL enrichment failed for {isbn}: {ExcType} {msg}")` — enrichment failures are now visible in logs with the specific step (description vs. cover URL) that failed
