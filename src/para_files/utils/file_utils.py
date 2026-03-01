@@ -77,6 +77,9 @@ TEXT_EXTENSIONS = frozenset(
 # Spreadsheet extensions with extractable content
 EXCEL_EXTENSIONS = frozenset({".xlsx", ".xlsm", ".xls"})
 
+# Archive extensions with manifest-readable content
+ARCHIVE_EXTENSIONS = frozenset({".zip", ".7z", ".7zip"})
+
 # Maximum cells to extract per spreadsheet (prevents runaway on huge sheets)
 _SPREADSHEET_MAX_CELLS = 200
 
@@ -225,6 +228,10 @@ def read_content_preview(
     # For ODS spreadsheets, extract sheet names and cell values
     if extension == ".ods":
         return _read_ods_file(file_path, max_chars)
+
+    # For archive files, read the internal filename manifest (no extraction)
+    if extension in ARCHIVE_EXTENSIONS:
+        return _read_archive_manifest(file_path, max_chars)
 
     # For document formats, try pandoc extraction
     from para_files.utils.pandoc import PANDOC_EXTENSIONS, extract_text
@@ -779,3 +786,55 @@ def _read_ods_file(file_path: Path, max_chars: int) -> str:
 
     text = "\n".join(parts)
     return text[:max_chars] if text.strip() else f"Filename: {file_path.name}"
+
+
+def _read_archive_manifest(file_path: Path, max_chars: int) -> str:
+    """Read archive manifest (list of internal filenames) without extracting.
+
+    For ZIP files: uses stdlib zipfile.ZipFile.namelist() — no extraction.
+    For 7Z files: uses py7zr.SevenZipFile.getnames() — no extraction.
+
+    Handles encrypted, corrupt, and unsupported archives gracefully.
+
+    Args:
+        file_path: Path to archive file.
+        max_chars: Maximum characters to return.
+
+    Returns:
+        Manifest text listing internal filenames, or filename fallback.
+    """
+    extension = file_path.suffix.lower()
+    names: list[str] = []
+
+    try:
+        if extension == ".zip":
+            import zipfile
+
+            with zipfile.ZipFile(file_path, "r") as zf:
+                names = zf.namelist()
+
+        elif extension in {".7z", ".7zip"}:
+            try:
+                import py7zr  # type: ignore[import-not-found]
+
+                with py7zr.SevenZipFile(file_path, mode="r") as zf:
+                    names = zf.getnames()
+            except ImportError:
+                logger.debug("py7zr not installed, cannot read 7Z manifest: {}", file_path)
+                return f"Filename: {file_path.name}"
+
+    except Exception:  # noqa: BLE001
+        logger.warning(
+            "Failed to read archive manifest (corrupt, encrypted, or unsupported?): {}",
+            file_path,
+        )
+        return f"Filename: {file_path.name}"
+
+    if not names:
+        return f"Filename: {file_path.name}"
+
+    # Build manifest text: "Archive manifest:\n  invoice_2024.pdf\n  contract.docx\n..."
+    header = f"Archive manifest ({len(names)} files):"
+    parts = [header] + [f"  {name}" for name in names]
+    text = "\n".join(parts)
+    return text[:max_chars]
