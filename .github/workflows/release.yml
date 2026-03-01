@@ -3,19 +3,9 @@ name: Release
 # Trigger: push a semver tag, e.g.:
 #   git tag v0.2.0 && git push --tags
 #
-# Prerequisites (one-time setup):
-#   1. PyPI OIDC trusted publisher — go to pypi.org > Account > Publishing >
-#      Add a new pending publisher with:
-#        - PyPI project name : para-files
-#        - GitHub owner      : fjacquet
-#        - Repository        : para-files
-#        - Workflow filename  : release.yml
-#        - Environment name  : pypi
-#      Then create the GitHub environment "pypi" in Settings > Environments.
-#      (Alternatively, set secret PYPI_API_TOKEN and skip the OIDC setup.)
-#   2. Before tagging, update both:
-#        - pyproject.toml    → version = "x.y.z"
-#        - src/para_files/__init__.py → __version__ = "x.y.z"
+# Before tagging, update both:
+#   - pyproject.toml             → version = "x.y.z"
+#   - src/para_files/__init__.py → __version__ = "x.y.z"
 
 on:
   push:
@@ -71,34 +61,10 @@ jobs:
           path: dist/
           retention-days: 7
 
-  # ── 3. Publish to PyPI ─────────────────────────────────────────────────────
-  publish-pypi:
-    runs-on: ubuntu-latest
-    needs: build
-    environment: pypi
-    permissions:
-      id-token: write   # required for OIDC trusted publishing
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          version: "latest"
-
-      - name: Publish to PyPI
-        # --trusted-publishing=automatic: prefers OIDC, falls back to token
-        run: uv publish --trusted-publishing=automatic
-        env:
-          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-
-  # ── 4. GitHub Release ──────────────────────────────────────────────────────
+  # ── 3. GitHub Release ──────────────────────────────────────────────────────
   github-release:
     runs-on: ubuntu-latest
-    needs: publish-pypi
+    needs: build
     permissions:
       contents: write
     steps:
@@ -115,7 +81,7 @@ jobs:
           files: dist/*
           generate_release_notes: true
 
-  # ── 5. Update Homebrew formula ─────────────────────────────────────────────
+  # ── 4. Update Homebrew formula ─────────────────────────────────────────────
   update-formula:
     runs-on: ubuntu-latest
     needs: github-release
