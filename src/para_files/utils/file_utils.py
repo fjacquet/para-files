@@ -815,7 +815,7 @@ def _read_archive_manifest(file_path: Path, max_chars: int) -> str:
 
         elif extension in {".7z", ".7zip"}:
             try:
-                import py7zr  # type: ignore[import-not-found]
+                import py7zr
 
                 with py7zr.SevenZipFile(file_path, mode="r") as zf:
                     names = zf.getnames()

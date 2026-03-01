@@ -50,6 +50,9 @@ dependencies = [
 pdf = [
     "pypdf>=4.0.0",
 ]
+archives = [
+    "py7zr>=0.22.0",
+]
 dev = [
     "mypy>=1.15.0",
     "pytest>=8.3.0",
