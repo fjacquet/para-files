@@ -55,10 +55,13 @@ class TestMLXConfig:
 class TestLLMConfig:
     """Tests for LLMConfig."""
 
-    def test_default_values(self):
+    def test_default_values(self, monkeypatch, tmp_path):
         """Test default LLM configuration values."""
-        with patch.dict("os.environ", {}, clear=False) as env:
-            env.pop("PARA_FILES_LLM_MODEL", None)
+        monkeypatch.chdir(tmp_path)  # No .env in tmp_path — test pure defaults
+        import os
+
+        clean_env = {k: v for k, v in os.environ.items() if not k.startswith("PARA_FILES_")}
+        with patch.dict("os.environ", clean_env, clear=True):
             config = LLMConfig()
         assert config.enabled is False
         assert config.model == DEFAULT_LLM_MODEL
@@ -155,11 +158,15 @@ class TestConfig:
         with pytest.raises(ValidationError):
             Config(para_root=tmp_path, content_preview_chars=20000)
 
-    def test_para_root_has_default(self):
+    def test_para_root_has_default(self, monkeypatch, tmp_path):
         """Test that para_root has a sensible default."""
+        import os
         from pathlib import Path
 
-        config = Config()
+        monkeypatch.chdir(tmp_path)  # No .env in tmp_path — test pure defaults
+        clean_env = {k: v for k, v in os.environ.items() if not k.startswith("PARA_FILES_")}
+        with patch.dict("os.environ", clean_env, clear=True):
+            config = Config()
         assert config.para_root == Path.home() / "Documents" / "PARA"
 
 

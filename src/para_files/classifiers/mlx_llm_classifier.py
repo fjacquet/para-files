@@ -25,27 +25,41 @@ from para_files.types import (
 )
 
 
-# System prompt for PARA classification
-SYSTEM_PROMPT = """You are a file classification assistant for the PARA method.
+# Valid PARA top-level prefixes for output validation
+_VALID_PARA_PREFIXES = ("0_Inbox", "1_Projects", "2_Areas", "3_Resources", "4_Archives")
 
-PARA Categories:
-- 0_Inbox: Temporary files to be sorted
-- 1_Projects: Active projects with deadlines
-- 2_Areas: Ongoing responsibilities (work, finances, health)
-- 3_Resources: Reference materials (books, documentation, guides)
-- 4_Archives: Completed/historical content (photos, invoices, old projects)
 
-Sub-categories examples:
-- 4_Archives/factures/{year}/{issuer} - Invoices by year and provider
-- 4_Archives/banques/{bank}/{year} - Bank statements
-- 4_Archives/assurances/{type}/{year} - Insurance documents
-- 3_Resources/documentation/{technology} - Technical docs
-- 3_Resources/livres/{topic} - Books by subject
+def _build_system_prompt(valid_categories: list[str]) -> str:
+    """Build a system prompt that constrains LLM output to valid PARA categories.
 
-Given the file content, respond ONLY with a JSON object:
-{"category": "full/path", "confidence": 0.0-1.0, "reasoning": "brief explanation"}
+    Args:
+        valid_categories: List of valid PARA category paths from the taxonomy.
 
-Be specific with paths when possible. Extract year from dates if present."""
+    Returns:
+        System prompt string with real categories.
+    """
+    if valid_categories:
+        category_list = "\n".join(f"- {c}" for c in valid_categories)
+    else:
+        category_list = (
+            "- 3_Resources/documentation/{technology}\n- 4_Archives/5y_divers/{year}\n- 0_Inbox"
+        )
+
+    return f"""You are a file classification assistant for the PARA method.
+You MUST classify files into ONE of these exact category patterns:
+
+{category_list}
+
+Rules:
+- Replace {{technology}} with the actual technology name (e.g., Dell, Cisco, VMware)
+- Replace {{issuer}} with the company/organization name
+- Replace {{year}} with the 4-digit year extracted from the content
+- Use 0_Inbox ONLY if absolutely no category fits
+- NEVER invent paths outside this list
+- NEVER output absolute file paths (no / or C:\\ at the start)
+
+Respond ONLY with a JSON object:
+{{"category": "exact/path/from/list", "confidence": 0.0-1.0, "reasoning": "brief explanation"}}"""
 
 
 class MLXLLMClassifier(BaseClassifier):
@@ -68,6 +82,7 @@ class MLXLLMClassifier(BaseClassifier):
         confidence_threshold: float = 0.6,
         content_preview_chars: int = DEFAULT_CONTENT_PREVIEW_CHARS,
         max_tokens: int = 256,
+        valid_categories: list[str] | None = None,
     ) -> None:
         """Initialize MLX-LM classifier.
 
@@ -77,12 +92,14 @@ class MLXLLMClassifier(BaseClassifier):
             confidence_threshold: Minimum confidence to accept result.
             content_preview_chars: Max characters of content to send.
             max_tokens: Maximum tokens to generate.
+            valid_categories: List of valid PARA category paths from the taxonomy.
         """
         self._enabled = enabled
         self._model_name = model
         self._confidence_threshold = confidence_threshold
         self._content_preview_chars = content_preview_chars
         self._max_tokens = max_tokens
+        self._system_prompt = _build_system_prompt(valid_categories or [])
 
         # Lazy-loaded model and tokenizer
         self._model: Any | None = None
@@ -229,7 +246,7 @@ class MLXLLMClassifier(BaseClassifier):
         # Use chat template if tokenizer supports it
         if self._tokenizer is not None and hasattr(self._tokenizer, "apply_chat_template"):
             messages = [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": self._system_prompt},
                 {"role": "user", "content": user_message},
             ]
             result = self._tokenizer.apply_chat_template(
@@ -240,7 +257,33 @@ class MLXLLMClassifier(BaseClassifier):
             return str(result)
 
         # Fallback to simple format
-        return f"{SYSTEM_PROMPT}\n\nUser: {user_message}\n\nAssistant:"
+        return f"{self._system_prompt}\n\nUser: {user_message}\n\nAssistant:"
+
+    def _sanitize_category(self, category: str) -> str | None:
+        """Validate and sanitize a category path from the LLM.
+
+        Rejects hallucinated absolute paths, Windows paths, and categories
+        that don't start with a valid PARA top-level folder.
+
+        Args:
+            category: Raw category string from LLM output.
+
+        Returns:
+            Sanitized category string, or None if invalid.
+        """
+        category = category.strip().strip('"').strip("'")
+
+        # Reject absolute or Windows-style paths
+        if category.startswith(("/", "~")) or ":\\" in category or category[1:2] == ":":
+            logger.debug("MLX-LLM rejected hallucinated path: {}", category[:100])
+            return None
+
+        # Must start with a valid PARA prefix
+        if not any(category.startswith(p) for p in _VALID_PARA_PREFIXES):
+            logger.debug("MLX-LLM rejected non-PARA category: {}", category[:100])
+            return None
+
+        return category
 
     def _parse_response(self, response: str) -> ClassificationResult | None:
         """Parse MLX-LM response.
@@ -274,6 +317,11 @@ class MLXLLMClassifier(BaseClassifier):
             confidence = float(data.get("confidence", 0.0))
             reasoning = data.get("reasoning", "")
 
+            if not category:
+                return None
+
+            # Validate category is a valid PARA path (reject hallucinated paths)
+            category = self._sanitize_category(category)
             if not category:
                 return None
 

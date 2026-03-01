@@ -31,7 +31,7 @@ config:
     score_threshold: 0.75
 
     # LLM fallback (native MLX, no Ollama required)
-    llm_enabled: false
+    llm_enabled: true
     llm_model: "mlx-community/Qwen2.5-1.5B-Instruct-4bit"
     llm_confidence: 0.6
 

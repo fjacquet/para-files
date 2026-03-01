@@ -26,7 +26,7 @@ from para_files.classifiers.semantic_classifier import SemanticClassifier
 from para_files.classifiers.taxonomy_classifier import TaxonomyClassifier
 from para_files.config import Config
 from para_files.reference_tree import ReferenceTree
-from para_files.taxonomies.loader import get_taxonomy_loader
+from para_files.taxonomies.loader import TaxonomyLoader, get_taxonomy_loader
 from para_files.types import (
     ClassificationResult,
     ClassificationSource,
@@ -126,11 +126,13 @@ class ClassificationPipeline:
 
         # Signal 6: MLX-LLM Fallback (configurable via mlx.llm_* settings)
         if self._config.mlx.llm_enabled:
+            valid_categories = self._get_valid_categories(taxonomy_loader)
             mlx_llm = MLXLLMClassifier(
                 enabled=True,
                 model=self._config.mlx.llm_model,
                 confidence_threshold=self._config.mlx.llm_confidence,
                 content_preview_chars=self._config.content_preview_chars,
+                valid_categories=valid_categories,
             )
             self._classifiers.append(mlx_llm)
 
@@ -181,6 +183,27 @@ class ClassificationPipeline:
             "VMware",
             "vSphere",
         ]
+
+    @staticmethod
+    def _get_valid_categories(loader: TaxonomyLoader) -> list[str]:
+        """Extract valid PARA category paths from the taxonomy.
+
+        Args:
+            loader: TaxonomyLoader with loaded documents.
+
+        Returns:
+            Sorted list of unique PARA category path patterns.
+        """
+        docs = loader.load_documents()
+        paths: set[str] = set()
+        for cat in docs.categories:
+            paths.add(cat.para_pattern)
+            for doc_type in cat.documents:
+                if doc_type.para_pattern:
+                    paths.add(doc_type.para_pattern)
+        # Add generic tech documentation catch-all for English PDFs
+        paths.add("3_Resources/documentation/{technology}")
+        return sorted(paths)
 
     def classify(
         self,

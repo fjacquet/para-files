@@ -80,6 +80,8 @@ class MLXConfig(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_prefix="PARA_FILES_MLX_",
+        env_file=".env",
+        env_file_encoding="utf-8",
         extra="ignore",  # Allow extra fields for backward compatibility
         populate_by_name=True,  # Accept both field name and alias
     )
@@ -111,7 +113,7 @@ class MLXConfig(BaseSettings):
 
     # LLM fallback configuration (v2.0 - optional native MLX-LM)
     llm_enabled: bool = Field(
-        default=False,
+        default=True,
         description="Enable native MLX-LM fallback for unclassified files",
     )
     llm_model: str = Field(
@@ -129,7 +131,12 @@ class MLXConfig(BaseSettings):
 class LLMConfig(BaseSettings):
     """LLM fallback configuration using litellm."""
 
-    model_config = SettingsConfigDict(env_prefix="PARA_FILES_LLM_")
+    model_config = SettingsConfigDict(
+        env_prefix="PARA_FILES_LLM_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     enabled: bool = Field(
         default=False,
@@ -154,7 +161,12 @@ class LLMConfig(BaseSettings):
 class LoggingConfig(BaseSettings):
     """Logging configuration for file and console output."""
 
-    model_config = SettingsConfigDict(env_prefix="PARA_FILES_LOG_")
+    model_config = SettingsConfigDict(
+        env_prefix="PARA_FILES_LOG_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     level: str = Field(
         default=DEFAULT_LOG_LEVEL,
@@ -200,7 +212,12 @@ class ExtensionRoutingConfig(BaseSettings):
     file types that are best classified by their extension alone.
     """
 
-    model_config = SettingsConfigDict(env_prefix="PARA_FILES_EXT_ROUTING_")
+    model_config = SettingsConfigDict(
+        env_prefix="PARA_FILES_EXT_ROUTING_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     media_video_folder: str = Field(
         default="3_Resources/media/video",
