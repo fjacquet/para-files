@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Files are classified correctly and transparently — users understand why, and failures surface loudly.
-**Current focus:** Phase 6 — Extension Routing (v1.1 Inbox Throughput)
+**Current focus:** Phase 7 — Inbox Processing UX (v1.1 Inbox Throughput)
 
 ## Current Position
 
-Phase: 6 of 7 (Extension Routing)
-Plan: 3 of 3 in current phase (COMPLETE)
+Phase: 7 of 7 (Inbox Processing UX)
+Plan: 1 of 1 in current phase (COMPLETE)
 Status: In Progress
-Last activity: 2026-03-01 — Completed plan 06-03: ExtensionRouterClassifier wired into pipeline as Signal 5
+Last activity: 2026-03-01 — Completed plan 07-01: inbox CLI command with progress display and summary
 
-Progress: [████████░░] 78% (v1.0 complete, v1.1 phase 6/7 complete with all 3 plans)
+Progress: [█████████░] 88% (v1.0 complete, v1.1 phase 7/7 plan 1/1 complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
-- Average duration: 5.9 minutes
-- Total execution time: 0.45 hours
+- Total plans completed: 10
+- Average duration: 5.7 minutes
+- Total execution time: 0.50 hours
 
 **By Phase:**
 
@@ -33,15 +33,17 @@ Progress: [████████░░] 78% (v1.0 complete, v1.1 phase 6/7 co
 | 04-user-features | 2 | 19 min | 9.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 5-12 min
+- Last 5 plans: 3-12 min
 - Trend: stable
 
 | 05-content-extraction | 3 | 12 min | 4 min |
 | 06-extension-routing | 3 | 21 min | 7 min |
+| 07-inbox-processing-ux | 1 | 3 min | 3 min |
 
 *Updated after each plan completion*
 | Phase 06-extension-routing P02 | 5 | 1 tasks | 1 files |
 | Phase 06-extension-routing P03 | 8 | 3 tasks | 3 files |
+| Phase 07-inbox-processing-ux P01 | 3 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -62,6 +64,7 @@ Recent decisions affecting current work:
 - [Phase 05-content-extraction]: Use openpyxl read_only+data_only for xlsx/xlsm; xlrd for legacy .xls; odfpy for .ods — all lazy imports with graceful fallback
 - [Phase 05-content-extraction]: Extract helper functions (_extract_*_content) to meet ruff complexity limits; PLR0911 per-file ignore for dispatch function
 - [Phase 05-content-extraction]: No file format parser mocking in tests — all tests use real openpyxl/odfpy/zipfile file creation for genuine contract verification
+- [Phase 07-inbox-processing-ux P01]: Use _InboxStats dataclass (not dict) for typed stats accumulation; ClassificationSource.DEFAULT check for stay-in-inbox decision; non-recursive discover (inbox root only)
 
 ### Pending Todos
 
@@ -75,5 +78,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 06-extension-routing-03-PLAN.md (ExtensionRouterClassifier wired into pipeline as Signal 5)
+Stopped at: Completed 07-inbox-processing-ux-01-PLAN.md (inbox CLI command with progress display and summary)
 Resume file: None

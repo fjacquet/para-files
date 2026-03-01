@@ -151,4 +151,4 @@ Plans:
 | 4. User Features | 2/2 | Complete    | 2026-02-28 |
 | 5. Content Extraction | 2/3 | In Progress|  |
 | 6. Extension Routing | 3/3 | Complete   | 2026-03-01 |
-| 7. Inbox Processing UX | 0/TBD | Not started | - |
+| 7. Inbox Processing UX | 1/2 | In Progress|  |

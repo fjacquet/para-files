@@ -49,10 +49,10 @@
 
 ### Inbox Processing UX
 
-- [ ] **UX-01**: A single command processes the entire inbox directory — classifying and moving all files it can confidently route
-- [ ] **UX-02**: Files the pipeline cannot classify are left in Inbox (not moved to a wrong location)
-- [ ] **UX-03**: Progress is displayed during bulk processing (file count, current file, destination)
-- [ ] **UX-04**: A post-run summary shows: total files processed, moved count, stayed-in-inbox count, breakdown by signal source
+- [x] **UX-01**: A single command processes the entire inbox directory — classifying and moving all files it can confidently route
+- [x] **UX-02**: Files the pipeline cannot classify are left in Inbox (not moved to a wrong location)
+- [x] **UX-03**: Progress is displayed during bulk processing (file count, current file, destination)
+- [x] **UX-04**: A post-run summary shows: total files processed, moved count, stayed-in-inbox count, breakdown by signal source
 
 ## v2 Requirements
 
@@ -113,12 +113,13 @@
 | ROUTE-04 | Phase 6 | Complete |
 | ROUTE-05 | Phase 6 | Complete |
 | ROUTE-06 | Phase 6 | Complete |
-| UX-01 | Phase 7 | Pending |
-| UX-02 | Phase 7 | Pending |
-| UX-03 | Phase 7 | Pending |
-| UX-04 | Phase 7 | Pending |
+| UX-01 | Phase 7 | Complete |
+| UX-02 | Phase 7 | Complete |
+| UX-03 | Phase 7 | Complete |
+| UX-04 | Phase 7 | Complete |
 
 **Coverage:**
+
 - v1.0 requirements: 12 total — all Complete ✓
 - v1.1 requirements: 14 total
 - Mapped to phases: 14
