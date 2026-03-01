@@ -119,6 +119,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
+
 - [ ] 06-01-PLAN.md — Add ExtensionRoutingConfig and ExtensionRouterClassifier (ROUTE-01–06)
 - [ ] 06-02-PLAN.md — TDD test suite for ExtensionRouterClassifier (ROUTE-01–06)
 - [ ] 06-03-PLAN.md — Wire ExtensionRouterClassifier into pipeline and regression tests (ROUTE-01–06)
@@ -134,7 +135,11 @@ Plans:
   2. Files the pipeline cannot classify with sufficient confidence remain in Inbox — none are moved to a wrong location
   3. During processing, each file shows its name, destination, and running count in the terminal output
   4. After processing completes, the terminal prints a summary: total files processed, moved count, stayed-in-inbox count, and breakdown by signal source
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — Implement inbox command with progress display and post-run summary (UX-01, UX-02, UX-03, UX-04)
+- [ ] 07-02-PLAN.md — TDD test suite for inbox command (UX-01, UX-02, UX-03, UX-04)
 
 ## Progress
 
