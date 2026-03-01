@@ -13,6 +13,11 @@ from pathlib import Path
 from loguru import logger
 
 
+# Track paths that already triggered a warning to avoid duplicate log lines
+# when multiple callers (file_utils, book_detector) process the same file.
+_warned_paths: set[Path] = set()
+
+
 @dataclass
 class PdfMetadata:
     """Metadata extracted from a PDF file."""
@@ -201,7 +206,9 @@ def extract_pdf_metadata(path: Path, max_pages_for_isbn: int = 20) -> PdfMetadat
         )
 
     except Exception as e:  # noqa: BLE001
-        logger.warning("Failed to extract PDF metadata from {}: {}", path, e)
+        if path not in _warned_paths:
+            _warned_paths.add(path)
+            logger.warning("Failed to extract PDF metadata from {}: {}", path, e)
         # If we found ISBN in filename, return partial metadata
         if filename_isbns:
             logger.info("Returning partial metadata with filename ISBN for {}", path.name)

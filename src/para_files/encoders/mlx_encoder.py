@@ -14,6 +14,34 @@ from pydantic import ConfigDict, PrivateAttr
 from semantic_router.encoders import DenseEncoder
 
 
+def _apply_transformers5_tokenizer_patch() -> None:
+    """Patch TokenizersBackend for transformers 5.x compatibility.
+
+    transformers 5.0 removed batch_encode_plus from TokenizersBackend.
+    mlx_embedding_models 0.0.11 still calls it, so we add it back as a
+    delegate to __call__, which accepts identical arguments.
+
+    Applied once at module import time so all future instances are covered.
+    """
+    try:
+        from transformers.tokenization_utils_tokenizers import (  # type: ignore[import-untyped]
+            TokenizersBackend,
+        )
+
+        if not hasattr(TokenizersBackend, "batch_encode_plus"):
+            logger.debug("Applying transformers 5.x TokenizersBackend compatibility patch")
+
+            def _batch_encode_plus(self: object, batch: list[str], **kwargs: object) -> object:
+                return self(batch, **kwargs)  # type: ignore[operator]
+
+            TokenizersBackend.batch_encode_plus = _batch_encode_plus  # type: ignore[attr-defined]
+    except ImportError:
+        pass  # transformers < 5.x: TokenizersBackend doesn't exist, no patch needed
+
+
+_apply_transformers5_tokenizer_patch()
+
+
 class MLXEncoder(DenseEncoder):
     """Custom encoder for semantic-router using MLX embeddings.
 
@@ -120,8 +148,8 @@ class MLXEncoder(DenseEncoder):
             # EmbeddingModel.encode returns numpy array of shape (n_texts, embedding_dim)
             embeddings_array = self._model.encode(truncated_texts)
         except IndexError as e:
-            # Batch failed — likely one problematic text. Retry per-text.
-            logger.warning("Batch encode failed (token limit), retrying per-text: {}", e)
+            # Batch failed — likely a tokenization edge case. Retry per-text.
+            logger.warning("Batch encode failed, retrying per-text: {}", e)
             return [self._encode_single(t) for t in texts]
 
         # Convert to list of lists
