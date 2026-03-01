@@ -193,6 +193,41 @@ class OCRRenameConfig(BaseModel):
     )
 
 
+class ExtensionRoutingConfig(BaseSettings):
+    """Configuration for extension-based routing classifier.
+
+    Provides destination folder paths for media, security, script, and other
+    file types that are best classified by their extension alone.
+    """
+
+    model_config = SettingsConfigDict(env_prefix="PARA_FILES_EXT_ROUTING_")
+
+    media_video_folder: str = Field(
+        default="3_Resources/media/video",
+        description="Destination for video files (.3gp, .m4v, .mp4, .mov)",
+    )
+    media_audio_folder: str = Field(
+        default="3_Resources/media/audio",
+        description="Destination for audio files (.m4a, .mp3)",
+    )
+    media_images_folder: str = Field(
+        default="3_Resources/media/images",
+        description="Destination for raster image files (.gif, .tif, .tiff, .psd)",
+    )
+    security_folder: str = Field(
+        default="3_Resources/security",
+        description="Destination for security files (.p7b, .asc, .kdbx)",
+    )
+    scripts_folder: str = Field(
+        default="3_Resources/dev/scripts",
+        description="Destination for script and web files (.ps1, .css, .js, .sh)",
+    )
+    catchall_folder: str = Field(
+        default="3_Resources/misc",
+        description="Destination for files with unrecognised extensions",
+    )
+
+
 class Config(BaseSettings):
     """Root configuration for para-files classification system."""
 
@@ -243,6 +278,7 @@ class Config(BaseSettings):
     llm: LLMConfig = Field(default_factory=LLMConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     ocr_rename: OCRRenameConfig = Field(default_factory=OCRRenameConfig)
+    extension_routing: ExtensionRoutingConfig = Field(default_factory=ExtensionRoutingConfig)
 
     @property
     def inbox_path(self) -> Path:
