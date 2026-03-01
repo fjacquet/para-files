@@ -16,6 +16,7 @@ from para_files.cli import (  # noqa: F401
     clean_cmd,
     config_cmd,
     dedupe_cmd,
+    inbox_cmd,
     init_cmd,
     learn_cmd,
     move_cmd,
