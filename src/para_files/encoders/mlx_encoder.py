@@ -5,6 +5,7 @@ Uses mlx-embedding-models to load embedding models optimized for Apple Silicon.
 
 from __future__ import annotations
 
+import logging
 import threading
 from typing import Any, ClassVar, cast
 
@@ -12,6 +13,44 @@ from loguru import logger
 from mlx_embedding_models.embedding import EmbeddingModel  # type: ignore[import-untyped]
 from pydantic import ConfigDict, PrivateAttr
 from semantic_router.encoders import DenseEncoder
+
+
+def _suppress_nomic_noise() -> None:
+    """Suppress noisy log output from the nomic-embed-text-v1.5 model.
+
+    Two sources of noise are silenced here:
+
+    1. ``transformers_modules.*.modeling_hf_nomic_bert`` logs "<All keys matched
+       successfully>" at WARNING level — it's a success message mis-classified by
+       the custom module's own logger.
+
+    2. The interactive ``trust_remote_code`` prompt that appears because
+       ``mlx_embedding_models`` calls ``AutoTokenizer.from_pretrained()`` without
+       ``trust_remote_code=True``.  We patch ``AutoTokenizer.from_pretrained`` to
+       inject ``trust_remote_code=True`` as a default so the prompt is never shown.
+    """
+    # Raise the stdlib log level for the nomic custom module to ERROR so the
+    # spurious WARNING "<All keys matched successfully>" line is suppressed.
+    # The logger name contains hyphens replaced with "_hyphen_" by transformers.
+    logging.getLogger(
+        "transformers_modules.nomic_hyphen_ai.nomic_hyphen_bert_hyphen_2048"
+    ).setLevel(logging.ERROR)
+
+    # Patch AutoTokenizer.from_pretrained to always include trust_remote_code=True
+    # so mlx_embedding_models (which omits it) never triggers the interactive prompt.
+    try:
+        import transformers  # type: ignore[import-untyped]
+
+        _orig = transformers.AutoTokenizer.from_pretrained.__func__  # type: ignore[attr-defined]
+
+        @classmethod  # type: ignore[misc]
+        def _patched(cls: object, name_or_path: object, *args: object, **kwargs: object) -> object:
+            kwargs.setdefault("trust_remote_code", True)
+            return _orig(cls, name_or_path, *args, **kwargs)
+
+        transformers.AutoTokenizer.from_pretrained = _patched
+    except Exception:  # noqa: BLE001, S110
+        pass  # If patching fails, the prompt just shows — non-fatal.
 
 
 def _apply_transformers5_tokenizer_patch() -> None:
@@ -39,6 +78,7 @@ def _apply_transformers5_tokenizer_patch() -> None:
         pass  # transformers < 5.x: TokenizersBackend doesn't exist, no patch needed
 
 
+_suppress_nomic_noise()
 _apply_transformers5_tokenizer_patch()
 
 
