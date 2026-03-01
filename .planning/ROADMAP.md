@@ -145,5 +145,5 @@ Plans:
 | 3. Test Coverage | 3/3 | Complete    | 2026-02-28 |
 | 4. User Features | 2/2 | Complete    | 2026-02-28 |
 | 5. Content Extraction | 2/3 | In Progress|  |
-| 6. Extension Routing | 0/3 | Not started | - |
+| 6. Extension Routing | 1/3 | In Progress|  |
 | 7. Inbox Processing UX | 0/TBD | Not started | - |

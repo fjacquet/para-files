@@ -40,12 +40,12 @@
 
 ### Extension Routing
 
-- [ ] **ROUTE-01**: Media video files (.3gp, .m4v, .mp4, .mov) without a better match route to a fixed media folder
-- [ ] **ROUTE-02**: Media audio files (.m4a, .mp3) route to a fixed media folder when unmatched
-- [ ] **ROUTE-03**: Image files (.gif, .tif, .tiff, .psd) route to a fixed media folder when unmatched
-- [ ] **ROUTE-04**: Security/cert files (.p7b, .asc, .kdbx) route to a dedicated security folder
-- [ ] **ROUTE-05**: Script files (.ps1, .css, .js, .sh) route to a dedicated scripts/dev folder
-- [ ] **ROUTE-06**: Exotic/unknown extensions route to a dedicated catch-all folder rather than staying in Inbox
+- [x] **ROUTE-01**: Media video files (.3gp, .m4v, .mp4, .mov) without a better match route to a fixed media folder
+- [x] **ROUTE-02**: Media audio files (.m4a, .mp3) route to a fixed media folder when unmatched
+- [x] **ROUTE-03**: Image files (.gif, .tif, .tiff, .psd) route to a fixed media folder when unmatched
+- [x] **ROUTE-04**: Security/cert files (.p7b, .asc, .kdbx) route to a dedicated security folder
+- [x] **ROUTE-05**: Script files (.ps1, .css, .js, .sh) route to a dedicated scripts/dev folder
+- [x] **ROUTE-06**: Exotic/unknown extensions route to a dedicated catch-all folder rather than staying in Inbox
 
 ### Inbox Processing UX
 
@@ -107,12 +107,12 @@
 | XTRCT-02 | Phase 5 | Complete |
 | XTRCT-03 | Phase 5 | Complete |
 | XTRCT-04 | Phase 5 | Complete |
-| ROUTE-01 | Phase 6 | Pending |
-| ROUTE-02 | Phase 6 | Pending |
-| ROUTE-03 | Phase 6 | Pending |
-| ROUTE-04 | Phase 6 | Pending |
-| ROUTE-05 | Phase 6 | Pending |
-| ROUTE-06 | Phase 6 | Pending |
+| ROUTE-01 | Phase 6 | Complete |
+| ROUTE-02 | Phase 6 | Complete |
+| ROUTE-03 | Phase 6 | Complete |
+| ROUTE-04 | Phase 6 | Complete |
+| ROUTE-05 | Phase 6 | Complete |
+| ROUTE-06 | Phase 6 | Complete |
 | UX-01 | Phase 7 | Pending |
 | UX-02 | Phase 7 | Pending |
 | UX-03 | Phase 7 | Pending |
