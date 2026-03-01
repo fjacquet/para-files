@@ -17,8 +17,8 @@ class ParaFiles < Formula
 
   desc "Intelligent file classification using MLX-powered semantic routing (PARA method)"
   homepage "https://github.com/fjacquet/para-files"
-  url "PLACEHOLDER"
-  sha256 "PLACEHOLDER"
+  url "https://github.com/fjacquet/para-files/archive/refs/tags/v0.1.0.tar.gz"
+  sha256 "e9e6f9b5f6091830477626a55f31fe89d5372d2f05f55fbd99b8a6ba9b6e3626"
   license "MIT"
 
   # macOS Apple Silicon only:
