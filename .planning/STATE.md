@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 ## Current Position
 
 Phase: 5 of 7 (Content Extraction)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-03-01 — Roadmap extended with phases 5-7 for milestone v1.1
+Plan: 1 of 3 in current phase
+Status: In Progress
+Last activity: 2026-03-01 — Completed plan 05-01: Excel and ODS content extraction
 
-Progress: [████░░░░░░] 40% (v1.0 complete, v1.1 starting)
+Progress: [████░░░░░░] 43% (v1.0 complete, v1.1 plan 1/3 done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
-- Average duration: 6.3 minutes
-- Total execution time: 0.35 hours
+- Total plans completed: 8
+- Average duration: 6.0 minutes
+- Total execution time: 0.40 hours
 
 **By Phase:**
 
@@ -35,6 +35,8 @@ Progress: [████░░░░░░] 40% (v1.0 complete, v1.1 starting)
 **Recent Trend:**
 - Last 5 plans: 5-12 min
 - Trend: stable
+
+| 05-content-extraction | 1 | 3 min | 3 min |
 
 *Updated after each plan completion*
 
@@ -50,6 +52,8 @@ Recent decisions affecting current work:
 - [Phase 04-user-features]: Run all classifiers (not first-match-return) so every signal is recorded
 - [Phase 04-user-features]: signals field has default_factory=list for backward compatibility
 - [Phase 04-user-features]: classify --dry-run suppresses OCR rename only (no file moves)
+- [Phase 05-content-extraction]: Use openpyxl read_only+data_only for xlsx/xlsm; xlrd for legacy .xls; odfpy for .ods — all lazy imports with graceful fallback
+- [Phase 05-content-extraction]: Extract helper functions (_extract_*_content) to meet ruff complexity limits; PLR0911 per-file ignore for dispatch function
 
 ### Pending Todos
 
@@ -62,5 +66,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Roadmap extended with phases 5-7 for milestone v1.1 Inbox Throughput
+Stopped at: Completed 05-content-extraction-01-PLAN.md (Excel + ODS content extraction)
 Resume file: None

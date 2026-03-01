@@ -33,10 +33,10 @@
 
 ### Content Extraction
 
-- [ ] **XTRCT-01**: Excel files (.xlsx, .xls, .xlsm) yield extractable text (sheet names + first N cell values) for semantic classification
-- [ ] **XTRCT-02**: ODS files (.ods) yield extractable text for semantic classification
+- [x] **XTRCT-01**: Excel files (.xlsx, .xls, .xlsm) yield extractable text (sheet names + first N cell values) for semantic classification
+- [x] **XTRCT-02**: ODS files (.ods) yield extractable text for semantic classification
 - [ ] **XTRCT-03**: ZIP/7Z archive manifests (list of internal filenames) are read and used as classification signal
-- [ ] **XTRCT-04**: Content extraction failures are handled gracefully — fall through to next signal, never crash
+- [x] **XTRCT-04**: Content extraction failures are handled gracefully — fall through to next signal, never crash
 
 ### Extension Routing
 
@@ -103,10 +103,10 @@
 | FEAT-01 | Phase 4 | Complete |
 | FEAT-02 | Phase 4 | Complete |
 | FEAT-03 | Phase 4 | Complete |
-| XTRCT-01 | Phase 5 | Pending |
-| XTRCT-02 | Phase 5 | Pending |
+| XTRCT-01 | Phase 5 | Complete |
+| XTRCT-02 | Phase 5 | Complete |
 | XTRCT-03 | Phase 5 | Pending |
-| XTRCT-04 | Phase 5 | Pending |
+| XTRCT-04 | Phase 5 | Complete |
 | ROUTE-01 | Phase 6 | Pending |
 | ROUTE-02 | Phase 6 | Pending |
 | ROUTE-03 | Phase 6 | Pending |
