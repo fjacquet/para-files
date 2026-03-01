@@ -62,6 +62,7 @@ completed: 2026-03-01
 - **Files modified:** 3
 
 ## Accomplishments
+
 - Added `ARCHIVE_EXTENSIONS` frozenset constant (`{".zip", ".7z", ".7zip"}`) after `EXCEL_EXTENSIONS`
 - Added `_read_archive_manifest()` using stdlib `zipfile.ZipFile.namelist()` for ZIP and lazy-import `py7zr.SevenZipFile.getnames()` for 7Z
 - Wired archive dispatch into `read_content_preview()` between ODS and pandoc blocks
@@ -78,11 +79,13 @@ Each task was committed atomically:
 **Plan metadata:** (docs commit follows)
 
 ## Files Created/Modified
-- `src/para_files/utils/file_utils.py` - Added ARCHIVE_EXTENSIONS constant, _read_archive_manifest() function, and dispatch in read_content_preview()
+
+- `src/para_files/utils/file_utils.py` - Added ARCHIVE_EXTENSIONS constant,_read_archive_manifest() function, and dispatch in read_content_preview()
 - `pyproject.toml` - Added archives optional-dependencies group with py7zr>=0.22.0
 - `uv.lock` - Updated with py7zr and its transitive dependencies
 
 ## Decisions Made
+
 - Used stdlib `zipfile` for ZIP — no new dependency needed, only `namelist()` (no extraction)
 - Used py7zr as optional extra with graceful `ImportError` fallback returning `"Filename: X"`
 - Removed `type: ignore[import-not-found]` after py7zr installation — py7zr ships its own stubs
@@ -93,6 +96,7 @@ Each task was committed atomically:
 ### Auto-fixed Issues
 
 **1. [Rule 1 - Bug] Adjusted type: ignore comment after py7zr installation**
+
 - **Found during:** Task 2 (py7zr installation)
 - **Issue:** Plan specified `# type: ignore[import-untyped]` but mypy saw `import-not-found` before install, then neither error after install (py7zr ships stubs)
 - **Fix:** Used `import-not-found` during Task 1, then removed entirely after py7zr was installed in Task 2
@@ -106,12 +110,15 @@ Each task was committed atomically:
 **Impact on plan:** Necessary for mypy compliance. No scope creep.
 
 ## Issues Encountered
+
 - mypy `unused-ignore` error because py7zr wasn't installed when Task 1 ran — resolved by installing py7zr in Task 2 and removing the now-unused ignore comment.
 
 ## User Setup Required
+
 None - py7zr is installed automatically via `uv sync --all-extras`. No external services or manual configuration needed.
 
 ## Next Phase Readiness
+
 - Archive manifest classification signal is now available in the pipeline
 - ZIP and 7Z files with meaningful internal filenames will route correctly (e.g., "documents.zip" containing "invoice_2024.pdf" → documents category)
 - 7Z support available when py7zr extra is installed; degrades gracefully otherwise

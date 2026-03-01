@@ -375,6 +375,7 @@ pass, no new mypy or ruff errors.
 </verification>
 
 <success_criteria>
+
 1. `uv run pytest` exits 0 with all new tests passing.
 2. A file named `document.PDF` — when passed through `extract_file_metadata` —
    returns `metadata.extension == ".pdf"` (verified by TestExtensionNormalization).

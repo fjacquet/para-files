@@ -94,7 +94,7 @@ None - plan executed exactly as written.
 ## Next Phase Readiness
 
 - Both source files meet success criteria: no silent exception swallowing remains in isbn_lookup.py or pdf_metadata.py
-- Network timeout in ISBN fetch now produces WARNING log with type(e).__name__ — success criterion 1 of Phase 2 met
+- Network timeout in ISBN fetch now produces WARNING log with type(e).**name** — success criterion 1 of Phase 2 met
 - Corrupted page in PDF extraction now produces DEBUG log with page number — traceable failures established
 
 ## Self-Check: PASSED

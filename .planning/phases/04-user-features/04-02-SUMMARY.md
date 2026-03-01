@@ -94,6 +94,7 @@ Each task was committed atomically:
 ### Auto-fixed Issues
 
 **1. [Rule 1 - Bug] Extracted _scan_files_parallel to fix cyclomatic complexity**
+
 - **Found during:** Task 2 (scan_cmd.py changes)
 - **Issue:** Adding verbose signal display to inline parallel loop in `scan()` pushed cyclomatic complexity to 12 (limit 10), causing ruff C901 error
 - **Fix:** Extracted parallel scan loop into `_scan_files_parallel(files, pipeline, stats, max_workers, *, output_json, verbose)` helper

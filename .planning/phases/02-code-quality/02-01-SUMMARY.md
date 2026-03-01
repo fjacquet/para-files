@@ -87,6 +87,7 @@ Each task was committed atomically:
 ### Auto-fixed Issues
 
 **1. [Rule 1 - Bug] Updated tests that directly called deleted private methods**
+
 - **Found during:** Task 2 (refactoring classifiers)
 - **Issue:** `TestCleanUnreplacedLocation` and `TestCleanUnreplacedDate` test classes called `classifier._clean_unreplaced_location()` and `classifier._clean_unreplaced_date()` directly. Deleting those methods caused AttributeError on 9 tests.
 - **Fix:** Updated both test classes to import and call `clean_unreplaced_placeholders` from `placeholder_resolver` directly, since behavior is now in the utility

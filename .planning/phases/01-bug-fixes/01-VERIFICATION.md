@@ -80,6 +80,7 @@ The `extract_file_metadata` function constructs a `FileMetadata` instance at lin
 The PDF metadata extraction guard at line 160 (`if file_path.suffix.lower() == ".pdf"`) is independent — it uses the raw path suffix, not `FileMetadata.extension`. This is correct and unchanged.
 
 **Test evidence:** `tests/test_file_utils.py::TestExtensionNormalization`
+
 - `test_extension_stored_lowercase` — `document.PDF` → `meta.extension == ".pdf"`
 - `test_extension_lowercase_epub` — `book.EPUB` → `meta.extension == ".epub"`
 - `test_extension_lowercase_chm` — `manual.CHM` → `meta.extension == ".chm"`
@@ -92,6 +93,7 @@ The PDF metadata extraction guard at line 160 (`if file_path.suffix.lower() == "
 `OCRRenameConfig.min_confidence` Field default is `0.7`, with `ge=0.0` and `le=1.0` validators intact. The description string is unchanged. Users can still override to a lower value explicitly (verified by `test_ocr_rename_min_confidence_accepts_low_value`).
 
 **Test evidence:** `tests/test_config.py::TestOCRRenameConfig`
+
 - `test_ocr_rename_min_confidence_default` — `OCRRenameConfig().min_confidence == 0.7`
 - `test_ocr_rename_min_confidence_accepts_low_value` — explicit 0.3 accepted
 - `test_ocr_rename_min_confidence_rejects_out_of_range` — 1.5 raises `ValidationError`
@@ -101,6 +103,7 @@ The PDF metadata extraction guard at line 160 (`if file_path.suffix.lower() == "
 **Fix location:** `src/para_files/encoders/mlx_encoder.py`, lines 66-129
 
 `_encode_single` (lines 66-100) implements progressive truncation:
+
 1. Try `text[:fallback_chars]` (700 chars)
 2. Try `text[:400]`
 3. Try `text[:200]`
@@ -108,12 +111,14 @@ The PDF metadata extraction guard at line 160 (`if file_path.suffix.lower() == "
 5. Only if all of the above fail: return `[0.0] * dim` with `logger.exception()`
 
 `__call__` (lines 102-129) uses this:
+
 - Normal path: batch encode all truncated texts (line 121)
 - On `IndexError`: `logger.warning(...)` then `return [self._encode_single(t) for t in texts]` (line 125)
 
 The original silent `return [[0.0] * 768 for _ in texts]` is entirely removed. The zero-vector path is only reachable via the logged exception at line 97 in `_encode_single`.
 
 **Test evidence:** `tests/test_encoders.py::TestMLXEncoderZeroVectorGuard`
+
 - `test_no_zero_vector_for_dense_text` — 2000-char input returns non-zero embedding after batch failure + per-text retry
 - `test_encode_single_progressive_truncation` — verifies `_encode_single` tries multiple lengths, not just the shortest
 

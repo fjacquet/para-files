@@ -31,6 +31,7 @@ class ClassificationSource(StrEnum):
     TAXONOMY_CLASSIFIER = (
         "taxonomy_classifier"  # Signal 3: 90% confidence (replaces domain_kb + semantic_router)
     )
+    EXTENSION_ROUTER = "extension_router"  # Signal 5: extension-based routing (catch-all layer)
     LLM_FALLBACK = "llm_fallback"  # Signal 4: configurable confidence
     DEFAULT = "default"  # Fallback to inbox
 

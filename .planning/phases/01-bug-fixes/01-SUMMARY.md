@@ -61,6 +61,7 @@ Changed `OCRRenameConfig.min_confidence` default from `0.3` to `0.7`. The previo
 Replaced the batch-level zero-vector fallback with per-text progressive truncation. The original code would return `[0.0] * 768` silently if a second batch encode failed after token-limit truncation. This caused symbol-dense or source-code files to receive zero vectors, which collapse semantic routing (everything looks equally (dis)similar to a zero vector).
 
 New implementation:
+
 - Added `_encode_single(text)` helper that tries progressively shorter prefixes: `fallback_chars` (700) → 400 → 200 → 100 chars
 - Updated `__call__` to catch batch IndexError and retry per-text via `_encode_single`
 - Zero vector is now only returned from `_encode_single` if even the 100-char encode fails (logged as an error, not silently)
@@ -73,6 +74,7 @@ New implementation:
 ### Auto-fixed Issues
 
 **1. [Rule 1 - Type] Fixed mypy TC006 cast() type expression quoting**
+
 - **Found during:** Task 3 verification (mypy run)
 - **Issue:** `cast(list[float], ...)` needs quotes around the type argument for `from __future__ import annotations` compatibility
 - **Fix:** Changed to `cast("list[float]", ...)` in both call sites in `_encode_single`
@@ -80,6 +82,7 @@ New implementation:
 - **Commit:** ee1cbbd
 
 **2. [Rule 1 - Lint] Fixed ruff EM101/TRY003 in test exception raising**
+
 - **Found during:** Task 3 verification (ruff check)
 - **Issue:** `raise IndexError("message")` violates EM101 (string literal in exception)
 - **Fix:** Assigned messages to variables before raising in both test mock functions
@@ -101,6 +104,7 @@ All success criteria met:
 ## Self-Check: PASSED
 
 Files verified to exist:
+
 - src/para_files/utils/file_utils.py: FOUND
 - src/para_files/config.py: FOUND
 - src/para_files/encoders/mlx_encoder.py: FOUND
@@ -109,6 +113,7 @@ Files verified to exist:
 - tests/test_encoders.py: FOUND
 
 Commits verified:
+
 - d236ecd (Task 1 - extension normalization): FOUND
 - 3664511 (Task 2 - OCR threshold): FOUND
 - b74012f (Task 3 - zero-vector fix): FOUND

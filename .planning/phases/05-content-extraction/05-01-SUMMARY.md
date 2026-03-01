@@ -80,7 +80,7 @@ Each task was committed atomically:
 
 ## Files Created/Modified
 
-- `src/para_files/utils/file_utils.py` - Added EXCEL_EXTENSIONS, _SPREADSHEET_MAX_CELLS, _extract_xlsx_content, _extract_xls_content, _read_excel_file, _extract_ods_content, _read_ods_file; wired into read_content_preview()
+- `src/para_files/utils/file_utils.py` - Added EXCEL_EXTENSIONS,_SPREADSHEET_MAX_CELLS, _extract_xlsx_content,_extract_xls_content, _read_excel_file,_extract_ods_content, _read_ods_file; wired into read_content_preview()
 - `pyproject.toml` - Added odfpy>=1.4.1 dependency; added mypy overrides for odf.*, xlrd.*, openpyxl.*; added PLR0911 per-file ignore for file_utils.py
 - `uv.lock` - Updated lockfile with odfpy and defusedxml (odfpy dependency)
 
@@ -96,6 +96,7 @@ Each task was committed atomically:
 ### Auto-fixed Issues
 
 **1. [Rule 1 - Bug] Removed unused `# type: ignore[import-untyped]` comments after adding mypy overrides**
+
 - **Found during:** Task 1+2 verification (mypy run)
 - **Issue:** Plan template included `# type: ignore[import-untyped]` on odfpy/xlrd imports, but adding these modules to mypy overrides made the comments redundant causing `unused-ignore` errors
 - **Fix:** Removed the comments from the lazy imports; overrides in pyproject.toml handle the suppression
@@ -104,9 +105,10 @@ Each task was committed atomically:
 - **Committed in:** a1c476f
 
 **2. [Rule 1 - Bug] Refactored to fix ruff complexity/magic-value violations**
+
 - **Found during:** Task 1+2 verification (ruff check)
 - **Issue:** _read_excel_file had C901 complexity=19, PLR0912 branches=18; magic `200` triggered PLR2004; read_content_preview exceeded PLR0911 return limit
-- **Fix:** Extracted _extract_xlsx_content, _extract_xls_content, _extract_ods_content helpers; replaced magic 200 with _SPREADSHEET_MAX_CELLS constant; added PLR0911 per-file ignore
+- **Fix:** Extracted _extract_xlsx_content,_extract_xls_content, _extract_ods_content helpers; replaced magic 200 with_SPREADSHEET_MAX_CELLS constant; added PLR0911 per-file ignore
 - **Files modified:** src/para_files/utils/file_utils.py, pyproject.toml
 - **Verification:** ruff check passes with no violations
 - **Committed in:** a1c476f

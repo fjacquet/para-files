@@ -75,6 +75,7 @@ completed: 2026-02-28
 ### Auto-fixed Issues
 
 **1. [Rule 1 - Bug] Fixed ruff PERF401: replaced for-loop append with list.extend**
+
 - **Found during:** Task 1 (test implementation)
 - **Issue:** `results.append(future.result())` in three for-loops triggered PERF401 (use list.extend)
 - **Fix:** Replaced each `for future in as_completed(futures): list.append(...)` with `list.extend(future.result() for future in as_completed(futures))`
@@ -83,6 +84,7 @@ completed: 2026-02-28
 - **Committed in:** 72c69a9
 
 **2. [Rule 2 - Missing Critical] Added type annotations to satisfy strict mypy**
+
 - **Found during:** Task 1 (post-implementation type check)
 - **Issue:** `results = []` and `move_results = []` lacked type annotations, failing mypy var-annotated check
 - **Fix:** Annotated as `list[tuple[bool, Path | None]]` and `list[MoveResult]` respectively

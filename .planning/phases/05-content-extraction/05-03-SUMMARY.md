@@ -91,6 +91,7 @@ Each task was committed atomically:
 ### Auto-fixed Issues
 
 **1. [Rule 1 - Bug] Removed unused `import pytest`**
+
 - **Found during:** Task 1 verification (ruff check)
 - **Issue:** `import pytest` was included in the initial file but no pytest fixtures/decorators were used directly — all fixtures are injected by pytest automatically via function signatures
 - **Fix:** Removed the unused import
