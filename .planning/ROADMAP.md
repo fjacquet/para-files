@@ -95,7 +95,13 @@ Plans:
   2. An ODS file whose content describes a project plan is classified semantically, not treated as an opaque binary
   3. A ZIP archive containing filenames like `invoice_2024.pdf` and `contract.docx` routes to a documents folder based on the manifest
   4. A corrupted or password-protected Excel/ZIP file does not crash the pipeline — it falls through to the next signal and logs a warning
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+
+- [ ] 05-01-PLAN.md — Add Excel (.xlsx, .xlsm, .xls) and ODS readers with graceful failure handling (XTRCT-01, XTRCT-02, XTRCT-04)
+- [ ] 05-02-PLAN.md — Add ZIP/7Z archive manifest reader, add py7zr optional dependency (XTRCT-03, XTRCT-04)
+- [ ] 05-03-PLAN.md — TDD test suite for all content extraction readers including graceful failure cases (XTRCT-01–04)
 
 ### Phase 6: Extension Routing
 
@@ -133,6 +139,6 @@ Plans:
 | 2. Code Quality | 2/2 | Complete    | 2026-02-28 |
 | 3. Test Coverage | 3/3 | Complete    | 2026-02-28 |
 | 4. User Features | 2/2 | Complete    | 2026-02-28 |
-| 5. Content Extraction | 0/TBD | Not started | - |
+| 5. Content Extraction | 0/3 | Not started | - |
 | 6. Extension Routing | 0/TBD | Not started | - |
 | 7. Inbox Processing UX | 0/TBD | Not started | - |
