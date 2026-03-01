@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from para_files.encoders.base import BaseEncoder
-from para_files.encoders.mlx_encoder import OllamaEncoder
+from para_files.encoders.ollama_encoder import OllamaEncoder
 
 
 class ConcreteEncoder(BaseEncoder):
@@ -64,7 +64,7 @@ class TestOllamaEncoder:
         result = encoder([])
         assert result == []
 
-    @patch("para_files.encoders.mlx_encoder.litellm")
+    @patch("para_files.encoders.ollama_encoder.litellm")
     def test_encode_calls_litellm(self, mock_litellm: MagicMock):
         """Test that encoding calls litellm.embedding()."""
         mock_response = MagicMock()
@@ -78,7 +78,7 @@ class TestOllamaEncoder:
         assert len(result) == 1
         assert len(result[0]) == 768
 
-    @patch("para_files.encoders.mlx_encoder.litellm")
+    @patch("para_files.encoders.ollama_encoder.litellm")
     def test_encode_multiple_texts(self, mock_litellm: MagicMock):
         """Test encoding multiple texts."""
         mock_response = MagicMock()
@@ -94,7 +94,7 @@ class TestOllamaEncoder:
 
         assert len(result) == 3
 
-    @patch("para_files.encoders.mlx_encoder.litellm")
+    @patch("para_files.encoders.ollama_encoder.litellm")
     def test_truncation(self, mock_litellm: MagicMock):
         """Test that long texts are truncated."""
         mock_response = MagicMock()
@@ -113,7 +113,7 @@ class TestOllamaEncoder:
 class TestOllamaEncoderFallback:
     """Tests for per-text retry logic on batch failure."""
 
-    @patch("para_files.encoders.mlx_encoder.litellm")
+    @patch("para_files.encoders.ollama_encoder.litellm")
     def test_batch_failure_retries_per_text(self, mock_litellm: MagicMock):
         """Batch failure triggers per-text retry with progressive truncation."""
         call_count = 0
@@ -136,7 +136,7 @@ class TestOllamaEncoderFallback:
         assert len(result) == 1
         assert result[0] != [0.0] * 768
 
-    @patch("para_files.encoders.mlx_encoder.litellm")
+    @patch("para_files.encoders.ollama_encoder.litellm")
     def test_encode_batch(self, mock_litellm: MagicMock):
         """Test batch encoding."""
         mock_response = MagicMock()
@@ -154,7 +154,7 @@ class TestOllamaEncoderFallback:
         )
         assert len(result) == 9
 
-    @patch("para_files.encoders.mlx_encoder.litellm")
+    @patch("para_files.encoders.ollama_encoder.litellm")
     def test_total_failure_returns_zero_vector(self, mock_litellm: MagicMock):
         """When all retries fail, returns zero vector."""
         mock_litellm.embedding.side_effect = RuntimeError("server down")

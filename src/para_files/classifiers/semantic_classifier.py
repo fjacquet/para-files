@@ -13,7 +13,7 @@ import re
 from loguru import logger
 
 from para_files.classifiers.base import BaseClassifier
-from para_files.encoders.mlx_encoder import OllamaEncoder
+from para_files.encoders.ollama_encoder import OllamaEncoder
 from para_files.taxonomies.loader import TaxonomyLoader, get_taxonomy_loader
 from para_files.taxonomies.models import DocumentCategory, DocumentType
 from para_files.types import (

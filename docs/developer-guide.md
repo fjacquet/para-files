@@ -80,7 +80,7 @@ para-files/
 │   │   ├── semantic_router.py # Signal 4: MLX embeddings
 │   │   └── llm_fallback.py   # Signal 5: LLM fallback
 │   ├── encoders/
-│   │   └── mlx_encoder.py    # MLX embedding encoder
+│   │   └── ollama_encoder.py  # Ollama embedding encoder via litellm
 │   ├── taxonomies/
 │   │   ├── models.py         # Thema/document taxonomy models
 │   │   └── loader.py         # JSON taxonomy loaders

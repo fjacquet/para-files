@@ -72,7 +72,7 @@ pre-commit run --all-files         # Run manually
 | `src/para_files/learner.py` | Feedback-based learning |
 | `src/para_files/reference_tree.py` | YAML reference tree loader |
 | `src/para_files/classifiers/` | Classification signal implementations |
-| `src/para_files/encoders/mlx_encoder.py` | Ollama embedding encoder via litellm |
+| `src/para_files/encoders/ollama_encoder.py` | Ollama embedding encoder via litellm |
 | `src/para_files/utils/filename_sanitizer.py` | Centralized filename sanitization |
 | `src/para_files/taxonomies/models.py` | Thema/document taxonomy models and path builders |
 | `tests/` | Test suite |

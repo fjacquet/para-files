@@ -14,7 +14,7 @@ from loguru import logger
 
 
 if TYPE_CHECKING:
-    from para_files.encoders.mlx_encoder import OllamaEncoder
+    from para_files.encoders.ollama_encoder import OllamaEncoder
 
 
 # Minimum similarity score to consider a technology match

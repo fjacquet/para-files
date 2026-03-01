@@ -15,16 +15,16 @@ class TestOllamaEncoderThreadSafety:
 
     def test_encoder_has_fallback_chars(self) -> None:
         """Test that OllamaEncoder has fallback_chars attribute."""
-        from para_files.encoders.mlx_encoder import OllamaEncoder
+        from para_files.encoders.ollama_encoder import OllamaEncoder
 
         encoder = OllamaEncoder()
         assert encoder.max_chars == 1000  # Default
         assert encoder.fallback_chars == 700  # Fallback for edge cases
 
-    @patch("para_files.encoders.mlx_encoder.litellm")
+    @patch("para_files.encoders.ollama_encoder.litellm")
     def test_encoder_fallback_on_error(self, mock_litellm: MagicMock) -> None:
         """Test that encoder uses fallback on batch failure."""
-        from para_files.encoders.mlx_encoder import OllamaEncoder
+        from para_files.encoders.ollama_encoder import OllamaEncoder
 
         call_count = 0
 
@@ -46,10 +46,10 @@ class TestOllamaEncoderThreadSafety:
         assert result is not None
         assert len(result) == 1
 
-    @patch("para_files.encoders.mlx_encoder.litellm")
+    @patch("para_files.encoders.ollama_encoder.litellm")
     def test_encoder_concurrent_encoding(self, mock_litellm: MagicMock) -> None:
         """Test that concurrent encoding calls work correctly."""
-        from para_files.encoders.mlx_encoder import OllamaEncoder
+        from para_files.encoders.ollama_encoder import OllamaEncoder
 
         mock_resp = MagicMock()
         mock_resp.data = [{"embedding": [0.1] * 768}]
