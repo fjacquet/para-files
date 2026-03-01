@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 ## Current Position
 
 Phase: 6 of 7 (Extension Routing)
-Plan: 1 of 2 in current phase (COMPLETE)
+Plan: 2 of 2 in current phase (COMPLETE)
 Status: In Progress
-Last activity: 2026-03-01 — Completed plan 06-01: ExtensionRouterClassifier and ExtensionRoutingConfig
+Last activity: 2026-03-01 — Completed plan 06-02: TDD test suite for ExtensionRouterClassifier (46 tests)
 
-Progress: [██████░░░░] 64% (v1.0 complete, v1.1 phase 6/7 in progress)
+Progress: [███████░░░] 71% (v1.0 complete, v1.1 phase 6/7 complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
-- Average duration: 6.0 minutes
-- Total execution time: 0.40 hours
+- Total plans completed: 9
+- Average duration: 5.9 minutes
+- Total execution time: 0.45 hours
 
 **By Phase:**
 
@@ -37,9 +37,10 @@ Progress: [██████░░░░] 64% (v1.0 complete, v1.1 phase 6/7 in
 - Trend: stable
 
 | 05-content-extraction | 3 | 12 min | 4 min |
+| 06-extension-routing | 2 | 13 min | 6.5 min |
 
 *Updated after each plan completion*
-| Phase 05-content-extraction P03 | 7 | 1 tasks | 1 files |
+| Phase 06-extension-routing P02 | 5 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -52,6 +53,7 @@ Recent decisions affecting current work:
 - [Phase 05-content-extraction]: Use stdlib zipfile for ZIP (no extraction, no new dependency); py7zr as optional extra for 7Z with graceful ImportError fallback
 - Extension catch-all routing for media/exotic types — content unreadable; extension is definitive
 - [Phase 06-extension-routing]: ExtensionRoutingConfig with PARA_FILES_EXT_ROUTING_ env prefix; confidence 0.97-0.98 for known groups, 0.80 for catch-all; empty extension returns None so pipeline continues
+- [Phase 06-extension-routing P02]: No file mocking needed for pure-logic classifiers — FileMetadata constructed directly; test class per ROUTE-* requirement for 1-to-1 traceability
 - [Phase 04-user-features]: Run all classifiers (not first-match-return) so every signal is recorded
 - [Phase 04-user-features]: signals field has default_factory=list for backward compatibility
 - [Phase 04-user-features]: classify --dry-run suppresses OCR rename only (no file moves)
@@ -71,5 +73,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 06-extension-routing-01-PLAN.md (ExtensionRouterClassifier + ExtensionRoutingConfig)
+Stopped at: Completed 06-extension-routing-02-PLAN.md (TDD test suite for ExtensionRouterClassifier — 46 tests)
 Resume file: None
