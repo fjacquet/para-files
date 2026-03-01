@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Files are classified correctly and transparently — users understand why, and failures surface loudly.
-**Current focus:** Milestone v1.1 — Inbox Throughput (defining requirements)
+**Current focus:** Phase 5 — Content Extraction (v1.1 Inbox Throughput)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements for milestone v1.1
-Last activity: 2026-03-01 — Milestone v1.1 Inbox Throughput started
+Phase: 5 of 7 (Content Extraction)
+Plan: 0 of TBD in current phase
+Status: Ready to plan
+Last activity: 2026-03-01 — Roadmap extended with phases 5-7 for milestone v1.1
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [████░░░░░░] 40% (v1.0 complete, v1.1 starting)
 
 ## Performance Metrics
 
@@ -45,27 +45,11 @@ Progress: [░░░░░░░░░░] 0%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- Raise OCR confidence to 0.7 — 0.3 threshold causes renames on weak signals
-- Centralize placeholder cleanup — 3 classifiers have divergent implementations
-- Both --verbose and JSON signals for explainability — covers CLI human use and programmatic use
-- [Phase 01-bug-fixes]: Raise OCR rename confidence to 0.7 to prevent false renames on weak signals
-- [Phase 01-bug-fixes]: Use progressive truncation for MLX encoder (fallback_chars/400/200/100 chars) to avoid zero vectors
-- [Phase 01-bug-fixes]: Normalize FileMetadata.extension to lowercase at construction point for all downstream safety
-- [Phase 02-code-quality]: Delete private methods _clean_unreplaced_location/_clean_unreplaced_date from RulesEngineClassifier — functionality centralized in placeholder_resolver
-- [Phase 02-code-quality]: Update tests to call clean_unreplaced_placeholders directly rather than deleted private methods
-- [Phase 02-code-quality]: Use logger.warning for ISBN enrichment failures and logger.debug for utility/page failures
-- [Phase 03-test-coverage]: Do not modify production code — exception handling already exists in pipeline.py at line 206-208
-- [Phase 03-test-coverage]: Use pipeline._classifiers list replacement (not insert) for clean deterministic test isolation
-- [Phase 03-test-coverage]: Use list.extend with generator instead of for-loop append to satisfy ruff PERF401 in concurrent tests
-- [Phase 03-test-coverage]: Annotate concurrent test result lists with explicit types for strict mypy var-annotated compliance
-- [Phase 03-test-coverage]: Named test method test_unicode_naive_pattern_match (ASCII) while filename under test uses full Unicode accents
-- [Phase 03-test-coverage]: Pre-existing 6 mypy errors on make_metadata helper are out-of-scope — confirmed identical before and after changes
-- [Phase 04-user-features]: Run all classifiers (not first-match-return) so every signal is recorded; winner is still first match
-- [Phase 04-user-features]: signals field has default_factory=list for backward compatibility with existing ClassificationResult construction
-- [Phase 04-user-features]: Use getattr + isinstance guard to safely extract ClassificationSource from classifier, fallback to DEFAULT for mocks/invalid
-- [Phase 04-user-features]: Extract _scan_files_parallel helper from scan() inline parallel code to satisfy ruff C901 cyclomatic complexity limit
-- [Phase 04-user-features]: classify --dry-run suppresses OCR rename only (no file moves); dry_run label appears in Target line output
-- [Phase 04-user-features]: signals array positioned before route_name in JSON for logical ordering
+- Peek archive manifest (not extract) — extraction is slow, risky; filenames inside give strong signal
+- Extension catch-all routing for media/exotic types — content unreadable; extension is definitive
+- [Phase 04-user-features]: Run all classifiers (not first-match-return) so every signal is recorded
+- [Phase 04-user-features]: signals field has default_factory=list for backward compatibility
+- [Phase 04-user-features]: classify --dry-run suppresses OCR rename only (no file moves)
 
 ### Pending Todos
 
@@ -77,6 +61,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-28
-Stopped at: Completed 04-user-features-02-PLAN.md
+Last session: 2026-03-01
+Stopped at: Roadmap extended with phases 5-7 for milestone v1.1 Inbox Throughput
 Resume file: None

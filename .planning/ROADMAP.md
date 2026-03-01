@@ -9,7 +9,10 @@ This milestone eliminates known bugs, tightens code quality, fills test coverage
 - [x] **Phase 1: Bug Fixes** - Eliminate silent failures and incorrect behavior in the classification pipeline (completed 2026-02-28)
 - [x] **Phase 2: Code Quality** - Replace defensive anti-patterns with explicit, typed error handling (completed 2026-02-28)
 - [x] **Phase 3: Test Coverage** - Validate pipeline resilience and edge cases with automated tests (completed 2026-02-28)
-- [ ] **Phase 4: User Features** - Expose classification transparency and dry-run safety to users
+- [x] **Phase 4: User Features** - Expose classification transparency and dry-run safety to users (completed 2026-02-28)
+- [ ] **Phase 5: Content Extraction** - Pipeline reads inside Excel, ODS, and ZIP/7Z files for semantic classification
+- [ ] **Phase 6: Extension Routing** - Media, security, script, and exotic files route to sensible folders by extension
+- [ ] **Phase 7: Inbox Processing UX** - One-shot command processes the entire inbox with progress display and post-run summary
 
 ## Phase Details
 
@@ -81,6 +84,47 @@ Plans:
 - [x] 04-01-PLAN.md — Add SignalResult type and collect all classifier signals in pipeline (FEAT-03 foundation)
 - [x] 04-02-PLAN.md — Add classify --dry-run, verbose signal display, and signals in JSON output (FEAT-01, FEAT-02, FEAT-03)
 
+### Phase 5: Content Extraction
+
+**Goal**: The pipeline reads inside Excel, ODS, and ZIP/7Z files and uses their content as a classification signal
+**Depends on**: Phase 4
+**Requirements**: XTRCT-01, XTRCT-02, XTRCT-03, XTRCT-04
+**Success Criteria** (what must be TRUE):
+
+  1. An Excel file (.xlsx, .xls, .xlsm) whose sheet names and cell values describe a budget is classified to a finance folder, not left in Inbox
+  2. An ODS file whose content describes a project plan is classified semantically, not treated as an opaque binary
+  3. A ZIP archive containing filenames like `invoice_2024.pdf` and `contract.docx` routes to a documents folder based on the manifest
+  4. A corrupted or password-protected Excel/ZIP file does not crash the pipeline — it falls through to the next signal and logs a warning
+**Plans**: TBD
+
+### Phase 6: Extension Routing
+
+**Goal**: Media, security, script, and exotic files route to sensible permanent folders rather than staying in Inbox
+**Depends on**: Phase 4
+**Requirements**: ROUTE-01, ROUTE-02, ROUTE-03, ROUTE-04, ROUTE-05, ROUTE-06
+**Success Criteria** (what must be TRUE):
+
+  1. A `.3gp`, `.m4v`, `.mp4`, or `.mov` file with no other matching signal routes to the configured media/video folder
+  2. A `.m4a` or `.mp3` file routes to the configured media/audio folder
+  3. A `.gif`, `.tif`, or `.psd` file routes to the configured media/images folder
+  4. A `.p7b`, `.asc`, or `.kdbx` file routes to the configured security folder
+  5. A `.ps1`, `.css`, `.js`, or `.sh` file routes to the configured scripts/dev folder
+  6. A file with an extension not handled by any other signal routes to a catch-all folder rather than remaining in Inbox
+**Plans**: TBD
+
+### Phase 7: Inbox Processing UX
+
+**Goal**: Users can drain their inbox in one command and see exactly what happened
+**Depends on**: Phase 5, Phase 6
+**Requirements**: UX-01, UX-02, UX-03, UX-04
+**Success Criteria** (what must be TRUE):
+
+  1. Running a single command against the inbox directory classifies and moves all confidently-matched files without any intermediate steps
+  2. Files the pipeline cannot classify with sufficient confidence remain in Inbox — none are moved to a wrong location
+  3. During processing, each file shows its name, destination, and running count in the terminal output
+  4. After processing completes, the terminal prints a summary: total files processed, moved count, stayed-in-inbox count, and breakdown by signal source
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -89,3 +133,6 @@ Plans:
 | 2. Code Quality | 2/2 | Complete    | 2026-02-28 |
 | 3. Test Coverage | 3/3 | Complete    | 2026-02-28 |
 | 4. User Features | 2/2 | Complete    | 2026-02-28 |
+| 5. Content Extraction | 0/TBD | Not started | - |
+| 6. Extension Routing | 0/TBD | Not started | - |
+| 7. Inbox Processing UX | 0/TBD | Not started | - |
