@@ -103,7 +103,7 @@ class MLXConfig(BaseSettings):
         description="Enable semantic classifier using MLX embeddings",
     )
     semantic_threshold: float = Field(
-        default=0.85,
+        default=0.65,
         ge=0.0,
         le=1.0,
         description="Minimum cosine similarity threshold for semantic matching",
@@ -223,7 +223,7 @@ class ExtensionRoutingConfig(BaseSettings):
         description="Destination for script and web files (.ps1, .css, .js, .sh)",
     )
     catchall_folder: str = Field(
-        default="3_Resources/misc",
+        default="0_Inbox",
         description="Destination for files with unrecognised extensions",
     )
 
