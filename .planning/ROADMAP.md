@@ -11,7 +11,7 @@ This milestone eliminates known bugs, tightens code quality, fills test coverage
 - [x] **Phase 3: Test Coverage** - Validate pipeline resilience and edge cases with automated tests (completed 2026-02-28)
 - [x] **Phase 4: User Features** - Expose classification transparency and dry-run safety to users (completed 2026-02-28)
 - [ ] **Phase 5: Content Extraction** - Pipeline reads inside Excel, ODS, and ZIP/7Z files for semantic classification
-- [ ] **Phase 6: Extension Routing** - Media, security, script, and exotic files route to sensible folders by extension
+- [x] **Phase 6: Extension Routing** - Media, security, script, and exotic files route to sensible folders by extension (completed 2026-03-01)
 - [ ] **Phase 7: Inbox Processing UX** - One-shot command processes the entire inbox with progress display and post-run summary
 
 ## Phase Details
@@ -145,5 +145,5 @@ Plans:
 | 3. Test Coverage | 3/3 | Complete    | 2026-02-28 |
 | 4. User Features | 2/2 | Complete    | 2026-02-28 |
 | 5. Content Extraction | 2/3 | In Progress|  |
-| 6. Extension Routing | 2/3 | In Progress|  |
+| 6. Extension Routing | 3/3 | Complete   | 2026-03-01 |
 | 7. Inbox Processing UX | 0/TBD | Not started | - |

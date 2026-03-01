@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 ## Current Position
 
 Phase: 6 of 7 (Extension Routing)
-Plan: 2 of 2 in current phase (COMPLETE)
+Plan: 3 of 3 in current phase (COMPLETE)
 Status: In Progress
-Last activity: 2026-03-01 — Completed plan 06-02: TDD test suite for ExtensionRouterClassifier (46 tests)
+Last activity: 2026-03-01 — Completed plan 06-03: ExtensionRouterClassifier wired into pipeline as Signal 5
 
-Progress: [███████░░░] 71% (v1.0 complete, v1.1 phase 6/7 complete)
+Progress: [████████░░] 78% (v1.0 complete, v1.1 phase 6/7 complete with all 3 plans)
 
 ## Performance Metrics
 
@@ -37,10 +37,11 @@ Progress: [███████░░░] 71% (v1.0 complete, v1.1 phase 6/7 co
 - Trend: stable
 
 | 05-content-extraction | 3 | 12 min | 4 min |
-| 06-extension-routing | 2 | 13 min | 6.5 min |
+| 06-extension-routing | 3 | 21 min | 7 min |
 
 *Updated after each plan completion*
 | Phase 06-extension-routing P02 | 5 | 1 tasks | 1 files |
+| Phase 06-extension-routing P03 | 8 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -54,6 +55,7 @@ Recent decisions affecting current work:
 - Extension catch-all routing for media/exotic types — content unreadable; extension is definitive
 - [Phase 06-extension-routing]: ExtensionRoutingConfig with PARA_FILES_EXT_ROUTING_ env prefix; confidence 0.97-0.98 for known groups, 0.80 for catch-all; empty extension returns None so pipeline continues
 - [Phase 06-extension-routing P02]: No file mocking needed for pure-logic classifiers — FileMetadata constructed directly; test class per ROUTE-* requirement for 1-to-1 traceability
+- [Phase 06-extension-routing P03]: ExtensionRouterClassifier runs unconditionally (no config guard) — deterministic and low-cost, no reason to make it optional
 - [Phase 04-user-features]: Run all classifiers (not first-match-return) so every signal is recorded
 - [Phase 04-user-features]: signals field has default_factory=list for backward compatibility
 - [Phase 04-user-features]: classify --dry-run suppresses OCR rename only (no file moves)
@@ -73,5 +75,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 06-extension-routing-02-PLAN.md (TDD test suite for ExtensionRouterClassifier — 46 tests)
+Stopped at: Completed 06-extension-routing-03-PLAN.md (ExtensionRouterClassifier wired into pipeline as Signal 5)
 Resume file: None
