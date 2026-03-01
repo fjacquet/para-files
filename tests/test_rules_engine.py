@@ -1147,9 +1147,7 @@ class TestUnicodeAndSpecialCharFilenames:
     def test_unicode_pattern_match(self) -> None:
         """Accented Latin filename matches glob pattern with accents."""
         rules = {
-            "payslips": RoutingRule(
-                patterns=["Décompte*"], destination="2_Areas/finance/payslips"
-            )
+            "payslips": RoutingRule(patterns=["Décompte*"], destination="2_Areas/finance/payslips")
         }
         classifier = RulesEngineClassifier(rules)
         metadata = make_metadata(
@@ -1320,9 +1318,7 @@ class TestOverlappingPatterns:
         rule_a = RoutingRule(extensions=[".pdf"], destination="dest_a")
         rule_b = RoutingRule(extensions=[".pdf"], destination="dest_b")
         rule_c = RoutingRule(extensions=[".pdf"], destination="dest_c")
-        classifier = RulesEngineClassifier(
-            {"rule_a": rule_a, "rule_b": rule_b, "rule_c": rule_c}
-        )
+        classifier = RulesEngineClassifier({"rule_a": rule_a, "rule_b": rule_b, "rule_c": rule_c})
         metadata = make_metadata(
             path=Path("/test/document.pdf"),
             filename="document.pdf",

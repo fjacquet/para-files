@@ -518,8 +518,7 @@ class TestConcurrentIsbnDeduplication:
         results: list[tuple[bool, Path | None]] = []
         with ThreadPoolExecutor(max_workers=5) as executor:
             futures = [
-                executor.submit(_check_and_register_isbn, isbn, book_path, ctx)
-                for _ in range(5)
+                executor.submit(_check_and_register_isbn, isbn, book_path, ctx) for _ in range(5)
             ]
             results.extend(future.result() for future in as_completed(futures))
 

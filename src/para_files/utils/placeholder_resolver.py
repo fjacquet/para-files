@@ -10,10 +10,19 @@ import re
 
 
 # All known placeholder names the classifiers use
-_KNOWN_PLACEHOLDERS = frozenset({
-    "year", "YYYY", "MM", "DD", "month", "day",
-    "issuer", "location", "country",
-})
+_KNOWN_PLACEHOLDERS = frozenset(
+    {
+        "year",
+        "YYYY",
+        "MM",
+        "DD",
+        "month",
+        "day",
+        "issuer",
+        "location",
+        "country",
+    }
+)
 
 
 def resolve_placeholders(pattern: str, params: dict[str, str]) -> str:
