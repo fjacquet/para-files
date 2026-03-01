@@ -4,7 +4,7 @@ Development guidance for Claude Code (claude.ai/code) when working with this rep
 
 ## Project Overview
 
-**para-files** is a macOS-only (Apple Silicon) intelligent file classification system using MLX-powered semantic routing. It implements the PARA method (Projects, Areas, Resources, Archives) with a deterministic 6-signal classification pipeline.
+**para-files** is an intelligent file classification system using Ollama-powered semantic routing (via litellm). It implements the PARA method (Projects, Areas, Resources, Archives) with a deterministic 6-signal classification pipeline. OCR features require macOS (Apple Silicon).
 
 For detailed project information, see the full documentation at [docs/index.md](docs/index.md).
 
@@ -72,7 +72,7 @@ pre-commit run --all-files         # Run manually
 | `src/para_files/learner.py` | Feedback-based learning |
 | `src/para_files/reference_tree.py` | YAML reference tree loader |
 | `src/para_files/classifiers/` | Classification signal implementations |
-| `src/para_files/encoders/mlx_encoder.py` | MLX embedding encoder with lazy loading |
+| `src/para_files/encoders/mlx_encoder.py` | Ollama embedding encoder via litellm |
 | `src/para_files/utils/filename_sanitizer.py` | Centralized filename sanitization |
 | `src/para_files/taxonomies/models.py` | Thema/document taxonomy models and path builders |
 | `tests/` | Test suite |
@@ -123,14 +123,15 @@ Files are classified using signals in priority order:
 2. **Book Detector** (96-100%) - PDF book detection via ISBN/metadata/Thema
 3. **Rules Engine** (95%) - Glob patterns on filename/path
 4. **Domain KB** (90%) - Known issuer to category mappings
-5. **Semantic Router** (85%) - MLX embedding similarity
-6. **LLM Fallback** (configurable) - Optional AI classification
+5. **Semantic Router** (85%) - Ollama embedding similarity (via litellm)
+6. **LLM Fallback** (configurable) - Ollama LLM classification (via litellm)
 
 For detailed architecture, see [docs/architecture/overview.md](docs/architecture/overview.md).
 
 ## Key Technologies
 
-- **MLX** - Optimized embeddings on Apple Neural Engine
+- **litellm** - Unified LLM/embedding API (calls Ollama, OpenAI, etc.)
+- **Ollama** - Local LLM and embedding server (nomic-embed-text, ministral-3:8b)
 - **Pydantic** - Configuration and data validation
 - **Typer** - CLI framework (built on Click)
 - **YAML** - Configuration format
@@ -138,10 +139,9 @@ For detailed architecture, see [docs/architecture/overview.md](docs/architecture
 
 ## Platform Constraint
 
-This project is **macOS only** (Apple Silicon required) because:
-
-- MLX requires Apple Neural Engine
-- Vision Framework for OCR is macOS-only
+OCR features require **macOS** (Apple Silicon) because Vision Framework is macOS-only.
+The core classification pipeline (embeddings, LLM, rules, taxonomy) is cross-platform
+and only requires a running Ollama server.
 
 ## Documentation
 

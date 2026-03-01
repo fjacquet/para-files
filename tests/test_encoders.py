@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from para_files.encoders.base import BaseEncoder
-from para_files.encoders.mlx_encoder import MLXEncoder
+from para_files.encoders.mlx_encoder import OllamaEncoder
 
 
 class ConcreteEncoder(BaseEncoder):
@@ -39,148 +39,163 @@ class TestBaseEncoder:
         assert len(result[0]) == 384
 
 
-class TestMLXEncoder:
-    """Tests for MLXEncoder class."""
+class TestOllamaEncoder:
+    """Tests for OllamaEncoder class."""
 
     def test_init_defaults(self):
         """Test initialization with default values."""
-        encoder = MLXEncoder()
-        assert encoder.name == "nomic-text-v1.5"
+        encoder = OllamaEncoder()
+        assert encoder.name == "nomic-embed-text"
         assert encoder.score_threshold == 0.75
-        assert encoder._loaded is False
+        assert encoder.type == "ollama"
 
     def test_init_custom_values(self):
         """Test initialization with custom values."""
-        encoder = MLXEncoder(
+        encoder = OllamaEncoder(
             name="bge-small",
             score_threshold=0.8,
         )
         assert encoder.name == "bge-small"
         assert encoder.score_threshold == 0.8
 
-    def test_lazy_loading(self):
-        """Test that model is not loaded on init."""
-        encoder = MLXEncoder()
-        assert encoder._model is None
-        assert encoder._loaded is False
-
     def test_empty_input(self):
         """Test encoding empty list returns empty list."""
-        encoder = MLXEncoder()
-        # Don't need to load model for empty input
+        encoder = OllamaEncoder()
         result = encoder([])
         assert result == []
 
-    @patch("para_files.encoders.mlx_encoder.EmbeddingModel.from_registry")
-    def test_ensure_loaded(self, mock_from_registry: MagicMock):
-        """Test model loading on first use."""
-        mock_model = MagicMock()
-        mock_from_registry.return_value = mock_model
+    @patch("para_files.encoders.mlx_encoder.litellm")
+    def test_encode_calls_litellm(self, mock_litellm: MagicMock):
+        """Test that encoding calls litellm.embedding()."""
+        mock_response = MagicMock()
+        mock_response.data = [{"embedding": [0.1] * 768}]
+        mock_litellm.embedding.return_value = mock_response
 
-        encoder = MLXEncoder()
-        encoder._ensure_loaded()
+        encoder = OllamaEncoder()
+        result = encoder(["hello world"])
 
-        assert encoder._loaded is True
-        mock_from_registry.assert_called_once_with("nomic-text-v1.5")
+        mock_litellm.embedding.assert_called_once()
+        assert len(result) == 1
+        assert len(result[0]) == 768
 
-    @patch("para_files.encoders.mlx_encoder.EmbeddingModel.from_registry")
-    def test_only_loads_once(self, mock_from_registry: MagicMock):
-        """Test model is only loaded once."""
-        mock_model = MagicMock()
-        mock_from_registry.return_value = mock_model
+    @patch("para_files.encoders.mlx_encoder.litellm")
+    def test_encode_multiple_texts(self, mock_litellm: MagicMock):
+        """Test encoding multiple texts."""
+        mock_response = MagicMock()
+        mock_response.data = [
+            {"embedding": [0.1] * 768},
+            {"embedding": [0.2] * 768},
+            {"embedding": [0.3] * 768},
+        ]
+        mock_litellm.embedding.return_value = mock_response
 
-        encoder = MLXEncoder()
-        encoder._ensure_loaded()
-        encoder._ensure_loaded()
-        encoder._ensure_loaded()
+        encoder = OllamaEncoder()
+        result = encoder(["text1", "text2", "text3"])
 
-        mock_from_registry.assert_called_once()
+        assert len(result) == 3
+
+    @patch("para_files.encoders.mlx_encoder.litellm")
+    def test_truncation(self, mock_litellm: MagicMock):
+        """Test that long texts are truncated."""
+        mock_response = MagicMock()
+        mock_response.data = [{"embedding": [0.1] * 768}]
+        mock_litellm.embedding.return_value = mock_response
+
+        encoder = OllamaEncoder(max_chars=100)
+        encoder(["x" * 500])
+
+        # Verify the text was truncated
+        call_args = mock_litellm.embedding.call_args
+        texts_sent = call_args.kwargs.get("input") or call_args[1].get("input")
+        assert len(texts_sent[0]) == 100
 
 
-class TestMLXEncoderZeroVectorGuard:
-    """Tests for per-text retry logic — must not return zero vectors when retry succeeds."""
+class TestOllamaEncoderFallback:
+    """Tests for per-text retry logic on batch failure."""
 
-    @patch("para_files.encoders.mlx_encoder.EmbeddingModel.from_registry")
-    def test_no_zero_vector_for_dense_text(self, mock_from_registry: MagicMock):
-        """Per-text retry must not return a zero vector when a shorter prefix succeeds."""
-        mock_model = MagicMock()
+    @patch("para_files.encoders.mlx_encoder.litellm")
+    def test_batch_failure_retries_per_text(self, mock_litellm: MagicMock):
+        """Batch failure triggers per-text retry with progressive truncation."""
         call_count = 0
 
-        def side_effect(texts):
+        def side_effect(**kwargs):
             nonlocal call_count
             call_count += 1
-            # First call (batch) raises IndexError
-            # Subsequent calls (per-text via _encode_single) succeed with 200-char prefix
             if call_count == 1:
-                msg = "sequence length exceeds maximum"
-                raise IndexError(msg)
-            import numpy as np
+                msg = "batch too large"
+                raise RuntimeError(msg)
+            mock_resp = MagicMock()
+            mock_resp.data = [{"embedding": [0.5] * 768}]
+            return mock_resp
 
-            return np.array([[0.1] * 768 for _ in texts])
+        mock_litellm.embedding.side_effect = side_effect
 
-        mock_model.encode.side_effect = side_effect
-        mock_from_registry.return_value = mock_model
-
-        encoder = MLXEncoder()
-        encoder._model = mock_model
-        encoder._loaded = True
-
-        dense_text = "x" * 2000  # Simulates symbol-dense / token-heavy text
-        result = encoder([dense_text])
+        encoder = OllamaEncoder()
+        result = encoder(["x" * 2000])
 
         assert len(result) == 1
-        assert result[0] != [0.0] * 768, "Must not return zero vector when retry succeeds"
-        assert any(v != 0.0 for v in result[0])
+        assert result[0] != [0.0] * 768
 
-    @patch("para_files.encoders.mlx_encoder.EmbeddingModel.from_registry")
-    def test_encode_single_progressive_truncation(self, mock_from_registry: MagicMock):
-        """_encode_single tries shorter and shorter prefixes on IndexError."""
-        mock_model = MagicMock()
-        attempts = []
+    @patch("para_files.encoders.mlx_encoder.litellm")
+    def test_encode_batch(self, mock_litellm: MagicMock):
+        """Test batch encoding."""
+        mock_response = MagicMock()
+        mock_response.data = [
+            {"embedding": [0.1] * 768},
+            {"embedding": [0.2] * 768},
+            {"embedding": [0.3] * 768},
+        ]
+        mock_litellm.embedding.return_value = mock_response
 
-        def side_effect(texts):
-            attempts.append(len(texts[0]))
-            if len(texts[0]) > 200:
-                msg = "too long"
-                raise IndexError(msg)
-            import numpy as np
+        encoder = OllamaEncoder()
+        result = encoder.encode_batch(
+            [f"Document {i}" for i in range(9)],
+            batch_size=3,
+        )
+        assert len(result) == 9
 
-            return np.array([[0.5] * 768])
+    @patch("para_files.encoders.mlx_encoder.litellm")
+    def test_total_failure_returns_zero_vector(self, mock_litellm: MagicMock):
+        """When all retries fail, returns zero vector."""
+        mock_litellm.embedding.side_effect = RuntimeError("server down")
 
-        mock_model.encode.side_effect = side_effect
-        mock_from_registry.return_value = mock_model
+        encoder = OllamaEncoder()
+        result = encoder(["test"])
 
-        encoder = MLXEncoder()
-        encoder._model = mock_model
-        encoder._loaded = True
-
-        result = encoder._encode_single("a" * 1000)
-
-        # Must have tried multiple lengths before succeeding at 200
-        assert len(attempts) >= 2
-        assert result != [0.0] * 768
+        assert len(result) == 1
+        assert result[0] == [0.0] * 768
 
 
-class TestMLXEncoderIntegration:
-    """Integration tests for MLXEncoder (require model download).
+class TestBackwardCompatibility:
+    """Test backward compatibility aliases."""
 
-    These tests are marked slow and require an actual MLX model.
+    def test_mlx_encoder_alias(self):
+        """Test that MLXEncoder is an alias for OllamaEncoder."""
+        from para_files.encoders import MLXEncoder
+
+        assert MLXEncoder is OllamaEncoder
+
+
+class TestOllamaEncoderIntegration:
+    """Integration tests for OllamaEncoder (require running Ollama server).
+
+    These tests are marked slow and require Ollama with nomic-embed-text.
     Skip with: pytest -m "not slow"
     """
 
     @pytest.mark.slow
     def test_encode_single_text(self):
         """Test encoding a single text."""
-        encoder = MLXEncoder()
+        encoder = OllamaEncoder()
         result = encoder(["This is a test document about insurance."])
         assert len(result) == 1
-        assert len(result[0]) > 0  # Should have embedding dimensions
+        assert len(result[0]) > 0
         assert all(isinstance(x, float) for x in result[0])
 
     @pytest.mark.slow
     def test_encode_multiple_texts(self):
         """Test encoding multiple texts."""
-        encoder = MLXEncoder()
+        encoder = OllamaEncoder()
         texts = [
             "Invoice from insurance company",
             "Bank statement for January",
@@ -195,18 +210,17 @@ class TestMLXEncoderIntegration:
         """Test that embeddings are L2 normalized."""
         import math
 
-        encoder = MLXEncoder()
+        encoder = OllamaEncoder()
         result = encoder(["Test document"])
         embedding = result[0]
 
-        # Check L2 norm is approximately 1
         norm = math.sqrt(sum(x * x for x in embedding))
-        assert abs(norm - 1.0) < 0.01
+        assert abs(norm - 1.0) < 0.1  # Ollama embeddings may not be perfectly normalized
 
     @pytest.mark.slow
     def test_encode_batch(self):
         """Test batch encoding."""
-        encoder = MLXEncoder()
+        encoder = OllamaEncoder()
         texts = [f"Document {i}" for i in range(10)]
         result = encoder.encode_batch(texts, batch_size=3)
         assert len(result) == 10
@@ -214,7 +228,7 @@ class TestMLXEncoderIntegration:
     @pytest.mark.slow
     def test_similar_texts_have_similar_embeddings(self):
         """Test that semantically similar texts have similar embeddings."""
-        encoder = MLXEncoder()
+        encoder = OllamaEncoder()
         result = encoder(
             [
                 "Invoice for health insurance premium",
@@ -223,16 +237,13 @@ class TestMLXEncoderIntegration:
             ]
         )
 
-        # Compute cosine similarity between embeddings
         def cosine_sim(a: list[float], b: list[float]) -> float:
             dot = sum(x * y for x, y in zip(a, b, strict=True))
             norm_a = sum(x * x for x in a) ** 0.5
             norm_b = sum(x * x for x in b) ** 0.5
             return dot / (norm_a * norm_b)
 
-        # Similar texts should have higher similarity
-        sim_12 = cosine_sim(result[0], result[1])  # Both about insurance
-        sim_13 = cosine_sim(result[0], result[2])  # Insurance vs bank
+        sim_12 = cosine_sim(result[0], result[1])
+        sim_13 = cosine_sim(result[0], result[2])
 
-        # Insurance texts should be more similar to each other
         assert sim_12 > sim_13

@@ -586,15 +586,15 @@ class TestGetEncoder:
         result = extractor._get_encoder()
         assert result is mock_encoder
 
-    @patch("para_files.utils.technology_extractor.MLXEncoder", create=True)
-    def test_get_encoder_loads_mlx(self, mock_mlx_class: MagicMock) -> None:
-        """Test encoder loads MLX when available."""
+    @patch("para_files.utils.technology_extractor.OllamaEncoder", create=True)
+    def test_get_encoder_loads_ollama(self, mock_encoder_class: MagicMock) -> None:
+        """Test encoder loads OllamaEncoder when available."""
         mock_instance = MagicMock()
-        mock_mlx_class.return_value = mock_instance
+        mock_encoder_class.return_value = mock_instance
 
         with patch.dict(
             "sys.modules",
-            {"para_files.encoders": MagicMock(MLXEncoder=mock_mlx_class)},
+            {"para_files.encoders": MagicMock(OllamaEncoder=mock_encoder_class)},
         ):
             extractor = TechnologyExtractor()
             extractor._encoder = None

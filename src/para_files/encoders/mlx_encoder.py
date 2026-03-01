@@ -1,142 +1,69 @@
-"""MLX-based encoder for semantic routing.
+"""Ollama-based encoder for semantic routing via litellm.
 
-Uses mlx-embedding-models to load embedding models optimized for Apple Silicon.
+Uses litellm.embedding() to call Ollama's nomic-embed-text model
+for 768-dimensional embeddings. Cross-platform replacement for MLX.
 """
 
 from __future__ import annotations
 
-import logging
-import threading
-from typing import Any, ClassVar, cast
+from typing import ClassVar
 
+import litellm
 from loguru import logger
-from mlx_embedding_models.embedding import EmbeddingModel  # type: ignore[import-untyped]
 from pydantic import ConfigDict, PrivateAttr
 from semantic_router.encoders import DenseEncoder
 
 
-def _suppress_nomic_noise() -> None:
-    """Suppress noisy log output from the nomic-embed-text-v1.5 model.
-
-    Two sources of noise are silenced here:
-
-    1. ``transformers_modules.*.modeling_hf_nomic_bert`` logs "<All keys matched
-       successfully>" at WARNING level — it's a success message mis-classified by
-       the custom module's own logger.
-
-    2. The interactive ``trust_remote_code`` prompt that appears because
-       ``mlx_embedding_models`` calls ``AutoTokenizer.from_pretrained()`` without
-       ``trust_remote_code=True``.  We patch ``AutoTokenizer.from_pretrained`` to
-       inject ``trust_remote_code=True`` as a default so the prompt is never shown.
-    """
-    # Raise the stdlib log level for the nomic custom module to ERROR so the
-    # spurious WARNING "<All keys matched successfully>" line is suppressed.
-    # The logger name contains hyphens replaced with "_hyphen_" by transformers.
-    logging.getLogger(
-        "transformers_modules.nomic_hyphen_ai.nomic_hyphen_bert_hyphen_2048"
-    ).setLevel(logging.ERROR)
-
-    # Patch AutoTokenizer.from_pretrained to always include trust_remote_code=True
-    # so mlx_embedding_models (which omits it) never triggers the interactive prompt.
-    try:
-        import transformers  # type: ignore[import-untyped]
-
-        _orig = transformers.AutoTokenizer.from_pretrained.__func__  # type: ignore[attr-defined]
-
-        @classmethod  # type: ignore[misc]
-        def _patched(cls: object, name_or_path: object, *args: object, **kwargs: object) -> object:
-            kwargs.setdefault("trust_remote_code", True)
-            return _orig(cls, name_or_path, *args, **kwargs)
-
-        transformers.AutoTokenizer.from_pretrained = _patched
-    except Exception:  # noqa: BLE001, S110
-        pass  # If patching fails, the prompt just shows — non-fatal.
-
-
-def _apply_transformers5_tokenizer_patch() -> None:
-    """Patch TokenizersBackend for transformers 5.x compatibility.
-
-    transformers 5.0 removed batch_encode_plus from TokenizersBackend.
-    mlx_embedding_models 0.0.11 still calls it, so we add it back as a
-    delegate to __call__, which accepts identical arguments.
-
-    Applied once at module import time so all future instances are covered.
-    """
-    try:
-        from transformers.tokenization_utils_tokenizers import (  # type: ignore[import-untyped]
-            TokenizersBackend,
-        )
-
-        if not hasattr(TokenizersBackend, "batch_encode_plus"):
-            logger.debug("Applying transformers 5.x TokenizersBackend compatibility patch")
-
-            def _batch_encode_plus(self: object, batch: list[str], **kwargs: object) -> object:
-                return self(batch, **kwargs)  # type: ignore[operator]
-
-            TokenizersBackend.batch_encode_plus = _batch_encode_plus  # type: ignore[attr-defined]
-    except ImportError:
-        pass  # transformers < 5.x: TokenizersBackend doesn't exist, no patch needed
-
-
-_suppress_nomic_noise()
-_apply_transformers5_tokenizer_patch()
-
-
-class MLXEncoder(DenseEncoder):
-    """Custom encoder for semantic-router using MLX embeddings.
+class OllamaEncoder(DenseEncoder):
+    """Custom encoder for semantic-router using Ollama embeddings via litellm.
 
     This encoder inherits from DenseEncoder (Pydantic model) and uses
-    mlx-embedding-models for optimized inference on Apple Silicon.
+    litellm.embedding() to call Ollama's embedding endpoint.
 
-    Available models in registry:
-        - nomic-text-v1.5 (default, 768 dims, 8192 token context)
-        - nomic-text-v1 (768 dims)
-        - bge-small (384 dims)
-        - bge-base (768 dims)
-        - bge-large (1024 dims)
-        - minilm-l6 (384 dims)
-        - minilm-l12 (384 dims)
-        - multilingual-e5-small (384 dims)
+    Default model: nomic-embed-text (768 dims, same as MLX variant).
     """
 
-    name: str = "nomic-text-v1.5"
+    name: str = "nomic-embed-text"
     score_threshold: float | None = 0.75
-    type: str = "mlx"
-    # Max chars to avoid exceeding model's token limit
-    # mlx-embedding-models uses buckets up to 512 tokens max
-    # ~2 chars per token average, with 700 fallback for edge cases
+    type: str = "ollama"
+    api_base: str = "http://localhost:11434"
+
+    # Max chars to avoid excessive token usage
     max_chars: int = 1000
     fallback_chars: int = 700
 
     model_config: ClassVar[ConfigDict] = ConfigDict(arbitrary_types_allowed=True)
 
-    # Class-level lock for thread-safe model loading
-    _load_lock: ClassVar[threading.Lock] = threading.Lock()
-
-    # Private attributes for lazy loading
-    _model: Any = PrivateAttr(default=None)
-    _loaded: bool = PrivateAttr(default=False)
-
-    def _ensure_loaded(self) -> None:
-        """Lazily load model on first use (thread-safe with double-check pattern)."""
-        if not self._loaded:
-            with self._load_lock:
-                if not self._loaded:  # Double-check after acquiring lock
-                    self._model = EmbeddingModel.from_registry(self.name)
-                    self._loaded = True
+    # Private attribute tracking initialization
+    _initialized: bool = PrivateAttr(default=False)
 
     def _truncate(self, text: str) -> str:
-        """Truncate text to max_chars to avoid exceeding model's token limit."""
+        """Truncate text to max_chars to avoid excessive token usage."""
         if len(text) > self.max_chars:
             return text[: self.max_chars]
         return text
 
+    def _encode_texts(self, texts: list[str]) -> list[list[float]]:
+        """Encode texts via litellm.embedding().
+
+        Args:
+            texts: List of texts to encode.
+
+        Returns:
+            List of embedding vectors as Python lists.
+        """
+        response = litellm.embedding(
+            model=f"ollama/{self.name}",
+            input=texts,
+            api_base=self.api_base,
+        )
+        return [item["embedding"] for item in response.data]
+
     def _encode_single(self, text: str) -> list[float]:
-        """Encode a single text with progressive truncation on IndexError.
+        """Encode a single text with progressive truncation on failure.
 
         Tries progressively shorter truncations (fallback_chars, 400, 200)
-        before giving up and returning a mean-pooled partial result.
-        Never returns a zero vector — uses the shortest encodable prefix instead.
+        before giving up and returning a zero vector.
 
         Args:
             text: Text to encode.
@@ -151,21 +78,20 @@ class MLXEncoder(DenseEncoder):
         ]
         for candidate in candidates:
             try:
-                arr = self._model.encode([candidate])
-                return cast("list[float]", arr.tolist()[0])
-            except IndexError:
+                result = self._encode_texts([candidate])
+                return result[0]
+            except Exception:  # noqa: BLE001
+                logger.debug("Encode failed for {}-char text, trying shorter", len(candidate))
                 continue
-        # Absolute last resort: encode just the first sentence or 100 chars
-        # This should never fail because 100 chars << token limit
+
+        # Absolute last resort: encode just the first 100 chars
         last_chance = text[:100] if text else "document"
         try:
-            arr = self._model.encode([last_chance])
-            return cast("list[float]", arr.tolist()[0])
+            result = self._encode_texts([last_chance])
+            return result[0]
         except Exception:  # noqa: BLE001
-            logger.exception("MLX encoder failed on 100-char text — model may be broken")
-            # Only now do we return a zero vector, and we log it as an error
-            dim = getattr(self._model, "dims", 768)
-            return [0.0] * dim
+            logger.exception("Ollama encoder failed on 100-char text — server may be down")
+            return [0.0] * 768
 
     def __call__(self, texts: list[str]) -> list[list[float]]:
         """Encode texts to embeddings.
@@ -179,22 +105,15 @@ class MLXEncoder(DenseEncoder):
         if not texts:
             return []
 
-        self._ensure_loaded()
-
-        # Truncate texts to avoid exceeding model's token limit
+        # Truncate texts
         truncated_texts = [self._truncate(t) for t in texts]
 
         try:
-            # EmbeddingModel.encode returns numpy array of shape (n_texts, embedding_dim)
-            embeddings_array = self._model.encode(truncated_texts)
-        except IndexError as e:
-            # Batch failed — likely a tokenization edge case. Retry per-text.
+            return self._encode_texts(truncated_texts)
+        except Exception as e:  # noqa: BLE001
+            # Batch failed — retry per-text with progressive truncation
             logger.warning("Batch encode failed, retrying per-text: {}", e)
             return [self._encode_single(t) for t in texts]
-
-        # Convert to list of lists
-        embeddings: list[list[float]] = embeddings_array.tolist()
-        return embeddings
 
     def encode_batch(self, texts: list[str], batch_size: int = 32) -> list[list[float]]:
         """Encode texts in batches for efficiency.
@@ -214,3 +133,7 @@ class MLXEncoder(DenseEncoder):
             all_embeddings.extend(batch_embeddings)
 
         return all_embeddings
+
+
+# Backward compatibility alias
+MLXEncoder = OllamaEncoder

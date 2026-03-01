@@ -1,7 +1,7 @@
-"""Technology extraction using MLX semantic matching.
+"""Technology extraction using semantic matching.
 
 Extracts technology/topic category from document content or filename
-using MLX embeddings for semantic similarity matching.
+using Ollama embeddings (via litellm) for semantic similarity matching.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from loguru import logger
 
 
 if TYPE_CHECKING:
-    from para_files.encoders.mlx_encoder import MLXEncoder
+    from para_files.encoders.mlx_encoder import OllamaEncoder
 
 
 # Minimum similarity score to consider a technology match
@@ -120,18 +120,18 @@ class TechnologyExtractor:
         """
         self._technologies = technologies or list(TECHNOLOGY_DESCRIPTIONS.keys())
         self._threshold = threshold
-        self._encoder: MLXEncoder | None = None
+        self._encoder: OllamaEncoder | None = None
         self._tech_embeddings: list[list[float]] | None = None
 
-    def _get_encoder(self) -> MLXEncoder | None:
-        """Lazy-load the MLX encoder."""
+    def _get_encoder(self) -> OllamaEncoder | None:
+        """Lazy-load the Ollama encoder."""
         if self._encoder is None:
             try:
-                from para_files.encoders import MLXEncoder
+                from para_files.encoders import OllamaEncoder
 
-                self._encoder = MLXEncoder()
+                self._encoder = OllamaEncoder()
             except ImportError:
-                logger.warning("MLX encoder not available for technology detection")
+                logger.warning("Ollama encoder not available for technology detection")
         return self._encoder
 
     def _ensure_tech_embeddings(self) -> bool:

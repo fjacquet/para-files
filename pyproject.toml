@@ -1,12 +1,12 @@
 [project]
 name = "para-files"
 version = "0.1.0"
-description = "Intelligent file classification using MLX-powered semantic routing with PARA method"
+description = "Intelligent file classification using semantic routing with PARA method"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "Frédéric Jacquet", email = "fred.jacquet@gmail.com" }]
 requires-python = ">=3.12"
-keywords = ["mlx", "classification", "para", "semantic-routing", "macos"]
+keywords = ["ollama", "classification", "para", "semantic-routing", "litellm"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: MacOS X",
@@ -21,8 +21,6 @@ classifiers = [
 ]
 
 dependencies = [
-    "mlx>=0.30.1",
-    "mlx-lm>=0.20.0",
     "pydantic>=2.12.0",
     "pydantic-settings>=2.6.0",
     "pyyaml>=6.0",
@@ -32,7 +30,6 @@ dependencies = [
     "pyobjc-framework-quartz>=12.1",
     "pyobjc-framework-cocoa>=12.1",
     "typer>=0.21.0",
-    "mlx-embedding-models>=0.0.11",
     "einops>=0.8.1",
     "httpx>=0.28.1",
     "isbnlib>=3.10.14",
@@ -187,6 +184,9 @@ ignore = [
     "FBT002",   # Boolean default positional arguments are standard for Typer CLI
     "PLR0913",  # CLI commands naturally have many parameters
 ]
+"src/para_files/classifiers/mlx_llm_classifier.py" = [
+    "PLR0913",  # LLMClassifier.__init__ has many config parameters
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["para_files"]
@@ -231,7 +231,7 @@ show_column_numbers = true
 pretty = true
 
 [[tool.mypy.overrides]]
-module = ["mlx.*", "mlx_lm.*", "pypdf", "pypdf.*", "semantic_router.*", "litellm.*", "transformers.*", "Vision", "Cocoa", "Quartz", "fitz", "odf.*", "xlrd.*", "openpyxl.*"]
+module = ["pypdf", "pypdf.*", "semantic_router.*", "litellm.*", "transformers.*", "Vision", "Cocoa", "Quartz", "fitz", "odf.*", "xlrd.*", "openpyxl.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

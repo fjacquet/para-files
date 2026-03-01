@@ -361,7 +361,7 @@ def _run_rescan(
 
     # Create pipeline once and reuse - includes all classifiers in priority order:
     # ValidatedDBClassifier (100%), RulesEngineClassifier (95%), BookDetector (92%),
-    # DomainKBClassifier (90%), SemanticClassifier (85%), MLXLLMClassifier (configurable)
+    # DomainKBClassifier (90%), SemanticClassifier (85%), LLMClassifier (configurable)
     pipeline = ClassificationPipeline(config)
 
     # Stream-process files as they're discovered

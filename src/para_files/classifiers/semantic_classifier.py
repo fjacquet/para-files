@@ -1,4 +1,4 @@
-"""Semantic classifier using MLX embeddings.
+"""Semantic classifier using Ollama embeddings via litellm.
 
 This classifier uses sentence embeddings to semantically match document content
 against category descriptions from the taxonomy. It serves as a fallback when
@@ -13,7 +13,7 @@ import re
 from loguru import logger
 
 from para_files.classifiers.base import BaseClassifier
-from para_files.encoders.mlx_encoder import MLXEncoder
+from para_files.encoders.mlx_encoder import OllamaEncoder
 from para_files.taxonomies.loader import TaxonomyLoader, get_taxonomy_loader
 from para_files.taxonomies.models import DocumentCategory, DocumentType
 from para_files.types import (
@@ -119,7 +119,7 @@ class SemanticClassifier(BaseClassifier):
         self._enabled = enabled
 
         # Lazy-loaded components
-        self._encoder: MLXEncoder | None = None
+        self._encoder: OllamaEncoder | None = None
         self._category_embeddings: dict[str, list[float]] = {}
         self._category_info: dict[str, dict[str, str]] = {}  # category -> metadata
         self._initialized = False
@@ -174,10 +174,10 @@ class SemanticClassifier(BaseClassifier):
         if self._initialized:
             return
 
-        logger.info("Initializing SemanticClassifier with MLX embeddings...")
+        logger.info("Initializing SemanticClassifier with Ollama embeddings...")
 
         # Initialize encoder
-        self._encoder = MLXEncoder()
+        self._encoder = OllamaEncoder()
 
         # Build category descriptions from taxonomy
         texts_to_embed: list[str] = []

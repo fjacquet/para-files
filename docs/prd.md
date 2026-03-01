@@ -15,7 +15,7 @@ nav_order: 10
 
 ## 1. Product Overview
 
-**para-files** is a macOS-only (Apple Silicon) intelligent file classification CLI that automatically organizes files into a structured PARA folder hierarchy. It uses a cascading 6-signal classification pipeline — from deterministic rules through MLX-powered semantic embeddings — to route documents, books, invoices, photos, and other files to their correct destination with high accuracy and full transparency.
+**para-files** is an intelligent file classification CLI that automatically organizes files into a structured PARA folder hierarchy. It uses a cascading 6-signal classification pipeline — from deterministic rules through Ollama-powered semantic embeddings and LLM fallback — to route documents, books, invoices, photos, and other files to their correct destination with high accuracy and full transparency. OCR features require macOS (Apple Silicon).
 
 ### Core Value Proposition
 
@@ -67,7 +67,7 @@ Existing tools either require cloud services (with privacy implications), are pl
 
 ### Non-Goals
 
-- Cross-platform support (Linux, Windows)
+- Full cross-platform support (OCR remains macOS-only)
 - GUI application
 - Cloud storage integration beyond filesystem sync
 - Real-time filesystem watching (daemon mode)
@@ -88,8 +88,8 @@ The core 6-signal cascading pipeline classifies any file by trying each signal i
 | Rules Engine | 2 | 95% | Glob patterns on filename, path, issuer |
 | Book Detector | 3 | 92–100% | PDF/EPUB/CHM/MOBI detection via ISBN + metadata |
 | Taxonomy Classifier | 4 | 90% | Issuer category matching from reference tree |
-| Semantic Router | 5 | 85% | MLX embedding similarity to route utterances |
-| LLM Fallback | 6 | Configurable | Optional Ollama-based AI classification |
+| Semantic Router | 5 | 85% | Ollama embedding similarity (via litellm) |
+| LLM Fallback | 6 | Configurable | Ollama LLM classification (via litellm) |
 | Inbox Fallback | — | 0% | Unclassified files land in `0_Inbox` |
 
 **Acceptance criteria:**
@@ -180,10 +180,11 @@ Key configuration options:
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `PARA_FILES_PARA_ROOT` | `~/Documents/PARA` | Root of PARA folder tree |
-| `mlx.model_name` | `nomic-text-v1.5` | MLX embedding model |
+| `mlx.model_name` | `nomic-text-v1.5` | Ollama embedding model |
 | `mlx.score_threshold` | `0.75` | Minimum semantic similarity score |
-| `llm.enabled` | `false` | Enable LLM fallback |
-| `llm.model` | `ollama/qwen2.5:1.5b` | LLM model for fallback |
+| `llm.enabled` | `true` | Enable LLM fallback via litellm/Ollama |
+| `llm.model` | `ollama/ministral-3:8b` | LLM model for fallback |
+| `llm.api_base` | `http://localhost:11434` | Ollama API base URL |
 
 ---
 
@@ -239,12 +240,13 @@ Key configuration options:
 
 | Constraint | Value |
 |-----------|-------|
-| **Platform** | macOS, Apple Silicon (M1–M4) only |
+| **Platform** | Any (OCR requires macOS Apple Silicon) |
 | **Python version** | 3.12+ |
 | **Package manager** | uv |
-| **Internet required** | First run only (model download ~270MB); ISBN lookups optional |
-| **Disk** | ~300MB for MLX model cache |
-| **Memory** | ~500MB during active classification (MLX unified memory) |
+| **Ollama server** | Required for embeddings and LLM classification |
+| **Internet required** | First Ollama model pull; ISBN lookups optional |
+| **Disk** | ~5GB for Ollama models (nomic-embed-text + ministral-3:8b) |
+| **Memory** | ~6GB for Ollama models during active classification |
 
 ---
 
@@ -312,7 +314,7 @@ Key configuration options:
 
 | Feature | Reason |
 |---------|--------|
-| Windows / Linux support | MLX requires Apple Silicon; intentional constraint |
+| Full cross-platform OCR | Vision Framework OCR remains macOS-only |
 | GUI application | CLI is the target interface; GUI adds complexity |
 | Real-time filesystem watching | Hazel/Folder Actions cover this use case |
 | Archive extraction before classification | Too slow and potentially destructive |

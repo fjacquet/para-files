@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **LLM fallback: mlx-lm → litellm/Ollama** — replaced native MLX-LM (Qwen2.5-1.5B) with
+  litellm calling Ollama (ministral-3:8b by default). 5x larger model, much better classification
+  accuracy for technical documents. Configure via `PARA_FILES_LLM_*` env vars.
+- **Embeddings: MLX → Ollama** — replaced mlx-embedding-models with litellm.embedding()
+  calling Ollama's nomic-embed-text. Same 768-dimensional vectors, now cross-platform.
+- **Removed MLX dependency** — mlx, mlx-lm, and mlx-embedding-models are no longer required.
+  Only OCR (Vision Framework) remains macOS-specific.
+- **LLM enabled by default** — `PARA_FILES_LLM_ENABLED` now defaults to `true` with
+  `ollama/ministral-3:8b` model and `http://localhost:11434` API base.
+
 ### Added
 
 - **Placeholder resolver utility** (`para_files/utils/placeholder_resolver.py`): New shared `clean_unreplaced_placeholders()` function replaces three divergent implementations across `rules_engine.py`, `semantic_classifier.py`, and `taxonomy_classifier.py` — eliminates 43 lines of duplicated regex logic and ensures consistent cleanup of `{year}`, `{issuer}`, `{location}`, and other template tokens

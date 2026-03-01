@@ -32,7 +32,7 @@ DEFAULT_REFERENCE_TREE = Path("config/personal_file_tree.yaml")
 # Default configuration values (centralized to avoid duplication)
 DEFAULT_MLX_MODEL = "nomic-text-v1.5"
 DEFAULT_SCORE_THRESHOLD = 0.75
-DEFAULT_LLM_MODEL = "ollama/qwen2.5:1.5b"
+DEFAULT_LLM_MODEL = "ollama/ministral-3:8b"
 DEFAULT_LLM_CONFIDENCE_THRESHOLD = 0.6
 DEFAULT_CONTENT_PREVIEW_CHARS = 2000
 
@@ -73,9 +73,10 @@ def _load_yaml_config(yaml_path: Path | None = None) -> dict[str, Any]:
 
 
 class MLXConfig(BaseSettings):
-    """MLX embedding and LLM configuration (unified in v2.0).
+    """Embedding configuration (formerly MLX, now Ollama via litellm).
 
-    In v2.0, MLX handles both embeddings and optional LLM fallback.
+    Env prefix kept as PARA_FILES_MLX_ for backward compatibility.
+    LLM settings have moved to LLMConfig (PARA_FILES_LLM_*).
     """
 
     model_config = SettingsConfigDict(
@@ -90,7 +91,7 @@ class MLXConfig(BaseSettings):
     model_name: str = Field(
         default=DEFAULT_MLX_MODEL,
         alias="embedding_model",
-        description="MLX embedding model from mlx-embedding-models registry",
+        description="Embedding model name (used by Ollama via litellm)",
     )
     score_threshold: float = Field(
         default=DEFAULT_SCORE_THRESHOLD,
@@ -99,10 +100,10 @@ class MLXConfig(BaseSettings):
         description="Minimum similarity score for semantic matching",
     )
 
-    # Semantic classifier configuration (v2.0 - MLX embeddings)
+    # Semantic classifier configuration
     semantic_enabled: bool = Field(
         default=True,
-        description="Enable semantic classifier using MLX embeddings",
+        description="Enable semantic classifier using Ollama embeddings",
     )
     semantic_threshold: float = Field(
         default=0.65,
@@ -111,25 +112,9 @@ class MLXConfig(BaseSettings):
         description="Minimum cosine similarity threshold for semantic matching",
     )
 
-    # LLM fallback configuration (v2.0 - optional native MLX-LM)
-    llm_enabled: bool = Field(
-        default=True,
-        description="Enable native MLX-LM fallback for unclassified files",
-    )
-    llm_model: str = Field(
-        default="mlx-community/Qwen2.5-1.5B-Instruct-4bit",
-        description="MLX-LM model for LLM fallback",
-    )
-    llm_confidence: float = Field(
-        default=0.6,
-        ge=0.0,
-        le=1.0,
-        description="Minimum confidence threshold for LLM results",
-    )
-
 
 class LLMConfig(BaseSettings):
-    """LLM fallback configuration using litellm."""
+    """LLM fallback configuration using litellm/Ollama."""
 
     model_config = SettingsConfigDict(
         env_prefix="PARA_FILES_LLM_",
@@ -139,12 +124,12 @@ class LLMConfig(BaseSettings):
     )
 
     enabled: bool = Field(
-        default=False,
-        description="Enable LLM fallback for ambiguous classifications",
+        default=True,
+        description="Enable LLM fallback via litellm/Ollama",
     )
     model: str = Field(
         default=DEFAULT_LLM_MODEL,
-        description="LLM model identifier for litellm",
+        description="LLM model identifier for litellm (e.g., ollama/ministral-3:8b)",
     )
     confidence_threshold: float = Field(
         default=DEFAULT_LLM_CONFIDENCE_THRESHOLD,
@@ -153,7 +138,7 @@ class LLMConfig(BaseSettings):
         description="Minimum confidence from LLM to accept classification",
     )
     api_base: str | None = Field(
-        default=None,
+        default="http://localhost:11434",
         description="API base URL for Ollama or other providers",
     )
 

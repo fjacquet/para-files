@@ -63,10 +63,10 @@ class TestLLMConfig:
         clean_env = {k: v for k, v in os.environ.items() if not k.startswith("PARA_FILES_")}
         with patch.dict("os.environ", clean_env, clear=True):
             config = LLMConfig()
-        assert config.enabled is False
+        assert config.enabled is True
         assert config.model == DEFAULT_LLM_MODEL
         assert config.confidence_threshold == DEFAULT_LLM_CONFIDENCE_THRESHOLD
-        assert config.api_base is None
+        assert config.api_base == "http://localhost:11434"
 
     def test_enabled_config(self):
         """Test LLM configuration when enabled."""

@@ -1,6 +1,9 @@
 """Encoders for semantic routing."""
 
-from para_files.encoders.mlx_encoder import MLXEncoder
+from para_files.encoders.mlx_encoder import OllamaEncoder
 
 
-__all__ = ["MLXEncoder"]
+# Backward compatibility alias
+MLXEncoder = OllamaEncoder
+
+__all__ = ["MLXEncoder", "OllamaEncoder"]

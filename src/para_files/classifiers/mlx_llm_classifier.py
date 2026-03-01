@@ -1,10 +1,9 @@
-"""Signal 4: MLX-LM based classifier for Apple Silicon.
+"""Signal 6: LLM-based classifier via litellm/Ollama.
 
-Replaces LLMFallbackClassifier (Ollama) with native MLX-LM inference.
-No external server required - runs entirely in-process.
+Uses litellm to call Ollama (or any compatible provider) for fallback
+classification when all other signals fail.
 
-Requires: mlx-lm package (pip install mlx-lm)
-Platform: macOS with Apple Silicon only
+Requires: litellm package + running Ollama server (or other provider)
 """
 
 from __future__ import annotations
@@ -32,6 +31,8 @@ _VALID_PARA_PREFIXES = ("0_Inbox", "1_Projects", "2_Areas", "3_Resources", "4_Ar
 def _build_system_prompt(valid_categories: list[str]) -> str:
     """Build a system prompt that constrains LLM output to valid PARA categories.
 
+    Groups categories by domain to help the LLM reason about classification.
+
     Args:
         valid_categories: List of valid PARA category paths from the taxonomy.
 
@@ -39,14 +40,42 @@ def _build_system_prompt(valid_categories: list[str]) -> str:
         System prompt string with real categories.
     """
     if valid_categories:
-        category_list = "\n".join(f"- {c}" for c in valid_categories)
+        # Group categories by domain for better LLM reasoning
+        tech_cats = [c for c in valid_categories if "documentation" in c or "docs/" in c]
+        resource_cats = [
+            c for c in valid_categories if c.startswith("3_Resources") and c not in tech_cats
+        ]
+        archive_cats = [c for c in valid_categories if c.startswith("4_Archives")]
+        other_cats = [
+            c
+            for c in valid_categories
+            if c not in tech_cats and c not in resource_cats and c not in archive_cats
+        ]
+
+        sections: list[str] = []
+        if tech_cats:
+            sections.append("TECHNICAL DOCUMENTATION:\n" + "\n".join(f"- {c}" for c in tech_cats))
+        if resource_cats:
+            sections.append("RESOURCES:\n" + "\n".join(f"- {c}" for c in resource_cats))
+        if archive_cats:
+            sections.append("ARCHIVES:\n" + "\n".join(f"- {c}" for c in archive_cats))
+        if other_cats:
+            sections.append("OTHER:\n" + "\n".join(f"- {c}" for c in other_cats))
+
+        category_list = "\n\n".join(sections)
     else:
         category_list = (
             "- 3_Resources/documentation/{technology}\n- 4_Archives/5y_divers/{year}\n- 0_Inbox"
         )
 
     return f"""You are a file classification assistant for the PARA method.
-You MUST classify files into ONE of these exact category patterns:
+
+STEP 1 - Determine the domain:
+- English technical document (IT, software, hardware): use 3_Resources/documentation/{{technology}}
+- If the document is a French administrative document: pick from ARCHIVES categories below
+- If unsure: use 0_Inbox
+
+STEP 2 - Pick the exact category from this list:
 
 {category_list}
 
@@ -62,36 +91,35 @@ Respond ONLY with a JSON object:
 {{"category": "exact/path/from/list", "confidence": 0.0-1.0, "reasoning": "brief explanation"}}"""
 
 
-class MLXLLMClassifier(BaseClassifier):
-    """Signal 4: MLX-LM fallback for unclassified files.
+class LLMClassifier(BaseClassifier):
+    """Signal 6: LLM fallback for unclassified files.
 
-    Uses mlx-lm for native Apple Silicon inference without external servers.
-    Model is loaded lazily on first classification request.
+    Uses litellm to call Ollama or any compatible LLM provider.
+    No model loading required - delegates to external server.
 
-    Recommended models (all via mlx-community):
-    - mlx-community/Qwen2.5-1.5B-Instruct-4bit (~1GB, fast)
-    - mlx-community/Phi-3.5-mini-instruct-4bit (~2GB, balanced)
-    - mlx-community/Llama-3.2-3B-Instruct-4bit (~2GB, capable)
+    Default model: ollama/ministral-3:8b (8B params, good classification)
     """
 
     def __init__(
         self,
         *,
         enabled: bool = False,
-        model: str = "mlx-community/Qwen2.5-1.5B-Instruct-4bit",
+        model: str = "ollama/ministral-3:8b",
         confidence_threshold: float = 0.6,
         content_preview_chars: int = DEFAULT_CONTENT_PREVIEW_CHARS,
         max_tokens: int = 256,
+        api_base: str | None = None,
         valid_categories: list[str] | None = None,
     ) -> None:
-        """Initialize MLX-LM classifier.
+        """Initialize LLM classifier.
 
         Args:
-            enabled: Whether MLX-LM fallback is enabled.
-            model: HuggingFace model ID (mlx-community recommended).
+            enabled: Whether LLM fallback is enabled.
+            model: litellm model identifier (e.g., ollama/ministral-3:8b).
             confidence_threshold: Minimum confidence to accept result.
             content_preview_chars: Max characters of content to send.
             max_tokens: Maximum tokens to generate.
+            api_base: API base URL for Ollama or other providers.
             valid_categories: List of valid PARA category paths from the taxonomy.
         """
         self._enabled = enabled
@@ -99,16 +127,13 @@ class MLXLLMClassifier(BaseClassifier):
         self._confidence_threshold = confidence_threshold
         self._content_preview_chars = content_preview_chars
         self._max_tokens = max_tokens
+        self._api_base = api_base
         self._system_prompt = _build_system_prompt(valid_categories or [])
-
-        # Lazy-loaded model and tokenizer
-        self._model: Any | None = None
-        self._tokenizer: Any | None = None
 
     @property
     def name(self) -> str:
         """Return classifier name."""
-        return "mlx_llm"
+        return "llm"
 
     @property
     def source(self) -> ClassificationSource:
@@ -120,39 +145,12 @@ class MLXLLMClassifier(BaseClassifier):
         """Return default confidence threshold."""
         return self._confidence_threshold
 
-    def _load_model(self) -> bool:
-        """Lazily load MLX-LM model.
-
-        Returns:
-            True if model loaded successfully, False otherwise.
-        """
-        if self._model is not None:
-            return True
-
-        try:
-            from mlx_lm import load
-
-            logger.info("Loading MLX-LM model: {}", self._model_name)
-            # mlx_lm.load returns (model, tokenizer) tuple
-            result = load(self._model_name)
-            self._model = result[0]
-            self._tokenizer = result[1]
-            logger.info("MLX-LM model loaded successfully")
-        except ImportError:
-            logger.warning("mlx-lm not installed, MLX-LLM classifier disabled")
-            return False
-        except Exception:  # noqa: BLE001
-            logger.exception("Failed to load MLX-LM model: {}", self._model_name)
-            return False
-        else:
-            return True
-
     def classify(
         self,
         content: str,
         metadata: FileMetadata | None = None,
     ) -> ClassificationResult | None:
-        """Classify content using MLX-LM.
+        """Classify content using LLM via litellm.
 
         Args:
             content: Text content to classify.
@@ -167,14 +165,10 @@ class MLXLLMClassifier(BaseClassifier):
         if not content.strip():
             return None
 
-        # Load model lazily
-        if not self._load_model():
-            return None
-
         try:
             return self._generate_classification(content, metadata)
         except Exception:  # noqa: BLE001
-            logger.exception("MLX-LLM classification failed")
+            logger.exception("LLM classification failed")
             return None
 
     def _generate_classification(
@@ -182,7 +176,7 @@ class MLXLLMClassifier(BaseClassifier):
         content: str,
         metadata: FileMetadata | None,
     ) -> ClassificationResult | None:
-        """Generate classification using MLX-LM.
+        """Generate classification using litellm.
 
         Args:
             content: Text content to classify.
@@ -191,73 +185,59 @@ class MLXLLMClassifier(BaseClassifier):
         Returns:
             ClassificationResult if successful, None otherwise.
         """
-        from mlx_lm import generate
+        import litellm
 
-        if self._model is None or self._tokenizer is None:
-            return None
+        # Build user message
+        user_message = self._build_user_message(content, metadata)
 
-        # Build prompt
-        prompt = self._build_prompt(content, metadata)
+        # Build optional kwargs for api_base
+        kwargs: dict[str, Any] = {}
+        if self._api_base:
+            kwargs["api_base"] = self._api_base
 
-        # Generate response (mlx-lm >=0.22 uses sampler instead of temp kwarg)
-        from mlx_lm.sample_utils import make_sampler
-
-        response: str = generate(
-            self._model,
-            self._tokenizer,
-            prompt=prompt,
+        response = litellm.completion(
+            model=self._model_name,
+            messages=[
+                {"role": "system", "content": self._system_prompt},
+                {"role": "user", "content": user_message},
+            ],
+            temperature=0.0,
             max_tokens=self._max_tokens,
-            sampler=make_sampler(temp=0.0),  # Deterministic (greedy)
+            **kwargs,
         )
 
-        return self._parse_response(response)
+        text = response.choices[0].message.content or ""
+        logger.debug("LLM raw response: {}", text[:500])
 
-    def _build_prompt(
+        return self._parse_response(text)
+
+    def _build_user_message(
         self,
         content: str,
         metadata: FileMetadata | None,
     ) -> str:
-        """Build prompt for MLX-LM.
-
-        Uses chat template format for instruction-tuned models.
+        """Build user message for LLM.
 
         Args:
             content: Text content.
             metadata: File metadata.
 
         Returns:
-            Formatted prompt string.
+            Formatted user message string.
         """
-        # Build user message
-        user_parts: list[str] = []
+        parts: list[str] = []
 
         if metadata:
-            user_parts.append(f"Filename: {metadata.filename}")
-            user_parts.append(f"Extension: {metadata.extension}")
+            parts.append(f"Filename: {metadata.filename}")
+            parts.append(f"Extension: {metadata.extension}")
             if metadata.modified_at:
-                user_parts.append(f"Modified: {metadata.modified_at.strftime('%Y-%m-%d')}")
+                parts.append(f"Modified: {metadata.modified_at.strftime('%Y-%m-%d')}")
 
         # Truncate content
         preview = content[: self._content_preview_chars]
-        user_parts.append(f"\nContent:\n{preview}")
+        parts.append(f"\nContent:\n{preview}")
 
-        user_message = "\n".join(user_parts)
-
-        # Use chat template if tokenizer supports it
-        if self._tokenizer is not None and hasattr(self._tokenizer, "apply_chat_template"):
-            messages = [
-                {"role": "system", "content": self._system_prompt},
-                {"role": "user", "content": user_message},
-            ]
-            result = self._tokenizer.apply_chat_template(
-                messages,
-                tokenize=False,
-                add_generation_prompt=True,
-            )
-            return str(result)
-
-        # Fallback to simple format
-        return f"{self._system_prompt}\n\nUser: {user_message}\n\nAssistant:"
+        return "\n".join(parts)
 
     def _sanitize_category(self, category: str) -> str | None:
         """Validate and sanitize a category path from the LLM.
@@ -275,18 +255,18 @@ class MLXLLMClassifier(BaseClassifier):
 
         # Reject absolute or Windows-style paths
         if category.startswith(("/", "~")) or ":\\" in category or category[1:2] == ":":
-            logger.debug("MLX-LLM rejected hallucinated path: {}", category[:100])
+            logger.debug("LLM rejected hallucinated path: {}", category[:100])
             return None
 
         # Must start with a valid PARA prefix
         if not any(category.startswith(p) for p in _VALID_PARA_PREFIXES):
-            logger.debug("MLX-LLM rejected non-PARA category: {}", category[:100])
+            logger.debug("LLM rejected non-PARA category: {}", category[:100])
             return None
 
         return category
 
     def _parse_response(self, response: str) -> ClassificationResult | None:
-        """Parse MLX-LM response.
+        """Parse LLM response.
 
         Args:
             response: Raw model response.
@@ -300,15 +280,13 @@ class MLXLLMClassifier(BaseClassifier):
 
             # Remove markdown code blocks if present
             if "```" in text:
-                # Find JSON between code blocks
                 match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
-                # Use match group or remove markers as fallback
                 text = match.group(1) if match else re.sub(r"```(?:json)?", "", text).strip()
 
-            # Find JSON object in response
-            json_match = re.search(r"\{[^}]+\}", text, re.DOTALL)
+            # Find JSON object with "category" key (handles nested braces better)
+            json_match = re.search(r'\{[^{}]*"category"[^{}]*\}', text, re.DOTALL)
             if not json_match:
-                logger.debug("No JSON found in response: {}", text[:200])
+                logger.debug("No JSON found in LLM response: {}", text[:200])
                 return None
 
             data = json.loads(json_match.group())
@@ -321,20 +299,20 @@ class MLXLLMClassifier(BaseClassifier):
                 return None
 
             # Validate category is a valid PARA path (reject hallucinated paths)
-            category = self._sanitize_category(category)
-            if not category:
+            sanitized = self._sanitize_category(category)
+            if not sanitized:
                 return None
 
             if confidence < self._confidence_threshold:
                 logger.debug(
-                    "MLX-LLM confidence %.2f below threshold %.2f",
+                    "LLM confidence {:.2f} below threshold {:.2f}",
                     confidence,
                     self._confidence_threshold,
                 )
                 return None
 
             return ClassificationResult(
-                category=category,
+                category=sanitized,
                 confidence=Confidence(
                     value=confidence,
                     source=self.source,
@@ -346,5 +324,9 @@ class MLXLLMClassifier(BaseClassifier):
             )
 
         except (json.JSONDecodeError, KeyError, ValueError) as e:
-            logger.debug("Failed to parse MLX-LLM response: {} - {}", e, response[:200])
+            logger.debug("Failed to parse LLM response: {} - {}", e, response[:200])
             return None
+
+
+# Backward compatibility alias
+MLXLLMClassifier = LLMClassifier

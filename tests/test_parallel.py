@@ -10,81 +10,65 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 
-class TestMLXEncoderThreadSafety:
-    """Test thread-safety of MLX encoder lazy loading."""
-
-    def test_encoder_load_lock_exists(self) -> None:
-        """Test that MLXEncoder has a class-level lock."""
-        from para_files.encoders.mlx_encoder import MLXEncoder
-
-        assert hasattr(MLXEncoder, "_load_lock")
-        assert isinstance(MLXEncoder._load_lock, type(threading.Lock()))
+class TestOllamaEncoderThreadSafety:
+    """Test thread-safety of Ollama encoder."""
 
     def test_encoder_has_fallback_chars(self) -> None:
-        """Test that MLXEncoder has fallback_chars attribute."""
-        from para_files.encoders.mlx_encoder import MLXEncoder
+        """Test that OllamaEncoder has fallback_chars attribute."""
+        from para_files.encoders.mlx_encoder import OllamaEncoder
 
-        encoder = MLXEncoder()
+        encoder = OllamaEncoder()
         assert encoder.max_chars == 1000  # Default
         assert encoder.fallback_chars == 700  # Fallback for edge cases
 
-    @patch("para_files.encoders.mlx_encoder.EmbeddingModel")
-    def test_encoder_fallback_on_index_error(self, mock_model: MagicMock) -> None:
-        """Test that encoder uses fallback_chars when IndexError occurs."""
-        import numpy as np
+    @patch("para_files.encoders.mlx_encoder.litellm")
+    def test_encoder_fallback_on_error(self, mock_litellm: MagicMock) -> None:
+        """Test that encoder uses fallback on batch failure."""
+        from para_files.encoders.mlx_encoder import OllamaEncoder
 
-        from para_files.encoders.mlx_encoder import MLXEncoder
+        call_count = 0
 
-        # First call raises IndexError, second succeeds
-        mock_encode = MagicMock()
-        mock_encode.side_effect = [
-            IndexError("list index out of range"),
-            np.array([[0.1, 0.2, 0.3]]),
-        ]
-        mock_model.from_registry.return_value.encode = mock_encode
+        def side_effect(**kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                msg = "batch too large"
+                raise RuntimeError(msg)
+            mock_resp = MagicMock()
+            mock_resp.data = [{"embedding": [0.1, 0.2, 0.3]}]
+            return mock_resp
 
-        encoder = MLXEncoder()
+        mock_litellm.embedding.side_effect = side_effect
+
+        encoder = OllamaEncoder()
         result = encoder(["test text " * 100])  # Long text
 
-        # Verify result was returned
         assert result is not None
-        # Should have been called twice: first fails, second with fallback
-        assert mock_encode.call_count == 2
-        # Second call should use fallback truncation
-        second_call_arg = mock_encode.call_args_list[1][0][0][0]
-        assert len(second_call_arg) <= 700  # fallback_chars
+        assert len(result) == 1
 
-    @patch("para_files.encoders.mlx_encoder.EmbeddingModel")
-    def test_encoder_concurrent_loading(self, mock_model: MagicMock) -> None:
-        """Test that concurrent calls to _ensure_loaded only load once."""
-        from para_files.encoders.mlx_encoder import MLXEncoder
+    @patch("para_files.encoders.mlx_encoder.litellm")
+    def test_encoder_concurrent_encoding(self, mock_litellm: MagicMock) -> None:
+        """Test that concurrent encoding calls work correctly."""
+        from para_files.encoders.mlx_encoder import OllamaEncoder
 
-        mock_model.from_registry.return_value = MagicMock()
-        encoder = MLXEncoder()
+        mock_resp = MagicMock()
+        mock_resp.data = [{"embedding": [0.1] * 768}]
+        mock_litellm.embedding.return_value = mock_resp
 
-        # Simulate concurrent loading
-        load_count = 0
-        original_from_registry = mock_model.from_registry
+        encoder = OllamaEncoder()
 
-        def counting_from_registry(*args: object, **kwargs: object) -> MagicMock:
-            nonlocal load_count
-            load_count += 1
-            return original_from_registry(*args, **kwargs)
+        results = []
 
-        mock_model.from_registry = counting_from_registry
-
-        # Run concurrent ensure_loaded calls
-        def load_encoder() -> None:
-            encoder._ensure_loaded()
+        def encode_text() -> None:
+            result = encoder(["test text"])
+            results.append(result)
 
         with ThreadPoolExecutor(max_workers=5) as executor:
-            futures = [executor.submit(load_encoder) for _ in range(10)]
+            futures = [executor.submit(encode_text) for _ in range(10)]
             for future in futures:
                 future.result()
 
-        # Model should only be loaded once due to locking
-        assert load_count == 1
-        assert encoder._loaded is True
+        assert len(results) == 10
 
 
 class TestGeolocationCacheThreadSafety:

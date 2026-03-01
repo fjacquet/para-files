@@ -1,12 +1,12 @@
 """Classification pipeline orchestrating 6-signal cascade.
 
-Pipeline v2.1 - Extension routing added before LLM fallback:
+Pipeline v2.2 - Ollama/litellm migration:
 1. RulesEngine (95%) - Extension/pattern based routing
 2. BookDetector (92%) - ISBN detection + Thema classification
 3. TaxonomyClassifier (90%) - Issuers + keywords from documents.json
-4. SemanticClassifier (85%) - MLX embedding similarity
+4. SemanticClassifier (85%) - Ollama embedding similarity
 5. ExtensionRouterClassifier (97%) - Deterministic routing by file extension
-6. MLXLLMClassifier (60%) - Optional LLM fallback via mlx-lm
+6. LLMClassifier (60%) - Optional LLM fallback via litellm/Ollama
 
 Chains classifiers in priority order: first match wins.
 """
@@ -20,7 +20,7 @@ from loguru import logger
 
 from para_files.classifiers.book_detector import BookDetector
 from para_files.classifiers.extension_router import ExtensionRouterClassifier
-from para_files.classifiers.mlx_llm_classifier import MLXLLMClassifier
+from para_files.classifiers.mlx_llm_classifier import LLMClassifier
 from para_files.classifiers.rules_engine import RulesEngineClassifier
 from para_files.classifiers.semantic_classifier import SemanticClassifier
 from para_files.classifiers.taxonomy_classifier import TaxonomyClassifier
@@ -47,24 +47,17 @@ _MIN_CONTENT_FOR_RENAME = 50
 
 
 class ClassificationPipeline:
-    """Orchestrates 6-signal classification cascade (v2.1).
+    """Orchestrates 6-signal classification cascade (v2.2).
 
     Simplified pipeline using JSON taxonomies:
     1. Rules Engine (95%) - Extension/pattern based routing
     2. Book Detector (92%, 100% with ISBN) - ISBN + Thema classification
     3. Taxonomy Classifier (90%) - Issuers + keywords from documents.json
-    4. Semantic Classifier (85%) - MLX embedding similarity
+    4. Semantic Classifier (85%) - Ollama embedding similarity via litellm
     5. Extension Router (97%) - Deterministic routing by file extension
-    6. MLX-LLM Fallback (60%) - Optional native Apple Silicon LLM
+    6. LLM Fallback (60%) - Optional LLM via litellm/Ollama
 
     First match wins. If nothing matches, returns default 0_Inbox.
-
-    Key changes from v1.0:
-    - Removed: ValidatedDB, DomainKB
-    - Added: TaxonomyClassifier (unified issuer + keyword matching)
-    - Added: SemanticClassifier (MLX embeddings for similarity matching)
-    - Replaced: LLMFallback (Ollama) with MLXLLMClassifier (native MLX)
-    - Added: ExtensionRouterClassifier (deterministic extension-based routing)
     """
 
     def __init__(self, config: Config) -> None:
@@ -124,21 +117,22 @@ class ClassificationPipeline:
         extension_router = ExtensionRouterClassifier(config=self._config.extension_routing)
         self._classifiers.append(extension_router)
 
-        # Signal 6: MLX-LLM Fallback (configurable via mlx.llm_* settings)
-        if self._config.mlx.llm_enabled:
+        # Signal 6: LLM Fallback (configurable via PARA_FILES_LLM_* env vars)
+        if self._config.llm.enabled:
             valid_categories = self._get_valid_categories(taxonomy_loader)
-            mlx_llm = MLXLLMClassifier(
+            llm = LLMClassifier(
                 enabled=True,
-                model=self._config.mlx.llm_model,
-                confidence_threshold=self._config.mlx.llm_confidence,
+                model=self._config.llm.model,
+                confidence_threshold=self._config.llm.confidence_threshold,
                 content_preview_chars=self._config.content_preview_chars,
+                api_base=self._config.llm.api_base,
                 valid_categories=valid_categories,
             )
-            self._classifiers.append(mlx_llm)
+            self._classifiers.append(llm)
 
         self._initialized = True
         logger.info(
-            "Pipeline v2.0 initialized with {} classifiers: {}",
+            "Pipeline v2.2 initialized with {} classifiers: {}",
             len(self._classifiers),
             [c.name for c in self._classifiers],
         )

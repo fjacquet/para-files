@@ -475,7 +475,7 @@ def _extract_pdf_with_pymupdf(file_path: Path, max_chars: int) -> str:
     encoding). pymupdf's parser is more permissive than pypdf's.
     """
     try:
-        import fitz  # type: ignore[import-untyped]  # pymupdf
+        import fitz  # pymupdf
 
         doc = fitz.open(str(file_path))
         text_parts = []

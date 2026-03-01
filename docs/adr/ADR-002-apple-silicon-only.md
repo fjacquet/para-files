@@ -1,7 +1,7 @@
 # ADR-002: Apple Silicon (macOS) Only Platform
 
 **Date**: 2024-01-01
-**Status**: Accepted
+**Status**: Superseded by [ADR-010](ADR-010-ollama-litellm-migration.md)
 **Deciders**: Frédéric Jacquet
 
 ---

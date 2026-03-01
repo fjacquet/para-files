@@ -24,24 +24,18 @@ config:
     documents_path: "config/documents.json"
     thema_path: "config/thema.json"
 
-  # MLX settings (all models via mlx-lm, no external server needed)
+  # Embedding settings (Ollama via litellm)
   mlx:
-    # Embedding model for semantic matching
+    # Embedding model for semantic matching (served by Ollama)
     embedding_model: "nomic-text-v1.5"
     score_threshold: 0.75
 
-    # LLM fallback (native MLX, no Ollama required)
-    llm_enabled: true
-    llm_model: "mlx-community/Qwen2.5-1.5B-Instruct-4bit"
-    llm_confidence: 0.6
-
-# mlx-community/phi-4-4bit (Très bon modèle généraliste, mais moins performant que les suivants)
-# mlx-community/Qwen2.5-1.5B-Instruct-4bit" (Bon modèle généraliste, léger et rapide)
-# mlx-community/Llama-3.1-8B-Instruct-4bit (Le plus populaire, excellent partout)
-# mlx-community/Mistral-7B-Instruct-v0.3-4bit (Très fiable, une valeur sûre)
-# mlx-community/gemma-2-9b-it-4bit (Le modèle de Google, excellent en français et rédaction)
-# mlx-community/Qwen2.5-Coder-7B-Instruct-4bit (Actuellement le roi du code en petite taille)
-# mlx-community/DeepSeek-Coder-V2-Lite-Instruct-4bit (Excellent pour le Python et le Web)
+  # LLM fallback settings (litellm/Ollama)
+  llm:
+    enabled: true
+    model: "ollama/ministral-3:8b"
+    confidence_threshold: 0.6
+    api_base: "http://localhost:11434"
 
 # =============================================================================
 # ROUTING RULES - Technical patterns by extension/filename
