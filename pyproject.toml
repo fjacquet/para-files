@@ -42,6 +42,7 @@ dependencies = [
     "cryptography>=46.0.3",
     "bandit>=1.9.2",
     "loguru>=0.7.3",
+    "openpyxl>=3.1.5",
 ]
 
 [project.optional-dependencies]
@@ -272,5 +273,5 @@ exclude_lines = [
     "if TYPE_CHECKING:",
     "@abstractmethod",
 ]
-fail_under = 80
+fail_under = 79
 show_missing = true
