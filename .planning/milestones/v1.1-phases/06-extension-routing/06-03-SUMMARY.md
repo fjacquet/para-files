@@ -75,7 +75,7 @@ Each task was committed atomically:
 
 ## Files Created/Modified
 
-- `src/para_files/classifiers/__init__.py` - Added ExtensionRouterClassifier import and __all__ export; updated module docstring to v2.1
+- `src/para_files/classifiers/__init__.py` - Added ExtensionRouterClassifier import and **all** export; updated module docstring to v2.1
 - `src/para_files/pipeline.py` - Added Signal 5 (ExtensionRouter) block, updated Signal 6 comment, updated module/class docstrings to v2.1
 - `tests/test_types.py` - Fixed test_source_count: updated count from 8 to 9 (EXTENSION_ROUTER added in 06-01)
 
@@ -89,6 +89,7 @@ Each task was committed atomically:
 ### Auto-fixed Issues
 
 **1. [Rule 1 - Bug] Fixed outdated ClassificationSource count in test_types.py**
+
 - **Found during:** Task 3 (Full regression test run)
 - **Issue:** `test_source_count` asserted `len(ClassificationSource) == 8`, but plan 06-01 added `EXTENSION_ROUTER`, making the total 9. The test count was never updated.
 - **Fix:** Updated assertion to `== 9` and updated docstring to reference v2.1 pipeline

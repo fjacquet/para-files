@@ -40,7 +40,7 @@ re_verification: false
 | `src/para_files/config.py`                        | ExtensionRoutingConfig nested model + Config field    | VERIFIED | ExtensionRoutingConfig class lines 196–228; Config.extension_routing line 281 |
 | `src/para_files/types.py`                         | ClassificationSource.EXTENSION_ROUTER enum member     | VERIFIED | line 34: `EXTENSION_ROUTER = "extension_router"`               |
 | `src/para_files/pipeline.py`                      | ExtensionRouterClassifier wired as Signal 5           | VERIFIED | lines 122–125 in _ensure_initialized                            |
-| `src/para_files/classifiers/__init__.py`          | ExtensionRouterClassifier exported from package       | VERIFIED | line 16 import, line 27 in __all__                              |
+| `src/para_files/classifiers/__init__.py`          | ExtensionRouterClassifier exported from package       | VERIFIED | line 16 import, line 27 in **all**                              |
 | `tests/test_extension_router.py`                  | TDD test suite, min 80 lines                          | VERIFIED | 337 lines; 46 tests; 100% pass rate                             |
 
 ### Key Link Verification
@@ -84,6 +84,7 @@ None. All observable behaviors are verifiable programmatically.
 No gaps. Phase goal is fully achieved.
 
 All three plans executed successfully:
+
 - Plan 06-01: ExtensionRoutingConfig (6 fields) added to config.py; ExtensionRouterClassifier implemented with EXTENSION_GROUPS (17 extensions across 5 groups) and catch-all logic.
 - Plan 06-02: 46-test TDD suite created; all 46 pass; parametrized coverage over every extension in EXTENSION_GROUPS.
 - Plan 06-03: Pipeline wired, classifier exported from package, all 1294 non-encoder tests pass.

@@ -134,9 +134,7 @@ def _print_inbox_summary(stats: _InboxStats, *, dry_run: bool) -> None:
 def inbox(
     directory: Annotated[
         Path | None,
-        typer.Argument(
-            help="Inbox directory to process (default: configured para_root/0_Inbox)"
-        ),
+        typer.Argument(help="Inbox directory to process (default: configured para_root/0_Inbox)"),
     ] = None,
     reference_tree: Annotated[
         Path | None,
