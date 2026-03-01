@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 ## Current Position
 
 Phase: 5 of 7 (Content Extraction)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In Progress
-Last activity: 2026-03-01 — Completed plan 05-01: Excel and ODS content extraction
+Last activity: 2026-03-01 — Completed plan 05-02: ZIP and 7Z archive manifest reading
 
 Progress: [████░░░░░░] 43% (v1.0 complete, v1.1 plan 1/3 done)
 
@@ -36,7 +36,7 @@ Progress: [████░░░░░░] 43% (v1.0 complete, v1.1 plan 1/3 don
 - Last 5 plans: 5-12 min
 - Trend: stable
 
-| 05-content-extraction | 1 | 3 min | 3 min |
+| 05-content-extraction | 2 | 5 min | 2.5 min |
 
 *Updated after each plan completion*
 
@@ -48,6 +48,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
 - Peek archive manifest (not extract) — extraction is slow, risky; filenames inside give strong signal
+- [Phase 05-content-extraction]: Use stdlib zipfile for ZIP (no extraction, no new dependency); py7zr as optional extra for 7Z with graceful ImportError fallback
 - Extension catch-all routing for media/exotic types — content unreadable; extension is definitive
 - [Phase 04-user-features]: Run all classifiers (not first-match-return) so every signal is recorded
 - [Phase 04-user-features]: signals field has default_factory=list for backward compatibility
@@ -66,5 +67,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 05-content-extraction-01-PLAN.md (Excel + ODS content extraction)
+Stopped at: Completed 05-content-extraction-02-PLAN.md (ZIP and 7Z archive manifest reading)
 Resume file: None
