@@ -1,11 +1,12 @@
-"""Classification pipeline orchestrating 5-signal cascade.
+"""Classification pipeline orchestrating 6-signal cascade.
 
-Pipeline v2.0 - Simplified with taxonomy-based classification:
+Pipeline v2.1 - Extension routing added before LLM fallback:
 1. RulesEngine (95%) - Extension/pattern based routing
 2. BookDetector (92%) - ISBN detection + Thema classification
 3. TaxonomyClassifier (90%) - Issuers + keywords from documents.json
 4. SemanticClassifier (85%) - MLX embedding similarity
-5. MLXLLMClassifier (60%) - Optional LLM fallback via mlx-lm
+5. ExtensionRouterClassifier (97%) - Deterministic routing by file extension
+6. MLXLLMClassifier (60%) - Optional LLM fallback via mlx-lm
 
 Chains classifiers in priority order: first match wins.
 """
@@ -18,6 +19,7 @@ from typing import TYPE_CHECKING
 from loguru import logger
 
 from para_files.classifiers.book_detector import BookDetector
+from para_files.classifiers.extension_router import ExtensionRouterClassifier
 from para_files.classifiers.mlx_llm_classifier import MLXLLMClassifier
 from para_files.classifiers.rules_engine import RulesEngineClassifier
 from para_files.classifiers.semantic_classifier import SemanticClassifier
@@ -45,14 +47,15 @@ _MIN_CONTENT_FOR_RENAME = 50
 
 
 class ClassificationPipeline:
-    """Orchestrates 5-signal classification cascade (v2.0).
+    """Orchestrates 6-signal classification cascade (v2.1).
 
     Simplified pipeline using JSON taxonomies:
     1. Rules Engine (95%) - Extension/pattern based routing
     2. Book Detector (92%, 100% with ISBN) - ISBN + Thema classification
     3. Taxonomy Classifier (90%) - Issuers + keywords from documents.json
     4. Semantic Classifier (85%) - MLX embedding similarity
-    5. MLX-LLM Fallback (60%) - Optional native Apple Silicon LLM
+    5. Extension Router (97%) - Deterministic routing by file extension
+    6. MLX-LLM Fallback (60%) - Optional native Apple Silicon LLM
 
     First match wins. If nothing matches, returns default 0_Inbox.
 
@@ -61,6 +64,7 @@ class ClassificationPipeline:
     - Added: TaxonomyClassifier (unified issuer + keyword matching)
     - Added: SemanticClassifier (MLX embeddings for similarity matching)
     - Replaced: LLMFallback (Ollama) with MLXLLMClassifier (native MLX)
+    - Added: ExtensionRouterClassifier (deterministic extension-based routing)
     """
 
     def __init__(self, config: Config) -> None:
@@ -115,7 +119,12 @@ class ClassificationPipeline:
             )
             self._classifiers.append(semantic_classifier)
 
-        # Signal 5: MLX-LLM Fallback (configurable via mlx.llm_* settings)
+        # Signal 5: Extension Router (97%) - Deterministic routing by file extension
+        # Handles media, security, scripts, and exotic types with no semantic signal
+        extension_router = ExtensionRouterClassifier(config=self._config.extension_routing)
+        self._classifiers.append(extension_router)
+
+        # Signal 6: MLX-LLM Fallback (configurable via mlx.llm_* settings)
         if self._config.mlx.llm_enabled:
             mlx_llm = MLXLLMClassifier(
                 enabled=True,
