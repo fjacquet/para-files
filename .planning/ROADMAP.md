@@ -116,7 +116,12 @@ Plans:
   4. A `.p7b`, `.asc`, or `.kdbx` file routes to the configured security folder
   5. A `.ps1`, `.css`, `.js`, or `.sh` file routes to the configured scripts/dev folder
   6. A file with an extension not handled by any other signal routes to a catch-all folder rather than remaining in Inbox
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Add ExtensionRoutingConfig and ExtensionRouterClassifier (ROUTE-01–06)
+- [ ] 06-02-PLAN.md — TDD test suite for ExtensionRouterClassifier (ROUTE-01–06)
+- [ ] 06-03-PLAN.md — Wire ExtensionRouterClassifier into pipeline and regression tests (ROUTE-01–06)
 
 ### Phase 7: Inbox Processing UX
 
@@ -140,5 +145,5 @@ Plans:
 | 3. Test Coverage | 3/3 | Complete    | 2026-02-28 |
 | 4. User Features | 2/2 | Complete    | 2026-02-28 |
 | 5. Content Extraction | 2/3 | In Progress|  |
-| 6. Extension Routing | 0/TBD | Not started | - |
+| 6. Extension Routing | 0/3 | Not started | - |
 | 7. Inbox Processing UX | 0/TBD | Not started | - |
