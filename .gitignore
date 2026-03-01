@@ -46,10 +46,23 @@ htmlcov/
 .cache
 nosetests.xml
 coverage.xml
+junit*.xml
 *.cover
 *.py,cover
 .hypothesis/
 .pytest_cache/
+
+# Type checking cache
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Linting cache
+.ruff_cache/
+
+# Profiling
+*.prof
+*.pstats
 
 # Translations
 *.mo
@@ -99,6 +112,12 @@ env/
 .AppleDouble
 .LSOverride
 ._*
+Icon\r
+.Spotlight-V100
+.Trashes
+.fseventsd
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
 
 # Thumbnails
 Thumbs.db
@@ -149,3 +168,9 @@ secrets.yml
 credentials.json
 .python-version
 all-files.txt
+
+# ============================================================================
+# Tool-specific local overrides (never commit)
+# ============================================================================
+settings.local.json
+*.local.json
