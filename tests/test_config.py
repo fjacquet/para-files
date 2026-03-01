@@ -57,7 +57,9 @@ class TestLLMConfig:
 
     def test_default_values(self):
         """Test default LLM configuration values."""
-        config = LLMConfig()
+        with patch.dict("os.environ", {}, clear=False) as env:
+            env.pop("PARA_FILES_LLM_MODEL", None)
+            config = LLMConfig()
         assert config.enabled is False
         assert config.model == DEFAULT_LLM_MODEL
         assert config.confidence_threshold == DEFAULT_LLM_CONFIDENCE_THRESHOLD
