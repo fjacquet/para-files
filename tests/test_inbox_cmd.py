@@ -19,7 +19,6 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-import typer
 from typer.testing import CliRunner
 
 from para_files.cli.app import app
@@ -45,7 +44,7 @@ class TestInboxStats:
     """Unit tests for the _InboxStats dataclass."""
 
     def test_defaults(self) -> None:
-        """Verify default values after construction: total=0, moved=0, stayed=0, failed=0, by_signal={}."""
+        """Verify default values: total=0, moved=0, stayed=0, failed=0, by_signal={}."""
         stats = _InboxStats()
 
         assert stats.total == 0
@@ -80,7 +79,9 @@ class TestInboxStats:
 class TestProcessInboxFile:
     """Unit tests for _process_inbox_file using mocked pipeline and mover."""
 
-    def _make_result(self, source: ClassificationSource, confidence: float = 0.95) -> ClassificationResult:
+    def _make_result(
+        self, source: ClassificationSource, confidence: float = 0.95
+    ) -> ClassificationResult:
         """Build a ClassificationResult with the given source."""
         return ClassificationResult(
             category="3_Resources/tests",
@@ -301,7 +302,6 @@ class TestInboxCommand:
 
     def test_inbox_dry_run_does_not_move_files(self, tmp_path: Path) -> None:
         """UX-02: --dry-run must call move_classified_file with dry_run=True."""
-        # Create two dummy files
         (tmp_path / "file1.txt").write_text("content1")
         (tmp_path / "file2.txt").write_text("content2")
 
@@ -319,8 +319,10 @@ class TestInboxCommand:
 
         with (
             patch("para_files.cli.inbox_cmd.load_config_or_exit") as mock_config,
-            patch("para_files.cli.inbox_cmd.ClassificationPipeline") as MockPipeline,
-            patch("para_files.cli.inbox_cmd.move_classified_file", return_value=success_move) as mock_mover,
+            patch("para_files.cli.inbox_cmd.ClassificationPipeline") as mock_pipeline_cls,
+            patch(
+                "para_files.cli.inbox_cmd.move_classified_file", return_value=success_move
+            ) as mock_mover,
         ):
             mock_cfg = MagicMock(
                 inbox_path=tmp_path,
@@ -331,7 +333,7 @@ class TestInboxCommand:
             mock_pipeline = MagicMock()
             mock_pipeline.classify_file.return_value = confident_result
             mock_pipeline.get_target_path.return_value = target_dir
-            MockPipeline.return_value = mock_pipeline
+            mock_pipeline_cls.return_value = mock_pipeline
 
             result = runner.invoke(app, ["inbox", str(tmp_path), "--dry-run"])
 
@@ -360,7 +362,7 @@ class TestInboxCommand:
 
         with (
             patch("para_files.cli.inbox_cmd.load_config_or_exit") as mock_config,
-            patch("para_files.cli.inbox_cmd.ClassificationPipeline") as MockPipeline,
+            patch("para_files.cli.inbox_cmd.ClassificationPipeline") as mock_pipeline_cls,
             patch("para_files.cli.inbox_cmd.move_classified_file", return_value=success_move),
         ):
             mock_cfg = MagicMock(
@@ -372,7 +374,7 @@ class TestInboxCommand:
             mock_pipeline = MagicMock()
             mock_pipeline.classify_file.return_value = confident_result
             mock_pipeline.get_target_path.return_value = target_dir
-            MockPipeline.return_value = mock_pipeline
+            mock_pipeline_cls.return_value = mock_pipeline
 
             result = runner.invoke(app, ["inbox", str(tmp_path)])
 
@@ -381,7 +383,7 @@ class TestInboxCommand:
         assert str(dest_path) in result.output
 
     def test_inbox_leaves_unclassifiable_files(self, tmp_path: Path) -> None:
-        """UX-02: Files classified as DEFAULT must stay in inbox; move_classified_file NOT called."""
+        """UX-02: Files classified as DEFAULT stay in inbox; move_classified_file NOT called."""
         test_file = tmp_path / "mystery.txt"
         test_file.write_text("unclassifiable content")
 
@@ -390,7 +392,7 @@ class TestInboxCommand:
 
         with (
             patch("para_files.cli.inbox_cmd.load_config_or_exit") as mock_config,
-            patch("para_files.cli.inbox_cmd.ClassificationPipeline") as MockPipeline,
+            patch("para_files.cli.inbox_cmd.ClassificationPipeline") as mock_pipeline_cls,
             patch("para_files.cli.inbox_cmd.move_classified_file") as mock_mover,
         ):
             mock_cfg = MagicMock(
@@ -401,14 +403,18 @@ class TestInboxCommand:
             mock_config.return_value = mock_cfg
             mock_pipeline = MagicMock()
             mock_pipeline.classify_file.return_value = default_result
-            MockPipeline.return_value = mock_pipeline
+            mock_pipeline_cls.return_value = mock_pipeline
 
             result = runner.invoke(app, ["inbox", str(tmp_path)])
 
         assert result.exit_code == 0
         mock_mover.assert_not_called()
         # Summary should indicate file stayed
-        assert "INBOX" in result.output or "stayed" in result.output.lower() or "Stayed" in result.output
+        assert (
+            "INBOX" in result.output
+            or "stayed" in result.output.lower()
+            or "Stayed" in result.output
+        )
 
     def test_inbox_summary_by_signal(self, tmp_path: Path) -> None:
         """UX-04: Summary must include by-signal breakdown when files are moved."""
@@ -430,7 +436,7 @@ class TestInboxCommand:
 
         with (
             patch("para_files.cli.inbox_cmd.load_config_or_exit") as mock_config,
-            patch("para_files.cli.inbox_cmd.ClassificationPipeline") as MockPipeline,
+            patch("para_files.cli.inbox_cmd.ClassificationPipeline") as mock_pipeline_cls,
             patch("para_files.cli.inbox_cmd.move_classified_file", side_effect=make_success_move),
         ):
             mock_cfg = MagicMock(
@@ -442,7 +448,7 @@ class TestInboxCommand:
             mock_pipeline = MagicMock()
             mock_pipeline.classify_file.return_value = confident_result
             mock_pipeline.get_target_path.return_value = target_dir
-            MockPipeline.return_value = mock_pipeline
+            mock_pipeline_cls.return_value = mock_pipeline
 
             result = runner.invoke(app, ["inbox", str(tmp_path)])
 
