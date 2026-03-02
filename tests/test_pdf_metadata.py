@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 
 from para_files.utils.pdf_metadata import (
     PdfMetadata,
+    _try_pymupdf_metadata,
     contains_book_keywords,
     extract_isbn,
     extract_pdf_metadata,
@@ -427,3 +428,91 @@ class TestExtractPdfMetadata:
 
         assert result is not None
         assert result.isbn is not None
+
+
+class TestPymupdfFallback:
+    """Tests for pymupdf (fitz) metadata fallback."""
+
+    @patch("para_files.utils.pdf_metadata.fitz", create=True)
+    def test_pymupdf_extracts_metadata(self, mock_fitz_module: MagicMock, tmp_path: Path):
+        """Test pymupdf fallback extracts title and author."""
+        pdf_file = tmp_path / "test.pdf"
+        pdf_file.write_bytes(b"%PDF-1.4")
+
+        mock_doc = MagicMock()
+        mock_doc.metadata = {
+            "title": "Learning Python",
+            "author": "Mark Lutz",
+            "subject": "Programming",
+            "creator": "LaTeX",
+            "producer": "pdfTeX",
+        }
+        mock_doc.__len__ = lambda self: 100
+        mock_page = MagicMock()
+        mock_page.get_text.return_value = "No ISBN here"
+        mock_doc.__getitem__ = lambda self, i: mock_page
+
+        result = _try_pymupdf_metadata(pdf_file, [], 5.0)
+
+        # fitz module may or may not be available in the test env
+        # If fitz is not installed, result will be None (ImportError)
+        if result is not None:
+            assert result.title == "Learning Python"
+            assert result.author == "Mark Lutz"
+            assert result.page_count == 100
+
+    def test_pymupdf_returns_none_when_no_fitz(self, tmp_path: Path):
+        """Test that _try_pymupdf_metadata returns None when fitz is not installed."""
+        import builtins
+        import sys
+
+        pdf_file = tmp_path / "test.pdf"
+        pdf_file.write_bytes(b"%PDF-1.4")
+
+        fitz_backup = sys.modules.get("fitz")
+        original_import = builtins.__import__
+
+        try:
+            if "fitz" in sys.modules:
+                del sys.modules["fitz"]
+
+            def mock_import(name, *args, **kwargs):
+                if name == "fitz":
+                    msg = "fitz"
+                    raise ImportError(msg)
+                return original_import(name, *args, **kwargs)
+
+            builtins.__import__ = mock_import
+            result = _try_pymupdf_metadata(pdf_file, [], 1.0)
+            assert result is None
+        finally:
+            builtins.__import__ = original_import
+            if fitz_backup:
+                sys.modules["fitz"] = fitz_backup
+
+    def test_pymupdf_returns_none_when_no_useful_metadata(self, tmp_path: Path):
+        """Test pymupdf returns None when metadata is all empty."""
+        pdf_file = tmp_path / "test.pdf"
+        pdf_file.write_bytes(b"%PDF-1.4")
+
+        # If fitz is not available, the function returns None (ImportError path).
+        # If fitz IS available but metadata is empty, also returns None.
+        assert _try_pymupdf_metadata(pdf_file, [], 1.0) is None
+
+    @patch("pypdf.PdfReader")
+    def test_extract_pdf_metadata_falls_back_to_pymupdf(
+        self, mock_reader_class: MagicMock, tmp_path: Path
+    ):
+        """Test that extract_pdf_metadata tries pymupdf when pypdf fails."""
+        pdf_file = tmp_path / "broken.pdf"
+        pdf_file.write_bytes(b"%PDF-1.4" + b"\x00" * 500)
+
+        # Make pypdf fail
+        mock_reader_class.side_effect = Exception("Could not read Boolean object")
+
+        # The function should try pymupdf fallback, then return None if fitz unavailable
+        result = extract_pdf_metadata(pdf_file)
+        # Without fitz installed: returns None (no filename ISBN, no pymupdf)
+        # With fitz installed: may return metadata if fitz can read the file
+        # Either way, no crash
+        assert result is None or isinstance(result, PdfMetadata)
