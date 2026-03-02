@@ -100,7 +100,7 @@ class TestConfigMaxWorkers:
 
         config = Config()
         assert hasattr(config, "max_workers")
-        assert config.max_workers == 1  # Default value
+        assert config.max_workers == 4  # Default value
 
     def test_max_workers_bounds(self) -> None:
         """Test max_workers validation bounds."""
@@ -203,3 +203,118 @@ class TestParallelClassification:
 
         # All files should be processed
         assert len(results) == 3
+
+
+class TestParallelMove:
+    """Test parallel move functionality."""
+
+    def test_move_parallel_processes_all_files(self, tmp_path: Path) -> None:
+        """Test that parallel move processes all files."""
+        from para_files.cli.move_cmd import _move_files_parallel
+        from para_files.mover import ConflictStrategy
+
+        # Create test files
+        files = []
+        for i in range(5):
+            f = tmp_path / f"test_{i}.txt"
+            f.write_text(f"content {i}")
+            files.append(f)
+
+        # Mock pipeline
+        mock_pipeline = MagicMock()
+        mock_result = MagicMock()
+        mock_result.category = "1_Projects/test"
+        mock_result.confidence.value = 0.95
+        mock_result.confidence.source.value = "semantic"
+        mock_result.route_name = None
+        mock_result.signals = []
+        mock_result.extracted_params = {}
+
+        mock_move_result = MagicMock()
+        mock_move_result.success = True
+        mock_move_result.destination = Path("/target/file.txt")
+        mock_move_result.action = "moved"
+        mock_move_result.message = None
+
+        mock_pipeline.classify_file.return_value = mock_result
+        mock_pipeline.get_target_path.return_value = Path("/target/path")
+
+        with patch("para_files.cli.move_cmd.move_classified_file", return_value=mock_move_result):
+            results, source_dirs, success, skip, fail = _move_files_parallel(
+                files,
+                mock_pipeline,
+                max_workers=3,
+                dry_run=True,
+                copy=False,
+                conflict_strategy=ConflictStrategy.RENAME,
+                date_prefix=False,
+                smart_rename=False,
+                skip_unclassifiable=False,
+                output_json=True,
+                action_verb="Would move",
+            )
+
+        assert len(results) == 5
+        assert success == 5
+        assert skip == 0
+        assert fail == 0
+        assert mock_pipeline.classify_file.call_count == 5
+
+    def test_move_parallel_error_isolation(self, tmp_path: Path) -> None:
+        """Test that one file failure doesn't crash the batch."""
+        from para_files.cli.move_cmd import _move_files_parallel
+        from para_files.mover import ConflictStrategy
+
+        # Create test files
+        files = []
+        for i in range(3):
+            f = tmp_path / f"test_{i}.txt"
+            f.write_text(f"content {i}")
+            files.append(f)
+
+        # Mock pipeline: first file raises, others succeed
+        mock_pipeline = MagicMock()
+        call_count = 0
+
+        def classify_side_effect(path):
+            nonlocal call_count
+            call_count += 1
+            if path.name == "test_0.txt":
+                msg = "simulated failure"
+                raise RuntimeError(msg)
+            mock_result = MagicMock()
+            mock_result.category = "1_Projects/test"
+            mock_result.confidence.value = 0.95
+            mock_result.confidence.source.value = "semantic"
+            mock_result.route_name = None
+            mock_result.signals = []
+            return mock_result
+
+        mock_pipeline.classify_file.side_effect = classify_side_effect
+        mock_pipeline.get_target_path.return_value = Path("/target/path")
+
+        mock_move_result = MagicMock()
+        mock_move_result.success = True
+        mock_move_result.destination = Path("/target/file.txt")
+        mock_move_result.action = "moved"
+        mock_move_result.message = None
+
+        with patch("para_files.cli.move_cmd.move_classified_file", return_value=mock_move_result):
+            results, source_dirs, success, skip, fail = _move_files_parallel(
+                files,
+                mock_pipeline,
+                max_workers=2,
+                dry_run=True,
+                copy=False,
+                conflict_strategy=ConflictStrategy.RENAME,
+                date_prefix=False,
+                smart_rename=False,
+                skip_unclassifiable=False,
+                output_json=True,
+                action_verb="Would move",
+            )
+
+        # All files processed: 1 failed, 2 succeeded
+        assert len(results) == 3
+        assert success == 2
+        assert fail == 1

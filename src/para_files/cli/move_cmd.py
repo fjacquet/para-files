@@ -7,6 +7,7 @@ This module provides the 'move' command which classifies files and moves
 from __future__ import annotations
 
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any
 
@@ -76,6 +77,7 @@ def _format_move_result_json(
 def _process_single_move(
     file_path: Path,
     pipeline: ClassificationPipeline,
+    classification: ClassificationResult,
     *,
     dry_run: bool,
     copy: bool,
@@ -85,11 +87,12 @@ def _process_single_move(
 ) -> tuple[Any, Any, bool]:
     """Process a single file move.
 
-    Classifies the file and performs the move/copy operation.
+    Uses the provided classification and performs the move/copy operation.
 
     Args:
         file_path: Path to the file to move.
         pipeline: The classification pipeline.
+        classification: Pre-computed classification result (avoids double-classify).
         dry_run: If True, simulate the move without actually moving.
         copy: If True, copy instead of move.
         conflict_strategy: Strategy for handling existing files.
@@ -99,7 +102,7 @@ def _process_single_move(
     Returns:
         Tuple of (classification result, move result, success boolean).
     """
-    result = pipeline.classify_file(file_path)
+    result = classification
     target_dir = pipeline.get_target_path(result)
 
     move_result = move_classified_file(
@@ -214,6 +217,7 @@ def _handle_move_file(
         result, move_result, success = _process_single_move(
             file_path,
             pipeline,
+            classification,
             dry_run=dry_run,
             copy=copy,
             conflict_strategy=conflict_strategy,
@@ -281,6 +285,157 @@ def _print_move_summary(
     if fail_count:
         summary_parts.append(f"{fail_count} failed")
     typer.echo(f"\nSummary: {', '.join(summary_parts)}")
+
+
+def _move_single_file(
+    file_path: Path,
+    pipeline: ClassificationPipeline,
+    *,
+    dry_run: bool,
+    copy: bool,
+    conflict_strategy: ConflictStrategy,
+    date_prefix: bool,
+    smart_rename: bool,
+    skip_unclassifiable: bool,
+) -> dict[str, Any]:
+    """Classify and move a single file (for ThreadPoolExecutor).
+
+    Self-contained worker that handles its own errors.
+
+    Returns:
+        Dict with keys: success, skipped, error, source_dir, and optionally
+        json_result for JSON output mode.
+    """
+    from para_files.types import ClassificationSource
+
+    if not validate_file_exists(file_path):
+        return {
+            "success": False,
+            "skipped": False,
+            "error": "file validation failed",
+            "source_file": str(file_path),
+        }
+
+    try:
+        classification = pipeline.classify_file(file_path)
+
+        # Skip unclassifiable files if requested
+        if skip_unclassifiable and classification.confidence.source == ClassificationSource.DEFAULT:
+            logger.info("Skipping unclassifiable file: {}", file_path)
+            return {
+                "success": True,
+                "skipped": True,
+                "source_file": str(file_path),
+                "reason": "unclassifiable",
+            }
+
+        result, move_result, success = _process_single_move(
+            file_path,
+            pipeline,
+            classification,
+            dry_run=dry_run,
+            copy=copy,
+            conflict_strategy=conflict_strategy,
+            date_prefix=date_prefix,
+            smart_rename=smart_rename,
+        )
+        target_dir = pipeline.get_target_path(result)
+        return {
+            "success": success,
+            "skipped": False,
+            "source_dir": str(file_path.parent),
+            "source_file": str(file_path),
+            "result": result,
+            "move_result": move_result,
+            "target_dir": target_dir,
+        }
+    except Exception as e:  # noqa: BLE001
+        logger.exception("Failed to process {}", file_path)
+        return {"success": False, "skipped": False, "error": str(e), "source_file": str(file_path)}
+
+
+def _move_files_parallel(
+    expanded_files: list[Path],
+    pipeline: ClassificationPipeline,
+    max_workers: int,
+    *,
+    dry_run: bool,
+    copy: bool,
+    conflict_strategy: ConflictStrategy,
+    date_prefix: bool,
+    smart_rename: bool,
+    skip_unclassifiable: bool,
+    output_json: bool,
+    action_verb: str,
+    verbose: bool = False,
+) -> tuple[list[dict[str, Any]], set[Path], int, int, int]:
+    """Move files in parallel using ThreadPoolExecutor.
+
+    Returns:
+        Tuple of (json_results, source_dirs, success_count, skip_count, fail_count).
+    """
+    results: list[dict[str, Any]] = []
+    source_dirs: set[Path] = set()
+    success_count = 0
+    skip_count = 0
+    fail_count = 0
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(
+                _move_single_file,
+                f,
+                pipeline,
+                dry_run=dry_run,
+                copy=copy,
+                conflict_strategy=conflict_strategy,
+                date_prefix=date_prefix,
+                smart_rename=smart_rename,
+                skip_unclassifiable=skip_unclassifiable,
+            ): f
+            for f in expanded_files
+        }
+        for future in as_completed(futures):
+            file_path = futures[future]
+            source_dirs.add(file_path.parent)
+            rd = future.result()
+
+            if rd.get("skipped"):
+                skip_count += 1
+                if output_json:
+                    results.append(
+                        {
+                            "source_file": rd["source_file"],
+                            "skipped": True,
+                            "reason": rd.get("reason", "unclassifiable"),
+                        }
+                    )
+                else:
+                    typer.echo(f"  Skipped (unclassifiable): {file_path.name}")
+            elif rd.get("error"):
+                fail_count += 1
+                if output_json:
+                    results.append({"source_file": rd["source_file"], "error": rd["error"]})
+                else:
+                    typer.echo(f"Failed: {file_path.name} - {rd['error']}", err=True)
+            else:
+                # Both success and move-failure have result/move_result
+                if rd["success"]:
+                    success_count += 1
+                else:
+                    fail_count += 1
+                if output_json:
+                    results.append(
+                        _format_move_result_json(
+                            file_path, rd["result"], rd["target_dir"], rd["move_result"]
+                        )
+                    )
+                else:
+                    _print_move_result(
+                        file_path, rd["result"], rd["move_result"], action_verb, verbose=verbose
+                    )
+
+    return results, source_dirs, success_count, skip_count, fail_count
 
 
 @app.command()
@@ -357,22 +512,17 @@ def move(
 
     pipeline = ClassificationPipeline(config)
     conflict_strategy = ConflictStrategy(conflict.value)
-    results: list[dict[str, Any]] = []
-    success_count = 0
-    fail_count = 0
-    skip_count = 0
+    max_workers = config.max_workers
     action_verb = (
         ("Would copy" if copy else "Would move") if dry_run else ("Copied" if copy else "Moved")
     )
 
-    for resolved in expanded_files:
-        source_dirs.add(resolved.parent)
-
-        success, skipped = _handle_move_file(
-            resolved,
+    # Use parallel or sequential processing based on max_workers
+    if max_workers > 1 and len(expanded_files) > 1:
+        results, par_source_dirs, success_count, skip_count, fail_count = _move_files_parallel(
+            expanded_files,
             pipeline,
-            results,
-            action_verb,
+            max_workers,
             dry_run=dry_run,
             copy=copy,
             conflict_strategy=conflict_strategy,
@@ -380,14 +530,39 @@ def move(
             smart_rename=smart_rename,
             skip_unclassifiable=skip_unclassifiable,
             output_json=output_json,
+            action_verb=action_verb,
             verbose=verbose,
         )
-        if skipped:
-            skip_count += 1
-        elif success:
-            success_count += 1
-        else:
-            fail_count += 1
+        source_dirs.update(par_source_dirs)
+    else:
+        results = []
+        success_count = 0
+        fail_count = 0
+        skip_count = 0
+
+        for resolved in expanded_files:
+            source_dirs.add(resolved.parent)
+
+            success, skipped = _handle_move_file(
+                resolved,
+                pipeline,
+                results,
+                action_verb,
+                dry_run=dry_run,
+                copy=copy,
+                conflict_strategy=conflict_strategy,
+                date_prefix=date_prefix,
+                smart_rename=smart_rename,
+                skip_unclassifiable=skip_unclassifiable,
+                output_json=output_json,
+                verbose=verbose,
+            )
+            if skipped:
+                skip_count += 1
+            elif success:
+                success_count += 1
+            else:
+                fail_count += 1
 
     # Cleanup empty directories if requested (only for move, not copy)
     if cleanup_empty and not copy:

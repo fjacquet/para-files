@@ -122,6 +122,74 @@ def extract_all_isbns(text: str) -> list[str]:  # noqa: C901
     return result
 
 
+def _try_pymupdf_metadata(
+    path: Path,
+    filename_isbns: list[str],
+    file_size_mb: float,
+) -> PdfMetadata | None:
+    """Try extracting PDF metadata using pymupdf as fallback.
+
+    Called when pypdf fails (e.g. "Could not read Boolean object").
+
+    Args:
+        path: Path to the PDF file.
+        filename_isbns: ISBNs already found in the filename.
+        file_size_mb: Pre-calculated file size in MB.
+
+    Returns:
+        PdfMetadata if pymupdf succeeds, None otherwise.
+    """
+    try:
+        import fitz
+    except ImportError:
+        return None
+
+    try:
+        doc = fitz.open(str(path))
+        meta = doc.metadata or {}
+
+        title = meta.get("title") or None
+        author = meta.get("author") or None
+        subject = meta.get("subject") or None
+        creator = meta.get("creator") or None
+        producer = meta.get("producer") or None
+        page_count = len(doc)
+
+        # Search first pages for ISBNs
+        all_isbns: list[str] = list(filename_isbns)
+        seen_isbns: set[str] = set(filename_isbns)
+        pages_to_check = min(20, page_count)
+        for i in range(pages_to_check):
+            try:
+                page_text = doc[i].get_text() or ""
+                for found_isbn in extract_all_isbns(page_text):
+                    if found_isbn not in seen_isbns:
+                        seen_isbns.add(found_isbn)
+                        all_isbns.append(found_isbn)
+            except Exception:  # noqa: BLE001, S112
+                continue
+
+        doc.close()
+
+        # Only return if we got something useful
+        if title or author or subject or all_isbns:
+            logger.info("pymupdf fallback extracted metadata from {}", path.name)
+            return PdfMetadata(
+                title=str(title) if title else None,
+                author=str(author) if author else None,
+                subject=str(subject) if subject else None,
+                creator=str(creator) if creator else None,
+                producer=str(producer) if producer else None,
+                page_count=page_count,
+                isbn=all_isbns[0] if all_isbns else None,
+                isbns=all_isbns,
+                file_size_mb=file_size_mb,
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("pymupdf fallback also failed for {}: {}", path.name, exc)
+    return None
+
+
 def extract_pdf_metadata(path: Path, max_pages_for_isbn: int = 20) -> PdfMetadata | None:  # noqa: C901
     """Extract metadata from a PDF file.
 
@@ -209,6 +277,12 @@ def extract_pdf_metadata(path: Path, max_pages_for_isbn: int = 20) -> PdfMetadat
         if path not in _warned_paths:
             _warned_paths.add(path)
             logger.warning("Failed to extract PDF metadata from {}: {}", path, e)
+
+        # Try pymupdf (fitz) as fallback for metadata extraction
+        pymupdf_meta = _try_pymupdf_metadata(path, filename_isbns, file_size_mb)
+        if pymupdf_meta is not None:
+            return pymupdf_meta
+
         # If we found ISBN in filename, return partial metadata
         if filename_isbns:
             logger.info("Returning partial metadata with filename ISBN for {}", path.name)

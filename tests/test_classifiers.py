@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from para_files.classifiers.base import BaseClassifier
+from para_files.classifiers.llm_classifier import LLMClassifier
 from para_files.classifiers.rules_engine import RulesEngineClassifier
 from para_files.types import (
     ClassificationResult,
@@ -149,3 +150,75 @@ class TestRulesEngineClassifier:
 
         result = classifier.classify("", metadata)
         assert result is None
+
+
+class TestLLMClassifier:
+    """Tests for LLMClassifier 0_Inbox rejection and sanitization."""
+
+    @pytest.fixture
+    def classifier(self) -> LLMClassifier:
+        """Create a test LLM classifier."""
+        return LLMClassifier(
+            enabled=True,
+            confidence_threshold=0.6,
+            valid_categories=["3_Resources/documentation/Dell", "4_Archives/5y_divers/2024"],
+        )
+
+    def test_rejects_0_inbox_response(self, classifier: LLMClassifier):
+        """LLM returning 0_Inbox should be treated as 'uncertain' and return None."""
+        response = '{"category": "0_Inbox", "confidence": 1.0, "reasoning": "unsure"}'
+        result = classifier._parse_response(response)
+        assert result is None
+
+    def test_accepts_valid_category(self, classifier: LLMClassifier):
+        """LLM returning a valid PARA category should be accepted."""
+        response = (
+            '{"category": "3_Resources/documentation/Dell",'
+            ' "confidence": 0.85, "reasoning": "Dell tech doc"}'
+        )
+        result = classifier._parse_response(response)
+        assert result is not None
+        assert result.category == "3_Resources/documentation/Dell"
+        assert result.confidence.value == 0.85
+
+    def test_rejects_low_confidence(self, classifier: LLMClassifier):
+        """LLM response below threshold should return None."""
+        response = (
+            '{"category": "3_Resources/documentation/Dell",'
+            ' "confidence": 0.3, "reasoning": "maybe Dell"}'
+        )
+        result = classifier._parse_response(response)
+        assert result is None
+
+    def test_rejects_absolute_path(self, classifier: LLMClassifier):
+        """LLM returning an absolute path should be rejected."""
+        response = (
+            '{"category": "/home/user/3_Resources/docs", "confidence": 0.9, "reasoning": "x"}'
+        )
+        result = classifier._parse_response(response)
+        assert result is None
+
+    def test_rejects_non_para_category(self, classifier: LLMClassifier):
+        """LLM returning a non-PARA category should be rejected."""
+        response = '{"category": "random/folder", "confidence": 0.9, "reasoning": "x"}'
+        result = classifier._parse_response(response)
+        assert result is None
+
+    def test_returns_none_when_disabled(self):
+        """Disabled classifier should always return None."""
+        classifier = LLMClassifier(enabled=False)
+        result = classifier.classify("some content")
+        assert result is None
+
+    def test_returns_none_for_empty_content(self):
+        """Empty content should return None."""
+        classifier = LLMClassifier(enabled=True)
+        result = classifier.classify("")
+        assert result is None
+
+    def test_system_prompt_excludes_0_inbox_instruction(self):
+        """System prompt should not encourage returning 0_Inbox."""
+        classifier = LLMClassifier(enabled=True, valid_categories=[])
+        prompt = classifier._system_prompt
+        assert "If unsure: use 0_Inbox" not in prompt
+        assert "Use 0_Inbox ONLY" not in prompt

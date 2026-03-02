@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **LLM classifier returning 0_Inbox at 100% confidence** — PDFs with opaque filenames were
+  confidently classified to `0_Inbox` by the LLM, bypassing the pipeline's own DEFAULT fallback.
+  Three fixes applied:
+  - `_parse_response()` now rejects `0_Inbox` — the LLM admitting uncertainty should not count
+    as a confident classification
+  - System prompt no longer says "If unsure: use 0_Inbox" — replaced with "return confidence 0.0"
+  - Removed `0_Inbox` from fallback category list when no valid_categories are provided
+- **PDF metadata extraction for non-standard PDFs** — Added pymupdf (fitz) fallback in
+  `extract_pdf_metadata()` when pypdf fails with errors like "Could not read Boolean object".
+  The fallback extracts title, author, subject, and ISBNs, giving downstream classifiers
+  (TaxonomyClassifier, BookDetector) data to work with instead of returning None.
+
+### Changed
+
+- **Parallel move command** — `move` now uses `ThreadPoolExecutor` for concurrent file processing,
+  matching the existing pattern in `scan` and `classify`. Significant speedup for large batches
+  of files with I/O-bound Ollama calls.
+- **Default `max_workers` raised from 1 to 4** — all commands (`scan`, `classify`, `move`) now
+  process files in parallel by default. Tune via `PARA_FILES_MAX_WORKERS` env var.
+
+### Fixed
+
+- **Double-classification bug in `move` command** — files were classified twice (once to check
+  skip_unclassifiable, then again in `_process_single_move`). Now classified once and the result
+  is passed through, giving an immediate 2x speedup for the move command even without parallelism.
+
 ### Changed
 
 - **LLM fallback: mlx-lm → litellm/Ollama** — replaced native MLX-LM (Qwen2.5-1.5B) with

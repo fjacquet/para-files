@@ -64,16 +64,14 @@ def _build_system_prompt(valid_categories: list[str]) -> str:
 
         category_list = "\n\n".join(sections)
     else:
-        category_list = (
-            "- 3_Resources/documentation/{technology}\n- 4_Archives/5y_divers/{year}\n- 0_Inbox"
-        )
+        category_list = "- 3_Resources/documentation/{technology}\n- 4_Archives/5y_divers/{year}"
 
     return f"""You are a file classification assistant for the PARA method.
 
 STEP 1 - Determine the domain:
 - English technical document (IT, software, hardware): use 3_Resources/documentation/{{technology}}
 - If the document is a French administrative document: pick from ARCHIVES categories below
-- If unsure: use 0_Inbox
+- If unsure: return confidence 0.0
 
 STEP 2 - Pick the exact category from this list:
 
@@ -83,7 +81,7 @@ Rules:
 - Replace {{technology}} with the actual technology name (e.g., Dell, Cisco, VMware)
 - Replace {{issuer}} with the company/organization name
 - Replace {{year}} with the 4-digit year extracted from the content
-- Use 0_Inbox ONLY if absolutely no category fits
+- Do NOT return 0_Inbox — if no category fits, return confidence 0.0
 - NEVER invent paths outside this list
 - NEVER output absolute file paths (no / or C:\\ at the start)
 
@@ -265,7 +263,7 @@ class LLMClassifier(BaseClassifier):
 
         return category
 
-    def _parse_response(self, response: str) -> ClassificationResult | None:
+    def _parse_response(self, response: str) -> ClassificationResult | None:  # noqa: PLR0911
         """Parse LLM response.
 
         Args:
@@ -303,6 +301,11 @@ class LLMClassifier(BaseClassifier):
             if not sanitized:
                 return None
 
+            # Reject 0_Inbox — LLM is admitting it can't classify; let pipeline DEFAULT handle it
+            if sanitized == "0_Inbox":
+                logger.debug("LLM returned 0_Inbox (uncertain), deferring to pipeline default")
+                return None
+
             if confidence < self._confidence_threshold:
                 logger.debug(
                     "LLM confidence {:.2f} below threshold {:.2f}",
@@ -326,7 +329,3 @@ class LLMClassifier(BaseClassifier):
         except (json.JSONDecodeError, KeyError, ValueError) as e:
             logger.debug("Failed to parse LLM response: {} - {}", e, response[:200])
             return None
-
-
-# Backward compatibility alias
-MLXLLMClassifier = LLMClassifier
