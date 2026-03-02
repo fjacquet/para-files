@@ -269,7 +269,7 @@ class Config(BaseSettings):
 
     # Parallel processing settings
     max_workers: int = Field(
-        default=1,
+        default=4,
         ge=1,
         le=16,
         description="Number of parallel workers for file processing (1=sequential)",

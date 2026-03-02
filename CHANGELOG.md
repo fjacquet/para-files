@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Parallel move command** — `move` now uses `ThreadPoolExecutor` for concurrent file processing,
+  matching the existing pattern in `scan` and `classify`. Significant speedup for large batches
+  of files with I/O-bound Ollama calls.
+- **Default `max_workers` raised from 1 to 4** — all commands (`scan`, `classify`, `move`) now
+  process files in parallel by default. Tune via `PARA_FILES_MAX_WORKERS` env var.
+
+### Fixed
+
+- **Double-classification bug in `move` command** — files were classified twice (once to check
+  skip_unclassifiable, then again in `_process_single_move`). Now classified once and the result
+  is passed through, giving an immediate 2x speedup for the move command even without parallelism.
+
+### Changed
+
 - **LLM fallback: mlx-lm → litellm/Ollama** — replaced native MLX-LM (Qwen2.5-1.5B) with
   litellm calling Ollama (ministral-3:8b by default). 5x larger model, much better classification
   accuracy for technical documents. Configure via `PARA_FILES_LLM_*` env vars.

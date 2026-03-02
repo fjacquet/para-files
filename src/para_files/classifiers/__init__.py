@@ -20,15 +20,11 @@ from para_files.classifiers.semantic_classifier import SemanticClassifier
 from para_files.classifiers.taxonomy_classifier import TaxonomyClassifier
 
 
-# Backward compatibility alias
-MLXLLMClassifier = LLMClassifier
-
 __all__ = [
     "BaseClassifier",
     "BookDetector",
     "ExtensionRouterClassifier",
     "LLMClassifier",
-    "MLXLLMClassifier",
     "RulesEngineClassifier",
     "SemanticClassifier",
     "TaxonomyClassifier",

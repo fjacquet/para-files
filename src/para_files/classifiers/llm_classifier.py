@@ -326,7 +326,3 @@ class LLMClassifier(BaseClassifier):
         except (json.JSONDecodeError, KeyError, ValueError) as e:
             logger.debug("Failed to parse LLM response: {} - {}", e, response[:200])
             return None
-
-
-# Backward compatibility alias
-MLXLLMClassifier = LLMClassifier
