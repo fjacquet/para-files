@@ -223,25 +223,25 @@ class TestReferenceTreeValidation:
         with pytest.raises(ValueError, match=str(empty_yaml)):
             tree.load()
 
-    def test_routing_rule_missing_destination_raises(self, tmp_path: Path):
-        """Routing rule without destination raises ValueError."""
-        yaml_content = "routing_rules:\n  photos:\n    extensions:\n      - .jpg\n"
-        bad_yaml = tmp_path / "no_dest.yaml"
-        bad_yaml.write_text(yaml_content, encoding="utf-8")
-        tree = ReferenceTree(bad_yaml)
-        with pytest.raises(ValueError):
-            tree.load()
+    def test_routing_rule_missing_destination_is_valid(self, tmp_path: Path):
+        """Routing rule without destination is valid — some rules use action instead."""
+        yaml_content = "routing_rules:\n  generic:\n    patterns:\n      - '*'\n    action: flatten_to_inbox\n"
+        yaml_file = tmp_path / "action_rule.yaml"
+        yaml_file.write_text(yaml_content, encoding="utf-8")
+        tree = ReferenceTree(yaml_file)
+        tree.load()  # must not raise
+        assert tree._loaded  # noqa: SLF001
 
-    def test_routing_rule_empty_destination_raises(self, tmp_path: Path):
-        """Routing rule with empty destination string raises ValueError."""
+    def test_routing_rule_empty_destination_is_valid(self, tmp_path: Path):
+        """Routing rule with empty destination string is valid — action-based rules omit destination."""
         yaml_content = (
             "routing_rules:\n  photos:\n    extensions:\n      - .jpg\n    destination: ''\n"
         )
-        bad_yaml = tmp_path / "empty_dest.yaml"
-        bad_yaml.write_text(yaml_content, encoding="utf-8")
-        tree = ReferenceTree(bad_yaml)
-        with pytest.raises(ValueError):
-            tree.load()
+        yaml_file = tmp_path / "empty_dest.yaml"
+        yaml_file.write_text(yaml_content, encoding="utf-8")
+        tree = ReferenceTree(yaml_file)
+        tree.load()  # must not raise
+        assert tree._loaded  # noqa: SLF001
 
     def test_valid_minimal_yaml_loads(self, tmp_path: Path):
         """Minimal valid YAML (version + empty routing_rules) loads without error."""

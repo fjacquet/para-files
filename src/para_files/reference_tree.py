@@ -31,12 +31,12 @@ class RoutingRuleModel(BaseModel):
 
     extensions: list[str] = Field(default_factory=list)
     patterns: list[str] = Field(default_factory=list)
-    destination: str = Field(min_length=1)
+    destination: str = Field(default="")
     source: str | None = None
     date_source: str | None = None
     fallback_date: str | None = None
     action: str | None = None
-    platforms: list[str] | None = None
+    platforms: dict[str, list[str]] | list[str] | None = None
     issuers: list[dict[str, Any]] = Field(default_factory=list)
     known_technologies: list[str] = Field(default_factory=list)
 
