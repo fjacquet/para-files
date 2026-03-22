@@ -2,7 +2,7 @@
 
 ## What This Is
 
-para-files is a macOS-only (Apple Silicon) intelligent file classification system using MLX-powered semantic routing. It implements the PARA method (Projects, Areas, Resources, Archives) with a deterministic 7-signal classification pipeline. The system classifies and moves files to their correct PARA folder — reading inside Excel/ODS spreadsheets, peeking at ZIP archive manifests, routing media and exotic files by extension, and providing a one-shot inbox drain command.
+para-files is an intelligent file classification system using Ollama-powered semantic routing (via litellm). It implements the PARA method (Projects, Areas, Resources, Archives) with a deterministic 6-signal classification pipeline. The system classifies and moves files to their correct PARA folder — reading inside Excel/ODS spreadsheets, peeking at ZIP archive manifests, routing media and exotic files by extension, and providing a one-shot inbox drain command. OCR features require macOS (Apple Silicon).
 
 ## Core Value
 
@@ -30,7 +30,19 @@ Files are classified correctly and transparently — users can understand why a 
 
 ### Active
 
-(None — planning next milestone)
+## Current Milestone: v1.2 Reliability & Performance
+
+**Goal:** Make the classification pipeline trustworthy — fix silent failures, add timeouts and circuit breakers, harden error handling, and improve throughput.
+
+**Target features:**
+- LLM classifier timeout + graceful Ctrl+C handling
+- Ollama circuit breaker (skip after repeated failures)
+- Replace broad `except Exception` (BLE001) with specific exception types
+- Fix silent placeholder resolution failures
+- Embedding caching to avoid redundant Ollama calls
+- Reduce book detector false positives on financial documents
+- Batch rollback for move operations
+- Adaptive thread pool sizing
 
 ### Out of Scope
 
@@ -38,9 +50,10 @@ Files are classified correctly and transparently — users can understand why a 
 - Geolocation cache read-write lock — low impact, defer
 - Async/await refactor of bookstore — large scope, defer
 - MLX local model mirroring — infrastructure concern, defer
-- Embedding LRU cache — premature optimization, defer
+- Embedding LRU cache — promoted to v1.2 active scope
 - Extracting/decompressing archives before classification — too slow and risky
-- Mobile / non-Apple-Silicon support — MLX is core dependency
+- Mobile support — desktop CLI tool
+- Full cross-platform support — OCR remains macOS-only
 
 ## Context
 
@@ -50,7 +63,7 @@ Files are classified correctly and transparently — users can understand why a 
 
 ## Constraints
 
-- **Platform**: macOS Apple Silicon only — MLX and Vision Framework requirements
+- **Platform**: macOS for OCR (Apple Silicon Vision Framework); core pipeline is cross-platform (Ollama)
 - **Python**: 3.12+ with strict mypy, ruff linting (line length 100)
 - **Style**: Functional programming preferred, loguru for logging, pydantic for config
 - **Testing**: Pytest; all new code must have tests
@@ -68,5 +81,9 @@ Files are classified correctly and transparently — users can understand why a 
 | StrEnum migration (UP042) | Python 3.12+ native, cleaner than (str, Enum) | ✓ Good — v1.1 |
 | Coverage threshold at 79% | Phase 4 added new code paths not yet fully covered | ✓ Good — will grow with tests |
 
+| Pipeline short-circuit (break on first match) | Running all 6 classifiers even after match wastes 30-55s on Ollama | — Pending |
+| LLM timeout 15s + graceful Ctrl+C | ministral-3:8b takes 30-55s and often returns 0_Inbox | — Pending |
+| Migrate from MLX to litellm/Ollama | Cross-platform, unified API, no Apple Silicon requirement | ✓ Good — v1.2 prep |
+
 ---
-*Last updated: 2026-03-01 after v1.1 Inbox Throughput milestone*
+*Last updated: 2026-03-22 after v1.2 Reliability & Performance milestone start*
