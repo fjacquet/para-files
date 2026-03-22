@@ -41,6 +41,11 @@ Files are classified correctly and transparently — users can understand why a 
 - ✓ YAML reference tree validation: Pydantic models, fail-fast on invalid config — v1.2 Phase 10
 - ✓ Unclassifiable files routed to 6_unclassified (DEFAULT_UNCLASSIFIED_CATEGORY constant) — v1.2 Phase 10
 - ✓ Batch move safety: permission pre-check, stop-on-first-failure, rollback capability — v1.2 Phase 10
+- ✓ Adaptive thread pool: SINGLE_THREAD_THRESHOLD=5 skips thread pool for small batches — v1.2 Phase 11
+- ✓ Hash cache: mtime+path keyed cache eliminates redundant SHA256 computation — v1.2 Phase 11
+- ✓ Centralized content truncation: all classifiers use DEFAULT_CONTENT_PREVIEW_CHARS from config — v1.2 Phase 11
+- ✓ Pipeline order/failure tests: classifier ordering, first-match-wins, exception isolation verified — v1.2 Phase 11
+- ✓ Concurrent move tests: thread crash isolation, 10-file load, sequential/parallel parity — v1.2 Phase 11
 
 ### Active
 
@@ -71,6 +76,8 @@ Files are classified correctly and transparently — users can understand why a 
 - Full cross-platform support — OCR remains macOS-only
 
 ## Context
+
+**v1.2 Phase 11 complete (2026-03-22):** Performance + Pipeline Tests. Adaptive threading skips thread pool for batches < 5 files. Hash cache (path+mtime key) avoids redundant SHA256 calls. All classifiers now use `DEFAULT_CONTENT_PREVIEW_CHARS` — no hidden truncation constants. Pipeline ordering and concurrent threading fully tested. 1488 tests passing. v1.2 milestone complete.
 
 **v1.2 Phase 10 complete (2026-03-22):** Classification Accuracy + Move Safety. Book detector no longer misclassifies French financial documents (is_financial_document takes precedence). YAML reference tree validates with Pydantic at load time — fails fast on malformed config. Unclassifiable files route to 6_unclassified. BatchMover adds permission pre-check, stop-on-first-failure, and rollback. 1472 tests passing.
 
@@ -105,4 +112,4 @@ Files are classified correctly and transparently — users can understand why a 
 | Migrate from MLX to litellm/Ollama | Cross-platform, unified API, no Apple Silicon requirement | ✓ Good — v1.2 prep |
 
 ---
-*Last updated: 2026-03-22 after Phase 8 Foundation Hardening complete*
+*Last updated: 2026-03-22 after Phase 11 Performance + Pipeline Tests complete — v1.2 milestone complete*
