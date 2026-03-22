@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import re
 from typing import Any
+from urllib.parse import unquote
 
 from loguru import logger
 
@@ -129,6 +130,7 @@ class LLMClassifier(BaseClassifier):
         self._max_tokens = max_tokens
         self._api_base = api_base
         self._timeout = timeout
+        self._valid_categories = set(valid_categories or [])
         self._system_prompt = _build_system_prompt(valid_categories or [])
 
     @property
@@ -168,7 +170,10 @@ class LLMClassifier(BaseClassifier):
 
         try:
             return self._generate_classification(content, metadata)
-        except (ValueError, TypeError, KeyError, json.JSONDecodeError, ConnectionError, TimeoutError, OSError) as e:
+        except (
+            ValueError, TypeError, KeyError, json.JSONDecodeError,
+            ConnectionError, TimeoutError, OSError,
+        ) as e:
             logger.exception("LLM classification failed: {}", e)
             return None
 
@@ -251,7 +256,8 @@ class LLMClassifier(BaseClassifier):
         """Validate and sanitize a category path from the LLM.
 
         Rejects hallucinated absolute paths, Windows paths, and categories
-        that don't start with a valid PARA top-level folder.
+        that don't start with a valid PARA top-level folder. URL-decodes paths
+        and optionally validates against an allowlist.
 
         Args:
             category: Raw category string from LLM output.
@@ -261,8 +267,12 @@ class LLMClassifier(BaseClassifier):
         """
         category = category.strip().strip('"').strip("'")
 
+        # URL-decode (handles %2B -> +, %20 -> space, etc.)
+        category = unquote(category)
+
         # Reject absolute or Windows-style paths
-        if category.startswith(("/", "~")) or ":\\" in category or category[1:2] == ":":
+        is_windows_path = len(category) > 1 and category[1:2] == ":"
+        if category.startswith(("/", "~")) or ":\\" in category or is_windows_path:
             logger.debug("LLM rejected hallucinated path: {}", category[:100])
             return None
 
@@ -271,10 +281,46 @@ class LLMClassifier(BaseClassifier):
             logger.debug("LLM rejected non-PARA category: {}", category[:100])
             return None
 
+        # Allowlist check: if we have valid_categories, verify the base pattern exists
+        if self._valid_categories and not any(
+            category.startswith(vc.split("{")[0]) for vc in self._valid_categories
+        ):
+            logger.debug("LLM category not in allowlist: {}", category[:100])
+            return None
+
         return category
 
-    def _parse_response(self, response: str) -> ClassificationResult | None:  # noqa: PLR0911
-        """Parse LLM response.
+    @staticmethod
+    def _coerce_confidence(raw: Any) -> float:  # noqa: ANN401
+        """Coerce confidence value to float 0.0-1.0.
+
+        Handles: 0.8 (float), "0.8" (string), "80%" (percentage), "80" (integer-like).
+
+        Args:
+            raw: Raw confidence value from LLM JSON output.
+
+        Returns:
+            Float confidence in range [0.0, 1.0].
+        """
+        if isinstance(raw, (int, float)):
+            val = float(raw)
+            return val / 100.0 if val > 1.0 else val
+        if isinstance(raw, str):
+            s = raw.strip().rstrip("%")
+            try:
+                val = float(s)
+                if "%" in raw or val > 1.0:
+                    val = val / 100.0
+                return max(0.0, min(1.0, val))
+            except ValueError:
+                return 0.0
+        return 0.0
+
+    def _parse_response(self, response: str) -> ClassificationResult | None:  # noqa: PLR0911, C901
+        """Parse LLM response using JSON-first strategy with regex fallback.
+
+        Tries json.loads on the full text first, then falls back to regex
+        extraction for chatty/wrapped responses.
 
         Args:
             response: Raw model response.
@@ -282,60 +328,72 @@ class LLMClassifier(BaseClassifier):
         Returns:
             ClassificationResult if parsing succeeds, None otherwise.
         """
+        text = response.strip()
+        if not text:
+            return None
+
+        # Remove markdown code blocks if present
+        if "```" in text:
+            match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+            text = match.group(1) if match else re.sub(r"```(?:json)?", "", text).strip()
+
+        # Strategy 1: Try json.loads on the full text first
+        data: dict[str, Any] | None = None
         try:
-            # Extract JSON from response (handle markdown code blocks)
-            text = response.strip()
+            parsed = json.loads(text)
+            if isinstance(parsed, dict) and "category" in parsed:
+                data = parsed
+        except (json.JSONDecodeError, ValueError):
+            pass
 
-            # Remove markdown code blocks if present
-            if "```" in text:
-                match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
-                text = match.group(1) if match else re.sub(r"```(?:json)?", "", text).strip()
-
-            # Find JSON object with "category" key (handles nested braces better)
+        # Strategy 2: Regex fallback for chatty/wrapped responses
+        if data is None:
             json_match = re.search(r'\{[^{}]*"category"[^{}]*\}', text, re.DOTALL)
             if not json_match:
                 logger.debug("No JSON found in LLM response: {}", text[:200])
                 return None
-
-            data = json.loads(json_match.group())
-
-            category = data.get("category", "")
-            confidence = float(data.get("confidence", 0.0))
-            reasoning = data.get("reasoning", "")
-
-            if not category:
+            try:
+                data = json.loads(json_match.group())
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.debug("Failed to parse extracted JSON: {} - {}", e, text[:200])
                 return None
 
-            # Validate category is a valid PARA path (reject hallucinated paths)
-            sanitized = self._sanitize_category(category)
-            if not sanitized:
-                return None
+        category = data.get("category", "")
+        raw_confidence = data.get("confidence", 0.0)
+        reasoning = data.get("reasoning", "")
 
-            # Reject 0_Inbox — LLM is admitting it can't classify; let pipeline DEFAULT handle it
-            if sanitized == "0_Inbox":
-                logger.debug("LLM returned 0_Inbox (uncertain), deferring to pipeline default")
-                return None
-
-            if confidence < self._confidence_threshold:
-                logger.debug(
-                    "LLM confidence {:.2f} below threshold {:.2f}",
-                    confidence,
-                    self._confidence_threshold,
-                )
-                return None
-
-            return ClassificationResult(
-                category=sanitized,
-                confidence=Confidence(
-                    value=confidence,
-                    source=self.source,
-                ),
-                extracted_params={
-                    "llm_reasoning": reasoning,
-                    "llm_model": self._model_name,
-                },
-            )
-
-        except (json.JSONDecodeError, KeyError, ValueError) as e:
-            logger.debug("Failed to parse LLM response: {} - {}", e, response[:200])
+        if not category:
             return None
+
+        # Coerce confidence: handle "0.8", "80%", "80", 0.8
+        confidence = self._coerce_confidence(raw_confidence)
+
+        # URL-decode + sanitize category
+        sanitized = self._sanitize_category(category)
+        if not sanitized:
+            return None
+
+        # Reject 0_Inbox — LLM is admitting it can't classify; let pipeline DEFAULT handle it
+        if sanitized == "0_Inbox":
+            logger.debug("LLM returned 0_Inbox (uncertain), deferring to pipeline default")
+            return None
+
+        if confidence < self._confidence_threshold:
+            logger.debug(
+                "LLM confidence {:.2f} below threshold {:.2f}",
+                confidence,
+                self._confidence_threshold,
+            )
+            return None
+
+        return ClassificationResult(
+            category=sanitized,
+            confidence=Confidence(
+                value=confidence,
+                source=self.source,
+            ),
+            extracted_params={
+                "llm_reasoning": reasoning,
+                "llm_model": self._model_name,
+            },
+        )
