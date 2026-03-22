@@ -29,10 +29,12 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 ## Phase Details
 
 ### Phase 8: Foundation Hardening
+
 **Goal**: The codebase handles errors explicitly — no broad exception swallowing, no silent placeholder failures, subprocess calls validated
 **Depends on**: Phase 7 (v1.1 shipped)
 **Requirements**: DEP-02, ERR-01, ERR-02, ERR-03, ERR-04, ERR-05, TEST-02, TEST-05
 **Success Criteria** (what must be TRUE):
+
   1. Running `uv run para-files classify <file>` never swallows a specific exception silently — ruff BLE001 violations are zero in pipeline.py, all classifiers, and utilities
   2. Classifying a file whose template has an unresolved placeholder surfaces a warning instead of stripping the placeholder and silently returning a bad path
   3. Subprocess calls to exiftool, pandoc, and chm reject files with wrong extensions before execution, preventing misuse
@@ -41,15 +43,18 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 **Plans:** 2/3 plans executed
 
 Plans:
+
 - [ ] 08-01-PLAN.md — Narrow exceptions in pipeline, LLM classifier, and Ollama encoder (ERR-01, ERR-02)
 - [ ] 08-02-PLAN.md — Narrow exceptions in utilities, subprocess extension validation, macOS test isolation (ERR-03, ERR-05, DEP-02)
 - [ ] 08-03-PLAN.md — Placeholder resolution policy with required/optional distinction, placeholder and pandoc test suites (ERR-04, TEST-02, TEST-05)
 
 ### Phase 9: LLM + Service Reliability
+
 **Goal**: Ollama-dependent classifiers never hang the pipeline, never crash on Ctrl+C, and recover gracefully when the Ollama server is absent or flaking
 **Depends on**: Phase 8
 **Requirements**: LLM-01, LLM-02, LLM-03, LLM-04, LLM-05, SVC-01, SVC-02, SVC-03, SVC-04, SVC-05, TEST-04
 **Success Criteria** (what must be TRUE):
+
   1. Classifying a file with Ollama responding slowly completes within 15 seconds (default timeout) and returns a non-LLM result rather than hanging
   2. Pressing Ctrl+C during `para-files inbox` exits cleanly without a RuntimeError traceback
   3. After a configured number of consecutive Ollama failures, semantic and LLM classifiers are skipped for remaining files in the batch — no further connection attempts
@@ -58,10 +63,12 @@ Plans:
 **Plans**: TBD
 
 ### Phase 10: Classification Accuracy + Move Safety
+
 **Goal**: The book detector stops misclassifying French financial documents as books, the reference tree validates on load, and batch moves can be rolled back on failure
 **Depends on**: Phase 9
 **Requirements**: ACC-01, ACC-02, ACC-03, ACC-04, ACC-05, MOV-01, MOV-02
 **Success Criteria** (what must be TRUE):
+
   1. Running `para-files classify` on a French financial PDF (IBAN-containing, no actual ISBN) returns a non-book classification
   2. Loading a malformed `personal_file_tree.yaml` causes an immediate startup error with a clear message, not a silent misconfiguration
   3. A failed batch move operation provides a rollback option that restores all already-moved files to their original locations
@@ -70,10 +77,12 @@ Plans:
 **Plans**: TBD
 
 ### Phase 11: Performance + Pipeline Tests
+
 **Goal**: The pipeline adapts thread usage to file count, avoids redundant hashing and Ollama calls, and pipeline-level tests verify classifier ordering and failure isolation
 **Depends on**: Phase 10
 **Requirements**: PERF-01, PERF-02, PERF-03, TEST-01, TEST-03
 **Success Criteria** (what must be TRUE):
+
   1. Classifying fewer than 5 files runs single-threaded with no thread pool overhead — observable via `--verbose` output
   2. Moving a set of files where some share content does not re-hash already-seen files (mtime + path cache hit)
   3. All classifiers and encoders respect MAX_CONTENT_CHARS — no classifier silently truncates at a different limit

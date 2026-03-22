@@ -125,6 +125,7 @@ Deferred to v1.3+. Tracked but not in current roadmap.
 | TEST-05 | Phase 8 | Complete |
 
 **Coverage:**
+
 - v1.2 requirements: 32 total (1 deferred)
 - Mapped to phases: 32
 - Unmapped: 0 ✓
