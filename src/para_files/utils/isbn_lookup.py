@@ -14,6 +14,13 @@ from loguru import logger
 # ISBN-10 has exactly 10 characters
 ISBN_10_LENGTH = 10
 
+# isbnlib can raise various exceptions: network errors, parse errors, import failures,
+# and internal RuntimeError from its decorators/caching layer
+_ISBNLIB_ERRORS = (
+    ConnectionError, TimeoutError, OSError, ValueError,
+    KeyError, ImportError, RuntimeError,
+)
+
 
 @dataclass
 class BookInfo:
@@ -75,7 +82,7 @@ def lookup_isbn(isbn: str, service: str = "default") -> BookInfo | None:  # noqa
             if meta and meta.get("Title"):
                 logger.debug("Found metadata via {} for ISBN {}", svc, isbn)
                 break
-        except (ConnectionError, TimeoutError, OSError, ValueError, KeyError) as e:
+        except _ISBNLIB_ERRORS as e:
             logger.debug("Service {} failed for ISBN {}: {}", svc, isbn, e)
             continue
 
@@ -99,7 +106,7 @@ def lookup_isbn(isbn: str, service: str = "default") -> BookInfo | None:  # noqa
         desc = isbnlib.desc(canonical)
         if desc:
             info.description = desc
-    except (ConnectionError, TimeoutError, OSError, ValueError, KeyError) as e:
+    except _ISBNLIB_ERRORS as e:
         logger.warning(
             "ISBN description enrichment failed for {}: {} {}",
             canonical,
@@ -112,7 +119,7 @@ def lookup_isbn(isbn: str, service: str = "default") -> BookInfo | None:  # noqa
         cover = isbnlib.cover(canonical)
         if cover and "thumbnail" in cover:
             info.cover_url = cover["thumbnail"]
-    except (ConnectionError, TimeoutError, OSError, ValueError, KeyError) as e:
+    except _ISBNLIB_ERRORS as e:
         logger.warning(
             "ISBN cover URL enrichment failed for {}: {} {}",
             canonical,
@@ -198,7 +205,7 @@ def validate_isbn(isbn: str) -> bool:
 
         canonical = isbnlib.canonical(isbn)
         return bool(canonical and (isbnlib.is_isbn10(canonical) or isbnlib.is_isbn13(canonical)))
-    except (ConnectionError, TimeoutError, OSError, ValueError, KeyError) as e:
+    except _ISBNLIB_ERRORS as e:
         logger.debug("validate_isbn failed for {!r}: {} {}", isbn, type(e).__name__, e)
         return False
 
@@ -216,7 +223,7 @@ def normalize_isbn(isbn: str) -> str | None:
         import isbnlib
 
         return isbnlib.canonical(isbn) or None
-    except (ConnectionError, TimeoutError, OSError, ValueError, KeyError) as e:
+    except _ISBNLIB_ERRORS as e:
         logger.debug("normalize_isbn failed for {!r}: {} {}", isbn, type(e).__name__, e)
         return None
 
@@ -237,7 +244,7 @@ def isbn_to_isbn13(isbn: str) -> str | None:
         if canonical:
             result: str | None = isbnlib.to_isbn13(canonical)
             return result
-    except (ConnectionError, TimeoutError, OSError, ValueError, KeyError) as e:
+    except _ISBNLIB_ERRORS as e:
         logger.debug("isbn_to_isbn13 failed for {!r}: {} {}", isbn, type(e).__name__, e)
     return None
 

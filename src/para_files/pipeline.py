@@ -271,7 +271,11 @@ class ClassificationPipeline:
                         matched=False,
                     )
                 )
-            except (ValueError, TypeError, KeyError, AttributeError, ConnectionError, TimeoutError, OSError, json.JSONDecodeError, RuntimeError) as e:
+            except (
+                ValueError, TypeError, KeyError, AttributeError,
+                ConnectionError, TimeoutError, OSError,
+                json.JSONDecodeError, RuntimeError,
+            ) as e:
                 logger.exception("Classifier {} failed: {}", classifier.name, e)
                 signals.append(
                     SignalResult(
