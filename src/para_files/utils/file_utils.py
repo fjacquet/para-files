@@ -504,6 +504,7 @@ def _extract_pdf_with_pypdf(file_path: Path, max_chars: int) -> str:
     # 1. Try pypdf first
     try:
         from pypdf import PdfReader
+        from pypdf.errors import PyPdfError
 
         reader = PdfReader(file_path)
         text_parts = []
@@ -521,7 +522,7 @@ def _extract_pdf_with_pypdf(file_path: Path, max_chars: int) -> str:
 
     except ImportError:
         logger.debug("pypdf not installed: {}", file_path)
-    except (OSError, ValueError, UnicodeDecodeError) as e:
+    except (OSError, ValueError, UnicodeDecodeError, PyPdfError) as e:
         logger.debug("pypdf failed, trying pdftotext: {} ({})", file_path, e)
 
     # 2. Fallback to pdftotext (poppler-utils)
