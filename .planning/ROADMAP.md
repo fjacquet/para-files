@@ -120,4 +120,4 @@ Plans:
 | 8. Foundation Hardening | 2/3 | In Progress|  | - |
 | 9. LLM + Service Reliability | 3/3 | Complete    | 2026-03-22 | - |
 | 10. Classification Accuracy + Move Safety | 3/3 | Complete   | 2026-03-22 | - |
-| 11. Performance + Pipeline Tests | 2/2 | Complete   | 2026-03-22 | - |
+| 11. Performance + Pipeline Tests | 2/2 | Complete    | 2026-03-22 | - |
