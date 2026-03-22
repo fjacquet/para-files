@@ -6,9 +6,10 @@ for path normalization after placeholder removal.
 
 from __future__ import annotations
 
-import pytest
-
-from para_files.utils.placeholder_resolver import clean_unreplaced_placeholders, resolve_placeholders
+from para_files.utils.placeholder_resolver import (
+    clean_unreplaced_placeholders,
+    resolve_placeholders,
+)
 
 
 class TestRequiredPlaceholderRejection:

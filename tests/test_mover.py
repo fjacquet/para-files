@@ -439,7 +439,7 @@ class TestFileHashing:
         mtime2 = file.stat().st_mtime
 
         # mtime must differ for the test to be meaningful
-        assert mtime1 != mtime2 or file.stat().st_size != len("original content".encode()), (
+        assert mtime1 != mtime2 or file.stat().st_size != len(b"original content"), (
             "File modification did not produce a different cache key"
         )
 

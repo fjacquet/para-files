@@ -193,11 +193,11 @@ def extract_metadata(file_path: Path) -> dict[str, str] | None:
         return None
 
     fmt = get_pandoc_format(file_path)
-    if fmt is None or not file_path.exists():
-        return None
-
-    if file_path.suffix.lower() not in ALLOWED_EXTENSIONS:
-        logger.warning("Rejected file with unsupported extension for pandoc: {}", file_path.suffix)
+    if fmt is None or not file_path.exists() or file_path.suffix.lower() not in ALLOWED_EXTENSIONS:
+        if file_path.suffix.lower() not in ALLOWED_EXTENSIONS:
+            logger.warning(
+                "Rejected file with unsupported extension for pandoc: {}", file_path.suffix
+            )
         return None
 
     # Template to extract metadata fields

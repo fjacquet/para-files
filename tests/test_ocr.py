@@ -8,7 +8,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from conftest import macos_only
-
 from para_files.utils.ocr import (
     OCR_EXTENSIONS,
     OCRResult,

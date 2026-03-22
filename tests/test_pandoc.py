@@ -251,7 +251,9 @@ class TestExtractTextIntegration:
         so we use .rst which is in the subprocess allowlist.
         """
         rst_file = tmp_path / "test.rst"
-        rst_file.write_text("Hello World\n===========\n\nThis is a test document.\n\n- Item 1\n- Item 2")
+        rst_file.write_text(
+            "Hello World\n===========\n\nThis is a test document.\n\n- Item 1\n- Item 2"
+        )
 
         result = extract_text(rst_file)
 
@@ -277,8 +279,8 @@ class TestExtractTextIntegration:
         assert result.format == "html"
 
     @pytest.mark.slow
-    def test_extract_from_rst(self, check_pandoc, tmp_path: Path):
-        """Test extracting text from reStructuredText file."""
+    def test_extract_from_rst_bullet(self, check_pandoc, tmp_path: Path):
+        """Test extracting text from reStructuredText with bullet points."""
         rst_file = tmp_path / "test.rst"
         rst_file.write_text("Title\n=====\n\nThis is a paragraph.\n\n* Bullet point")
 

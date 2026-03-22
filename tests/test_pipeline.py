@@ -211,7 +211,7 @@ class TestClassificationPipeline:
         assert result.confidence.value == 0.0
 
     def test_pipeline_returns_default_when_all_classifiers_fail(self, mock_config: Config):
-        """Test that pipeline returns 6_unclassified when all classifiers raise, without crashing."""
+        """Pipeline returns 6_unclassified when all classifiers raise."""
         pipeline = ClassificationPipeline(mock_config)
         pipeline._ensure_initialized()
 

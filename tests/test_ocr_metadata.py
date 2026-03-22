@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from datetime import date
 
-from conftest import macos_only
-
 from para_files.utils.ocr_metadata import OCRMetadata, extract_metadata
 
 

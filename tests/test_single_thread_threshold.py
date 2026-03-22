@@ -33,7 +33,7 @@ class TestSingleThreadThreshold:
         assert not uses_parallel, "Small batch (3 files) should NOT trigger parallel mode"
 
     def test_threshold_batch_uses_parallel(self) -> None:
-        """Batch of exactly 5 files with max_workers=4 uses parallel path (threshold is exclusive)."""
+        """Batch of 5 files uses parallel path (threshold is exclusive)."""
         batch_size = 5
         max_workers = 4
 
@@ -74,7 +74,7 @@ class TestSingleThreadThreshold:
                     f"Processing {len(expanded_files)} file(s) in single-threaded mode "
                     f"(< {SINGLE_THREAD_THRESHOLD} files)"
                 )
-            max_workers = 1  # noqa: F841
+            max_workers = 1
 
         combined = " ".join(echoed_messages)
         assert "single-threaded" in combined, (

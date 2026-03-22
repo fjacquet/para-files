@@ -128,7 +128,9 @@ class ClassificationPipeline:
             timeout=3.0,
         )
         if not embedding_available:
-            logger.warning("Ollama unreachable at init — disabling semantic classifier (embeddings)")
+            logger.warning(
+                "Ollama unreachable at init — disabling semantic classifier (embeddings)"
+            )
         if not llm_provider_available:
             logger.warning("LLM provider unreachable at init — disabling LLM classifier")
         self._circuit_breaker = OllamaCircuitBreaker(threshold=3)

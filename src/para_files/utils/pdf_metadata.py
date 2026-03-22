@@ -166,7 +166,7 @@ def _try_pymupdf_metadata(
                     if found_isbn not in seen_isbns:
                         seen_isbns.add(found_isbn)
                         all_isbns.append(found_isbn)
-            except (OSError, ValueError, KeyError):  # noqa: S112
+            except (OSError, ValueError, KeyError):
                 continue
 
         doc.close()
