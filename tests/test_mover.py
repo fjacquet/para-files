@@ -392,6 +392,81 @@ class TestFileHashing:
         # Should return False without computing hash (size check)
         assert files_are_identical(file1, file2) is False
 
+    def test_hash_cache_module_level_dict_exists(self) -> None:
+        """_hash_cache module-level dict exists with correct type annotation."""
+        import para_files.mover as mover_mod
+
+        assert hasattr(mover_mod, "_hash_cache"), "_hash_cache not found in mover module"
+        assert isinstance(mover_mod._hash_cache, dict), "_hash_cache must be a dict"
+
+    def test_hash_cache_hit_on_second_call(self, tmp_path: Path) -> None:
+        """Second call to _compute_file_hash on unchanged file hits cache."""
+        import para_files.mover as mover_mod
+
+        file = tmp_path / "cached.txt"
+        file.write_text("cache test content")
+
+        # Clear cache for isolation
+        mover_mod._hash_cache.clear()
+
+        # First call — populates cache
+        hash1 = _compute_file_hash(file)
+
+        # Cache should now have an entry
+        cache_key = (str(file), file.stat().st_mtime)
+        assert cache_key in mover_mod._hash_cache, "Cache not populated after first call"
+
+        # Second call — should hit cache (same result)
+        hash2 = _compute_file_hash(file)
+        assert hash1 == hash2
+
+    def test_hash_cache_invalidates_on_mtime_change(self, tmp_path: Path) -> None:
+        """After file content changes (new mtime), cache key differs and hash is recomputed."""
+        import para_files.mover as mover_mod
+
+        file = tmp_path / "changing.txt"
+        file.write_text("original content")
+
+        mover_mod._hash_cache.clear()
+        hash1 = _compute_file_hash(file)
+        mtime1 = file.stat().st_mtime
+
+        # Modify file (new mtime)
+        import time
+
+        time.sleep(0.01)  # Ensure different mtime
+        file.write_text("changed content")
+        mtime2 = file.stat().st_mtime
+
+        # mtime must differ for the test to be meaningful
+        assert mtime1 != mtime2 or file.stat().st_size != len("original content".encode()), (
+            "File modification did not produce a different cache key"
+        )
+
+        hash2 = _compute_file_hash(file)
+        assert hash1 != hash2, "Hash should differ after content change"
+
+    def test_hash_cache_shared_across_files_are_identical(self, tmp_path: Path) -> None:
+        """files_are_identical benefits from cache — same file hashed only once."""
+        import para_files.mover as mover_mod
+
+        file1 = tmp_path / "a.bin"
+        file2 = tmp_path / "b.bin"
+        content = b"binary content for cache sharing test"
+        file1.write_bytes(content)
+        file2.write_bytes(content)
+
+        mover_mod._hash_cache.clear()
+
+        result = files_are_identical(file1, file2)
+        assert result is True
+
+        # Both files should now be cached
+        key1 = (str(file1), file1.stat().st_mtime)
+        key2 = (str(file2), file2.stat().st_mtime)
+        assert key1 in mover_mod._hash_cache
+        assert key2 in mover_mod._hash_cache
+
 
 class TestDeduplication:
     """Tests for duplicate file detection and handling."""

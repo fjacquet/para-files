@@ -27,9 +27,13 @@ _MAX_RENAME_ATTEMPTS = 1000
 # Buffer size for file hashing (64KB)
 _HASH_BUFFER_SIZE = 65536
 
+# Cache: (str(path), mtime_float) -> sha256_hex
+# Lives for process lifetime; mtime change naturally invalidates the key.
+_hash_cache: dict[tuple[str, float], str] = {}
+
 
 def _compute_file_hash(file_path: Path) -> str:
-    """Compute SHA256 hash of a file.
+    """Compute SHA256 hash of a file, using cache keyed by path + mtime.
 
     Args:
         file_path: Path to the file to hash.
@@ -37,11 +41,18 @@ def _compute_file_hash(file_path: Path) -> str:
     Returns:
         Hexadecimal hash string.
     """
+    cache_key = (str(file_path), file_path.stat().st_mtime)
+    cached = _hash_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     sha256 = hashlib.sha256()
     with file_path.open("rb") as f:
         while chunk := f.read(_HASH_BUFFER_SIZE):
             sha256.update(chunk)
-    return sha256.hexdigest()
+    result = sha256.hexdigest()
+    _hash_cache[cache_key] = result
+    return result
 
 
 def files_are_identical(file1: Path, file2: Path) -> bool:
