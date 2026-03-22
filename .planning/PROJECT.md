@@ -31,6 +31,12 @@ Files are classified correctly and transparently — users can understand why a 
 - ✓ Placeholder resolution: required vs optional policy (reject on missing issuer/technology) — v1.2 Phase 8
 - ✓ Subprocess extension validation: pandoc/chm allowlists before execution — v1.2 Phase 8
 - ✓ macOS OCR test isolation with platform skip markers — v1.2 Phase 8
+- ✓ Ollama circuit breaker + health check at init (disable semantic/LLM when unreachable) — v1.2 Phase 9
+- ✓ Encoder connection-error short-circuit (no retry loop when Ollama is down) — v1.2 Phase 9
+- ✓ Ctrl+C handling: KeyboardInterrupt caught in classify loop, exits cleanly — v1.2 Phase 9
+- ✓ LLM response parsing hardened: JSON-first, confidence coercion, URL-decode, allowlist — v1.2 Phase 9
+- ✓ LRU embedding cache (500 entries, SHA256 key on first 2000 chars) — v1.2 Phase 9
+- ✓ ISBN error distinction: transient retry vs data error skip — v1.2 Phase 9
 
 ### Active
 
@@ -61,6 +67,8 @@ Files are classified correctly and transparently — users can understand why a 
 - Full cross-platform support — OCR remains macOS-only
 
 ## Context
+
+**v1.2 Phase 9 complete (2026-03-22):** LLM + Service Reliability. Circuit breaker, health check at init, encoder short-circuit on connection errors, clean Ctrl+C, LLM response hardening (JSON-first, confidence coercion, URL-decode, allowlist), LRU embedding cache, ISBN error distinction. 1435 tests passing.
 
 **Shipped v1.1 (2026-03-01):** 7 phases, 16 plans. Pipeline upgraded from 6-signal to 7-signal with `ExtensionRouterClassifier`. New content readers for Excel/ODS/ZIP/7Z. `inbox` command enables one-shot processing of large mixed-type inboxes. Source: ~17,600 LOC Python. Tests: ~16,600 LOC Python.
 
