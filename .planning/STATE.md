@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Reliability & Performance
 status: unknown
-stopped_at: Completed 08-02-PLAN.md
-last_updated: "2026-03-22T15:42:17Z"
+stopped_at: Completed 08-03-PLAN.md
+last_updated: "2026-03-22T16:05:00Z"
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 3
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Project State
@@ -23,8 +23,8 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 
 ## Current Position
 
-Phase: 08 (Foundation Hardening) — EXECUTING
-Plan: 2 of 3
+Phase: 08 (Foundation Hardening) — COMPLETE
+Plan: 3 of 3 (all plans complete)
 
 ## Performance Metrics
 
@@ -48,6 +48,7 @@ Plan: 2 of 3
 *Updated after each plan completion*
 | Phase 08 P01 | 8m | 2 tasks | 4 files |
 | Phase 08 P02 | 29m | 2 tasks | 17 files |
+| Phase 08 P03 | 15m | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -63,6 +64,8 @@ Recent decisions affecting current work:
 - [Phase 08]: test_classifier_exception_handling updated to raise ValueError not bare Exception to reflect narrowed handler (EXC-02)
 - [Phase 08]: ALLOWED_EXTENSIONS in pandoc.py excludes .md/.tex/.latex (read as text directly); exiftool has no extension restriction (EXC-03)
 - [Phase 08]: macos_only marker in conftest.py + tests/ added to pythonpath for conftest import (EXC-04)
+- [Phase 08]: location and country are required placeholders — unresolved = None, not stripped (ERR-04)
+- [Phase 08]: taxonomy_classifier._resolve_pattern return type changed to str | None to propagate placeholder rejection
 
 ### Pending Todos
 
@@ -75,6 +78,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T15:42:17Z
-Stopped at: Completed 08-02-PLAN.md
+Last session: 2026-03-22T16:05:00Z
+Stopped at: Completed 08-03-PLAN.md
 Resume file: None

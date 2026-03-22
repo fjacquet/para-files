@@ -20,7 +20,7 @@ Requirements for Reliability & Performance milestone. Each maps to roadmap phase
 - [x] **ERR-01**: Replace broad `except Exception` (BLE001) in pipeline.py with specific exception types
 - [x] **ERR-02**: Replace broad `except Exception` in classifiers with specific types
 - [x] **ERR-03**: Replace broad `except Exception` in utilities (ocr, pandoc, isbn_lookup) with specific types
-- [ ] **ERR-04**: Placeholder resolution rejects classification when critical placeholders are unresolved (not silent strip)
+- [x] **ERR-04**: Placeholder resolution rejects classification when critical placeholders are unresolved (not silent strip)
 - [x] **ERR-05**: Subprocess calls (exiftool, pandoc, chm) validate file extensions before execution
 
 ### Service Resilience
@@ -58,10 +58,10 @@ Requirements for Reliability & Performance milestone. Each maps to roadmap phase
 ### Test Coverage
 
 - [ ] **TEST-01**: Pipeline tests: classifier order matters, disabled classifiers, partial failures
-- [ ] **TEST-02**: Placeholder resolution tests: missing year, empty issuer, multiple missing, double-slash
+- [x] **TEST-02**: Placeholder resolution tests: missing year, empty issuer, multiple missing, double-slash
 - [ ] **TEST-03**: Concurrent threading tests: thread crash, timeout under load
 - [ ] **TEST-04**: LLM response format tests: string confidence, trailing spaces, nested JSON, incomplete JSON
-- [ ] **TEST-05**: Pandoc integration tests: broken install, timeout, wrong encoding
+- [x] **TEST-05**: Pandoc integration tests: broken install, timeout, wrong encoding
 
 ## Future Requirements
 
@@ -99,7 +99,7 @@ Deferred to v1.3+. Tracked but not in current roadmap.
 | ERR-01 | Phase 8 | Complete |
 | ERR-02 | Phase 8 | Complete |
 | ERR-03 | Phase 8 | Complete |
-| ERR-04 | Phase 8 | Pending |
+| ERR-04 | Phase 8 | Complete |
 | ERR-05 | Phase 8 | Complete |
 | SVC-01 | Phase 9 | Pending |
 | SVC-02 | Phase 9 | Pending |
@@ -119,10 +119,10 @@ Deferred to v1.3+. Tracked but not in current roadmap.
 | DEP-01 | Phase 8 | Deferred (keep semantic-router) |
 | DEP-02 | Phase 8 | Complete |
 | TEST-01 | Phase 11 | Pending |
-| TEST-02 | Phase 8 | Pending |
+| TEST-02 | Phase 8 | Complete |
 | TEST-03 | Phase 11 | Pending |
 | TEST-04 | Phase 9 | Pending |
-| TEST-05 | Phase 8 | Pending |
+| TEST-05 | Phase 8 | Complete |
 
 **Coverage:**
 - v1.2 requirements: 32 total (1 deferred)
