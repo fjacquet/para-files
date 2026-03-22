@@ -394,8 +394,8 @@ class TestLookupIsbn:
         mock_is_isbn13.return_value = True
         mock_to_isbn13.return_value = "9780596517748"
         mock_meta.return_value = {"Title": "Test Book"}
-        mock_desc.side_effect = Exception("API error")
-        mock_cover.side_effect = Exception("API error")
+        mock_desc.side_effect = RuntimeError("API error")
+        mock_cover.side_effect = RuntimeError("API error")
 
         result = lookup_isbn("9780596517748")
 
@@ -451,7 +451,7 @@ class TestLookupIsbn:
         mock_to_isbn13.return_value = "9780596517748"
         # First service fails, second succeeds
         mock_meta.side_effect = [
-            Exception("Google failed"),
+            RuntimeError("Google failed"),
             {"Title": "From Open Library"},
             None,  # Won't be reached
         ]
