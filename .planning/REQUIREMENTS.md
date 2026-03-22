@@ -37,6 +37,7 @@ Requirements for Reliability & Performance milestone. Each maps to roadmap phase
 - [ ] **ACC-02**: Book detector tests: invalid ISBNs, all-zero, IBAN-like patterns
 - [ ] **ACC-03**: Rules engine tests: date extraction edge cases (1989, 2041), pattern shadowing
 - [ ] **ACC-04**: Reference tree YAML validates structure with Pydantic on load (fail fast on invalid)
+- [ ] **ACC-05**: Unclassifiable files (no classifier match) go to `6_unclassified` instead of `0_Inbox`
 
 ### Move Safety
 
@@ -90,43 +91,44 @@ Deferred to v1.3+. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LLM-01 | — | Pending |
-| LLM-02 | — | Pending |
-| LLM-03 | — | Pending |
-| LLM-04 | — | Pending |
-| LLM-05 | — | Pending |
-| ERR-01 | — | Pending |
-| ERR-02 | — | Pending |
-| ERR-03 | — | Pending |
-| ERR-04 | — | Pending |
-| ERR-05 | — | Pending |
-| SVC-01 | — | Pending |
-| SVC-02 | — | Pending |
-| SVC-03 | — | Pending |
-| SVC-04 | — | Pending |
-| SVC-05 | — | Pending |
-| ACC-01 | — | Pending |
-| ACC-02 | — | Pending |
-| ACC-03 | — | Pending |
-| ACC-04 | — | Pending |
-| MOV-01 | — | Pending |
-| MOV-02 | — | Pending |
-| PERF-01 | — | Pending |
-| PERF-02 | — | Pending |
-| PERF-03 | — | Pending |
-| DEP-01 | — | Pending |
-| DEP-02 | — | Pending |
-| TEST-01 | — | Pending |
-| TEST-02 | — | Pending |
-| TEST-03 | — | Pending |
-| TEST-04 | — | Pending |
-| TEST-05 | — | Pending |
+| LLM-01 | Phase 9 | Pending |
+| LLM-02 | Phase 9 | Pending |
+| LLM-03 | Phase 9 | Pending |
+| LLM-04 | Phase 9 | Pending |
+| LLM-05 | Phase 9 | Pending |
+| ERR-01 | Phase 8 | Pending |
+| ERR-02 | Phase 8 | Pending |
+| ERR-03 | Phase 8 | Pending |
+| ERR-04 | Phase 8 | Pending |
+| ERR-05 | Phase 8 | Pending |
+| SVC-01 | Phase 9 | Pending |
+| SVC-02 | Phase 9 | Pending |
+| SVC-03 | Phase 9 | Pending |
+| SVC-04 | Phase 9 | Pending |
+| SVC-05 | Phase 9 | Pending |
+| ACC-01 | Phase 10 | Pending |
+| ACC-02 | Phase 10 | Pending |
+| ACC-03 | Phase 10 | Pending |
+| ACC-04 | Phase 10 | Pending |
+| ACC-05 | Phase 10 | Pending |
+| MOV-01 | Phase 10 | Pending |
+| MOV-02 | Phase 10 | Pending |
+| PERF-01 | Phase 11 | Pending |
+| PERF-02 | Phase 11 | Pending |
+| PERF-03 | Phase 11 | Pending |
+| DEP-01 | Phase 8 | Pending |
+| DEP-02 | Phase 8 | Pending |
+| TEST-01 | Phase 11 | Pending |
+| TEST-02 | Phase 8 | Pending |
+| TEST-03 | Phase 11 | Pending |
+| TEST-04 | Phase 9 | Pending |
+| TEST-05 | Phase 8 | Pending |
 
 **Coverage:**
-- v1.2 requirements: 31 total
-- Mapped to phases: 0
-- Unmapped: 31 ⚠️
+- v1.2 requirements: 32 total
+- Mapped to phases: 32
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-22*
-*Last updated: 2026-03-22 after initial definition*
+*Last updated: 2026-03-22 after roadmap creation*
