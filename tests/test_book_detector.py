@@ -8,7 +8,10 @@ from unittest.mock import patch
 import pytest
 
 from para_files.classifiers.book_detector import (
+    FINANCIAL_EXCLUSION_PATTERNS,
+    MIN_FINANCIAL_PATTERN_MATCHES,
     BookDetector,
+    is_financial_document,
     sanitize_title,
     score_book_structure,
 )
@@ -734,3 +737,256 @@ class TestBookDetectorMobiFiles:
             result = detector.classify("", metadata)
             assert result is not None
             assert result.confidence.source == ClassificationSource.BOOK_DETECTOR
+
+
+class TestBookDetectorFalsePositives:
+    """Tests for false positive prevention in BookDetector.
+
+    French financial PDFs often contain IBAN or other number sequences that
+    resemble ISBNs. These tests verify that the financial exclusion logic
+    runs before ISBN extraction, preventing misclassification.
+    """
+
+    @pytest.fixture
+    def detector(self) -> BookDetector:
+        """Create BookDetector with ISBN lookup enabled."""
+        return BookDetector(enable_isbn_lookup=True)
+
+    def test_iban_containing_pdf_not_classified_as_book(
+        self, detector: BookDetector, tmp_path: Path
+    ) -> None:
+        """PDF with French IBAN and banking keywords must not be classified as a book."""
+        pdf_file = tmp_path / "releve_bancaire_2025.pdf"
+        pdf_file.touch()
+
+        metadata = FileMetadata(
+            path=pdf_file,
+            filename="releve_bancaire_2025.pdf",
+            extension=".pdf",
+            size_bytes=200_000,
+        )
+
+        content = (
+            "BANQUE NATIONALE\n"
+            "IBAN FR76 1234 5678 9012 3456 7890 123\n"
+            "RELEVÉ DE COMPTE\n"
+            "Solde précédent: 1234.56 EUR\n"
+        )
+
+        with patch("para_files.classifiers.book_detector.extract_pdf_metadata") as mock_extract:
+            result = detector.classify(content, metadata)
+            # Financial check runs before PDF extraction — extract_pdf_metadata not called
+            mock_extract.assert_not_called()
+            assert result is None
+
+    def test_financial_doc_with_isbn_like_reference(
+        self, detector: BookDetector, tmp_path: Path
+    ) -> None:
+        """Financial doc containing an ISBN-like 13-digit number must still return None.
+
+        Per CONTEXT decision: is_financial_document() takes absolute precedence.
+        Even if the content has a 13-digit sequence resembling an ISBN, the
+        financial check fires first and returns None.
+        """
+        pdf_file = tmp_path / "releve_bnp_2025.pdf"
+        pdf_file.touch()
+
+        metadata = FileMetadata(
+            path=pdf_file,
+            filename="releve_bnp_2025.pdf",
+            extension=".pdf",
+            size_bytes=150_000,
+        )
+
+        content = (
+            "BANQUE BNP PARIBAS\n"
+            "IBAN FR76 3000 6000 0112 3456 7890 189\n"
+            "Ref: 9782100000001\n"  # 13-digit number that looks like an ISBN
+            "RELEVÉ DE COMPTE au 31/01/2025\n"
+        )
+
+        with patch("para_files.classifiers.book_detector.extract_pdf_metadata") as mock_extract:
+            result = detector.classify(content, metadata)
+            mock_extract.assert_not_called()
+            assert result is None
+
+    def test_real_book_with_valid_isbn_not_blocked(
+        self, detector: BookDetector, tmp_path: Path
+    ) -> None:
+        """A legitimate book PDF with no financial patterns must still classify as a book."""
+        pdf_file = tmp_path / "python_guide.pdf"
+        pdf_file.write_bytes(b"%PDF-1.4\n")
+
+        metadata = FileMetadata(
+            path=pdf_file,
+            filename="python_guide.pdf",
+            extension=".pdf",
+            size_bytes=10_000_000,
+        )
+
+        content = (
+            "Table of Contents\n"
+            "Chapter 1: Introduction to Python\n"
+            "Chapter 2: Variables and Types\n"
+            "ISBN 978-0-13-468599-1\n"
+            "Copyright 2023 by Tech Publishers\n"
+        )
+
+        from para_files.utils.pdf_metadata import PdfMetadata
+
+        mock_pdf_meta = PdfMetadata(
+            title="Python Programming Guide",
+            author="Jane Smith",
+            page_count=350,
+            isbn="9780134685991",
+            isbns=["9780134685991"],
+            file_size_mb=10.0,
+        )
+
+        mock_book_info = BookInfo(
+            title="Python Programming Guide",
+            authors=["Jane Smith"],
+            subjects=["Python", "Programming"],
+            isbn_13="9780134685991",
+        )
+
+        with (
+            patch(
+                "para_files.classifiers.book_detector.extract_pdf_metadata",
+                return_value=mock_pdf_meta,
+            ),
+            patch(
+                "para_files.classifiers.book_detector.find_matching_book_info",
+                return_value=(mock_book_info, "9780134685991"),
+            ),
+        ):
+            result = detector.classify(content, metadata)
+            assert result is not None
+            assert result.confidence.value == 1.0
+            assert "livres" in result.category
+
+    def test_invalid_isbn_all_zeros(self, detector: BookDetector, tmp_path: Path) -> None:
+        """Content with an all-zero ISBN must not crash and should return None or low confidence."""
+        pdf_file = tmp_path / "document_with_zero_isbn.pdf"
+        pdf_file.write_bytes(b"%PDF-1.4\n")
+
+        metadata = FileMetadata(
+            path=pdf_file,
+            filename="document_with_zero_isbn.pdf",
+            extension=".pdf",
+            size_bytes=1_000_000,
+        )
+
+        content = "ISBN: 0000000000000\nSome document content here."
+
+        from para_files.utils.pdf_metadata import PdfMetadata
+
+        mock_pdf_meta = PdfMetadata(
+            title=None,
+            page_count=10,
+            isbns=[],  # Validator filters out all-zero ISBN
+            file_size_mb=1.0,
+        )
+
+        with patch(
+            "para_files.classifiers.book_detector.extract_pdf_metadata",
+            return_value=mock_pdf_meta,
+        ):
+            # Must not raise, must return None (score below threshold)
+            result = detector.classify(content, metadata)
+            assert result is None  # No valid signals → below threshold
+
+    def test_iban_like_pattern_not_treated_as_isbn(
+        self, detector: BookDetector, tmp_path: Path
+    ) -> None:
+        """French IBAN format must not be treated as an ISBN."""
+        pdf_file = tmp_path / "facture_2025_01.pdf"
+        pdf_file.touch()
+
+        metadata = FileMetadata(
+            path=pdf_file,
+            filename="facture_2025_01.pdf",
+            extension=".pdf",
+            size_bytes=80_000,
+        )
+
+        content = (
+            "FACTURE\n"
+            "IBAN: FR76 3000 6000 0112 3456 7890 189\n"
+            "BIC: BNPAFRPPXXX\n"
+            "Montant: 125.00 EUR\n"
+        )
+
+        with patch("para_files.classifiers.book_detector.extract_pdf_metadata") as mock_extract:
+            result = detector.classify(content, metadata)
+            mock_extract.assert_not_called()
+            assert result is None
+
+    def test_swiss_iban_pattern_excluded(self, detector: BookDetector, tmp_path: Path) -> None:
+        """Swiss IBAN format in a financial document must be excluded from book detection."""
+        pdf_file = tmp_path / "extrait_ubs_2025.pdf"
+        pdf_file.touch()
+
+        metadata = FileMetadata(
+            path=pdf_file,
+            filename="extrait_ubs_2025.pdf",
+            extension=".pdf",
+            size_bytes=120_000,
+        )
+
+        content = (
+            "UBS Switzerland AG\n"
+            "CH93 0076 2011 6238 5295 7\n"
+            "EXTRAIT DE COMPTE\n"
+            "Solde: CHF 5432.10\n"
+        )
+
+        with patch("para_files.classifiers.book_detector.extract_pdf_metadata") as mock_extract:
+            result = detector.classify(content, metadata)
+            mock_extract.assert_not_called()
+            assert result is None
+
+    def test_is_financial_document_minimum_threshold(self) -> None:
+        """Content matching exactly 1 FINANCIAL_EXCLUSION_PATTERN must return False.
+
+        MIN_FINANCIAL_PATTERN_MATCHES = 2, so a single match is not enough.
+        """
+        # Only one pattern: IBAN keyword alone (no BANQUE, no FACTURE, etc.)
+        content = "IBAN is used for international transfers."
+        # Ensure only 1 pattern matches
+        matches = sum(1 for p in FINANCIAL_EXCLUSION_PATTERNS if p.search(content))
+        assert matches == 1, f"Expected 1 match, got {matches}"
+
+        result = is_financial_document(content, "document.pdf")
+        assert result is False
+
+    def test_is_financial_document_at_threshold(self) -> None:
+        """Content matching exactly MIN_FINANCIAL_PATTERN_MATCHES patterns must return True."""
+        # Two patterns: IBAN + BANQUE
+        content = "IBAN FR76 1234 5678 9012 3456 7890 123\nBANQUE NATIONALE"
+        matches = sum(1 for p in FINANCIAL_EXCLUSION_PATTERNS if p.search(content))
+        assert matches >= MIN_FINANCIAL_PATTERN_MATCHES, (
+            f"Expected >= {MIN_FINANCIAL_PATTERN_MATCHES} matches, got {matches}"
+        )
+
+        result = is_financial_document(content, "document.pdf")
+        assert result is True
+
+    def test_is_financial_document_filename_match(self) -> None:
+        """Filename containing a financial keyword must return True regardless of content."""
+        result = is_financial_document("", "facture_2025.pdf")
+        assert result is True
+
+    def test_is_financial_document_content_match(self) -> None:
+        """Content with IBAN + BANQUE must return True."""
+        content = "IBAN FR76 0000 0000 0000 0000 000\nBANQUE DU SUD\n"
+        result = is_financial_document(content, "document.pdf")
+        assert result is True
+
+    def test_is_financial_document_below_threshold(self) -> None:
+        """Content with only 1 financial pattern match must return False."""
+        # Just the word BANK but nothing else financial
+        content = "The BANK of tomorrow will be digital."
+        result = is_financial_document(content, "my_notes.pdf")
+        # Matches: BANK (1 match) — below threshold of 2
+        assert result is False
