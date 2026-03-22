@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from para_files.classifiers.rules_engine import (
@@ -18,9 +19,9 @@ from para_files.types import ClassificationSource, FileMetadata, RoutingRule, Ru
 from para_files.utils.placeholder_resolver import clean_unreplaced_placeholders
 
 
-def make_metadata(**kwargs: object) -> FileMetadata:
+def make_metadata(**kwargs: Any) -> FileMetadata:
     """Helper to create FileMetadata with required defaults."""
-    defaults: dict[str, object] = {
+    defaults: dict[str, Any] = {
         "path": Path("/test/file.txt"),
         "filename": "file.txt",
         "extension": ".txt",
@@ -324,6 +325,7 @@ class TestCreateResult:
             extension=".jpg",
         )
         result = classifier._create_result("photos", rule, metadata)
+        assert result is not None
         assert result.category == "1_Projects/photos"
         assert result.route_name == "photos"
         assert result.confidence.value == 0.95
@@ -342,6 +344,7 @@ class TestCreateResult:
             modified_at=datetime(2024, 6, 15, tzinfo=UTC),
         )
         result = classifier._create_result("photos", rule, metadata)
+        assert result is not None
         assert "2024" in result.category
         assert "06" in result.category
         assert result.extracted_params.get("YYYY") == "2024"
@@ -359,6 +362,7 @@ class TestCreateResult:
             extension=".mp4",
         )
         result = classifier._create_result("courses", rule, metadata, platform="Udemy")
+        assert result is not None
         assert "Udemy" in result.category
         assert result.extracted_params.get("platform") == "Udemy"
 
@@ -385,6 +389,7 @@ class TestCreateResult:
             exif_gps_lon=6.6323,
         )
         result = classifier._create_result("photos", rule, metadata)
+        assert result is not None
         assert "Switzerland" in result.category
         assert "Lausanne" in result.category
         assert result.extracted_params.get("country") == "Switzerland"
@@ -413,6 +418,7 @@ class TestCreateResult:
             exif_gps_lon=6.6323,
         )
         result = classifier._create_result("photos", rule, metadata)
+        assert result is not None
         assert "Valais" in result.category
 
     def test_result_with_technology_from_filename(self) -> None:
@@ -427,6 +433,7 @@ class TestCreateResult:
             extension=".pdf",
         )
         result = classifier._create_result("tech", rule, metadata)
+        assert result is not None
         assert "Kubernetes" in result.category
         assert result.extracted_params.get("technology") == "Kubernetes"
 
@@ -448,6 +455,7 @@ class TestCreateResult:
             extension=".pdf",
         )
         result = classifier._create_result("tech", rule, metadata, content="Docker containers")
+        assert result is not None
         assert "Docker" in result.category
 
     @patch("para_files.classifiers.rules_engine.TechnologyExtractor")
@@ -468,6 +476,7 @@ class TestCreateResult:
             extension=".pdf",
         )
         result = classifier._create_result("tech", rule, metadata, content="random content")
+        assert result is not None
         assert "misc" in result.category
 
     def test_result_with_issuer_extraction(self) -> None:
@@ -486,6 +495,7 @@ class TestCreateResult:
             extension=".pdf",
         )
         result = classifier._create_result("banking", rule, metadata, content="UBS Statement 2024")
+        assert result is not None
         assert "UBS" in result.category
         assert result.extracted_params.get("issuer") == "UBS"
 
@@ -506,6 +516,7 @@ class TestCreateResult:
         result = classifier._create_result(
             "banking", rule, metadata, content="Random Bank Statement"
         )
+        assert result is not None
         assert "unknown" in result.category
 
 
