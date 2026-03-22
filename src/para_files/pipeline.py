@@ -48,6 +48,10 @@ if TYPE_CHECKING:
 # Minimum content length required for OCR-based renaming
 _MIN_CONTENT_FOR_RENAME = 50
 
+# Default category for files no classifier can match.
+# Distinct from 0_Inbox which is for user-placed files awaiting triage.
+DEFAULT_UNCLASSIFIED_CATEGORY = "6_unclassified"
+
 
 class ClassificationPipeline:
     """Orchestrates 6-signal classification cascade (v2.2).
@@ -60,7 +64,7 @@ class ClassificationPipeline:
     5. Extension Router (97%) - Deterministic routing by file extension
     6. LLM Fallback (60%) - Optional LLM via litellm/Ollama
 
-    First match wins. If nothing matches, returns default 0_Inbox.
+    First match wins. If nothing matches, returns default 6_unclassified.
     """
 
     def __init__(self, config: Config) -> None:
@@ -237,7 +241,7 @@ class ClassificationPipeline:
         """Classify content through the pipeline.
 
         Tries each classifier in priority order until one succeeds.
-        Returns default 0_Inbox if no classifier matches.
+        Returns default 6_unclassified if no classifier matches.
 
         Args:
             content: Text content to classify.
@@ -347,10 +351,10 @@ class ClassificationPipeline:
         if winner is not None:
             return winner.model_copy(update={"signals": signals})
 
-        # Default to 0_Inbox
-        logger.debug("No classifier matched, defaulting to 0_Inbox")
+        # Default to 6_unclassified (not 0_Inbox -- that's for user-placed files)
+        logger.debug("No classifier matched, defaulting to {}", DEFAULT_UNCLASSIFIED_CATEGORY)
         return ClassificationResult(
-            category="0_Inbox",
+            category=DEFAULT_UNCLASSIFIED_CATEGORY,
             confidence=Confidence(
                 value=0.0,
                 source=ClassificationSource.DEFAULT,

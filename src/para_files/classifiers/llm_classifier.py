@@ -26,7 +26,14 @@ from para_files.types import (
 
 
 # Valid PARA top-level prefixes for output validation
-_VALID_PARA_PREFIXES = ("0_Inbox", "1_Projects", "2_Areas", "3_Resources", "4_Archives")
+_VALID_PARA_PREFIXES = (
+    "0_Inbox",
+    "1_Projects",
+    "2_Areas",
+    "3_Resources",
+    "4_Archives",
+    "6_unclassified",
+)
 
 
 def _build_system_prompt(valid_categories: list[str]) -> str:
@@ -381,9 +388,10 @@ class LLMClassifier(BaseClassifier):
         if not sanitized:
             return None
 
-        # Reject 0_Inbox — LLM is admitting it can't classify; let pipeline DEFAULT handle it
-        if sanitized == "0_Inbox":
-            logger.debug("LLM returned 0_Inbox (uncertain), deferring to pipeline default")
+        # Reject 0_Inbox / 6_unclassified — LLM is admitting it can't classify;
+        # let pipeline DEFAULT handle routing to 6_unclassified
+        if sanitized in ("0_Inbox", "6_unclassified"):
+            logger.debug("LLM returned {} (uncertain), deferring to pipeline default", sanitized)
             return None
 
         if confidence < self._confidence_threshold:

@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from para_files.config import Config
-from para_files.pipeline import ClassificationPipeline
+from para_files.pipeline import DEFAULT_UNCLASSIFIED_CATEGORY, ClassificationPipeline
 from para_files.types import (
     ClassificationResult,
     ClassificationSource,
@@ -71,21 +71,16 @@ class TestClassificationPipeline:
         # TaxonomyClassifier should be present
         assert "TaxonomyClassifier" in classifier_names
 
-    def test_classify_returns_inbox_when_no_match(self, mock_config: Config):
-        """Test that classify returns 0_Inbox when nothing matches.
+    def test_classify_returns_unclassified_when_no_match(self, mock_config: Config):
+        """Test that classify returns 6_unclassified when nothing matches.
 
-        With LLM enabled, the LLM may classify to 0_Inbox with llm_fallback source.
-        With LLM disabled, falls through to default source.
+        With LLM disabled (mocked), falls through to default source.
         """
         pipeline = ClassificationPipeline(mock_config)
         result = pipeline.classify("random content that matches nothing specific")
 
-        assert result.category == "0_Inbox"
-        # LLM may catch this and classify as 0_Inbox (llm_fallback) or it falls to default
-        assert result.confidence.source in (
-            ClassificationSource.DEFAULT,
-            ClassificationSource.LLM_FALLBACK,
-        )
+        assert result.category == DEFAULT_UNCLASSIFIED_CATEGORY
+        assert result.confidence.source == ClassificationSource.DEFAULT
 
     def test_classify_with_taxonomy_issuer_match(self, mock_config: Config):
         """Test classification with TaxonomyClassifier issuer match (v2.0)."""
@@ -199,7 +194,7 @@ class TestClassificationPipeline:
         assert passing.classify.call_count == 1
 
     def test_pipeline_returns_default_when_only_classifier_fails(self, mock_config: Config):
-        """Test that pipeline returns 0_Inbox when the only classifier raises."""
+        """Test that pipeline returns 6_unclassified when the only classifier raises."""
         pipeline = ClassificationPipeline(mock_config)
         pipeline._ensure_initialized()
 
@@ -211,12 +206,12 @@ class TestClassificationPipeline:
 
         result = pipeline.classify("any content")
 
-        assert result.category == "0_Inbox"
+        assert result.category == DEFAULT_UNCLASSIFIED_CATEGORY
         assert result.confidence.source == ClassificationSource.DEFAULT
         assert result.confidence.value == 0.0
 
     def test_pipeline_returns_default_when_all_classifiers_fail(self, mock_config: Config):
-        """Test that pipeline returns 0_Inbox when all classifiers raise, without crashing."""
+        """Test that pipeline returns 6_unclassified when all classifiers raise, without crashing."""
         pipeline = ClassificationPipeline(mock_config)
         pipeline._ensure_initialized()
 
@@ -236,7 +231,7 @@ class TestClassificationPipeline:
 
         result = pipeline.classify("any content")
 
-        assert result.category == "0_Inbox"
+        assert result.category == DEFAULT_UNCLASSIFIED_CATEGORY
         assert result.confidence.source == ClassificationSource.DEFAULT
         assert failing_1.classify.call_count == 1
         assert failing_2.classify.call_count == 1
@@ -312,3 +307,25 @@ class TestClassificationPipelineIntegration:
         assert result is not None
         if result.confidence.source == ClassificationSource.TAXONOMY_CLASSIFIER:
             assert "UBS" in result.category or "banque" in result.category.lower()
+
+
+class TestDefaultUnclassifiedCategory:
+    """Tests for the DEFAULT_UNCLASSIFIED_CATEGORY constant and pipeline default behavior."""
+
+    def test_default_unclassified_category_constant(self):
+        """DEFAULT_UNCLASSIFIED_CATEGORY must equal '6_unclassified'."""
+        assert DEFAULT_UNCLASSIFIED_CATEGORY == "6_unclassified"
+
+    def test_no_match_returns_unclassified(self, mock_config: Config):
+        """Pipeline returns 6_unclassified when no classifiers are present."""
+        pipeline = ClassificationPipeline(mock_config)
+        pipeline._ensure_initialized()
+
+        # Replace all classifiers with empty list — nothing can match
+        pipeline._classifiers = []
+
+        result = pipeline.classify("some content")
+
+        assert result.category == "6_unclassified"
+        assert result.confidence.source == ClassificationSource.DEFAULT
+        assert result.confidence.value == 0.0
