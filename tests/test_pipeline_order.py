@@ -4,8 +4,6 @@ from __future__ import annotations
 import threading
 from unittest.mock import MagicMock
 
-import pytest
-
 from para_files.pipeline import ClassificationPipeline
 from para_files.types import ClassificationResult, ClassificationSource, Confidence
 
