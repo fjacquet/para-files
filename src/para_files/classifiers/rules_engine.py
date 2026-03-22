@@ -172,7 +172,7 @@ class RulesEngineClassifier(BaseClassifier):
         metadata: FileMetadata,
         platform: str | None = None,
         content: str | None = None,
-    ) -> ClassificationResult:
+    ) -> ClassificationResult | None:
         """Create classification result from matched rule.
 
         Args:
@@ -251,11 +251,13 @@ class RulesEngineClassifier(BaseClassifier):
         for key, value in params.items():
             category = category.replace(f"{{{key}}}", value)
 
-        # Clean up unreplaced placeholders
-        category = clean_unreplaced_placeholders(category)
+        # Clean up unreplaced placeholders (None means required placeholder missing)
+        cleaned_category = clean_unreplaced_placeholders(category)
+        if cleaned_category is None:
+            return None
 
         return ClassificationResult(
-            category=category,
+            category=cleaned_category,
             confidence=Confidence(
                 value=self.default_confidence,
                 source=self.source,

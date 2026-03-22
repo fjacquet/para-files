@@ -13,6 +13,8 @@ from difflib import SequenceMatcher
 from functools import lru_cache
 from typing import TYPE_CHECKING, ClassVar
 
+from loguru import logger
+
 from para_files.classifiers.base import BaseClassifier
 from para_files.taxonomies.loader import TaxonomyLoader, get_taxonomy_loader
 from para_files.types import (
@@ -441,7 +443,7 @@ class TaxonomyClassifier(BaseClassifier):
         year: str | None = None,
         metadata: FileMetadata | None = None,
         retention: str | None = None,
-    ) -> str:
+    ) -> str | None:
         """Resolve placeholders in para_pattern and inject retention suffix.
 
         Placeholders:
@@ -502,9 +504,13 @@ class TaxonomyClassifier(BaseClassifier):
             result = result.replace("{day}", f"{date.day:02d}")
             result = result.replace("{DD}", f"{date.day:02d}")
 
-        return clean_unreplaced_placeholders(result)
+        cleaned = clean_unreplaced_placeholders(result)
+        if cleaned is None:
+            logger.warning("Placeholder resolution failed for taxonomy match: {}", result)
+            return None
+        return cleaned
 
-    def classify(
+    def classify(  # noqa: PLR0911
         self,
         content: str,
         metadata: FileMetadata | None = None,
@@ -537,6 +543,8 @@ class TaxonomyClassifier(BaseClassifier):
                 metadata=metadata,
                 retention=doc_type.retention,
             )
+            if resolved_path is None:
+                return None
 
             return ClassificationResult(
                 category=resolved_path,
@@ -570,6 +578,8 @@ class TaxonomyClassifier(BaseClassifier):
                 metadata=metadata,
                 retention=doc_type.retention,
             )
+            if resolved_path is None:
+                return None
 
             return ClassificationResult(
                 category=resolved_path,
@@ -604,6 +614,8 @@ class TaxonomyClassifier(BaseClassifier):
                 metadata=metadata,
                 retention=doc_type.retention,
             )
+            if resolved_path is None:
+                return None
 
             # Confidence = base issuer confidence * fuzzy multiplier * similarity
             fuzzy_confidence = (

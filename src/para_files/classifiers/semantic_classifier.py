@@ -72,7 +72,7 @@ def _extract_year(content: str, metadata: FileMetadata | None) -> str | None:
     return None
 
 
-def _resolve_pattern(para_pattern: str, extracted_params: dict[str, str]) -> str:
+def _resolve_pattern(para_pattern: str, extracted_params: dict[str, str]) -> str | None:
     """Resolve a para_pattern by replacing placeholders.
 
     Args:
@@ -80,13 +80,17 @@ def _resolve_pattern(para_pattern: str, extracted_params: dict[str, str]) -> str
         extracted_params: Dict of extracted values.
 
     Returns:
-        Resolved path string.
+        Resolved path string, or None if required placeholders remain unresolved.
     """
     category_path = para_pattern
     for key, value in extracted_params.items():
         category_path = category_path.replace(f"{{{key}}}", value)
 
-    return clean_unreplaced_placeholders(category_path)
+    result = clean_unreplaced_placeholders(category_path)
+    if result is None:
+        logger.warning("Placeholder resolution failed for semantic match: {}", category_path)
+        return None
+    return result
 
 
 class SemanticClassifier(BaseClassifier):
@@ -358,6 +362,8 @@ class SemanticClassifier(BaseClassifier):
 
         # Calculate final category path
         category_path = _resolve_pattern(para_pattern, extracted_params)
+        if category_path is None:
+            return None
 
         # Adjust confidence based on similarity
         adjusted_confidence = self.default_confidence * best_similarity

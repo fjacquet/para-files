@@ -510,22 +510,26 @@ class TestCreateResult:
 
 
 class TestCleanUnreplacedLocation:
-    """Test clean_unreplaced_placeholders for location placeholders."""
+    """Test clean_unreplaced_placeholders for location placeholders.
 
-    def test_removes_location_placeholder(self) -> None:
-        """Test removes {location} placeholder."""
+    Since location and country are required placeholders, unresolved paths
+    are rejected (return None) rather than silently stripped.
+    """
+
+    def test_rejects_unresolved_location_placeholder(self) -> None:
+        """Test that unresolved {location} causes rejection (required placeholder)."""
         result = clean_unreplaced_placeholders("photos/{location}/2024")
-        assert result == "photos/2024"
+        assert result is None
 
-    def test_removes_country_placeholder(self) -> None:
-        """Test removes {country} placeholder."""
+    def test_rejects_unresolved_country_placeholder(self) -> None:
+        """Test that unresolved {country} causes rejection (required placeholder)."""
         result = clean_unreplaced_placeholders("photos/{country}/2024")
-        assert result == "photos/2024"
+        assert result is None
 
-    def test_removes_both_placeholders(self) -> None:
-        """Test removes both {country} and {location}."""
+    def test_rejects_both_unresolved_placeholders(self) -> None:
+        """Test that unresolved {country} and {location} both cause rejection."""
         result = clean_unreplaced_placeholders("photos/{country}/{location}/2024")
-        assert result == "photos/2024"
+        assert result is None
 
     def test_cleans_double_slashes(self) -> None:
         """Test cleans up double slashes."""
