@@ -87,7 +87,7 @@ def test_crashing_worker_others_succeed(tmp_path: Path) -> None:
 
     mock_pipeline.classify_file.side_effect = crash_on_specific_file
 
-    _results, _source_dirs, success_count, skip_count, fail_count = _move_files_parallel(
+    *_, success_count, skip_count, fail_count = _move_files_parallel(
         expanded_files=files,
         pipeline=mock_pipeline,
         max_workers=2,
@@ -105,7 +105,7 @@ def test_load_ten_files_no_silent_losses(tmp_path: Path) -> None:
     files = _create_files(tmp_path, 10)
     mock_pipeline = _build_mock_pipeline(tmp_path)
 
-    _results, _source_dirs, success_count, skip_count, fail_count = _move_files_parallel(
+    *_, success_count, skip_count, fail_count = _move_files_parallel(
         expanded_files=files,
         pipeline=mock_pipeline,
         max_workers=4,
@@ -123,14 +123,14 @@ def test_single_vs_parallel_same_results(tmp_path: Path) -> None:
     files = _create_files(tmp_path, 6)
     mock_pipeline = _build_mock_pipeline(tmp_path)
 
-    seq_results, seq_success, seq_skip, seq_fail = _move_files_sequential(
+    _, seq_success, seq_skip, seq_fail = _move_files_sequential(
         expanded_files=files,
         pipeline=mock_pipeline,
         source_dirs=set(),
         **_SEQUENTIAL_KWARGS,
     )
 
-    par_results, _source_dirs, par_success, par_skip, par_fail = _move_files_parallel(
+    *_, par_success, par_skip, par_fail = _move_files_parallel(
         expanded_files=files,
         pipeline=mock_pipeline,
         max_workers=4,

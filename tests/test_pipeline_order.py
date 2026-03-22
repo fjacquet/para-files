@@ -50,15 +50,15 @@ def test_classifier_order_respected() -> None:
     """Classifiers run in registration order (A then B then C)."""
     call_order: list[str] = []
 
-    def side_effect_a(content: str, metadata: object = None) -> ClassificationResult | None:
+    def side_effect_a(_content: str, _metadata: object = None) -> ClassificationResult | None:
         call_order.append("A")
         return None
 
-    def side_effect_b(content: str, metadata: object = None) -> ClassificationResult | None:
+    def side_effect_b(_content: str, _metadata: object = None) -> ClassificationResult | None:
         call_order.append("B")
         return None
 
-    def side_effect_c(content: str, metadata: object = None) -> ClassificationResult | None:
+    def side_effect_c(_content: str, _metadata: object = None) -> ClassificationResult | None:
         call_order.append("C")
         return _make_result("3_Resources/test")
 
