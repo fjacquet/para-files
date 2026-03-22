@@ -108,6 +108,7 @@ class LLMClassifier(BaseClassifier):
         content_preview_chars: int = DEFAULT_CONTENT_PREVIEW_CHARS,
         max_tokens: int = 256,
         api_base: str | None = None,
+        api_key: str | None = None,
         valid_categories: list[str] | None = None,
         timeout: float = 15.0,
     ) -> None:
@@ -120,6 +121,7 @@ class LLMClassifier(BaseClassifier):
             content_preview_chars: Max characters of content to send.
             max_tokens: Maximum tokens to generate.
             api_base: API base URL for Ollama or other providers.
+            api_key: API key for cloud LLM providers (e.g., OpenRouter).
             valid_categories: List of valid PARA category paths from the taxonomy.
             timeout: Request timeout in seconds.
         """
@@ -129,6 +131,7 @@ class LLMClassifier(BaseClassifier):
         self._content_preview_chars = content_preview_chars
         self._max_tokens = max_tokens
         self._api_base = api_base
+        self._api_key = api_key
         self._timeout = timeout
         self._valid_categories = set(valid_categories or [])
         self._system_prompt = _build_system_prompt(valid_categories or [])
@@ -196,10 +199,12 @@ class LLMClassifier(BaseClassifier):
         # Build user message
         user_message = self._build_user_message(content, metadata)
 
-        # Build optional kwargs for api_base
+        # Build optional kwargs for api_base and api_key
         kwargs: dict[str, Any] = {}
         if self._api_base:
             kwargs["api_base"] = self._api_base
+        if self._api_key:
+            kwargs["api_key"] = self._api_key
 
         try:
             response = litellm.completion(

@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 
 from loguru import logger
 
+from para_files.circuit_breaker import OllamaCircuitBreaker, check_ollama_health
 from para_files.classifiers.book_detector import BookDetector
 from para_files.classifiers.extension_router import ExtensionRouterClassifier
 from para_files.classifiers.llm_classifier import LLMClassifier
@@ -73,6 +74,7 @@ class ClassificationPipeline:
         self._reference_tree: ReferenceTree | None = None
         self._initialized = False
         self._init_lock = threading.Lock()
+        self._circuit_breaker: OllamaCircuitBreaker | None = None
 
     def _ensure_initialized(self) -> None:
         """Lazily initialize classifiers on first use (thread-safe)."""
@@ -111,9 +113,18 @@ class ClassificationPipeline:
         taxonomy_classifier = TaxonomyClassifier(loader=taxonomy_loader)
         self._classifiers.append(taxonomy_classifier)
 
+        # Health check: probe Ollama before enabling Ollama-dependent classifiers
+        ollama_available = check_ollama_health(
+            api_base=self._config.llm.api_base or "http://localhost:11434",
+            timeout=3.0,
+        )
+        if not ollama_available:
+            logger.warning("Ollama unreachable at init — disabling semantic and LLM classifiers")
+        self._circuit_breaker = OllamaCircuitBreaker(threshold=3)
+
         # Signal 4: Semantic Classifier (85%) - MLX embedding similarity
         # Uses pre-computed embeddings for category descriptions
-        if self._config.mlx.semantic_enabled:
+        if self._config.mlx.semantic_enabled and ollama_available:
             semantic_classifier = SemanticClassifier(
                 loader=taxonomy_loader,
                 confidence_threshold=self._config.mlx.semantic_threshold,
@@ -127,7 +138,7 @@ class ClassificationPipeline:
         self._classifiers.append(extension_router)
 
         # Signal 6: LLM Fallback (configurable via PARA_FILES_LLM_* env vars)
-        if self._config.llm.enabled:
+        if self._config.llm.enabled and ollama_available:
             valid_categories = self._get_valid_categories(taxonomy_loader)
             llm = LLMClassifier(
                 enabled=True,
@@ -135,6 +146,7 @@ class ClassificationPipeline:
                 confidence_threshold=self._config.llm.confidence_threshold,
                 content_preview_chars=self._config.content_preview_chars,
                 api_base=self._config.llm.api_base,
+                api_key=self._config.llm.api_key,
                 valid_categories=valid_categories,
                 timeout=self._config.llm.timeout,
             )
@@ -240,51 +252,85 @@ class ClassificationPipeline:
         winner: ClassificationResult | None = None
         winner_idx: int = len(self._classifiers)
 
+        # Classifier names that use Ollama (circuit-breaker guarded)
+        _ollama_classifiers = frozenset({"SemanticClassifier", "llm"})
+
         # Run classifiers in priority order; stop after first match
-        for idx, classifier in enumerate(self._classifiers):
-            signal_source = self._get_signal_source(classifier)
-            try:
-                result = classifier.classify(content, metadata)
-                if result is not None:
+        try:
+            for idx, classifier in enumerate(self._classifiers):
+                # Skip Ollama-dependent classifiers when circuit breaker is open
+                if (
+                    self._circuit_breaker
+                    and self._circuit_breaker.is_open
+                    and classifier.name in _ollama_classifiers
+                ):
+                    signal_source = self._get_signal_source(classifier)
                     signals.append(
                         SignalResult(
                             source=signal_source,
                             name=classifier.name,
-                            score=result.confidence.value,
-                            matched=True,
+                            score=0.0,
+                            matched=False,
+                            skipped=True,
                         )
                     )
-                    winner = result
-                    winner_idx = idx
-                    logger.debug(
-                        "Classified by {}: {} ({:.0f}%)",
-                        classifier.name,
-                        result.category,
-                        result.confidence.value * 100,
+                    continue
+
+                signal_source = self._get_signal_source(classifier)
+                try:
+                    result = classifier.classify(content, metadata)
+                    if result is not None:
+                        if (
+                            self._circuit_breaker
+                            and classifier.name in _ollama_classifiers
+                        ):
+                            self._circuit_breaker.record_success()
+                        signals.append(
+                            SignalResult(
+                                source=signal_source,
+                                name=classifier.name,
+                                score=result.confidence.value,
+                                matched=True,
+                            )
+                        )
+                        winner = result
+                        winner_idx = idx
+                        logger.debug(
+                            "Classified by {}: {} ({:.0f}%)",
+                            classifier.name,
+                            result.category,
+                            result.confidence.value * 100,
+                        )
+                        break
+                    signals.append(
+                        SignalResult(
+                            source=signal_source,
+                            name=classifier.name,
+                            score=0.0,
+                            matched=False,
+                        )
                     )
-                    break
-                signals.append(
-                    SignalResult(
-                        source=signal_source,
-                        name=classifier.name,
-                        score=0.0,
-                        matched=False,
+                except (
+                    ValueError, TypeError, KeyError, AttributeError,
+                    ConnectionError, TimeoutError, OSError,
+                    json.JSONDecodeError, RuntimeError,
+                ) as e:
+                    if (
+                        self._circuit_breaker
+                        and classifier.name in _ollama_classifiers
+                    ):
+                        self._circuit_breaker.record_failure()
+                    logger.exception("Classifier {} failed: {}", classifier.name, e)
+                    signals.append(
+                        SignalResult(
+                            source=signal_source,
+                            name=classifier.name,
+                            score=0.0,
+                            matched=False,
+                        )
                     )
-                )
-            except (
-                ValueError, TypeError, KeyError, AttributeError,
-                ConnectionError, TimeoutError, OSError,
-                json.JSONDecodeError, RuntimeError,
-            ) as e:
-                logger.exception("Classifier {} failed: {}", classifier.name, e)
-                signals.append(
-                    SignalResult(
-                        source=signal_source,
-                        name=classifier.name,
-                        score=0.0,
-                        matched=False,
-                    )
-                )
+        except KeyboardInterrupt:
+            logger.info("Classification interrupted by user (Ctrl+C)")
 
         # Record skipped classifiers for verbose display
         signals.extend(

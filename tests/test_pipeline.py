@@ -17,6 +17,17 @@ from para_files.types import (
 )
 
 
+@pytest.fixture(autouse=True)
+def mock_ollama_health() -> MagicMock:
+    """Patch check_ollama_health to return False in all pipeline tests.
+
+    Prevents tests from connecting to a live Ollama server and avoids
+    adding SemanticClassifier / LLMClassifier to the pipeline under test.
+    """
+    with patch("para_files.pipeline.check_ollama_health", return_value=False) as mock_health:
+        yield mock_health
+
+
 @pytest.fixture
 def mock_config(tmp_path: Path, fixtures_dir: Path) -> Config:
     """Create a test configuration."""

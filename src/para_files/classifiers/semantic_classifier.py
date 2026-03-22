@@ -213,7 +213,13 @@ class SemanticClassifier(BaseClassifier):
 
         # Compute embeddings for all categories
         logger.info("Computing embeddings for {} document types...", len(texts_to_embed))
-        embeddings = self._encoder.encode_batch(texts_to_embed, batch_size=32)
+        try:
+            embeddings = self._encoder.encode_batch(texts_to_embed, batch_size=32)
+        except KeyboardInterrupt:
+            logger.info("SemanticClassifier init interrupted — disabling")
+            self._enabled = False
+            self._initialized = True
+            return
 
         # Store embeddings
         for key, embedding in zip(category_keys, embeddings, strict=True):
