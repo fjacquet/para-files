@@ -216,3 +216,29 @@ class TestPandocHappyPath:
         assert result.text == "Extracted document content."
         assert result.char_count > 0
         assert result.word_count > 0
+
+
+class TestPandocWrongEncoding:
+    """Tests for pandoc behavior with encoding errors."""
+
+    def test_extract_text_unicode_decode_error(self) -> None:
+        """Test that extract_text handles UnicodeDecodeError from pandoc output."""
+        test_file = Path("/test/doc.docx")
+        with (
+            patch("para_files.utils.pandoc.is_pandoc_available", return_value=True),
+            patch("para_files.utils.pandoc.subprocess.run") as mock_run,
+        ):
+            mock_run.side_effect = UnicodeDecodeError("utf-8", b"\xff\xfe", 0, 1, "invalid")
+            result = extract_text(test_file)
+        assert result is None
+
+    def test_extract_metadata_unicode_decode_error(self) -> None:
+        """Test that extract_metadata handles UnicodeDecodeError from pandoc output."""
+        test_file = Path("/test/doc.docx")
+        with (
+            patch("para_files.utils.pandoc.is_pandoc_available", return_value=True),
+            patch("para_files.utils.pandoc.subprocess.run") as mock_run,
+        ):
+            mock_run.side_effect = UnicodeDecodeError("utf-8", b"\xff\xfe", 0, 1, "invalid")
+            result = extract_metadata(test_file)
+        assert result is None

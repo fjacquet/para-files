@@ -133,7 +133,7 @@ def _run_pandoc_to_plain(file_path: Path, fmt: str) -> str | None:
     except subprocess.TimeoutExpired:
         logger.warning("pandoc timed out for: {}", file_path)
         return None
-    except (subprocess.SubprocessError, FileNotFoundError, OSError) as e:
+    except (subprocess.SubprocessError, FileNotFoundError, OSError, UnicodeDecodeError) as e:
         logger.exception("Failed to extract text with pandoc from: {} ({})", file_path, e)
         return None
 
@@ -236,7 +236,7 @@ def extract_metadata(file_path: Path) -> dict[str, str] | None:
     except subprocess.TimeoutExpired:
         logger.warning("pandoc metadata extraction timed out for: {}", file_path)
         return None
-    except (subprocess.SubprocessError, FileNotFoundError, OSError) as e:
+    except (subprocess.SubprocessError, FileNotFoundError, OSError, UnicodeDecodeError) as e:
         logger.exception("Failed to extract metadata with pandoc from: {} ({})", file_path, e)
         return None
 
