@@ -38,6 +38,10 @@ if TYPE_CHECKING:
     from para_files.types import ClassificationResult
 
 
+# Skip thread pool for small batches — overhead exceeds benefit below this count
+SINGLE_THREAD_THRESHOLD = 5
+
+
 def _format_move_result_json(
     file_path: Path,
     result: ClassificationResult,
@@ -618,7 +622,14 @@ def move(
     )
 
     # Use parallel or sequential processing based on max_workers
-    if max_workers > 1 and len(expanded_files) > 1:
+    if max_workers > 1 and len(expanded_files) < SINGLE_THREAD_THRESHOLD:
+        if verbose:
+            typer.echo(
+                f"Processing {len(expanded_files)} file(s) in single-threaded mode "
+                f"(< {SINGLE_THREAD_THRESHOLD} files)"
+            )
+        max_workers = 1
+    if max_workers > 1 and len(expanded_files) >= SINGLE_THREAD_THRESHOLD:
         results, par_source_dirs, success_count, skip_count, fail_count = _move_files_parallel(
             expanded_files,
             pipeline,
