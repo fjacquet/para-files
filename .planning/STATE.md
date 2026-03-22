@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Reliability & Performance
 status: unknown
-stopped_at: Phase 11 context gathered
-last_updated: "2026-03-22T19:04:13Z"
+stopped_at: Completed 11-01-PLAN.md
+last_updated: "2026-03-22T19:08:13.264Z"
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 11
-  completed_plans: 9
+  completed_plans: 11
 ---
 
 # Project State
@@ -57,6 +57,7 @@ Plan: 2 of 2 (COMPLETE)
 | Phase 10 P03 | 689 | 2 tasks | 3 files |
 | Phase 11 P01 | — | — | — |
 | Phase 11 P02 | 5m | 2 tasks | 2 files |
+| Phase 11-performance-pipeline-tests P01 | 7m | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -85,6 +86,9 @@ Recent decisions affecting current work:
 - [Phase 10-02]: Pipeline default changed from 0_Inbox to 6_unclassified — distinct semantics: user triage vs pipeline could not match
 - [Phase 10]: BatchMover tracks completed_moves only for actual moves (not dry-run/skipped), enabling accurate LIFO rollback
 - [Phase 10]: CLI permission pre-check runs in sequential mode only before first file moves; rejects batch with Exit(1) on unwritable dest
+- [Phase 11]: SINGLE_THREAD_THRESHOLD=5 exclusive: batch < 5 forces sequential, skipping thread pool overhead (PERF-01)
+- [Phase 11]: Hash cache in mover.py uses plain dict keyed by (str(path), mtime_float) — mtime change auto-invalidates (PERF-02)
+- [Phase 11]: DEFAULT_CONTENT_PREVIEW_CHARS centralized in semantic_classifier, book_detector, rules_engine — removes all [:2000] hardcoded slices (PERF-03)
 
 ### Pending Todos
 
@@ -97,6 +101,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T19:04:13Z
-Stopped at: Completed 11-02-PLAN.md (Phase 11 complete)
-Resume file: .planning/phases/11-performance-pipeline-tests/11-CONTEXT.md
+Last session: 2026-03-22T19:08:13.261Z
+Stopped at: Completed 11-01-PLAN.md
+Resume file: None
