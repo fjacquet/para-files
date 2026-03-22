@@ -19,9 +19,9 @@ Requirements for Reliability & Performance milestone. Each maps to roadmap phase
 
 - [x] **ERR-01**: Replace broad `except Exception` (BLE001) in pipeline.py with specific exception types
 - [x] **ERR-02**: Replace broad `except Exception` in classifiers with specific types
-- [ ] **ERR-03**: Replace broad `except Exception` in utilities (ocr, pandoc, isbn_lookup) with specific types
+- [x] **ERR-03**: Replace broad `except Exception` in utilities (ocr, pandoc, isbn_lookup) with specific types
 - [ ] **ERR-04**: Placeholder resolution rejects classification when critical placeholders are unresolved (not silent strip)
-- [ ] **ERR-05**: Subprocess calls (exiftool, pandoc, chm) validate file extensions before execution
+- [x] **ERR-05**: Subprocess calls (exiftool, pandoc, chm) validate file extensions before execution
 
 ### Service Resilience
 
@@ -53,7 +53,7 @@ Requirements for Reliability & Performance milestone. Each maps to roadmap phase
 ### Dependency Hygiene
 
 - [x] **DEP-01**: ~~Remove unused semantic-router dependency~~ — DEFERRED (user decision: keep dependency)
-- [ ] **DEP-02**: macOS OCR tests isolated with platform skip markers in CI
+- [x] **DEP-02**: macOS OCR tests isolated with platform skip markers in CI
 
 ### Test Coverage
 
@@ -98,9 +98,9 @@ Deferred to v1.3+. Tracked but not in current roadmap.
 | LLM-05 | Phase 9 | Pending |
 | ERR-01 | Phase 8 | Complete |
 | ERR-02 | Phase 8 | Complete |
-| ERR-03 | Phase 8 | Pending |
+| ERR-03 | Phase 8 | Complete |
 | ERR-04 | Phase 8 | Pending |
-| ERR-05 | Phase 8 | Pending |
+| ERR-05 | Phase 8 | Complete |
 | SVC-01 | Phase 9 | Pending |
 | SVC-02 | Phase 9 | Pending |
 | SVC-03 | Phase 9 | Pending |
@@ -117,7 +117,7 @@ Deferred to v1.3+. Tracked but not in current roadmap.
 | PERF-02 | Phase 11 | Pending |
 | PERF-03 | Phase 11 | Pending |
 | DEP-01 | Phase 8 | Deferred (keep semantic-router) |
-| DEP-02 | Phase 8 | Pending |
+| DEP-02 | Phase 8 | Complete |
 | TEST-01 | Phase 11 | Pending |
 | TEST-02 | Phase 8 | Pending |
 | TEST-03 | Phase 11 | Pending |

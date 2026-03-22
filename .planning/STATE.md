@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Reliability & Performance
 status: unknown
-stopped_at: Completed 08-01-PLAN.md
-last_updated: "2026-03-22T15:19:38.699Z"
+stopped_at: Completed 08-02-PLAN.md
+last_updated: "2026-03-22T15:42:17Z"
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 ## Current Position
 
 Phase: 08 (Foundation Hardening) — EXECUTING
-Plan: 1 of 3
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -47,6 +47,7 @@ Plan: 1 of 3
 
 *Updated after each plan completion*
 | Phase 08 P01 | 8m | 2 tasks | 4 files |
+| Phase 08 P02 | 29m | 2 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -60,6 +61,8 @@ Recent decisions affecting current work:
 - Coarse granularity: 4 phases for v1.2 (31 requirements compressed)
 - [Phase 08]: Encoder fallback uses (ConnectionError, TimeoutError, OSError, ValueError, RuntimeError) for litellm API and data errors (EXC-01)
 - [Phase 08]: test_classifier_exception_handling updated to raise ValueError not bare Exception to reflect narrowed handler (EXC-02)
+- [Phase 08]: ALLOWED_EXTENSIONS in pandoc.py excludes .md/.tex/.latex (read as text directly); exiftool has no extension restriction (EXC-03)
+- [Phase 08]: macos_only marker in conftest.py + tests/ added to pythonpath for conftest import (EXC-04)
 
 ### Pending Todos
 
@@ -72,6 +75,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T15:19:38.697Z
-Stopped at: Completed 08-01-PLAN.md
+Last session: 2026-03-22T15:42:17Z
+Stopped at: Completed 08-02-PLAN.md
 Resume file: None
