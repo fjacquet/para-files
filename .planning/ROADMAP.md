@@ -38,7 +38,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
   3. Subprocess calls to exiftool, pandoc, and chm reject files with wrong extensions before execution, preventing misuse
   4. Placeholder resolution tests cover: missing year, empty issuer, multiple missing fields, double-slash paths — all pass
   5. Pandoc integration tests cover: broken install, timeout, wrong encoding — all pass
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 - [ ] 08-01-PLAN.md — Narrow exceptions in pipeline, LLM classifier, and Ollama encoder (ERR-01, ERR-02)
@@ -91,7 +91,7 @@ Plans:
 | 5. Content Extraction | v1.1 | 3/3 | Complete | 2026-03-01 |
 | 6. Extension Routing | v1.1 | 3/3 | Complete | 2026-03-01 |
 | 7. Inbox Processing UX | v1.1 | 2/2 | Complete | 2026-03-01 |
-| 8. Foundation Hardening | v1.2 | 0/3 | Planned | - |
+| 8. Foundation Hardening | 1/3 | In Progress|  | - |
 | 9. LLM + Service Reliability | v1.2 | 0/? | Not started | - |
 | 10. Classification Accuracy + Move Safety | v1.2 | 0/? | Not started | - |
 | 11. Performance + Pipeline Tests | v1.2 | 0/? | Not started | - |
