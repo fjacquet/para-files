@@ -462,6 +462,115 @@ class TestLookupIsbn:
         assert result.title == "From Open Library"
 
 
+class TestIsbnErrorDistinction:
+    """Tests for transient vs data error distinction in lookup_isbn."""
+
+    @patch("isbnlib.canonical")
+    @patch("isbnlib.is_isbn10")
+    @patch("isbnlib.is_isbn13")
+    @patch("isbnlib.to_isbn13")
+    @patch("isbnlib.meta")
+    @patch("isbnlib.desc")
+    @patch("isbnlib.cover")
+    def test_isbn_service_unavailable_retries(  # noqa: PLR0913
+        self,
+        mock_cover: MagicMock,
+        mock_desc: MagicMock,
+        mock_meta: MagicMock,
+        mock_to_isbn13: MagicMock,
+        mock_is_isbn13: MagicMock,
+        mock_is_isbn10: MagicMock,
+        mock_canonical: MagicMock,
+    ):
+        """ConnectionError triggers one retry; second call succeeds and returns BookInfo."""
+        mock_canonical.return_value = "9780596517748"
+        mock_is_isbn10.return_value = False
+        mock_is_isbn13.return_value = True
+        mock_to_isbn13.return_value = "9780596517748"
+        # First call raises ConnectionError, second call succeeds
+        mock_meta.side_effect = [
+            ConnectionError("network down"),
+            {"Title": "Python Cookbook", "Authors": ["David Beazley"]},
+        ]
+        mock_desc.return_value = None
+        mock_cover.return_value = None
+
+        result = lookup_isbn("9780596517748", service="openl")
+
+        assert result is not None
+        assert result.title == "Python Cookbook"
+        # meta should be called twice (original + 1 retry)
+        assert mock_meta.call_count == 2
+
+    @patch("isbnlib.canonical")
+    @patch("isbnlib.is_isbn10")
+    @patch("isbnlib.is_isbn13")
+    @patch("isbnlib.to_isbn13")
+    @patch("isbnlib.meta")
+    def test_isbn_data_error_no_retry(
+        self,
+        mock_meta: MagicMock,
+        mock_to_isbn13: MagicMock,
+        mock_is_isbn13: MagicMock,
+        mock_is_isbn10: MagicMock,
+        mock_canonical: MagicMock,
+    ):
+        """ValueError (data error) does not trigger retry — meta called once per service."""
+        mock_canonical.return_value = "9780596517748"
+        mock_is_isbn10.return_value = False
+        mock_is_isbn13.return_value = True
+        mock_to_isbn13.return_value = "9780596517748"
+        mock_meta.side_effect = ValueError("bad data")
+
+        result = lookup_isbn("9780596517748", service="openl")
+
+        assert result is None
+        # Each of the 1 service gets 1 attempt (no retry)
+        assert mock_meta.call_count == 1
+
+    @patch("isbnlib.canonical")
+    @patch("isbnlib.is_isbn10")
+    @patch("isbnlib.is_isbn13")
+    @patch("isbnlib.to_isbn13")
+    @patch("isbnlib.meta")
+    def test_isbn_timeout_logs_warning(
+        self,
+        mock_meta: MagicMock,
+        mock_to_isbn13: MagicMock,
+        mock_is_isbn13: MagicMock,
+        mock_is_isbn10: MagicMock,
+        mock_canonical: MagicMock,
+    ):
+        """TimeoutError (transient) logs at WARNING level with 'unavailable' in message."""
+        from loguru import logger
+
+        log_messages: list[str] = []
+
+        def sink(message: object) -> None:
+            log_messages.append(str(message))
+
+        # Add a temporary sink to capture loguru output
+        sink_id = logger.add(sink, level="WARNING")
+        try:
+            mock_canonical.return_value = "9780596517748"
+            mock_is_isbn10.return_value = False
+            mock_is_isbn13.return_value = True
+            mock_to_isbn13.return_value = "9780596517748"
+            mock_meta.side_effect = TimeoutError("timed out")
+
+            lookup_isbn("9780596517748", service="openl")
+        finally:
+            logger.remove(sink_id)
+
+        # At least one warning mentioning "unavailable" should have been logged
+        assert any("unavailable" in msg.lower() for msg in log_messages)
+
+    def test_isbn_invalid_returns_none(self):
+        """Non-ISBN string returns None immediately."""
+        result = lookup_isbn("not-an-isbn")
+        assert result is None
+
+
 class TestExtractSubjectsFromDescription:
     """Tests for _extract_subjects_from_description function."""
 

@@ -15,11 +15,17 @@ from loguru import logger
 ISBN_10_LENGTH = 10
 
 # isbnlib can raise various exceptions: network errors, parse errors, import failures,
-# and internal RuntimeError from its decorators/caching layer
-_ISBNLIB_ERRORS = (
-    ConnectionError, TimeoutError, OSError, ValueError,
-    KeyError, ImportError, RuntimeError,
-)
+# and internal RuntimeError from its decorators/caching layer.
+# Split into two groups for distinct handling:
+
+# Transient errors (server/network) — worth retrying once
+_TRANSIENT_ERRORS = (ConnectionError, TimeoutError, OSError)
+
+# Data errors (bad input/response) — no retry
+_DATA_ERRORS = (ValueError, KeyError, ImportError, RuntimeError)
+
+# All isbnlib errors (union for backward compat in other functions)
+_ISBNLIB_ERRORS = (*_TRANSIENT_ERRORS, *_DATA_ERRORS)
 
 
 @dataclass
@@ -38,7 +44,7 @@ class BookInfo:
     cover_url: str | None = None
 
 
-def lookup_isbn(isbn: str, service: str = "default") -> BookInfo | None:  # noqa: C901
+def lookup_isbn(isbn: str, service: str = "default") -> BookInfo | None:  # noqa: C901, PLR0912, PLR0915
     """Look up book information by ISBN using isbnlib.
 
     Tries multiple metadata services for best results.
@@ -77,14 +83,41 @@ def lookup_isbn(isbn: str, service: str = "default") -> BookInfo | None:  # noqa
     services_to_try = ["openl", "wiki", "goob"] if service == "default" else [service]
 
     for svc in services_to_try:
-        try:
-            meta = isbnlib.meta(canonical, service=svc)
-            if meta and meta.get("Title"):
-                logger.debug("Found metadata via {} for ISBN {}", svc, isbn)
-                break
-        except _ISBNLIB_ERRORS as e:
-            logger.debug("Service {} failed for ISBN {}: {}", svc, isbn, e)
+        retries = 1  # one retry for transient errors
+        for attempt in range(retries + 1):
+            try:
+                meta = isbnlib.meta(canonical, service=svc)
+                if meta and meta.get("Title"):
+                    logger.debug("Found metadata via {} for ISBN {}", svc, isbn)
+                    break
+                meta = None
+            except _TRANSIENT_ERRORS as e:
+                logger.warning(
+                    "ISBN service {} unavailable for {} (attempt {}/{}): {} {}",
+                    svc,
+                    isbn,
+                    attempt + 1,
+                    retries + 1,
+                    type(e).__name__,
+                    e,
+                )
+                if attempt < retries:
+                    continue
+                meta = None
+            except _DATA_ERRORS as e:
+                logger.debug(
+                    "ISBN service {} data error for {}: {} {}",
+                    svc,
+                    isbn,
+                    type(e).__name__,
+                    e,
+                )
+                meta = None
+                break  # no retry for data errors
+        else:
             continue
+        if meta and meta.get("Title"):
+            break
 
     if not meta or not meta.get("Title"):
         logger.debug("No metadata found for ISBN {}", isbn)
