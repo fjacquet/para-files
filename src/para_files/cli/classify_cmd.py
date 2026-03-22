@@ -86,8 +86,8 @@ def _print_parallel_result(
         if verbose and result_dict.get("signals"):
             typer.echo("   Signals:")
             for s in result_dict["signals"]:
-                marker = "[matched]" if s["matched"] else "[      ]"
-                typer.echo(f"      {marker} {s['name']}: {s['score']:.0%}")
+                m = "[matched]" if s["matched"] else "[skipped]" if s.get("skipped") else "[      ]"
+                typer.echo(f"      {m} {s['name']}: {s['score']:.0%}")
     else:
         typer.echo(f"\n⚠️ {file_path.name}: {result_dict.get('error', 'unknown error')}")
 

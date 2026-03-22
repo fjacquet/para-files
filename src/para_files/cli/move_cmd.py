@@ -21,6 +21,8 @@ from para_files.cli.shared import (
     load_config_or_exit,
     parse_extensions_filter,
     setup_logging,
+    signal_marker,
+    signal_to_dict,
 )
 from para_files.mover import ConflictStrategy, move_classified_file
 from para_files.pipeline import ClassificationPipeline
@@ -65,10 +67,7 @@ def _format_move_result_json(
     if move_result.message:
         output["message"] = move_result.message
     if result.signals:
-        output["signals"] = [
-            {"source": s.source.value, "name": s.name, "score": s.score, "matched": s.matched}
-            for s in result.signals
-        ]
+        output["signals"] = [signal_to_dict(s) for s in result.signals]
     if result.route_name:
         output["route_name"] = result.route_name
     return output
@@ -144,8 +143,7 @@ def _print_move_result(
         typer.echo(f"  Classification: {result.category} ({conf.value:.0%})")
         if verbose and result.signals:
             for s in result.signals:
-                marker = "[matched]" if s.matched else "[      ]"
-                typer.echo(f"    {marker} {s.name}: {s.score:.0%}")
+                typer.echo(f"    {signal_marker(s)} {s.name}: {s.score:.0%}")
     else:
         typer.echo(f"Failed: {file_path.name} - {move_result.message}", err=True)
 

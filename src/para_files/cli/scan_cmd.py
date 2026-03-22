@@ -21,6 +21,8 @@ from para_files.cli.shared import (
     load_config_or_exit,
     parse_extensions_filter,
     setup_logging,
+    signal_marker,
+    signal_to_dict,
     validate_directory_or_exit,
 )
 from para_files.pipeline import ClassificationPipeline
@@ -67,15 +69,7 @@ def _classify_file_for_scan(
             if result.route_name:
                 output["route_name"] = result.route_name
             if result.signals:
-                output["signals"] = [
-                    {
-                        "source": s.source.value,
-                        "name": s.name,
-                        "score": s.score,
-                        "matched": s.matched,
-                    }
-                    for s in result.signals
-                ]
+                output["signals"] = [signal_to_dict(s) for s in result.signals]
             return output
 
         confidence_pct = f"{result.confidence.value:.0%}"
@@ -83,8 +77,7 @@ def _classify_file_for_scan(
         typer.echo(f"   → {result.category} ({confidence_pct} {source})")
         if verbose and result.signals:
             for s in result.signals:
-                marker = "[matched]" if s.matched else "[      ]"
-                typer.echo(f"      {marker} {s.name}: {s.score:.0%}")
+                typer.echo(f"      {signal_marker(s)} {s.name}: {s.score:.0%}")
     except Exception as e:  # noqa: BLE001
         logger.warning("Failed to classify {}: {}", file_path.name, e)
         if output_json:
@@ -134,8 +127,10 @@ def _scan_files_parallel(
                     typer.echo(f"   → {result_dict['category']} ({conf_pct} {source})")
                     if verbose and result_dict.get("signals"):
                         for s in result_dict["signals"]:
-                            marker = "[matched]" if s["matched"] else "[      ]"
-                            typer.echo(f"      {marker} {s['name']}: {s['score']:.0%}")
+                            matched = s["matched"]
+                            skipped = s.get("skipped", False)
+                            m = "[matched]" if matched else "[skipped]" if skipped else "[      ]"
+                            typer.echo(f"      {m} {s['name']}: {s['score']:.0%}")
             elif not output_json:
                 typer.echo(f"⚠️ {file_path.name}: {result_dict.get('error')}")
     return results

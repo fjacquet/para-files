@@ -15,6 +15,7 @@ from para_files.cli.shared import (
     discover_files,
     load_config_or_exit,
     setup_logging,
+    signal_marker,
     validate_directory_or_exit,
 )
 from para_files.mover import ConflictStrategy, move_classified_file
@@ -98,8 +99,7 @@ def _process_inbox_file(
         typer.echo(f"    -> {move_result.destination}")
         if verbose and result.signals:
             for s in result.signals:
-                marker = "[matched]" if s.matched else "[      ]"
-                typer.echo(f"    {marker} {s.name}: {s.score:.0%}")
+                typer.echo(f"    {signal_marker(s)} {s.name}: {s.score:.0%}")
     else:
         stats.failed += 1
         typer.echo(

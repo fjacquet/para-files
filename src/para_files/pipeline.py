@@ -207,6 +207,14 @@ class ClassificationPipeline:
         paths.add("3_Resources/documentation/{technology}")
         return sorted(paths)
 
+    @staticmethod
+    def _get_signal_source(classifier: BaseClassifier) -> ClassificationSource:
+        """Extract ClassificationSource from a classifier."""
+        raw = getattr(classifier, "source", ClassificationSource.DEFAULT)
+        if isinstance(raw, ClassificationSource):
+            return raw
+        return ClassificationSource.DEFAULT
+
     def classify(
         self,
         content: str,
@@ -228,29 +236,11 @@ class ClassificationPipeline:
 
         signals: list[SignalResult] = []
         winner: ClassificationResult | None = None
+        winner_idx: int = len(self._classifiers)
 
         # Run classifiers in priority order; stop after first match
-        for classifier in self._classifiers:
-            raw_source = getattr(classifier, "source", ClassificationSource.DEFAULT)
-            signal_source = (
-                raw_source
-                if isinstance(raw_source, ClassificationSource)
-                else ClassificationSource.DEFAULT
-            )
-
-            # Short-circuit: skip remaining classifiers once we have a winner
-            if winner is not None:
-                signals.append(
-                    SignalResult(
-                        source=signal_source,
-                        name=classifier.name,
-                        score=0.0,
-                        matched=False,
-                        skipped=True,
-                    )
-                )
-                continue
-
+        for idx, classifier in enumerate(self._classifiers):
+            signal_source = self._get_signal_source(classifier)
             try:
                 result = classifier.classify(content, metadata)
                 if result is not None:
@@ -263,21 +253,22 @@ class ClassificationPipeline:
                         )
                     )
                     winner = result
+                    winner_idx = idx
                     logger.debug(
                         "Classified by {}: {} ({:.0f}%)",
                         classifier.name,
                         result.category,
                         result.confidence.value * 100,
                     )
-                else:
-                    signals.append(
-                        SignalResult(
-                            source=signal_source,
-                            name=classifier.name,
-                            score=0.0,
-                            matched=False,
-                        )
+                    break
+                signals.append(
+                    SignalResult(
+                        source=signal_source,
+                        name=classifier.name,
+                        score=0.0,
+                        matched=False,
                     )
+                )
             except Exception:  # noqa: BLE001
                 logger.exception("Classifier {} failed", classifier.name)
                 signals.append(
@@ -288,6 +279,18 @@ class ClassificationPipeline:
                         matched=False,
                     )
                 )
+
+        # Record skipped classifiers for verbose display
+        signals.extend(
+            SignalResult(
+                source=self._get_signal_source(c),
+                name=c.name,
+                score=0.0,
+                matched=False,
+                skipped=True,
+            )
+            for c in self._classifiers[winner_idx + 1 :]
+        )
 
         if winner is not None:
             return winner.model_copy(update={"signals": signals})

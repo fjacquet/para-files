@@ -17,6 +17,7 @@ from pydantic import ValidationError
 
 from para_files.config import DEFAULT_REFERENCE_TREE, load_config
 from para_files.logging import setup_logging as _setup_logging
+from para_files.types import SignalResult
 from para_files.utils.validation import (
     validate_directory_exists,
     validate_file_exists,
@@ -31,6 +32,26 @@ if TYPE_CHECKING:
 # Constants used across multiple commands
 MAX_PATTERNS_SHOWN = 3
 MAX_UTTERANCES_SHOWN = 5
+
+
+def signal_marker(signal: SignalResult) -> str:
+    """Return display marker for a classification signal."""
+    if signal.matched:
+        return "[matched]"
+    if signal.skipped:
+        return "[skipped]"
+    return "[      ]"
+
+
+def signal_to_dict(signal: SignalResult) -> dict[str, Any]:
+    """Serialize a SignalResult to a dict for JSON output."""
+    return {
+        "source": signal.source.value,
+        "name": signal.name,
+        "score": signal.score,
+        "matched": signal.matched,
+        "skipped": signal.skipped,
+    }
 
 
 class ConflictChoice(StrEnum):
@@ -290,15 +311,7 @@ def format_result_json(
         "target_path": str(target_path),
     }
     if result.signals:
-        output["signals"] = [
-            {
-                "source": s.source.value,
-                "name": s.name,
-                "score": s.score,
-                "matched": s.matched,
-            }
-            for s in result.signals
-        ]
+        output["signals"] = [signal_to_dict(s) for s in result.signals]
     if result.route_name:
         output["route_name"] = result.route_name
     if result.extracted_params:
@@ -337,7 +350,6 @@ def print_classification_result(
     if verbose and result.signals:
         typer.echo("   Signals:")
         for s in result.signals:
-            marker = "[matched]" if s.matched else "[skipped]" if s.skipped else "[      ]"
-            typer.echo(f"      {marker} {s.name}: {s.score:.0%}")
+            typer.echo(f"      {signal_marker(s)} {s.name}: {s.score:.0%}")
     if result.route_name:
         typer.echo(f"   Route: {result.route_name}")
