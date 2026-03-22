@@ -7,6 +7,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from conftest import macos_only
+
 from para_files.utils.ocr import (
     OCR_EXTENSIONS,
     OCRResult,
@@ -212,8 +214,9 @@ class TestExtractTextWithRegions:
             assert result is None
 
 
+@macos_only
 class TestExtractTextIntegration:
-    """Integration tests that require Vision Framework."""
+    """Integration tests that require Vision Framework (macOS only)."""
 
     @pytest.fixture
     def check_vision(self):

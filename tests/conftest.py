@@ -2,9 +2,17 @@
 
 from __future__ import annotations
 
+import platform
 from pathlib import Path
 
 import pytest
+
+
+# Platform skip marker for macOS-only tests (Apple Vision Framework, etc.)
+macos_only = pytest.mark.skipif(
+    platform.system() != "Darwin",
+    reason="Requires macOS (Apple Vision Framework)",
+)
 
 
 @pytest.fixture

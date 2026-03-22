@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import subprocess
+import zipfile
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -524,8 +526,6 @@ def _extract_pdf_with_pypdf(file_path: Path, max_chars: int) -> str:
 
     # 2. Fallback to pdftotext (poppler-utils)
     try:
-        import subprocess
-
         result = subprocess.run(  # noqa: S603
             ["pdftotext", "-q", str(file_path), "-"],  # noqa: S607
             check=False,
@@ -739,7 +739,7 @@ def _read_excel_file(file_path: Path, max_chars: int) -> str:
     except ImportError as e:
         logger.warning("Excel library not available for {}: {}", file_path, e)
         return f"Filename: {file_path.name}"
-    except (OSError, ValueError, UnicodeDecodeError) as e:
+    except (OSError, ValueError, UnicodeDecodeError, zipfile.BadZipFile) as e:
         logger.warning("Failed to read Excel file (corrupt or encrypted?): {} ({})", file_path, e)
         return f"Filename: {file_path.name}"
 
@@ -809,7 +809,7 @@ def _read_ods_file(file_path: Path, max_chars: int) -> str:
     except ImportError as e:
         logger.warning("odfpy not available for {}: {}", file_path, e)
         return f"Filename: {file_path.name}"
-    except (OSError, ValueError, UnicodeDecodeError) as e:
+    except (OSError, ValueError, UnicodeDecodeError, zipfile.BadZipFile) as e:
         logger.warning("Failed to read ODS file (corrupt?): {} ({})", file_path, e)
         return f"Filename: {file_path.name}"
 
@@ -837,8 +837,6 @@ def _read_archive_manifest(file_path: Path, max_chars: int) -> str:
 
     try:
         if extension == ".zip":
-            import zipfile
-
             with zipfile.ZipFile(file_path, "r") as zf:
                 names = zf.namelist()
 
@@ -852,7 +850,7 @@ def _read_archive_manifest(file_path: Path, max_chars: int) -> str:
                 logger.debug("py7zr not installed, cannot read 7Z manifest: {}", file_path)
                 return f"Filename: {file_path.name}"
 
-    except (OSError, ValueError, UnicodeDecodeError) as e:
+    except (OSError, ValueError, UnicodeDecodeError, zipfile.BadZipFile) as e:
         logger.warning(
             "Failed to read archive manifest (corrupt, encrypted, or unsupported?): {} ({})",
             file_path,

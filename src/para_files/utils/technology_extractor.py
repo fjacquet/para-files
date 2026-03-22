@@ -158,7 +158,7 @@ class TechnologyExtractor:
 
         try:
             self._tech_embeddings = encoder(descriptions)
-        except (ValueError, KeyError, OSError) as e:
+        except (ValueError, KeyError, OSError, RuntimeError) as e:
             logger.exception("Failed to compute technology embeddings: {}", e)
             return False
         else:
@@ -206,7 +206,7 @@ class TechnologyExtractor:
             if best_score >= self._threshold:
                 return self._technologies[best_idx], best_score
 
-        except (ValueError, KeyError, OSError) as e:
+        except (ValueError, KeyError, OSError, RuntimeError) as e:
             logger.exception("Error in semantic technology extraction: {}", e)
 
         return None, 0.0
