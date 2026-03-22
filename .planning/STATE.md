@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Reliability & Performance
 status: unknown
-stopped_at: Completed 10-02-PLAN.md
-last_updated: "2026-03-22T18:31:14.077Z"
+stopped_at: Completed 10-03-PLAN.md
+last_updated: "2026-03-22T18:36:01.336Z"
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State
@@ -54,6 +54,7 @@ Plan: 1 of 3
 | Phase 09 P01 | 9m | 2 tasks | 8 files |
 | Phase 10-classification-accuracy-move-safety P01 | 15m | 2 tasks | 2 files |
 | Phase 10-classification-accuracy-move-safety P02 | 18 | 2 tasks | 5 files |
+| Phase 10 P03 | 689 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -80,6 +81,8 @@ Recent decisions affecting current work:
 - [Phase 10-classification-accuracy-move-safety]: Rules engine date boundary: MIN_YEAR=1990 MAX_YEAR=2040 documented via tests
 - [Phase 10-02]: Use plain ValueError for YAML validation failures (not custom exception) — simpler and consistent
 - [Phase 10-02]: Pipeline default changed from 0_Inbox to 6_unclassified — distinct semantics: user triage vs pipeline could not match
+- [Phase 10]: BatchMover tracks completed_moves only for actual moves (not dry-run/skipped), enabling accurate LIFO rollback
+- [Phase 10]: CLI permission pre-check runs in sequential mode only before first file moves; rejects batch with Exit(1) on unwritable dest
 
 ### Pending Todos
 
@@ -92,6 +95,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T18:31:14.074Z
-Stopped at: Completed 10-02-PLAN.md
+Last session: 2026-03-22T18:36:01.334Z
+Stopped at: Completed 10-03-PLAN.md
 Resume file: None

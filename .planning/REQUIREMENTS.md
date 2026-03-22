@@ -41,8 +41,8 @@ Requirements for Reliability & Performance milestone. Each maps to roadmap phase
 
 ### Move Safety
 
-- [ ] **MOV-01**: Batch move tracks completed moves and offers rollback on failure
-- [ ] **MOV-02**: Move operation validates destination permissions before starting batch
+- [x] **MOV-01**: Batch move tracks completed moves and offers rollback on failure
+- [x] **MOV-02**: Move operation validates destination permissions before starting batch
 
 ### Performance
 
@@ -111,8 +111,8 @@ Deferred to v1.3+. Tracked but not in current roadmap.
 | ACC-03 | Phase 10 | Complete |
 | ACC-04 | Phase 10 | Complete |
 | ACC-05 | Phase 10 | Complete |
-| MOV-01 | Phase 10 | Pending |
-| MOV-02 | Phase 10 | Pending |
+| MOV-01 | Phase 10 | Complete |
+| MOV-02 | Phase 10 | Complete |
 | PERF-01 | Phase 11 | Pending |
 | PERF-02 | Phase 11 | Pending |
 | PERF-03 | Phase 11 | Pending |
