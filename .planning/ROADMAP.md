@@ -29,16 +29,21 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 ## Phase Details
 
 ### Phase 8: Foundation Hardening
-**Goal**: The codebase handles errors explicitly — no broad exception swallowing, no silent placeholder failures, no unused dependencies polluting the environment
+**Goal**: The codebase handles errors explicitly — no broad exception swallowing, no silent placeholder failures, subprocess calls validated
 **Depends on**: Phase 7 (v1.1 shipped)
-**Requirements**: DEP-01, DEP-02, ERR-01, ERR-02, ERR-03, ERR-04, ERR-05, TEST-02, TEST-05
+**Requirements**: DEP-02, ERR-01, ERR-02, ERR-03, ERR-04, ERR-05, TEST-02, TEST-05
 **Success Criteria** (what must be TRUE):
   1. Running `uv run para-files classify <file>` never swallows a specific exception silently — ruff BLE001 violations are zero in pipeline.py, all classifiers, and utilities
   2. Classifying a file whose template has an unresolved placeholder surfaces a warning instead of stripping the placeholder and silently returning a bad path
   3. Subprocess calls to exiftool, pandoc, and chm reject files with wrong extensions before execution, preventing misuse
   4. Placeholder resolution tests cover: missing year, empty issuer, multiple missing fields, double-slash paths — all pass
   5. Pandoc integration tests cover: broken install, timeout, wrong encoding — all pass
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — Narrow exceptions in pipeline, LLM classifier, and Ollama encoder (ERR-01, ERR-02)
+- [ ] 08-02-PLAN.md — Narrow exceptions in utilities, subprocess extension validation, macOS test isolation (ERR-03, ERR-05, DEP-02)
+- [ ] 08-03-PLAN.md — Placeholder resolution policy with required/optional distinction, placeholder and pandoc test suites (ERR-04, TEST-02, TEST-05)
 
 ### Phase 9: LLM + Service Reliability
 **Goal**: Ollama-dependent classifiers never hang the pipeline, never crash on Ctrl+C, and recover gracefully when the Ollama server is absent or flaking
@@ -86,7 +91,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 | 5. Content Extraction | v1.1 | 3/3 | Complete | 2026-03-01 |
 | 6. Extension Routing | v1.1 | 3/3 | Complete | 2026-03-01 |
 | 7. Inbox Processing UX | v1.1 | 2/2 | Complete | 2026-03-01 |
-| 8. Foundation Hardening | v1.2 | 0/? | Not started | - |
+| 8. Foundation Hardening | v1.2 | 0/3 | Planned | - |
 | 9. LLM + Service Reliability | v1.2 | 0/? | Not started | - |
 | 10. Classification Accuracy + Move Safety | v1.2 | 0/? | Not started | - |
 | 11. Performance + Pipeline Tests | v1.2 | 0/? | Not started | - |
