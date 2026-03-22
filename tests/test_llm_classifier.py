@@ -43,7 +43,8 @@ def classifier() -> LLMClassifier:
 
 def test_parse_response_valid_json(classifier: LLMClassifier) -> None:
     """Valid JSON with float confidence returns ClassificationResult."""
-    response = '{"category":"3_Resources/documentation/Python","confidence":0.8,"reasoning":"Python docs"}'
+    response = '{"category":"3_Resources/documentation/Python","confidence":0.8,'
+    response += '"reasoning":"Python docs"}'
     result = classifier._parse_response(response)
     assert result is not None
     assert result.category == "3_Resources/documentation/Python"
@@ -85,7 +86,9 @@ def test_parse_response_trailing_spaces(classifier: LLMClassifier) -> None:
 
 def test_parse_response_nested_json(classifier: LLMClassifier) -> None:
     """JSON embedded in extra text before/after is extracted correctly."""
-    response = 'Here is my analysis. {"category":"3_Resources/documentation/Python","confidence":0.75,"reasoning":"matches"} End.'
+    cat = "3_Resources/documentation/Python"
+    inner = f'{{"category":"{cat}","confidence":0.75,"reasoning":"matches"}}'
+    response = f"Here is my analysis. {inner} End."
     result = classifier._parse_response(response)
     assert result is not None
     assert result.category == "3_Resources/documentation/Python"
@@ -93,7 +96,8 @@ def test_parse_response_nested_json(classifier: LLMClassifier) -> None:
 
 def test_parse_response_markdown_wrapped(classifier: LLMClassifier) -> None:
     """JSON wrapped in triple backtick markdown code block is extracted."""
-    response = '```json\n{"category":"3_Resources/documentation/Python","confidence":0.8,"reasoning":"good match"}\n```'
+    cat = "3_Resources/documentation/Python"
+    response = f'```json\n{{"category":"{cat}","confidence":0.8,"reasoning":"good match"}}\n```'
     result = classifier._parse_response(response)
     assert result is not None
     assert result.category == "3_Resources/documentation/Python"
@@ -114,15 +118,15 @@ def test_parse_response_empty_string(classifier: LLMClassifier) -> None:
 
 def test_parse_response_chatty_response(classifier: LLMClassifier) -> None:
     """LLM chatty preamble before JSON is handled correctly."""
-    response = 'Sure! Here is the classification:\n{"category":"3_Resources/documentation/Python","confidence":0.82,"reasoning":"Python"}'
+    cat = "3_Resources/documentation/Python"
+    inner = f'{{"category":"{cat}","confidence":0.82,"reasoning":"Python"}}'
+    response = f"Sure! Here is the classification:\n{inner}"
     result = classifier._parse_response(response)
     assert result is not None
     assert result.category == "3_Resources/documentation/Python"
 
 
-# ---------------------------------------------------------------------------
-# _sanitize_category: URL-encoding and allowlist
-# ---------------------------------------------------------------------------
+# _sanitize_category: URL-encoding and allowlist tests
 
 
 def test_sanitize_category_url_encoded(classifier: LLMClassifier) -> None:
@@ -207,8 +211,9 @@ def test_pipeline_short_circuit() -> None:
     # Build a pipeline with our mocks injected directly, bypassing __init__
     pipeline = ClassificationPipeline.__new__(ClassificationPipeline)
     pipeline._classifiers = [first_classifier, second_classifier, third_classifier]
-    pipeline._lock = threading.Lock()
+    pipeline._init_lock = threading.Lock()  # type: ignore[attr-defined]
     pipeline._initialized = True  # skip lazy init
+    pipeline._circuit_breaker = None  # type: ignore[attr-defined]
 
     # Patch _ensure_initialized to be a no-op
     with patch.object(ClassificationPipeline, "_ensure_initialized"):

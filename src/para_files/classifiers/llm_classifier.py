@@ -358,7 +358,10 @@ class LLMClassifier(BaseClassifier):
                 logger.debug("No JSON found in LLM response: {}", text[:200])
                 return None
             try:
-                data = json.loads(json_match.group())
+                parsed2 = json.loads(json_match.group())
+                if not isinstance(parsed2, dict):
+                    return None
+                data = parsed2
             except (json.JSONDecodeError, ValueError) as e:
                 logger.debug("Failed to parse extracted JSON: {} - {}", e, text[:200])
                 return None

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -18,7 +19,7 @@ from para_files.types import (
 
 
 @pytest.fixture(autouse=True)
-def mock_ollama_health() -> MagicMock:
+def mock_ollama_health() -> Generator[MagicMock, None, None]:
     """Patch check_ollama_health to return False in all pipeline tests.
 
     Prevents tests from connecting to a live Ollama server and avoids
