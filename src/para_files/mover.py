@@ -6,6 +6,7 @@ Handles moving/copying files to their PARA destinations with conflict resolution
 from __future__ import annotations
 
 import hashlib
+import os
 import shutil
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -437,3 +438,190 @@ def move_classified_file(  # noqa: PLR0913
         deduplicate=deduplicate,
     )
     return mover.move(source, target_dir, classification)
+
+
+def validate_destination_permissions(destinations: set[Path]) -> list[Path]:
+    """Pre-flight check: validate write permissions for all unique destination directories.
+
+    For directories that don't exist yet, checks the nearest existing parent.
+
+    Args:
+        destinations: Set of destination directory paths to check.
+
+    Returns:
+        List of paths that are NOT writable (empty if all OK).
+    """
+    unwritable: list[Path] = []
+    for dest in destinations:
+        check_path = dest
+        # Walk up to find an existing directory
+        while not check_path.exists():
+            check_path = check_path.parent
+            if check_path == check_path.parent:  # reached filesystem root
+                break
+        if not os.access(check_path, os.W_OK):
+            unwritable.append(dest)
+    return unwritable
+
+
+class BatchMoveResult(BaseModel):
+    """Result of a batch move operation with rollback capability."""
+
+    results: list[MoveResult] = Field(
+        default_factory=list,
+        description="Results for each file attempted",
+    )
+    completed_moves: list[tuple[Path, Path]] = Field(
+        default_factory=list,
+        description="(source, destination) pairs for successful moves",
+    )
+    total: int = Field(default=0, description="Total files in batch")
+    succeeded: int = Field(default=0, description="Successfully moved")
+    failed_at: int | None = Field(
+        default=None,
+        description="Index where failure occurred (None if all succeeded)",
+    )
+    failure_message: str = Field(default="", description="Error message from the failed move")
+
+    class Config:
+        """Pydantic config."""
+
+        arbitrary_types_allowed = True
+
+
+class BatchMover:
+    """Moves files in batch with stop-on-failure and rollback support.
+
+    Tracks every completed move as a (source, destination) tuple.
+    On first failure: stops immediately, offers rollback of completed moves.
+    """
+
+    def __init__(
+        self,
+        *,
+        dry_run: bool = False,
+        copy_mode: bool = False,
+        conflict_strategy: ConflictStrategy = ConflictStrategy.RENAME,
+        add_date_prefix: bool = False,
+        smart_rename: bool = False,
+        deduplicate: bool = True,
+    ) -> None:
+        """Initialize the batch mover.
+
+        Args:
+            dry_run: If True, simulate operations without moving files.
+            copy_mode: If True, copy files instead of moving.
+            conflict_strategy: How to handle existing files at destination.
+            add_date_prefix: If True, add date prefix to filename.
+            smart_rename: If True, use suggested name from classification.
+            deduplicate: If True, delete source when destination has identical content.
+        """
+        self._mover = FileMover(
+            dry_run=dry_run,
+            copy_mode=copy_mode,
+            conflict_strategy=conflict_strategy,
+            add_date_prefix=add_date_prefix,
+            smart_rename=smart_rename,
+            deduplicate=deduplicate,
+        )
+        self._dry_run = dry_run
+        self._completed_moves: list[tuple[Path, Path]] = []
+
+    @property
+    def completed_moves(self) -> list[tuple[Path, Path]]:
+        """Return a copy of (source, destination) pairs for successfully completed moves."""
+        return self._completed_moves.copy()
+
+    def move_batch(
+        self,
+        items: list[tuple[Path, Path, ClassificationResult | None]],
+    ) -> BatchMoveResult:
+        """Move a batch of files, stopping on first failure.
+
+        Args:
+            items: List of (source, destination_dir, classification) tuples.
+
+        Returns:
+            BatchMoveResult with results and rollback info.
+        """
+        self._completed_moves.clear()
+        results: list[MoveResult] = []
+
+        for idx, (source, dest_dir, classification) in enumerate(items):
+            move_result = self._mover.move(source, dest_dir, classification)
+            results.append(move_result)
+
+            if move_result.success and move_result.action not in (
+                "skipped",
+                "would be moved",
+                "would be copied",
+            ):
+                self._completed_moves.append((source, move_result.destination))
+
+            if not move_result.success:
+                return BatchMoveResult(
+                    results=results,
+                    completed_moves=self._completed_moves.copy(),
+                    total=len(items),
+                    succeeded=len(self._completed_moves),
+                    failed_at=idx,
+                    failure_message=move_result.message,
+                )
+
+        return BatchMoveResult(
+            results=results,
+            completed_moves=self._completed_moves.copy(),
+            total=len(items),
+            succeeded=len(self._completed_moves),
+        )
+
+    def rollback(self) -> list[MoveResult]:
+        """Roll back all completed moves, returning files to original locations.
+
+        Processes in LIFO order. Rollback failures are logged as warnings, not
+        hard errors — callers receive the full list of rollback results.
+
+        Returns:
+            List of MoveResult for each rollback operation.
+        """
+        rollback_results: list[MoveResult] = []
+
+        # Reverse order to undo in LIFO order
+        for source, destination in reversed(self._completed_moves):
+            if self._dry_run:
+                rollback_results.append(
+                    MoveResult(
+                        source=destination,
+                        destination=source,
+                        success=True,
+                        action="would rollback",
+                        message=f"Dry run: would move {destination} back to {source}",
+                    )
+                )
+                continue
+
+            try:
+                shutil.move(str(destination), str(source))
+                logger.info("Rolled back: {} -> {}", destination, source)
+                rollback_results.append(
+                    MoveResult(
+                        source=destination,
+                        destination=source,
+                        success=True,
+                        action="rolled back",
+                    )
+                )
+            except OSError as e:
+                logger.warning("Rollback failed for {} -> {}: {}", destination, source, e)
+                rollback_results.append(
+                    MoveResult(
+                        source=destination,
+                        destination=source,
+                        success=False,
+                        action="rollback failed",
+                        message=str(e),
+                    )
+                )
+
+        self._completed_moves.clear()
+        return rollback_results

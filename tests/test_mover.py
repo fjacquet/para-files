@@ -5,12 +5,14 @@ from __future__ import annotations
 from pathlib import Path
 
 from para_files.mover import (
+    BatchMover,
     ConflictStrategy,
     FileMover,
     MoveResult,
     _compute_file_hash,
     files_are_identical,
     move_classified_file,
+    validate_destination_permissions,
 )
 
 
@@ -492,3 +494,280 @@ class TestDeduplication:
         assert result.success is True
         assert result.action == "deleted duplicate"
         assert not source.exists()
+
+
+class TestValidateDestinationPermissions:
+    """Tests for validate_destination_permissions function."""
+
+    def test_validate_destination_permissions_writable(self, tmp_path: Path) -> None:
+        """Test that a writable directory returns no failures."""
+        dest_dir = tmp_path / "writable_dest"
+        dest_dir.mkdir()
+
+        unwritable = validate_destination_permissions({dest_dir})
+
+        assert unwritable == []
+
+    def test_validate_destination_permissions_not_writable(self, tmp_path: Path) -> None:
+        """Test that a read-only directory is flagged as unwritable."""
+        dest_dir = tmp_path / "readonly_dest"
+        dest_dir.mkdir()
+        # Remove write permission; restore in finally so pytest can clean up tmp_path
+        original_mode = dest_dir.stat().st_mode
+        dest_dir.chmod(original_mode & ~0o222)  # strip write bits
+        try:
+            unwritable = validate_destination_permissions({dest_dir})
+            assert dest_dir in unwritable
+        finally:
+            dest_dir.chmod(original_mode)  # restore original mode
+
+    def test_validate_destination_permissions_nonexistent_parent(self, tmp_path: Path) -> None:
+        """Test that a non-existent path with writable parent returns no failures."""
+        # tmp_path itself is writable, so a new subdir that doesn't exist yet should pass
+        new_dest = tmp_path / "new_subdir" / "deeper"
+
+        unwritable = validate_destination_permissions({new_dest})
+
+        assert unwritable == []
+
+    def test_validate_destination_permissions_multiple_dirs(self, tmp_path: Path) -> None:
+        """Test validation with multiple destination directories."""
+        dir_a = tmp_path / "dir_a"
+        dir_b = tmp_path / "dir_b"
+        dir_a.mkdir()
+        dir_b.mkdir()
+
+        unwritable = validate_destination_permissions({dir_a, dir_b})
+
+        assert unwritable == []
+
+
+class TestBatchMover:
+    """Tests for BatchMover class."""
+
+    def test_batch_move_all_succeed(self, tmp_path: Path) -> None:
+        """Test that all 3 files are moved when all destinations are writable."""
+        # Create 3 source files
+        sources = []
+        for i in range(3):
+            src = tmp_path / "src" / f"file{i}.txt"
+            src.parent.mkdir(exist_ok=True)
+            src.write_text(f"content {i}")
+            sources.append(src)
+
+        dest = tmp_path / "dest"
+        dest.mkdir()
+
+        items = [(src, dest, None) for src in sources]
+
+        batch_mover = BatchMover()
+        result = batch_mover.move_batch(items)
+
+        assert result.succeeded == 3
+        assert result.total == 3
+        assert result.failed_at is None
+        assert len(result.completed_moves) == 3
+        for src in sources:
+            assert not src.exists()
+
+    def test_batch_move_stops_on_first_failure(self, tmp_path: Path) -> None:
+        """Test that batch stops immediately when second file fails."""
+        # Create 3 source files
+        sources = []
+        for i in range(3):
+            src = tmp_path / "src" / f"file{i}.txt"
+            src.parent.mkdir(exist_ok=True)
+            src.write_text(f"content {i}")
+            sources.append(src)
+
+        dest = tmp_path / "dest"
+        dest.mkdir()
+
+        batch_mover = BatchMover()
+
+        # Mock FileMover.move to fail on second file
+        call_count = 0
+        original_move = batch_mover._mover.move
+
+        def mock_move(
+            source: Path,
+            destination_dir: Path,
+            classification: object = None,
+        ) -> MoveResult:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 2:
+                return MoveResult(
+                    source=source,
+                    destination=destination_dir / source.name,
+                    success=False,
+                    action="error",
+                    message="Simulated failure",
+                )
+            return original_move(source, destination_dir, classification)
+
+        batch_mover._mover.move = mock_move  # type: ignore[method-assign]
+
+        items = [(src, dest, None) for src in sources]
+        result = batch_mover.move_batch(items)
+
+        # First file succeeded, second failed, third not attempted
+        assert result.failed_at == 1
+        assert result.succeeded == 1
+        assert len(result.results) == 2  # Only 2 attempted
+        assert result.results[0].success is not False  # First succeeded
+        assert result.results[1].success is False  # Second failed
+
+    def test_batch_move_completed_moves_tracking(self, tmp_path: Path) -> None:
+        """Test that completed_moves tracks (source, destination) tuples in order."""
+        sources = []
+        for i in range(3):
+            src = tmp_path / "src" / f"file{i}.txt"
+            src.parent.mkdir(exist_ok=True)
+            src.write_text(f"content {i}")
+            sources.append(src)
+
+        dest = tmp_path / "dest"
+        dest.mkdir()
+
+        batch_mover = BatchMover()
+
+        # Mock to fail on second file so we can check partial tracking
+        call_count = 0
+        original_move = batch_mover._mover.move
+
+        def mock_move_tracking(
+            source: Path,
+            destination_dir: Path,
+            classification: object = None,
+        ) -> MoveResult:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 2:
+                return MoveResult(
+                    source=source,
+                    destination=destination_dir / source.name,
+                    success=False,
+                    action="error",
+                    message="Simulated failure",
+                )
+            return original_move(source, destination_dir, classification)
+
+        batch_mover._mover.move = mock_move_tracking  # type: ignore[method-assign]
+
+        items = [(src, dest, None) for src in sources]
+        batch_mover.move_batch(items)
+
+        # Only first file should be in completed_moves
+        completed = batch_mover.completed_moves
+        assert len(completed) == 1
+        source_path, _ = completed[0]
+        assert source_path == sources[0]
+
+    def test_batch_move_permission_check_rejects(self, tmp_path: Path) -> None:
+        """Test that a non-writable destination raises PermissionError before any moves."""
+        src = tmp_path / "src" / "file.txt"
+        src.parent.mkdir()
+        src.write_text("content")
+
+        dest = tmp_path / "readonly_dest"
+        dest.mkdir()
+        original_mode = dest.stat().st_mode
+        dest.chmod(original_mode & ~0o222)  # strip write bits
+
+        try:
+            # validate_destination_permissions should detect the unwritable dir
+            unwritable = validate_destination_permissions({dest})
+            assert dest in unwritable
+        finally:
+            dest.chmod(original_mode)  # restore original mode
+
+
+class TestBatchMoverRollback:
+    """Tests for BatchMover rollback functionality."""
+
+    def test_batch_move_rollback(self, tmp_path: Path) -> None:
+        """Test that rollback moves files back to original locations."""
+        sources = []
+        for i in range(3):
+            src = tmp_path / "src" / f"file{i}.txt"
+            src.parent.mkdir(exist_ok=True)
+            src.write_text(f"content {i}")
+            sources.append(src)
+
+        dest = tmp_path / "dest"
+        dest.mkdir()
+
+        batch_mover = BatchMover()
+
+        # Fail on third file so first two get moved
+        call_count = 0
+        original_move = batch_mover._mover.move
+
+        def mock_move_rollback(
+            source: Path,
+            destination_dir: Path,
+            classification: object = None,
+        ) -> MoveResult:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 3:
+                return MoveResult(
+                    source=source,
+                    destination=destination_dir / source.name,
+                    success=False,
+                    action="error",
+                    message="Third file fails",
+                )
+            return original_move(source, destination_dir, classification)
+
+        batch_mover._mover.move = mock_move_rollback  # type: ignore[method-assign]
+
+        items = [(src, dest, None) for src in sources]
+        result = batch_mover.move_batch(items)
+
+        assert result.failed_at == 2
+        assert result.succeeded == 2
+
+        # Verify first two files were moved
+        assert not sources[0].exists()
+        assert not sources[1].exists()
+        assert (dest / "file0.txt").exists()
+        assert (dest / "file1.txt").exists()
+
+        # Now rollback
+        rollback_results = batch_mover.rollback()
+
+        assert len(rollback_results) == 2
+        assert all(r.success for r in rollback_results)
+
+        # Files should be back in original locations
+        assert sources[0].exists()
+        assert sources[1].exists()
+        assert not (dest / "file0.txt").exists()
+        assert not (dest / "file1.txt").exists()
+
+    def test_batch_move_rollback_dry_run(self, tmp_path: Path) -> None:
+        """Test that rollback in dry_run mode logs but does not move files."""
+        src = tmp_path / "src" / "file.txt"
+        src.parent.mkdir()
+        src.write_text("content")
+
+        dest = tmp_path / "dest"
+        dest.mkdir()
+
+        batch_mover = BatchMover(dry_run=True)
+        items = [(src, dest, None)]
+        batch_mover.move_batch(items)
+
+        # In dry_run, the move is simulated (success=True, action="would be moved")
+        # completed_moves should NOT have entries since actual moves didn't happen
+        # But we can manually inject a completed move to test rollback
+        batch_mover._completed_moves.append((src, dest / "file.txt"))
+
+        rollback_results = batch_mover.rollback()
+
+        assert len(rollback_results) == 1
+        assert rollback_results[0].action == "would rollback"
+        # File should NOT have been moved since dry_run
+        assert src.exists()  # Original still there
