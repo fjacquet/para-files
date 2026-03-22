@@ -141,6 +141,15 @@ class LLMConfig(BaseSettings):
         default="http://localhost:11434",
         description="API base URL for Ollama or other providers",
     )
+    timeout: float = Field(
+        default=15.0,
+        gt=0.0,
+        description="Request timeout in seconds for LLM calls",
+    )
+    api_key: str | None = Field(
+        default=None,
+        description="API key for cloud LLM providers (e.g., OpenRouter). Passed to litellm.",
+    )
 
 
 class LoggingConfig(BaseSettings):

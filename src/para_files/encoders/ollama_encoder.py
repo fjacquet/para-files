@@ -106,7 +106,12 @@ class OllamaEncoder(DenseEncoder):
             try:
                 result = self._encode_texts([candidate])
                 return result[0]
-            except (ConnectionError, TimeoutError, OSError, ValueError, RuntimeError) as e:
+            except (ConnectionError, TimeoutError, OSError) as e:
+                # Server unreachable — no point retrying with shorter text
+                logger.warning("Ollama server unreachable, skipping retry: {}", e)
+                return [0.0] * 768
+            except (ValueError, RuntimeError) as e:
+                # Payload-related error — retry with shorter candidate
                 logger.debug("Encode failed for {}-char text, trying shorter: {}", len(candidate), e)  # noqa: E501
                 continue
 
@@ -115,7 +120,10 @@ class OllamaEncoder(DenseEncoder):
         try:
             result = self._encode_texts([last_chance])
             return result[0]
-        except (ConnectionError, TimeoutError, OSError, ValueError, RuntimeError) as e:
+        except (ConnectionError, TimeoutError, OSError) as e:
+            logger.warning("Ollama server unreachable on last-resort encode: {}", e)
+            return [0.0] * 768
+        except (ValueError, RuntimeError) as e:
             logger.exception("Ollama encoder failed on 100-char text — server may be down: {}", e)
             return [0.0] * 768
 
