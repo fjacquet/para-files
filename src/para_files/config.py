@@ -323,6 +323,34 @@ class Config(BaseSettings):
         return self.para_root / "4_Archives"
 
 
+def _apply_yaml_defaults(config: BaseSettings, yaml_vals: dict[str, Any]) -> BaseSettings:
+    """Apply YAML values as low-priority defaults (below env vars and .env).
+
+    pydantic-settings treats init kwargs as highest priority, so passing YAML
+    values directly would override env vars and .env — the opposite of what we want.
+    Instead, we first let pydantic-settings resolve env > .env > defaults, then
+    apply YAML values only for fields that are still at their default.
+
+    Args:
+        config: Already-constructed BaseSettings instance (env/dotenv resolved).
+        yaml_vals: Values from the YAML config section.
+
+    Returns:
+        Config with YAML defaults applied where no env/dotenv override exists.
+    """
+    if not yaml_vals:
+        return config
+    updates: dict[str, Any] = {}
+    fields = type(config).model_fields
+    for key, value in yaml_vals.items():
+        if key in fields:
+            current = getattr(config, key)
+            default = fields[key].default
+            if current == default:
+                updates[key] = value
+    return config.model_copy(update=updates) if updates else config
+
+
 def load_config(
     reference_tree_path: Path | None = None,
     **overrides: object,
@@ -358,13 +386,14 @@ def load_config(
     if "para_root" in yaml_config:
         yaml_config["para_root"] = Path(yaml_config["para_root"]).expanduser()
 
-    # Build nested config objects (env vars override YAML)
-    mlx_config = MLXConfig(**mlx_yaml)
-    llm_config = LLMConfig(**llm_yaml)
-    logging_config = LoggingConfig(**logging_yaml)
+    # Build nested configs: env vars > .env > YAML > defaults
+    # First let pydantic-settings resolve env vars and .env (no YAML kwargs),
+    # then apply YAML values only for fields still at defaults.
+    mlx_config = _apply_yaml_defaults(MLXConfig(), mlx_yaml)
+    llm_config = _apply_yaml_defaults(LLMConfig(), llm_yaml)
+    logging_config = _apply_yaml_defaults(LoggingConfig(), logging_yaml)
 
-    # Merge: YAML < env vars < overrides
-    # pydantic-settings handles env var overlay automatically
+    # Merge: overrides > env vars > .env > YAML > defaults
     merged = {
         **yaml_config,
         "mlx": mlx_config,

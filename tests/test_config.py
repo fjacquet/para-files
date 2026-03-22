@@ -60,6 +60,9 @@ class TestLLMConfig:
         monkeypatch.chdir(tmp_path)  # No .env in tmp_path — test pure defaults
         import os
 
+        # Prevent reading global config file (~/.config/para-files/.env)
+        no_env = (str(tmp_path / ".env"),)
+        monkeypatch.setitem(LLMConfig.model_config, "env_file", no_env)
         clean_env = {k: v for k, v in os.environ.items() if not k.startswith("PARA_FILES_")}
         with patch.dict("os.environ", clean_env, clear=True):
             config = LLMConfig()
@@ -164,6 +167,9 @@ class TestConfig:
         from pathlib import Path
 
         monkeypatch.chdir(tmp_path)  # No .env in tmp_path — test pure defaults
+        # Prevent reading global config file (~/.config/para-files/.env)
+        no_env = (str(tmp_path / ".env"),)
+        monkeypatch.setitem(Config.model_config, "env_file", no_env)
         clean_env = {k: v for k, v in os.environ.items() if not k.startswith("PARA_FILES_")}
         with patch.dict("os.environ", clean_env, clear=True):
             config = Config()
