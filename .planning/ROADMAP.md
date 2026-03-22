@@ -99,7 +99,12 @@ Plans:
   2. Moving a set of files where some share content does not re-hash already-seen files (mtime + path cache hit)
   3. All classifiers and encoders respect MAX_CONTENT_CHARS — no classifier silently truncates at a different limit
   4. Pipeline tests confirm: classifier order is respected, disabled classifiers are skipped, a single classifier failure does not abort remaining classifiers
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+
+- [ ] 11-01-PLAN.md — Performance improvements: adaptive threading, hash cache, centralized content truncation (PERF-01, PERF-02, PERF-03)
+- [ ] 11-02-PLAN.md — Pipeline order tests and concurrent move tests (TEST-01, TEST-03)
 
 ## Progress
 
@@ -115,4 +120,4 @@ Plans:
 | 8. Foundation Hardening | 2/3 | In Progress|  | - |
 | 9. LLM + Service Reliability | 3/3 | Complete    | 2026-03-22 | - |
 | 10. Classification Accuracy + Move Safety | 3/3 | Complete   | 2026-03-22 | - |
-| 11. Performance + Pipeline Tests | v1.2 | 0/? | Not started | - |
+| 11. Performance + Pipeline Tests | v1.2 | 0/2 | Not started | - |
