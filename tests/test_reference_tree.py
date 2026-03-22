@@ -200,3 +200,73 @@ class TestLoadReferenceTree:
         tree = load_reference_tree(test_yaml_path)
         assert tree._loaded is True
         assert len(tree.get_all_routes()) > 0
+
+
+class TestReferenceTreeValidation:
+    """Tests for Pydantic validation of the reference tree YAML."""
+
+    def test_malformed_yaml_raises(self, tmp_path: Path):
+        """Loading a YAML with invalid syntax raises yaml.YAMLError."""
+        import yaml
+
+        bad_yaml = tmp_path / "bad.yaml"
+        bad_yaml.write_text("routing_rules: {unclosed: [", encoding="utf-8")
+        tree = ReferenceTree(bad_yaml)
+        with pytest.raises(yaml.YAMLError):
+            tree.load()
+
+    def test_empty_yaml_raises(self, tmp_path: Path):
+        """Loading an empty YAML file raises ValueError with file path."""
+        empty_yaml = tmp_path / "empty.yaml"
+        empty_yaml.write_text("", encoding="utf-8")
+        tree = ReferenceTree(empty_yaml)
+        with pytest.raises(ValueError, match=str(empty_yaml)):
+            tree.load()
+
+    def test_routing_rule_missing_destination_raises(self, tmp_path: Path):
+        """Routing rule without destination raises ValueError."""
+        yaml_content = "routing_rules:\n  photos:\n    extensions:\n      - .jpg\n"
+        bad_yaml = tmp_path / "no_dest.yaml"
+        bad_yaml.write_text(yaml_content, encoding="utf-8")
+        tree = ReferenceTree(bad_yaml)
+        with pytest.raises(ValueError):
+            tree.load()
+
+    def test_routing_rule_empty_destination_raises(self, tmp_path: Path):
+        """Routing rule with empty destination string raises ValueError."""
+        yaml_content = (
+            "routing_rules:\n  photos:\n    extensions:\n      - .jpg\n    destination: ''\n"
+        )
+        bad_yaml = tmp_path / "empty_dest.yaml"
+        bad_yaml.write_text(yaml_content, encoding="utf-8")
+        tree = ReferenceTree(bad_yaml)
+        with pytest.raises(ValueError):
+            tree.load()
+
+    def test_valid_minimal_yaml_loads(self, tmp_path: Path):
+        """Minimal valid YAML (version + empty routing_rules) loads without error."""
+        yaml_content = 'version: "2.0"\nrouting_rules: {}\n'
+        valid_yaml = tmp_path / "minimal.yaml"
+        valid_yaml.write_text(yaml_content, encoding="utf-8")
+        tree = ReferenceTree(valid_yaml)
+        tree.load()
+        assert tree._loaded is True
+
+    def test_valid_yaml_with_routing_rules_loads(self, tmp_path: Path):
+        """Valid YAML with routing rules including destination loads without error."""
+        yaml_content = (
+            'version: "2.0"\n'
+            "routing_rules:\n"
+            "  photos:\n"
+            "    extensions:\n"
+            "      - .jpg\n"
+            "      - .png\n"
+            "    destination: 4_Archives/photos\n"
+        )
+        valid_yaml = tmp_path / "with_rules.yaml"
+        valid_yaml.write_text(yaml_content, encoding="utf-8")
+        tree = ReferenceTree(valid_yaml)
+        tree.load()
+        assert tree._loaded is True
+        rules = tree.get_routing_rules()
+        assert "photos" in rules

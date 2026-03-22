@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from pydantic import BaseModel, Field, ValidationError
 
 from para_files.types import (
     IssuerCategory,
@@ -23,6 +24,36 @@ from para_files.types import (
     RoutingRule,
     RuleIssuer,
 )
+
+
+class RoutingRuleModel(BaseModel):
+    """Validation model for a single routing rule in the YAML."""
+
+    extensions: list[str] = Field(default_factory=list)
+    patterns: list[str] = Field(default_factory=list)
+    destination: str = Field(min_length=1)
+    source: str | None = None
+    date_source: str | None = None
+    fallback_date: str | None = None
+    action: str | None = None
+    platforms: list[str] | None = None
+    issuers: list[dict[str, Any]] = Field(default_factory=list)
+    known_technologies: list[str] = Field(default_factory=list)
+
+
+class ReferenceTreeModel(BaseModel):
+    """Validation model for the top-level YAML structure."""
+
+    version: str | None = None
+    config: dict[str, Any] = Field(default_factory=dict)
+    routing_rules: dict[str, RoutingRuleModel] = Field(default_factory=dict)
+    inbox: dict[str, Any] | None = None
+    projects: dict[str, Any] | None = None
+    areas: dict[str, Any] | None = None
+    resources: dict[str, Any] | None = None
+    archives: dict[str, Any] | None = None
+
+    model_config = {"extra": "allow"}  # Allow unknown top-level keys
 
 
 class ReferenceTree:
@@ -51,9 +82,23 @@ class ReferenceTree:
         Raises:
             FileNotFoundError: If the YAML file doesn't exist.
             yaml.YAMLError: If the YAML is malformed.
+            ValueError: If the YAML is empty or fails Pydantic validation.
         """
         with self._yaml_path.open(encoding="utf-8") as f:
-            self._data = yaml.safe_load(f)
+            raw_data: Any = yaml.safe_load(f)
+
+        if raw_data is None:
+            msg = f"Empty reference tree YAML: {self._yaml_path}"
+            raise ValueError(msg)
+
+        self._data = raw_data
+
+        # Validate YAML structure with Pydantic
+        try:
+            ReferenceTreeModel(**self._data)
+        except ValidationError as e:
+            msg = f"Invalid reference tree YAML ({self._yaml_path}): {e}"
+            raise ValueError(msg) from e
 
         self._parse_routing_rules()
         self._parse_categories()
