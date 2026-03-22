@@ -1333,3 +1333,131 @@ class TestOverlappingPatterns:
         assert result.category == "dest_a"
         assert result.route_name == "rule_a"
         assert "suggested_name" not in result.extracted_params
+
+
+class TestRulesEngineDateEdgeCases:
+    """Date extraction edge cases for year boundaries and pattern shadowing.
+
+    Verifies MIN_YEAR and MAX_YEAR boundary enforcement and that rule ordering
+    determines winner when multiple rules could match the same file (pattern shadowing).
+    """
+
+    def test_date_extraction_year_1989(self) -> None:
+        """Year 1989 is below MIN_YEAR (1990), so it must NOT be extracted as a date."""
+        classifier = RulesEngineClassifier({})
+        # Use filename that contains 1989 at word boundary
+        result = classifier._extract_date_from_filename("rapport_1989.pdf")
+        # 1989 < MIN_YEAR (1990) → None
+        assert result is None
+
+    def test_date_extraction_year_2041(self) -> None:
+        """Year 2041 is above MAX_YEAR (2040), so it must NOT be extracted as a date.
+
+        MAX_YEAR exists to avoid false positives (e.g., crypto keys, port numbers).
+        """
+        classifier = RulesEngineClassifier({})
+        result = classifier._extract_date_from_filename("document_2041.pdf")
+        # 2041 > MAX_YEAR (2040) → None
+        assert result is None
+
+    def test_date_extraction_pre_min_year(self) -> None:
+        """Year below MIN_YEAR (e.g., 1899) must not be extracted."""
+        classifier = RulesEngineClassifier({})
+        result = classifier._extract_date_from_filename("rapport_1899.pdf")
+        assert result is None
+
+    def test_date_extraction_future_year_boundary(self) -> None:
+        """Year at MAX_YEAR boundary (2040) must be accepted."""
+        classifier = RulesEngineClassifier({})
+        result = classifier._extract_date_from_filename("document_2040.pdf")
+        assert result is not None
+        assert result.year == MAX_YEAR  # 2040
+
+    def test_date_extraction_year_1990_min_boundary(self) -> None:
+        """Year at MIN_YEAR boundary (1990) must be accepted."""
+        classifier = RulesEngineClassifier({})
+        result = classifier._extract_date_from_filename("rapport_1990.pdf")
+        assert result is not None
+        assert result.year == MIN_YEAR  # 1990
+
+    def test_pattern_shadowing_specific_before_general(self) -> None:
+        """When a more specific rule is listed first, it wins over the general rule.
+
+        Rule dict ordering: specific ("factures_eau") before general ("factures").
+        File "facture_eau_2025.pdf" matches both patterns; the first rule wins.
+        """
+        rule_specific = RoutingRule(
+            patterns=["*facture_eau*"],
+            destination="2_Areas/finance/eau",
+        )
+        rule_general = RoutingRule(
+            patterns=["*facture*"],
+            destination="2_Areas/finance/factures",
+        )
+        # Specific rule listed first in the dict
+        classifier = RulesEngineClassifier(
+            {"factures_eau": rule_specific, "factures": rule_general}
+        )
+        metadata = make_metadata(
+            path=Path("/test/facture_eau_2025.pdf"),
+            filename="facture_eau_2025.pdf",
+            extension=".pdf",
+        )
+        result = classifier.classify("", metadata)
+        assert result is not None
+        # First matching rule wins → specific destination
+        assert result.category == "2_Areas/finance/eau"
+        assert result.route_name == "factures_eau"
+
+    def test_pattern_shadowing_order_matters(self) -> None:
+        """When the general rule is listed first it wins (even if specific also matches).
+
+        Rule dict ordering: general ("factures") before specific ("factures_eau").
+        File "facture_eau_2025.pdf" matches both; the first rule wins.
+        """
+        rule_general = RoutingRule(
+            patterns=["*facture*"],
+            destination="2_Areas/finance/factures",
+        )
+        rule_specific = RoutingRule(
+            patterns=["*facture_eau*"],
+            destination="2_Areas/finance/eau",
+        )
+        # General rule listed first
+        classifier = RulesEngineClassifier(
+            {"factures": rule_general, "factures_eau": rule_specific}
+        )
+        metadata = make_metadata(
+            path=Path("/test/facture_eau_2025.pdf"),
+            filename="facture_eau_2025.pdf",
+            extension=".pdf",
+        )
+        result = classifier.classify("", metadata)
+        assert result is not None
+        # First matching rule wins → general destination
+        assert result.category == "2_Areas/finance/factures"
+        assert result.route_name == "factures"
+
+    def test_pattern_shadowing_non_matching_file_uses_correct_rule(self) -> None:
+        """File matching only the general pattern is routed to the general destination."""
+        rule_specific = RoutingRule(
+            patterns=["*facture_eau*"],
+            destination="2_Areas/finance/eau",
+        )
+        rule_general = RoutingRule(
+            patterns=["*facture*"],
+            destination="2_Areas/finance/factures",
+        )
+        classifier = RulesEngineClassifier(
+            {"factures_eau": rule_specific, "factures": rule_general}
+        )
+        # This file only matches the general pattern
+        metadata = make_metadata(
+            path=Path("/test/facture_gaz_2025.pdf"),
+            filename="facture_gaz_2025.pdf",
+            extension=".pdf",
+        )
+        result = classifier.classify("", metadata)
+        assert result is not None
+        assert result.category == "2_Areas/finance/factures"
+        assert result.route_name == "factures"
