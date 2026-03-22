@@ -166,6 +166,82 @@ class TestOllamaEncoderFallback:
         assert result[0] == [0.0] * 768
 
 
+class TestEmbeddingCache:
+    """Tests for OllamaEncoder in-memory LRU cache."""
+
+    @patch("para_files.encoders.ollama_encoder.litellm")
+    def test_embedding_cache_hit(self, mock_litellm: MagicMock):
+        """Same text twice — _encode_texts called only once (cache hit on second call)."""
+        mock_response = MagicMock()
+        mock_response.data = [{"embedding": [0.42] * 768}]
+        mock_litellm.embedding.return_value = mock_response
+
+        encoder = OllamaEncoder()
+        result1 = encoder(["hello world"])
+        result2 = encoder(["hello world"])
+
+        # litellm.embedding should only be called once
+        assert mock_litellm.embedding.call_count == 1
+        assert result1 == result2
+
+    @patch("para_files.encoders.ollama_encoder.litellm")
+    def test_embedding_cache_miss_different_texts(self, mock_litellm: MagicMock):
+        """Different texts always call _encode_texts (no cache sharing between different inputs)."""
+        call_count = 0
+
+        def side_effect(**kwargs):
+            nonlocal call_count
+            call_count += 1
+            mock_resp = MagicMock()
+            mock_resp.data = [{"embedding": [float(call_count)] * 768}]
+            return mock_resp
+
+        mock_litellm.embedding.side_effect = side_effect
+
+        encoder = OllamaEncoder()
+        encoder(["text one"])
+        encoder(["text two"])
+
+        assert mock_litellm.embedding.call_count == 2
+
+    @patch("para_files.encoders.ollama_encoder.litellm")
+    def test_embedding_cache_bounded(self, mock_litellm: MagicMock):
+        """Cache does not grow beyond _CACHE_MAX_SIZE entries."""
+        call_idx = 0
+
+        def side_effect(**kwargs):
+            nonlocal call_idx
+            call_idx += 1
+            mock_resp = MagicMock()
+            mock_resp.data = [{"embedding": [float(call_idx)] * 768}]
+            return mock_resp
+
+        mock_litellm.embedding.side_effect = side_effect
+
+        encoder = OllamaEncoder()
+        # Insert more than the max (500) entries
+        for i in range(OllamaEncoder._CACHE_MAX_SIZE + 1):
+            encoder([f"unique text {i}"])
+
+        assert len(encoder._cache) <= OllamaEncoder._CACHE_MAX_SIZE
+
+    @patch("para_files.encoders.ollama_encoder.litellm")
+    def test_embedding_cache_key_uses_2000_chars(self, mock_litellm: MagicMock):
+        """Texts that are identical for the first 2000 chars share the same cache key."""
+        mock_response = MagicMock()
+        mock_response.data = [{"embedding": [0.1] * 768}]
+        mock_litellm.embedding.return_value = mock_response
+
+        encoder = OllamaEncoder()
+        base = "a" * 2000
+        text1 = base + "XXXX"
+        text2 = base + "YYYY"
+
+        key1 = encoder._cache_key(text1)
+        key2 = encoder._cache_key(text2)
+        assert key1 == key2
+
+
 class TestBackwardCompatibility:
     """Test backward compatibility aliases."""
 
