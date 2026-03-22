@@ -1,5 +1,23 @@
 # Milestones
 
+## v1.2 Reliability & Performance (Shipped: 2026-03-22)
+
+**Phases completed:** 4 phases (8–11), 11 plans
+**Source code:** ~21,500 LOC Python | **Test suite:** ~19,200 LOC Python | **Tests:** 1,488 passing
+**Git range:** Phase 8 Foundation Hardening → Phase 11 Performance + Pipeline Tests
+**Timeline:** 21 days (2026-03-01 → 2026-03-22)
+
+**Key accomplishments:**
+
+1. Eliminated all broad `except Exception` (BLE001) in pipeline, classifiers, and utilities — every exception is now specific and logged
+2. Ollama circuit breaker + health check at init: semantic/LLM classifiers auto-disable when server is unreachable, no per-file failures
+3. LLM response parsing hardened: JSON-first strategy, confidence coercion, URL-decode, PARA category allowlist — no more garbage classifications
+4. Book detector false positives eliminated: French financial documents (IBAN-containing) no longer misclassified as books
+5. Batch move safety: permission pre-check before first move, stop-on-first-failure, LIFO rollback of completed moves
+6. Adaptive threading: batches < 5 files skip thread pool overhead; hash cache avoids redundant SHA256; centralized content truncation across all classifiers
+
+---
+
 ## v1.1 Inbox Throughput (Shipped: 2026-03-01)
 
 **Phases completed:** 7 phases, 16 plans
