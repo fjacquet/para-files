@@ -9,8 +9,8 @@ Requirements for Reliability & Performance milestone. Each maps to roadmap phase
 
 ### LLM Reliability
 
-- [ ] **LLM-01**: LLM classifier times out after configurable threshold (default 15s)
-- [ ] **LLM-02**: Ctrl+C during LLM call exits gracefully without RuntimeError crash
+- [x] **LLM-01**: LLM classifier times out after configurable threshold (default 15s)
+- [x] **LLM-02**: Ctrl+C during LLM call exits gracefully without RuntimeError crash
 - [x] **LLM-03**: Pipeline short-circuits after first classifier match
 - [x] **LLM-04**: LLM response parsing uses proper JSON parsing with regex fallback, not regex-only
 - [x] **LLM-05**: LLM output validation adds URL-decoding check and uses allowlist for PARA categories
@@ -25,10 +25,10 @@ Requirements for Reliability & Performance milestone. Each maps to roadmap phase
 
 ### Service Resilience
 
-- [ ] **SVC-01**: Ollama circuit breaker — skip semantic/LLM classifiers after N consecutive failures
+- [x] **SVC-01**: Ollama circuit breaker — skip semantic/LLM classifiers after N consecutive failures
 - [x] **SVC-02**: Embedding results cached by content hash to avoid redundant Ollama calls
-- [ ] **SVC-03**: Ollama health check at pipeline init — disable semantic/LLM if server unreachable
-- [ ] **SVC-04**: Ollama encoder stops retry chain immediately on connection error (not 4 retries when server is down)
+- [x] **SVC-03**: Ollama health check at pipeline init — disable semantic/LLM if server unreachable
+- [x] **SVC-04**: Ollama encoder stops retry chain immediately on connection error (not 4 retries when server is down)
 - [x] **SVC-05**: ISBN lookup distinguishes "invalid ISBN" from "service unavailable" and retries on transient errors
 
 ### Classification Accuracy
@@ -91,8 +91,8 @@ Deferred to v1.3+. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LLM-01 | Phase 9 | Pending |
-| LLM-02 | Phase 9 | Pending |
+| LLM-01 | Phase 9 | Complete |
+| LLM-02 | Phase 9 | Complete |
 | LLM-03 | Phase 9 | Complete |
 | LLM-04 | Phase 9 | Complete |
 | LLM-05 | Phase 9 | Complete |
@@ -101,10 +101,10 @@ Deferred to v1.3+. Tracked but not in current roadmap.
 | ERR-03 | Phase 8 | Complete |
 | ERR-04 | Phase 8 | Complete |
 | ERR-05 | Phase 8 | Complete |
-| SVC-01 | Phase 9 | Pending |
+| SVC-01 | Phase 9 | Complete |
 | SVC-02 | Phase 9 | Complete |
-| SVC-03 | Phase 9 | Pending |
-| SVC-04 | Phase 9 | Pending |
+| SVC-03 | Phase 9 | Complete |
+| SVC-04 | Phase 9 | Complete |
 | SVC-05 | Phase 9 | Complete |
 | ACC-01 | Phase 10 | Pending |
 | ACC-02 | Phase 10 | Pending |

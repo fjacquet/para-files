@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Reliability & Performance
 status: unknown
-stopped_at: Completed 09-03-PLAN.md
-last_updated: "2026-03-22T17:10:33Z"
+stopped_at: Completed 09-01-PLAN.md
+last_updated: "2026-03-22T17:25:36.841Z"
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -51,6 +51,7 @@ Plan: 3 of 3 (complete)
 | Phase 08 P03 | 15m | 2 tasks | 7 files |
 | Phase 09 P02 | 10m | 2 tasks | 2 files |
 | Phase 09 P03 | 15m | 2 tasks | 4 files |
+| Phase 09 P01 | 9m | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,8 @@ Recent decisions affecting current work:
 - [Phase 09]: _coerce_confidence is @staticmethod; JSON-first strategy before regex fallback; allowlist uses prefix matching for template categories
 - [Phase 09]: OllamaEncoder LRU cache uses SHA256 of first 2000 chars; bounded at 500 entries (CACHE-01)
 - [Phase 09]: _ISBNLIB_ERRORS split into _TRANSIENT_ERRORS + _DATA_ERRORS; transient errors retry once, data errors skip immediately (ERR-05, RETRY-01)
+- [Phase 09]: Used httpx instead of urllib for Ollama health check — semgrep CWE-939 blocks dynamic urlopen regardless of scheme validation
+- [Phase 09]: OllamaCircuitBreaker: record_success does not close open breaker — only reset() does; prevents premature re-enablement
 
 ### Pending Todos
 
@@ -83,6 +86,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T17:10:33Z
-Stopped at: Completed 09-03-PLAN.md
+Last session: 2026-03-22T17:25:36.839Z
+Stopped at: Completed 09-01-PLAN.md
 Resume file: None
