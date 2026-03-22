@@ -80,7 +80,13 @@ Plans:
   3. A failed batch move operation provides a rollback option that restores all already-moved files to their original locations
   4. Move operations validate destination write permissions before starting, rejecting the batch with a clear error if permissions are insufficient
   5. Files that no classifier can match are routed to `6_unclassified` (not `0_Inbox`) — `0_Inbox` is reserved for user-placed files awaiting triage
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+
+- [ ] 10-01-PLAN.md — Book detector false-positive tests and rules engine edge cases (ACC-01, ACC-02, ACC-03)
+- [ ] 10-02-PLAN.md — YAML reference tree Pydantic validation and 6_unclassified routing (ACC-04, ACC-05)
+- [ ] 10-03-PLAN.md — Batch move safety: rollback tracking and permission pre-check (MOV-01, MOV-02)
 
 ### Phase 11: Performance + Pipeline Tests
 
@@ -108,5 +114,5 @@ Plans:
 | 7. Inbox Processing UX | v1.1 | 2/2 | Complete | 2026-03-01 |
 | 8. Foundation Hardening | 2/3 | In Progress|  | - |
 | 9. LLM + Service Reliability | 3/3 | Complete    | 2026-03-22 | - |
-| 10. Classification Accuracy + Move Safety | v1.2 | 0/? | Not started | - |
+| 10. Classification Accuracy + Move Safety | v1.2 | 0/3 | Planned | - |
 | 11. Performance + Pipeline Tests | v1.2 | 0/? | Not started | - |
