@@ -47,33 +47,43 @@ Eliminated all `# noqa: BLE001` suppressions from the three pipeline-critical fi
 ## Changes Made
 
 ### pipeline.py (line 274)
+
 Added `import json` to support `json.JSONDecodeError` in the exception tuple.
 
 Replaced:
+
 ```python
 except Exception:  # noqa: BLE001
     logger.exception("Classifier {} failed", classifier.name)
 ```
+
 With:
+
 ```python
 except (ValueError, TypeError, KeyError, AttributeError, ConnectionError, TimeoutError, OSError, json.JSONDecodeError, RuntimeError) as e:
     logger.exception("Classifier {} failed: {}", classifier.name, e)
 ```
 
 ### llm_classifier.py (line 171)
+
 Replaced in `classify()` method:
+
 ```python
 except Exception:  # noqa: BLE001
     logger.exception("LLM classification failed")
 ```
+
 With:
+
 ```python
 except (ValueError, TypeError, KeyError, json.JSONDecodeError, ConnectionError, TimeoutError, OSError) as e:
     logger.exception("LLM classification failed: {}", e)
 ```
 
 ### ollama_encoder.py (3 sites)
+
 All three `except Exception` clauses replaced:
+
 - Fallback loop in `_encode_single`: `except (ConnectionError, TimeoutError, OSError, ValueError, RuntimeError) as e`
 - Last-resort 100-char attempt: same types
 - Batch retry in `__call__`: same types
@@ -93,6 +103,7 @@ uv run pytest tests/test_pipeline.py tests/test_classifiers.py tests/test_encode
 ### Auto-fixed Issues
 
 **1. [Rule 1 - Bug] Updated test_classifier_exception_handling to use ValueError**
+
 - **Found during:** Task 1 verification
 - **Issue:** Test raised bare `Exception("Test error")` which is no longer caught by narrowed handler, causing test failure
 - **Fix:** Changed `mock_classifier.classify.side_effect = Exception("Test error")` to `ValueError("Test error")` — matches the new specific exception list and correctly tests the graceful-fallback behavior

@@ -103,6 +103,7 @@ _Note: TDD tasks may have multiple commits (test -> feat -> refactor)_
 ### Auto-fixed Issues
 
 **1. [Rule 1 - Bug] Updated 3 pre-existing tests in test_rules_engine.py**
+
 - **Found during:** Task 1 (running tests after implementation)
 - **Issue:** `TestCleanUnreplacedLocation` expected `location`/`country` to be stripped (old behavior). After making them required, the tests failed with `None != 'photos/2024'`
 - **Fix:** Updated test docstrings and assertions to reflect that unresolved location/country now causes rejection (returns None)
@@ -111,6 +112,7 @@ _Note: TDD tasks may have multiple commits (test -> feat -> refactor)_
 - **Committed in:** 929225f (Task 1 commit)
 
 **2. [Rule 1 - Bug] Fixed mypy type errors across 3 classifiers**
+
 - **Found during:** Task 1 (mypy check after implementation)
 - **Issue:** 4 mypy errors: `_make_classification` return type still `ClassificationResult`, `_resolve_pattern` return type still `str`, `category_path` used as `str` after resolving to `str | None`, taxonomy call sites using `str | None` where `str` expected
 - **Fix:** Updated return types to `str | None` where needed, added early None checks before uses
@@ -119,6 +121,7 @@ _Note: TDD tasks may have multiple commits (test -> feat -> refactor)_
 - **Committed in:** 929225f (Task 1 commit)
 
 **3. [Rule 1 - Bug] Added noqa: PLR0911 to taxonomy_classifier.classify**
+
 - **Found during:** Task 1 (ruff check after implementation)
 - **Issue:** New None guards added 3 more return statements, pushing classify over PLR0911 limit (7 > 6)
 - **Fix:** Added `# noqa: PLR0911` consistent with `book_detector.py:482` and `llm_classifier.py:276`
@@ -141,6 +144,16 @@ Pre-existing failure in `tests/test_isbn_lookup.py::TestLookupIsbn::test_lookup_
 - Full test coverage for placeholder edge cases (19 tests) and pandoc failure modes (20 tests)
 - Ready for Phase 08 Plan 04 if it exists; foundation hardening goals for ERR-04, TEST-02, TEST-05 are met
 
+## Self-Check: PASSED
+
+- FOUND: src/para_files/utils/placeholder_resolver.py
+- FOUND: tests/test_placeholder_resolver.py
+- FOUND: tests/test_pandoc_integration.py
+- FOUND: .planning/phases/08-foundation-hardening/08-03-SUMMARY.md
+- FOUND: commit 929225f (Task 1)
+- FOUND: commit e3cbbb6 (Task 2)
+- FOUND: commit 9d7ea39 (Plan metadata)
+
 ---
-*Phase: 08-foundation-hardening*
-*Completed: 2026-03-22*
+_Phase: 08-foundation-hardening_
+_Completed: 2026-03-22_

@@ -7,6 +7,7 @@
 **Overall:** Cascading classifier pipeline with deterministic fallback routing
 
 **Key Characteristics:**
+
 - **First-match-wins classification** - Pipeline stops after first successful classification
 - **6-signal cascade** - Each signal has explicit confidence scores and sources
 - **Lazy initialization** - Pipeline initialized on first classification (thread-safe)
@@ -17,6 +18,7 @@
 ## Layers
 
 **Configuration Layer:**
+
 - Purpose: Load and validate all runtime settings
 - Location: `src/para_files/config.py`
 - Contains: `Config`, `MLXConfig`, `LLMConfig`, `LoggingConfig`, `ExtensionRoutingConfig`
@@ -24,6 +26,7 @@
 - Used by: Pipeline, CLI commands
 
 **Type Definitions Layer:**
+
 - Purpose: Define domain models and enums
 - Location: `src/para_files/types.py`
 - Contains: `ClassificationResult`, `FileMetadata`, `SignalResult`, `RoutingRule`, `Route`, classification enums
@@ -31,6 +34,7 @@
 - Used by: Pipeline, classifiers, CLI commands
 
 **Reference Tree Layer:**
+
 - Purpose: Parse and expose PARA structure and routing configuration
 - Location: `src/para_files/reference_tree.py`
 - Contains: `ReferenceTree` loader for personal_file_tree.yaml
@@ -38,6 +42,7 @@
 - Used by: Pipeline, rules engine, learning module
 
 **Classification Pipeline Layer:**
+
 - Purpose: Orchestrate 6-signal cascade
 - Location: `src/para_files/pipeline.py`
 - Contains: `ClassificationPipeline` with lazy init, signal coordination, default 0_Inbox fallback
@@ -45,6 +50,7 @@
 - Used by: CLI commands (scan, classify, move)
 
 **Classifier Implementations Layer:**
+
 - Purpose: Implement each classification signal
 - Location: `src/para_files/classifiers/`
 - Contains: 6 classifiers - `BookDetector`, `RulesEngineClassifier`, `TaxonomyClassifier`, `SemanticClassifier`, `ExtensionRouterClassifier`, `LLMClassifier`
@@ -52,6 +58,7 @@
 - Used by: Pipeline in priority order
 
 **Encoding Layer:**
+
 - Purpose: Compute semantic embeddings via Ollama/litellm
 - Location: `src/para_files/encoders/ollama_encoder.py`
 - Contains: `OllamaEncoder` using litellm API
@@ -59,6 +66,7 @@
 - Used by: `SemanticClassifier`
 
 **Taxonomy Layer:**
+
 - Purpose: Load and expose document/book classification taxonomies
 - Location: `src/para_files/taxonomies/loader.py`, `src/para_files/taxonomies/models.py`
 - Contains: `TaxonomyLoader`, `DocumentCategory`, `DocumentType`, `ThemaTaxonomy` (for Thema book codes)
@@ -66,6 +74,7 @@
 - Used by: `TaxonomyClassifier`, `BookDetector`, `SemanticClassifier`
 
 **File Movement Layer:**
+
 - Purpose: Move/copy classified files with conflict resolution
 - Location: `src/para_files/mover.py`
 - Contains: `ConflictStrategy` enum, file hashing, deduplication logic
@@ -73,6 +82,7 @@
 - Used by: `move_cmd`, `scan_cmd`
 
 **Learning Layer:**
+
 - Purpose: Extend routing rules based on user feedback
 - Location: `src/para_files/learner.py`, `src/para_files/learning/`
 - Contains: `RoutingLearner` for YAML modifications, feedback tracking, pattern extraction
@@ -80,6 +90,7 @@
 - Used by: `learn_cmd`
 
 **Utilities Layer:**
+
 - Purpose: Extract metadata, perform transformations, validate inputs
 - Location: `src/para_files/utils/`
 - Contains: File utilities, OCR, PDF/book metadata extraction, filename sanitization, EXIF parsing, geolocation
@@ -87,6 +98,7 @@
 - Used by: Pipeline, classifiers, CLI commands
 
 **CLI Layer:**
+
 - Purpose: Expose classification and file management as commands
 - Location: `src/para_files/cli/`
 - Contains: Typer commands (scan, move, classify, learn, routes, bookstore, etc.) and shared utilities
@@ -130,6 +142,7 @@
 5. **Lazy initialization** - Pipeline classifiers init on first classify() call
 
 **State Management:**
+
 - **No global state** - Configuration passed to components
 - **Thread-safe pipeline init** - Double-checked locking in `_ensure_initialized()`
 - **Immutable results** - Classification results frozen after creation
@@ -138,30 +151,35 @@
 ## Key Abstractions
 
 **BaseClassifier Interface:**
+
 - Purpose: Unified signature for all 6 signals
 - Location: `src/para_files/classifiers/base.py`
 - Pattern: Abstract methods for `name`, `source`, `default_confidence`, `classify()`
 - Examples: All 6 classifiers in `src/para_files/classifiers/`
 
 **ClassificationResult:**
+
 - Purpose: Immutable classification outcome with metadata
 - Location: `src/para_files/types.py`
 - Pattern: Pydantic model with category, confidence, signals, extracted params
 - Used by: All layers above pipeline
 
 **RoutingRule:**
+
 - Purpose: Pattern-based routing configuration
 - Location: `src/para_files/types.py`
 - Pattern: Contains extensions, glob patterns, destination template, date source options
 - Examples: Loaded from reference_tree YAML by `ReferenceTree.load()`
 
 **TaxonomyLoader:**
+
 - Purpose: Lazy-load and cache taxonomies
 - Location: `src/para_files/taxonomies/loader.py`
 - Pattern: Singleton pattern via `get_taxonomy_loader()`
 - Used by: Pipeline, `SemanticClassifier`, `TaxonomyClassifier`, `BookDetector`
 
 **FileMetadata:**
+
 - Purpose: Extracted file attributes for classification
 - Location: `src/para_files/types.py`
 - Pattern: Pydantic model with paths, timestamps, EXIF, PDF metadata
@@ -170,36 +188,42 @@
 ## Entry Points
 
 **CLI Entry Point:**
+
 - Location: `src/para_files/main.py` / `src/para_files/cli/app.py`
 - Triggers: `para-files [command]` from command line
 - Responsibilities: Parse command-line args, route to Typer command, setup logging
 - Structure: Typer app with 10+ commands (scan, move, classify, learn, routes, etc.)
 
 **Scan Command:**
+
 - Location: `src/para_files/cli/scan_cmd.py`
 - Triggers: `para-files scan [directory]`
 - Responsibilities: Recursively classify files, optionally move to PARA destinations
 - Flow: Walk directory → classify each file → optionally move with conflict strategy
 
 **Move Command:**
+
 - Location: `src/para_files/cli/move_cmd.py`
 - Triggers: `para-files move [file] [category]`
 - Responsibilities: Move single file to PARA category with conflict handling
 - Flow: Validate category → compute path → move/copy file
 
 **Classify Command:**
+
 - Location: `src/para_files/cli/classify_cmd.py`
 - Triggers: `para-files classify [file|directory]`
 - Responsibilities: Classify files and show signals/confidence (no move)
 - Flow: Read file → extract metadata → run pipeline → display results
 
 **Learn Command:**
+
 - Location: `src/para_files/cli/learn_cmd.py`
 - Triggers: `para-files learn [file] [category]`
 - Responsibilities: Add user correction to routing rules
 - Flow: Analyze misclassification → extract patterns → update YAML
 
 **Bookstore Command:**
+
 - Location: `src/para_files/cli/bookstore_cmd.py`
 - Triggers: `para-files bookstore [directory]`
 - Responsibilities: Scan for PDFs, detect/classify books by ISBN/Thema
@@ -210,6 +234,7 @@
 **Strategy:** Log and continue (non-fatal errors), raise on configuration/validation failures
 
 **Patterns:**
+
 - **Classifier exceptions** - Caught in pipeline, logged, signal marked as failed
 - **File I/O errors** - Logged with context (file path, operation)
 - **Content extraction failures** - Fall back to empty string (treated as unmatched)
@@ -219,22 +244,26 @@
 ## Cross-Cutting Concerns
 
 **Logging:**
+
 - Framework: loguru
 - Pattern: Import `from loguru import logger` in each module
 - Levels: DEBUG (fine-grained flow), INFO (decisions), WARNING (recoverable issues), ERROR (failures)
 - Configuration: `LoggingConfig` with rotation/retention
 
 **Validation:**
+
 - Pydantic models validate all domain types
 - Custom validators in `utils/validation.py` for paths, directories
 - CLI options validated before pipeline execution
 
 **Authentication:**
+
 - ISBN lookup: Uses external API (optional, graceful fallback if unavailable)
 - Ollama embedding server: Requires running service (configured via `LLMConfig.api_base`)
 - No user authentication (file system permission checks only)
 
 **Threading:**
+
 - Pipeline initialization: Double-checked locking for thread safety
 - File scanning: Optional parallel processing via `max_workers` config
 - No shared mutable state across threads

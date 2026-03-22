@@ -7,6 +7,7 @@
 **Git range:** Phase 1 Bug Fixes → Phase 7 Inbox UX
 
 **Key accomplishments:**
+
 1. Fixed silent pipeline failures: uppercase extension detection, OCR confidence threshold (0.3→0.7), MLX encoder zero-vector on high-density text
 2. Eliminated defensive anti-patterns: replaced all bare `except` blocks, centralized placeholder cleanup into `placeholder_resolver.py`, logged specific ISBN enrichment failures
 3. Achieved 80%+ test coverage: pipeline exception isolation, concurrent bookstore conflict resolution, rules engine Unicode/special-character edge cases
