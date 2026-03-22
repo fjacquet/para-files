@@ -84,9 +84,9 @@ Plans:
 
 Plans:
 
-- [ ] 10-01-PLAN.md — Book detector false-positive tests and rules engine edge cases (ACC-01, ACC-02, ACC-03)
-- [ ] 10-02-PLAN.md — YAML reference tree Pydantic validation and 6_unclassified routing (ACC-04, ACC-05)
-- [ ] 10-03-PLAN.md — Batch move safety: rollback tracking and permission pre-check (MOV-01, MOV-02)
+- [x] 10-01-PLAN.md — Book detector false-positive tests and rules engine edge cases (ACC-01, ACC-02, ACC-03)
+- [x] 10-02-PLAN.md — YAML reference tree Pydantic validation and 6_unclassified routing (ACC-04, ACC-05)
+- [x] 10-03-PLAN.md — Batch move safety: rollback tracking and permission pre-check (MOV-01, MOV-02)
 
 ### Phase 11: Performance + Pipeline Tests
 

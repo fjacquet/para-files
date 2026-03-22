@@ -37,6 +37,10 @@ Files are classified correctly and transparently — users can understand why a 
 - ✓ LLM response parsing hardened: JSON-first, confidence coercion, URL-decode, allowlist — v1.2 Phase 9
 - ✓ LRU embedding cache (500 entries, SHA256 key on first 2000 chars) — v1.2 Phase 9
 - ✓ ISBN error distinction: transient retry vs data error skip — v1.2 Phase 9
+- ✓ Book detector false positives on French financial documents eliminated (is_financial_document precedence) — v1.2 Phase 10
+- ✓ YAML reference tree validation: Pydantic models, fail-fast on invalid config — v1.2 Phase 10
+- ✓ Unclassifiable files routed to 6_unclassified (DEFAULT_UNCLASSIFIED_CATEGORY constant) — v1.2 Phase 10
+- ✓ Batch move safety: permission pre-check, stop-on-first-failure, rollback capability — v1.2 Phase 10
 
 ### Active
 
@@ -67,6 +71,8 @@ Files are classified correctly and transparently — users can understand why a 
 - Full cross-platform support — OCR remains macOS-only
 
 ## Context
+
+**v1.2 Phase 10 complete (2026-03-22):** Classification Accuracy + Move Safety. Book detector no longer misclassifies French financial documents (is_financial_document takes precedence). YAML reference tree validates with Pydantic at load time — fails fast on malformed config. Unclassifiable files route to 6_unclassified. BatchMover adds permission pre-check, stop-on-first-failure, and rollback. 1472 tests passing.
 
 **v1.2 Phase 9 complete (2026-03-22):** LLM + Service Reliability. Circuit breaker, health check at init, encoder short-circuit on connection errors, clean Ctrl+C, LLM response hardening (JSON-first, confidence coercion, URL-decode, allowlist), LRU embedding cache, ISBN error distinction. 1435 tests passing.
 
