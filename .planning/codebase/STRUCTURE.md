@@ -1,311 +1,339 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-02-28
+**Analysis Date:** 2026-03-22
 
 ## Directory Layout
 
 ```
-/Users/fjacquet/Projects/para-files/
-├── src/
-│   └── para_files/              # Main package
-│       ├── __init__.py          # Package exports (__version__, main entry points)
-│       ├── main.py              # CLI entry point (delegates to cli.app)
-│       ├── config.py            # Pydantic settings models
-│       ├── types.py             # Type definitions (ClassificationResult, etc.)
-│       ├── pipeline.py          # Classification pipeline orchestrator
-│       ├── reference_tree.py    # YAML reference tree loader
-│       ├── logging.py           # Loguru configuration
-│       ├── mover.py             # FileMover for file operations
-│       ├── learner.py           # Learning system for manual mappings
-│       │
-│       ├── cli/                 # CLI commands
-│       │   ├── __init__.py      # Imports all command modules
-│       │   ├── app.py           # Typer app instance
-│       │   ├── shared.py        # Shared utilities (setup_logging, validation, output formatting)
-│       │   ├── classify_cmd.py  # Classification command
-│       │   ├── scan_cmd.py      # Preview classifications without moving
-│       │   ├── move_cmd.py      # Move files to PARA destinations
-│       │   ├── learn_cmd.py     # Learn from manual file placements
-│       │   ├── bookstore_cmd.py # Intelligent book classification/organization
-│       │   ├── tree_cmd.py      # Show PARA folder structure
-│       │   ├── routes_cmd.py    # Show routing rules
-│       │   ├── config_cmd.py    # Show configuration
-│       │   ├── clean_cmd.py     # Clean up empty directories
-│       │   ├── dedupe_cmd.py    # Find duplicate files
-│       │   ├── init_cmd.py      # Initialize PARA structure
-│       │   ├── migrate_cmd.py   # Migrate files from old structure
-│       │   └── rescan_cmd.py    # Rescan files with updated rules
-│       │
-│       ├── classifiers/         # 5-signal classification pipeline
-│       │   ├── base.py          # BaseClassifier abstract interface
-│       │   ├── book_detector.py # Signal 1: ISBN/PDF book detection
-│       │   ├── rules_engine.py  # Signal 2: Glob pattern matching
-│       │   ├── taxonomy_classifier.py  # Signal 3: Domain knowledge (issuers, keywords)
-│       │   ├── semantic_classifier.py  # Signal 4: MLX embeddings
-│       │   ├── mlx_llm_classifier.py   # Signal 5: Optional MLX-LLM fallback
-│       │   └── __init__.py      # Classifier module exports
-│       │
-│       ├── encoders/            # Embedding model handling
-│       │   ├── base.py          # BaseEncoder abstract
-│       │   ├── mlx_encoder.py   # MLX embedding implementation (lazy loading)
-│       │   └── __init__.py
-│       │
-│       ├── taxonomies/          # Taxonomy data loaders
-│       │   ├── loader.py        # TaxonomyLoader: loads documents.json + thema.json
-│       │   ├── models.py        # Thema/document data models
-│       │   └── __init__.py
-│       │
-│       ├── learning/            # Learning system
-│       │   ├── pattern_extractor.py  # Extract patterns from filenames/content
-│       │   ├── feedback_tracker.py   # Track user feedback
-│       │   └── __init__.py
-│       │
-│       └── utils/               # Utility functions
-│           ├── file_utils.py    # File metadata extraction + content reading
-│           ├── validation.py    # Path validation
-│           ├── filename_sanitizer.py  # Sanitize filenames for filesystem
-│           ├── filename_detector.py   # Detect generic filenames (scan_001.pdf)
-│           ├── smart_renamer.py       # Suggest renames based on OCR
-│           ├── pdf_metadata.py        # Extract PDF metadata
-│           ├── epub_metadata.py       # Extract EPUB metadata
-│           ├── mobi_metadata.py       # Extract MOBI metadata
-│           ├── chm_metadata.py        # Extract CHM metadata
-│           ├── exiftool.py            # EXIF data extraction
-│           ├── pandoc.py              # File conversion to text
-│           ├── ocr.py                 # OCR using Vision Framework
-│           ├── ocr_metadata.py        # Extract structured data from OCR results
-│           ├── isbn_lookup.py         # ISBN → book metadata lookup
-│           ├── thema_lookup.py        # Thema code information
-│           ├── technology_extractor.py # Extract tech keywords from content
-│           ├── geolocation.py         # GPS coordinates → location names
-│           ├── nfo_parser.py          # Parse .nfo metadata files
-│           ├── cleanup.py             # Empty directory cleanup
-│           └── __init__.py
-│
-├── tests/                       # Test suite
-│   ├── conftest.py              # Pytest fixtures and configuration
-│   ├── fixtures/                # Test data (sample files, YAML, JSON)
-│   ├── test_classifiers.py      # Classifier tests
-│   ├── test_pipeline.py         # Pipeline orchestration tests
-│   ├── test_main.py             # CLI command tests
-│   ├── test_config.py           # Configuration loading tests
-│   ├── test_types.py            # Type definitions tests
-│   ├── test_reference_tree.py   # YAML parsing tests
-│   ├── test_mover.py            # File movement tests
-│   ├── test_learner.py          # Learning system tests
-│   ├── test_encoders.py         # Embedding encoder tests
-│   ├── test_file_utils.py       # File utility tests
-│   ├── test_pdf_metadata.py     # PDF parsing tests
-│   ├── test_epub_metadata.py    # EPUB parsing tests
-│   ├── test_mobi_metadata.py    # MOBI parsing tests
-│   ├── test_book_detector.py    # Book detection tests
-│   ├── test_rules_engine.py     # Routing rules tests
-│   ├── test_isbn_lookup.py      # ISBN lookup tests
-│   ├── test_thema_taxonomy.py   # Thema classification tests
-│   ├── test_*_cmd.py            # Individual command tests
-│   └── ...
-│
-├── config/                      # Configuration files
-│   ├── personal_file_tree.yaml  # PARA reference tree (example)
-│   └── thema.json               # Thema v1.6 book classification (9,187 codes)
-│
-├── docs/                        # User documentation
-│   ├── index.md                 # Overview
-│   ├── getting-started/         # Installation + quick start
-│   ├── cli/                     # Command reference
-│   ├── configuration/           # Settings guide
-│   ├── tasks/                   # How-to guides
-│   ├── architecture/            # Technical deep dives
-│   └── troubleshooting/         # Common issues
-│
-├── scripts/                     # Build and utility scripts
-│
-├── .planning/                   # GSD planning documents (generated)
-│   └── codebase/                # Analysis documents
-│
-├── pyproject.toml               # Project metadata and dependencies
-├── CLAUDE.md                    # Development guidelines (this project)
-├── README.md                    # User-facing overview
-├── CHANGELOG.md                 # Version history
-└── .env.example                 # Example environment variables
+para-files/
+├── .planning/codebase/        # Codebase analysis documents
+├── config/                     # Configuration files (YAML, JSON)
+│   ├── personal_file_tree.yaml # PARA structure + routing rules
+│   ├── thema.json             # Thema v1.6 book classification codes
+│   └── documents.json         # Document type taxonomy
+├── docs/                       # User-facing documentation
+│   ├── adr/                   # Architecture Decision Records
+│   ├── architecture/          # Technical architecture guides
+│   ├── cli/                   # Command reference
+│   ├── configuration/         # Configuration guides
+│   ├── getting-started/       # Installation & quick start
+│   ├── tasks/                 # How-to guides
+│   └── troubleshooting/       # Common issues
+├── scripts/                    # Utility scripts (brew, CI/CD)
+├── src/para_files/            # Main application code
+│   ├── __init__.py
+│   ├── main.py               # CLI entry point (re-exports)
+│   ├── config.py             # Configuration loading & validation
+│   ├── types.py              # Domain type definitions (Pydantic models)
+│   ├── pipeline.py           # Classification pipeline orchestrator
+│   ├── mover.py              # File movement with conflict resolution
+│   ├── learner.py            # Feedback-based routing extensions
+│   ├── reference_tree.py     # YAML reference tree parser
+│   ├── logging.py            # Logging configuration
+│   ├── cli/                  # CLI command implementations (Typer)
+│   │   ├── __init__.py
+│   │   ├── app.py            # Typer app instance
+│   │   ├── shared.py         # Shared utilities for commands
+│   │   ├── scan_cmd.py       # Scan directory & classify
+│   │   ├── move_cmd.py       # Move single file
+│   │   ├── classify_cmd.py   # Classify without moving
+│   │   ├── learn_cmd.py      # Learn from corrections
+│   │   ├── routes_cmd.py     # Show/manage routes
+│   │   ├── bookstore_cmd.py  # Detect & classify books
+│   │   ├── clean_cmd.py      # Cleanup operations
+│   │   ├── dedupe_cmd.py     # Deduplication
+│   │   ├── inbox_cmd.py      # Manage inbox
+│   │   ├── init_cmd.py       # Initialize reference tree
+│   │   ├── config_cmd.py     # Show configuration
+│   │   ├── tree_cmd.py       # Show PARA tree
+│   │   ├── migrate_cmd.py    # Migrate from old format
+│   │   ├── rescan_cmd.py     # Rescan existing files
+│   │   └── (other commands)
+│   ├── classifiers/          # 6-signal classification cascade
+│   │   ├── __init__.py
+│   │   ├── base.py           # BaseClassifier abstract interface
+│   │   ├── book_detector.py  # Signal 1: ISBN/Thema detection
+│   │   ├── rules_engine.py   # Signal 2: Pattern matching
+│   │   ├── taxonomy_classifier.py # Signal 3: Taxonomy lookup
+│   │   ├── semantic_classifier.py # Signal 4: Embedding similarity
+│   │   ├── extension_router.py   # Signal 5: Extension-based routing
+│   │   └── llm_classifier.py     # Signal 6: LLM fallback
+│   ├── encoders/             # Semantic embedding implementations
+│   │   ├── __init__.py
+│   │   ├── base.py           # BaseEncoder interface
+│   │   └── ollama_encoder.py # Ollama embedding via litellm
+│   ├── taxonomies/           # Document & book taxonomies
+│   │   ├── __init__.py
+│   │   ├── loader.py         # Singleton loader for taxonomies
+│   │   └── models.py         # DocumentCategory, DocumentType, ThemaTaxonomy
+│   ├── learning/             # Feedback-based pattern learning
+│   │   ├── __init__.py
+│   │   ├── feedback_tracker.py # Track classification mismatches
+│   │   └── pattern_extractor.py # Extract patterns from content
+│   └── utils/                # Utility functions & helpers
+│       ├── __init__.py
+│       ├── file_utils.py     # File I/O, metadata extraction
+│       ├── ocr.py            # OCR processing (macOS only)
+│       ├── ocr_metadata.py   # Extract metadata from OCR text
+│       ├── pdf_metadata.py   # PDF metadata extraction
+│       ├── isbn_lookup.py    # ISBN resolution
+│       ├── thema_lookup.py   # Thema code lookup
+│       ├── filename_sanitizer.py # Filesystem-safe names
+│       ├── filename_detector.py  # Detect generic names
+│       ├── smart_renamer.py  # Suggest renames
+│       ├── placeholder_resolver.py # Template variable substitution
+│       ├── validation.py     # Input validation helpers
+│       ├── technology_extractor.py # Extract tech keywords
+│       ├── geolocation.py    # Reverse geocoding (EXIF GPS)
+│       ├── exiftool.py       # EXIF metadata via exiftool
+│       ├── pandoc.py         # Document conversion
+│       ├── epub_metadata.py  # EPUB metadata
+│       ├── mobi_metadata.py  # MOBI metadata
+│       ├── chm_metadata.py   # CHM metadata
+│       ├── nfo_parser.py     # NFO file parsing
+│       └── cleanup.py        # File cleanup operations
+├── tests/                     # Test suite (pytest)
+│   ├── conftest.py           # Pytest fixtures & configuration
+│   ├── fixtures/             # Test data & mock files
+│   ├── test_pipeline.py      # Pipeline tests
+│   ├── test_classifiers.py   # Individual classifier tests
+│   ├── test_config.py        # Configuration tests
+│   ├── test_mover.py         # File movement tests
+│   ├── test_learner.py       # Learning module tests
+│   ├── test_*_cmd.py         # CLI command tests
+│   └── (other test modules)
+├── Formula/                   # Homebrew formula
+├── pyproject.toml            # Project metadata & dependencies
+├── uv.lock                   # UV lock file
+├── Makefile                  # Development commands
+├── CLAUDE.md                 # Project-specific instructions
+├── CHANGELOG.md              # Release notes
+└── README.md                 # Project overview
 ```
 
 ## Directory Purposes
 
-**`src/para_files/`:**
+**config/**
+- Purpose: Static configuration and reference data
+- Contains: YAML reference tree, JSON taxonomies
+- Key files: `personal_file_tree.yaml` (PARA structure), `thema.json` (9,187 book codes), `documents.json` (doc types)
 
-- Purpose: Main application package
-- Contains: All Python source code
-- Key files: `main.py` (entry), `pipeline.py` (core), `config.py` (settings)
-
-**`src/para_files/cli/`:**
-
-- Purpose: Command-line interface commands
-- Contains: Individual command modules, shared utilities
-- Key files: `app.py` (Typer instance), `shared.py` (utilities), `classify_cmd.py` (main command)
-
-**`src/para_files/classifiers/`:**
-
-- Purpose: Implement 5-signal classification strategy
-- Contains: BaseClassifier interface + 5 concrete implementations
-- Key files: `base.py` (interface), `book_detector.py`, `rules_engine.py`, `semantic_classifier.py`
-
-**`src/para_files/utils/`:**
-
-- Purpose: Cross-cutting utilities and external integrations
-- Contains: File handling, metadata extraction, external API calls
-- Key files: `file_utils.py` (metadata), `exiftool.py` (EXIF), `pdf_metadata.py`, `isbn_lookup.py`
-
-**`tests/`:**
-
-- Purpose: Automated test suite
-- Contains: Unit tests, integration tests, test fixtures
-- Pattern: One test file per source module (test_classifiers.py for classifiers/)
-
-**`config/`:**
-
-- Purpose: Configuration and data files
-- Contains: Example reference tree, Thema classification codes
-- Files: `personal_file_tree.yaml` (PARA structure), `thema.json` (book classification)
-
-**`docs/`:**
-
+**docs/**
 - Purpose: User-facing documentation
-- Contains: How-to guides, API reference, architecture documentation
-- Pattern: Organized by audience/task (getting-started, configuration, troubleshooting)
+- Contains: Guides, API references, troubleshooting, ADRs
+- Key files: `docs/architecture/` (technical reference), `docs/cli/` (command docs), `docs/getting-started/` (onboarding)
+
+**src/para_files/cli/**
+- Purpose: Command-line interface layer
+- Contains: Typer commands, shared utilities, logging setup
+- Key files: `app.py` (Typer instance), `shared.py` (utilities)
+- Pattern: Each command in `{name}_cmd.py`, imports `app` from `app.py`, registers via `@app.command()`
+
+**src/para_files/classifiers/**
+- Purpose: Implement 6-signal classification cascade
+- Contains: BaseClassifier interface + 6 implementations
+- Pattern: Each classifier returns `ClassificationResult | None`
+- Execution order: BookDetector → RulesEngine → Taxonomy → Semantic → Extension → LLM
+
+**src/para_files/utils/**
+- Purpose: Reusable utility functions across the system
+- Contains: File I/O, metadata extraction, validation, transformation
+- Pattern: One module per concern (file_utils, ocr, pdf_metadata, etc.)
+
+**tests/**
+- Purpose: Test suite with pytest
+- Contains: Unit tests, integration tests, fixtures
+- Pattern: Test files mirror source structure, fixtures in `conftest.py`
 
 ## Key File Locations
 
 **Entry Points:**
-
-- `src/para_files/main.py`: Main function (called by pyproject.toml entry point)
-- `src/para_files/cli/app.py`: Typer application instance (all commands register here)
+- `src/para_files/main.py` - Reexports `app` from `cli/app.py`, defines `main()` and `cli()` functions
+- `src/para_files/cli/app.py` - Typer application instance
 
 **Configuration:**
-
-- `src/para_files/config.py`: Config models, load_config() function
-- `config/personal_file_tree.yaml`: PARA reference tree (example)
+- `src/para_files/config.py` - Load & validate config from env/YAML/.env
+- `config/personal_file_tree.yaml` - PARA structure + routing rules (user-provided)
+- `config/thema.json` - Thema book taxonomy (bundled)
+- `config/documents.json` - Document type taxonomy (bundled)
 
 **Core Logic:**
+- `src/para_files/pipeline.py` - 6-signal classification cascade
+- `src/para_files/mover.py` - File movement with conflict handling
+- `src/para_files/reference_tree.py` - YAML parsing for routing rules
+- `src/para_files/learner.py` - Feedback tracking & rule extension
 
-- `src/para_files/pipeline.py`: ClassificationPipeline orchestrator
-- `src/para_files/classifiers/`: 5-signal classification implementations
-- `src/para_files/reference_tree.py`: YAML tree parsing
-
-**File Operations:**
-
-- `src/para_files/mover.py`: FileMover for file movement
-- `src/para_files/utils/file_utils.py`: Metadata extraction + content reading
-
-**Learning System:**
-
-- `src/para_files/learner.py`: Learner for manual mappings
-- `src/para_files/learning/pattern_extractor.py`: Pattern extraction
+**Type Definitions:**
+- `src/para_files/types.py` - All Pydantic models (ClassificationResult, FileMetadata, etc.)
 
 **Testing:**
-
-- `tests/conftest.py`: Pytest fixtures
-- `tests/test_pipeline.py`: Pipeline tests
-- `tests/test_classifiers.py`: Classifier tests
-- `tests/test_main.py`: CLI command tests
+- `tests/conftest.py` - Pytest fixtures and configuration
+- `tests/test_pipeline.py` - Pipeline tests
+- `tests/test_*.py` - Command and component tests
 
 ## Naming Conventions
 
 **Files:**
-
-- `*_cmd.py`: CLI command modules (classify_cmd.py, scan_cmd.py)
-- `test_*.py`: Test files (test_classifiers.py, test_pipeline.py)
-- `*.yaml`: Configuration files
-- `*.json`: Data files (thema.json)
+- Command files: `{command_name}_cmd.py` (e.g., `scan_cmd.py`, `move_cmd.py`)
+- Classifier files: `{signal_name}_classifier.py` or `{detector_name}.py` (e.g., `semantic_classifier.py`, `book_detector.py`)
+- Utility modules: `{concern_name}.py` (e.g., `file_utils.py`, `pdf_metadata.py`)
+- Test files: `test_{module_name}.py` (e.g., `test_pipeline.py`, `test_classify_cmd.py`)
 
 **Directories:**
-
-- Plural nouns for module collections: `classifiers/`, `utils/`, `taxonomies/`
-- Lowercase with underscores: `para_files/`, `cli/`, `learning/`
+- Command modules: `cli/` - All commands in this directory
+- Classifier modules: `classifiers/` - All classifiers here
+- Utility functions: `utils/` - Generic helpers
+- Domain-specific: `learning/`, `taxonomies/`, `encoders/` - Organized by feature
 
 **Functions:**
-
-- `camelCase` for private/internal: `_ensure_initialized()`, `_classify_single_file()`
-- `snake_case` for public: `classify()`, `classify_file()`, `load_config()`
+- Private functions: `_function_name()` (underscore prefix)
+- Public functions: `function_name()`
+- Abstract methods: `@abstractmethod` with no body
 
 **Classes:**
+- Classifiers: `{Name}Classifier` or `{Name}Detector` (e.g., `SemanticClassifier`, `BookDetector`)
+- Configuration: `{Name}Config` (e.g., `MLXConfig`, `LLMConfig`)
+- Domain models: Singular nouns (e.g., `ClassificationResult`, `FileMetadata`, `Route`)
 
-- `PascalCase` for all classes: `ClassificationPipeline`, `BaseClassifier`, `FileMetadata`
-- Abstract base classes prefixed: `BaseClassifier`, `BaseEncoder`
-
-**Constants:**
-
-- `UPPER_CASE` with underscores: `_MIN_CONTENT_FOR_RENAME`, `MAX_PATTERNS_SHOWN`
-- Prefixed with underscore if module-private: `_MAX_RENAME_ATTEMPTS`
+**Variables:**
+- Constants: `UPPERCASE_WITH_UNDERSCORES` (e.g., `_MAX_RENAME_ATTEMPTS`, `TEXT_EXTENSIONS`)
+- Module-level private: `_variable_name` (e.g., `_reference_tree`)
+- Instance variables: `self._private` (single underscore)
+- Public: `self.public` (no underscore)
 
 ## Where to Add New Code
 
-**New CLI Command:**
+**New Feature (e.g., new classification signal):**
+- Implementation: `src/para_files/classifiers/{signal_name}.py` - Extend `BaseClassifier`
+- Registration: Add to pipeline init in `src/para_files/pipeline.py` line ~95 (priority order)
+- Tests: `tests/test_{signal_name}.py`
+- Types: Add enum to `ClassificationSource` if needed in `src/para_files/types.py`
 
-- Create: `src/para_files/cli/new_cmd.py`
-- Implement: Function decorated with `@app.command()`
-- Register: Import in `src/para_files/cli/__init__.py`
-- Tests: `tests/test_new_cmd.py`
-
-**New Classification Signal:**
-
-- Create: `src/para_files/classifiers/new_classifier.py`
-- Implement: Class inheriting from `BaseClassifier`
-- Register: Add to pipeline in `src/para_files/pipeline.py::_ensure_initialized()`
-- Tests: `tests/test_classifiers.py` (add test case)
+**New CLI Command (e.g., new subcommand):**
+- Implementation: `src/para_files/cli/{command_name}_cmd.py`
+- Registration: Import in `src/para_files/main.py` line ~13-26
+- Decorator: Use `@app.command()` (imported from `app.py`)
+- Shared utilities: Extract to `src/para_files/cli/shared.py`
+- Tests: `tests/test_{command_name}_cmd.py`
 
 **New Utility Function:**
+- Implementation: `src/para_files/utils/{concern_name}.py` - Create if doesn't exist
+- Export: Add to `__all__` in module
+- Tests: `tests/test_{concern_name}.py` or add to existing test file
+- Docstrings: Include type hints and examples
 
-- Create: In appropriate `src/para_files/utils/*.py` file
-- Pattern: Pure function, no side effects, comprehensive type hints
-- Tests: Corresponding `tests/test_*.py` file
+**New Metadata Extractor (e.g., file format):**
+- Implementation: `src/para_files/utils/{format}_metadata.py`
+- Integration: Import in `src/para_files/utils/file_utils.py` → `extract_file_metadata()`
+- Tests: `tests/test_{format}_metadata.py`
 
-**New Data Type:**
-
-- Add: `src/para_files/types.py` (Pydantic model)
-- Pattern: Use Field() with description, constraints, defaults
-- Import: From `para_files.types` in consumers
+**Configuration Change:**
+- Settings class: Add field to appropriate config class in `src/para_files/config.py`
+- Environment variable: Follow prefix pattern (e.g., `PARA_FILES_MLX_`, `PARA_FILES_LLM_`)
+- YAML section: Document in config section of `personal_file_tree.yaml`
+- Defaults: Define at top of `config.py` (e.g., `DEFAULT_LLM_MODEL`)
 
 ## Special Directories
 
-**`.planning/codebase/`:**
+**config/** (checked in, user-editable)
+- Purpose: Application configuration files
+- Generated: No (user provides `personal_file_tree.yaml`)
+- Committed: Yes - thema.json and documents.json are bundled
+- Mutable: `personal_file_tree.yaml` modified by learn_cmd, migrate_cmd
 
-- Purpose: Generated analysis documents for GSD orchestrator
-- Contents: ARCHITECTURE.md, STRUCTURE.md, CONVENTIONS.md, TESTING.md, CONCERNS.md, STACK.md, INTEGRATIONS.md
-- Generated: By `/gsd:map-codebase` command
-- Committed: Yes (tracked in git)
-
-**`.venv/`:**
-
-- Purpose: Python virtual environment
-- Generated: Yes (created by `uv sync`)
-- Committed: No (.gitignore)
-
-**`.mypy_cache/`, `.ruff_cache/`, `.pytest_cache/`:**
-
-- Purpose: Tool caches
-- Generated: Yes
-- Committed: No (.gitignore)
-
-**`docs/`:**
-
-- Purpose: User documentation
-- Committed: Yes (tracked in git)
-- Pattern: Markdown files, cross-linked
-
-**`config/`:**
-
-- Purpose: Example/bundled configuration files
-- `thema.json`: Bundled (all 9,187 Thema codes)
-- `personal_file_tree.yaml`: Example (not personalized data)
+**.planning/codebase/** (generated, read-only)
+- Purpose: GSD codebase analysis documents
+- Generated: Yes (via `/gsd:map-codebase` command)
 - Committed: Yes
+- Mutable: No - regenerated on each mapping
 
-**`.serena/`, `.vscode/`:**
+**tests/fixtures/** (checked in)
+- Purpose: Test data and mock files
+- Generated: No (manually created test data)
+- Committed: Yes - essential for reproducible tests
+- Contents: Sample PDFs, YAML files, JSON fixtures
 
-- Purpose: Editor configuration
-- Generated: Partially (VS Code creates)
-- Committed: Yes (track project settings, not personal config)
+**.mypy_cache/, .pytest_cache/, dist/** (generated, ignored)
+- Purpose: Build/test artifacts
+- Generated: Yes (by type checker, test runner, build tools)
+- Committed: No (.gitignore)
+- Cleaned: `make clean` removes these
 
----
+**.venv/** (optional, ignored)
+- Purpose: Virtual environment
+- Generated: Yes (via `uv sync`)
+- Committed: No (.gitignore)
+- Use: `source .venv/bin/activate` or `uv run` prefix
 
-*Structure analysis: 2026-02-28*
+## Code Organization Patterns
+
+**Pipeline Initialization:**
+```python
+# Pipeline is lazy-initialized on first classification
+# Thread-safe via double-checked locking
+if self._initialized:
+    return
+with self._init_lock:
+    if self._initialized:
+        return
+    self._do_initialize()
+```
+
+**Classifier Template:**
+```python
+class MyClassifier(BaseClassifier):
+    @property
+    def name(self) -> str:
+        return "my_classifier"
+
+    @property
+    def source(self) -> ClassificationSource:
+        return ClassificationSource.MY_SOURCE
+
+    def classify(
+        self,
+        content: str,
+        metadata: FileMetadata | None = None,
+    ) -> ClassificationResult | None:
+        # Return None if no match (next classifier tries)
+        # Return ClassificationResult if match found (stop pipeline)
+        pass
+```
+
+**Configuration Loading:**
+```python
+from para_files.config import load_config
+
+config = load_config()  # Merges env vars > .env > YAML > defaults
+pipeline = ClassificationPipeline(config)
+```
+
+**File Movement:**
+```python
+from para_files.mover import ConflictStrategy
+
+result = mover.move_file(
+    source=file_path,
+    destination=target_path,
+    strategy=ConflictStrategy.RENAME,
+)
+```
+
+**Logging Pattern:**
+```python
+from loguru import logger
+
+logger.debug("Classifying {}", file_path)
+logger.info("Classified as {} ({}%)", category, confidence * 100)
+logger.exception("Classifier {} failed", classifier.name)
+```
+
+**Type-Safe Results:**
+```python
+# Always check for None from classifiers
+result = classifier.classify(content, metadata)
+if result is not None:
+    # Classifier matched
+    category = result.category
+    confidence = result.confidence.value
+```

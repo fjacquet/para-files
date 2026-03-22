@@ -1,227 +1,200 @@
 # External Integrations
 
-**Analysis Date:** 2026-02-28
+**Analysis Date:** 2026-03-22
 
 ## APIs & External Services
 
-**ISBN Metadata Lookup:**
+**Ollama (Primary):**
+- Service: Local LLM and embedding server
+- What it's used for: Text embeddings (semantic classification) and LLM fallback classification
+- SDK/Client: litellm 1.50.0+
+- Auth: None (local service)
+- Endpoint: `http://localhost:11434` (configurable via `PARA_FILES_LLM_API_BASE`)
+- Models used:
+  - Embeddings: `nomic-embed-text` (768 dimensions, configured in `PARA_FILES_MLX_MODEL_NAME`)
+  - LLM: `ministral-3:8b` (default, configurable via `PARA_FILES_LLM_MODEL`)
 
-- Google Books API (via isbnlib)
-  - SDK/Client: `isbnlib` 3.10.14+
-  - Usage: `src/para_files/utils/isbn_lookup.py` - BookInfo lookup via lookup_isbn()
-  - Fallback: Multiple sources (Google Books, Open Library, Wikipedia)
-  - Credentials: None required (public API)
+**Book Metadata (via isbnlib):**
+- Service: Multiple fallback providers (Open Library, Wikipedia, Google Books)
+- What it's used for: ISBN validation and book metadata enrichment for classification
+- SDK/Client: isbnlib 3.10.14+
+- Auth: None (public APIs with rate limiting)
+- Files: `src/para_files/utils/isbn_lookup.py` (lines 34-80), `src/para_files/classifiers/book_detector.py`
+- Lookup order: Open Library → Wikipedia → Google Books
+- Behavior: Graceful fallback if all providers fail
 
-**Book Classification:**
+**Geolocation (via geopy):**
+- Service: OpenStreetMap (Nominatim) reverse geocoding
+- What it's used for: Converting GPS coordinates to location names for file classification
+- SDK/Client: geopy 2.4.1+
+- Auth: None (public API with rate limits)
+- Files: `src/para_files/utils/geolocation.py`
+- Timeout: 5 seconds per request
+- Cache: Two-level (in-memory LRU + persistent SQLite at `~/.cache/para-files/geolocation.db`)
 
-- Thema (international book classification system)
-  - Data source: `config/thema.json` - Pre-loaded 9,187 classification codes
-  - Usage: `src/para_files/taxonomies/models.py` - ThemaTaxonomy model
-  - Integration: `src/para_files/utils/thema_lookup.py` - Code lookup and path building
-  - Credentials: None (offline data)
-
-**Reverse Geocoding:**
-
-- geopy (OSM Nominatim, fallback providers)
-  - SDK/Client: `geopy` 2.4.1+
-  - Usage: `src/para_files/utils/geolocation.py` - reverse_geocode() function
-  - Purpose: Convert GPS coordinates to location names
-  - Cache: Two-level (in-memory LRU + persistent SQLite at ~/.cache/para-files/geolocation.db)
-  - Timeout: 5 seconds per request
-  - Credentials: None (public API, though rate-limited)
+**LiteLLM (Universal LLM Router):**
+- Service: Unified API for Ollama, OpenAI, Anthropic, and other LLM providers
+- What it's used for: Abstracts embedding and LLM calls to support multiple backends
+- SDK/Client: litellm 1.50.0+
+- Auth: API keys required only for non-local providers (OpenAI, Anthropic, Azure)
+- Files: `src/para_files/encoders/ollama_encoder.py`, `src/para_files/classifiers/llm_classifier.py`
+- Supported models format: `provider/model` (e.g., `ollama/nomic-embed-text`, `openai/gpt-4o-mini`)
 
 ## Data Storage
 
 **Databases:**
-
-- None (no persistent relational database)
+- Type: Local SQLite (embedded, no server required)
+- Purpose: Geolocation cache for reverse geocoding results
+- Location: `~/.cache/para-files/geolocation.db`
+- Client: sqlite3 (Python stdlib)
+- Schema: Single table `geolocation_cache` with lat/lon/address_json
 
 **File Storage:**
+- Type: Local filesystem only (no cloud storage)
+- Structure: PARA method (0_Inbox, 1_Projects, 2_Areas, 3_Resources, 4_Archives)
+- Configuration: `PARA_FILES_PARA_ROOT` environment variable
+- Reference tree: `config/personal_file_tree.yaml` (YAML, user-editable)
+- Validated mappings: Optional JSON file at `PARA_FILES_VALIDATED_DB_PATH` for manual sender→category mappings
 
-- Local filesystem only
-  - PARA folder structure: `$PARA_ROOT/0_Inbox, 1_Projects, 2_Areas, 3_Resources, 4_Archives`
-  - Cache: `~/.cache/para-files/` - Geolocation SQLite DB, HuggingFace model cache
-  - Logs: `$PARA_ROOT/logs/operations.log` (JSON format with rotation)
+**Taxonomies (Read-Only):**
+- Thema v1.6 (9,187 book classification codes): `config/thema.json` (3.6 MB)
+- Document types (issuers, keywords, categories): `config/documents.json` (69.8 KB)
+- Both loaded once at startup via `TaxonomyLoader` (thread-safe singleton)
+
+**Logs:**
+- Type: JSON-formatted rotating files
+- Location: `{PARA_ROOT}/logs/operations.log`
+- Rotation: Size-based (default 10 MB) or time-based
+- Retention: Default 30 days
+- Format: JSON serialization with async writes (thread-safe via loguru)
+- Compression: gzip, bz2, xz, or zip
 
 **Caching:**
-
-- HuggingFace transformers cache: `~/.cache/huggingface/` (MLX models)
-- In-memory: LRU caches for YAML parsing, geolocation lookups
-- Persistent: SQLite geolocation cache at ~/.cache/para-files/geolocation.db
-
-## Machine Learning Models
-
-**Embedding Models:**
-
-- MLX embedding models (mlx-community registry)
-  - Default: `mlx-community/nomic-embed-text-v1.5` (768-dimensional)
-  - Configurable via: PARA_FILES_MLX_MODEL_NAME environment variable
-  - Download source: HuggingFace Hub (via mlx-embedding-models)
-  - Cache location: ~/.cache/huggingface/
-  - Size: ~100MB for nomic-embed-text-v1.5
-  - Hardware: Apple Neural Engine (MLX optimized)
-  - Integration: `src/para_files/encoders/mlx_encoder.py` - MLXEncoder class
-  - Used by: `src/para_files/classifiers/semantic_classifier.py` - Signal 4 semantic routing
-
-**Language Models (Optional LLM Fallback):**
-
-- MLX-LM native models (recommended):
-  - Default: `mlx-community/Qwen2.5-1.5B-Instruct-4bit` (1-2GB)
-  - Alternatives: Phi-3.5-mini, Llama-3.2-3B (all 4-bit quantized)
-  - Integration: `src/para_files/classifiers/mlx_llm_classifier.py` - Signal 6 LLM fallback
-  - Control: PARA_FILES_LLM_ENABLED (false by default)
-
-- Alternative: litellm for remote models
-  - Supported: OpenAI (gpt-4o-mini), Anthropic (claude-3-haiku), Ollama local
-  - Integration: Not directly in code, but supported via litellm configuration
-  - Control: PARA_FILES_LLM_MODEL, PARA_FILES_LLM_API_BASE
+- In-memory: LRU caches via `functools.lru_cache` for:
+  - Thema taxonomy lookups
+  - Document type classifications
+  - ISBN metadata results
+  - Geolocation results (up to 128 entries in memory, overflow to SQLite)
+- Persistent: SQLite cache for geolocation at `~/.cache/para-files/geolocation.db`
+- Pipeline state: Thread-safe singleton with lazy initialization (ADR-010)
 
 ## Authentication & Identity
 
 **Auth Provider:**
-
-- None (no authentication required)
-- ISBN/book lookup: Public APIs (no credentials)
-- Geocoding: Public APIs (no authentication, but rate-limited)
-- HuggingFace model download: No authentication (public models)
+- Type: None (no user authentication)
+- System runs as filesystem automation with no user identity
+- File access: Direct filesystem access (permissions inherited from OS)
+- No API tokens required for local/open services
 
 ## Monitoring & Observability
 
 **Error Tracking:**
-
-- None (no external service integration)
+- Type: None (no centralized error tracking)
+- Approach: Structured JSON logs with full context
 
 **Logs:**
+- Framework: loguru 0.7.3+
+- Format:
+  - Console: Human-readable with colors (DEBUG level if verbose, INFO otherwise)
+  - File: JSON format with structured fields for parsing
+- Configuration:
+  - Level: `PARA_FILES_LOG_LEVEL` (DEBUG, INFO, WARNING, ERROR)
+  - Rotation: `PARA_FILES_LOG_ROTATION` (size-based, e.g., "10 MB")
+  - Retention: `PARA_FILES_LOG_RETENTION` (e.g., "30 days")
+  - Compression: `PARA_FILES_LOG_COMPRESSION` (gz, bz2, xz, zip)
+- File: `src/para_files/logging.py` - setup_logging() configures both console and file output
+- Silenced loggers: isbnlib (expected 404s), pypdf (malformed PDFs) to reduce noise
 
-- Local file-based: `$PARA_ROOT/logs/operations.log` (JSON format)
-  - Framework: loguru
-  - Rotation: Size-based (default: 10 MB)
-  - Retention: Time-based (default: 30 days)
-  - Compression: gzip (configurable)
-  - Configuration: `src/para_files/logging.py` and config.LoggingConfig
+**Metrics:**
+- Type: None (no metrics collection or telemetry)
 
 ## CI/CD & Deployment
 
 **Hosting:**
-
-- None (local macOS application only)
+- Type: Local/Desktop application (not server-based)
+- Platform: macOS primary, cross-platform capable
+- Distribution: PyPI (planned), wheel packages
 
 **CI Pipeline:**
+- Type: None yet (GitHub Actions workflows planned)
+- Local: Makefile with full quality pipeline
 
-- GitHub Actions (defined in .github/workflows/)
-- Triggered on: Pull requests, pushes to maincd
-- Jobs: Lint (Ruff), Type check (mypy), Test (pytest)
+**Build Process:**
+- Builder: hatchling (from pyproject.toml)
+- Output: Wheel distribution in `dist/`
+- Entry point: `para-files` console script
 
-**Code Quality Gates:**
+## Environment Configuration
 
-- Linting: Ruff (pre-commit hook + CI)
-- Type checking: mypy strict mode (pre-commit hook + CI)
-- Security: bandit + gitleaks (pre-commit hooks)
-- Commit messages: commitizen validation (pre-commit hook)
-- Test coverage: 80% minimum (pytest-cov)
+**Required Environment Variables:**
+- `PARA_FILES_PARA_ROOT` - Root directory for PARA folders (required, defaults to ~/Documents/PARA)
+- `PARA_FILES_REFERENCE_TREE_PATH` - Path to personal_file_tree.yaml (default: config/personal_file_tree.yaml)
+
+**Optional Environment Variables - Embeddings:**
+- `PARA_FILES_MLX_MODEL_NAME` - Embedding model (default: nomic-text-v1.5)
+- `PARA_FILES_MLX_SCORE_THRESHOLD` - Min similarity score 0-1 (default: 0.75)
+- `PARA_FILES_MLX_SEMANTIC_ENABLED` - Enable semantic classifier (default: true)
+- `PARA_FILES_MLX_SEMANTIC_THRESHOLD` - Min similarity for semantic match (default: 0.65)
+
+**Optional Environment Variables - LLM Fallback:**
+- `PARA_FILES_LLM_ENABLED` - Enable LLM fallback (default: true)
+- `PARA_FILES_LLM_MODEL` - Model identifier (default: ollama/ministral-3:8b)
+- `PARA_FILES_LLM_API_BASE` - Ollama/provider endpoint (default: http://localhost:11434)
+- `PARA_FILES_LLM_CONFIDENCE_THRESHOLD` - Min confidence 0-1 (default: 0.6)
+- `PARA_FILES_LLM_TIMEOUT` - Request timeout in seconds (default: 15.0)
+
+**Optional Environment Variables - Logging:**
+- `PARA_FILES_LOG_LEVEL` - Log level (default: INFO)
+- `PARA_FILES_LOG_ROTATION` - Rotation policy (default: 10 MB)
+- `PARA_FILES_LOG_RETENTION` - Retention duration (default: 30 days)
+- `PARA_FILES_LOG_COMPRESSION` - Compression format (default: gz)
+
+**Optional Environment Variables - Processing:**
+- `PARA_FILES_CONTENT_PREVIEW_CHARS` - Characters extracted for matching (default: 2000, min: 100, max: 10000)
+- `PARA_FILES_MAX_WORKERS` - Parallel workers (default: 4, range: 1-16)
+
+**Secrets Location:**
+- Type: Environment variables or `.env` file
+- Priority: Env vars > `.env` > `config:` section in YAML > defaults
+- `.env` is git-ignored (never committed)
+
+**Configuration Files:**
+- Primary: `config/personal_file_tree.yaml` (user-maintained YAML with routing rules)
+- Secondary: `.env` or `.env.local` for environment overrides
+- Taxonomies: `config/documents.json`, `config/thema.json` (bundled, read-only)
 
 ## Webhooks & Callbacks
 
 **Incoming:**
-
-- None
+- Type: None (no webhook server)
+- Approach: CLI-driven, no external callbacks
 
 **Outgoing:**
+- Type: None (no external webhooks)
 
-- None
+## API Rate Limiting
 
-## Validated Database
+**Ollama:**
+- Type: None (local service)
 
-**Manual Mappings:**
+**isbnlib (Book Metadata):**
+- Open Library: Recommended ≤1 req/sec
+- Google Books: Rate limited by Google (typically 100-1000 req/day per IP)
+- Wikipedia: Rate limited (typically high for Nominatim-like usage)
+- Fallback graceful: If all fail, book classification continues with other signals
 
-- Path: PARA_FILES_VALIDATED_DB_PATH (optional JSON file)
-- Format: `{"sender@domain.com": "2_Areas/Category/Path"}`
-- Purpose: Manual overrides for known senders (highest priority in classification pipeline)
-- Integration: `src/para_files/classifiers/validated_db.py` - Signal 1 (if implemented)
-- Usage: Stores user feedback from interactive learning (`learn` command)
+**geopy (Geolocation):**
+- Nominatim (OpenStreetMap): 1 req/sec recommended, cached to minimize calls
+- Response caching: In-memory LRU + SQLite persistent cache
+- Timeout: 5 seconds per request
 
-## Reference Tree (YAML Configuration)
+## External Validation
 
-**File:** `config/personal_file_tree.yaml`
-
-**Sections:**
-
-1. `config:` - Settings overrides (PARA root, MLX model, LLM settings, etc.)
-2. `routes:` - Semantic routes (category descriptions for embedding similarity)
-3. `rules:` - Glob pattern matching rules (filename/path patterns → categories)
-4. `issuers:` - Known sender → category mappings (email, domain patterns)
-5. `retention:` - Document retention rules by category
-6. `categories:` - PARA folder descriptions and metadata
-
-**Integration Points:**
-
-- Loaded by: `src/para_files/reference_tree.py` - ReferenceTree class
-- Configuration layer: `src/para_files/config.py` - load_config() uses YAML config section
-- Used by: All classifiers (RulesEngineClassifier, SemanticClassifier, DomainClassifier)
-
-## External Files & Taxonomies
-
-**Document Taxonomy:**
-
-- File: `config/documents.json` (69.6KB)
-- Source: Swiss administrative document taxonomy
-- Format: JSON
-- Purpose: Maps document issuers to canonical paths
-- Integration: `src/para_files/taxonomies/loader.py` - TaxonomyLoader.load_documents()
-
-**Book Taxonomy:**
-
-- File: `config/thema.json` (3.6MB)
-- Source: Thema Classification Editorial Board (v1.6, 9,187 codes)
-- Format: JSON with nested hierarchies
-- Purpose: Book classification (Signal 2 - BookDetector)
-- Integration: `src/para_files/taxonomies/models.py` - ThemaTaxonomy model
-- Usage: `src/para_files/utils/thema_lookup.py` - get_thema_lookup()
-
-## Platform-Specific Integrations
-
-**macOS Vision Framework:**
-
-- Framework: Vision (PyObjC binding)
-- Package: `pyobjc-framework-vision` 12.1+
-- Usage: OCR text extraction from images/PDFs
-- Location: `src/para_files/utils/ocr.py` - extract_text_vision()
-- Availability: macOS only (fallback when unavailable)
-- Features: Language detection, confidence scoring
-
-**macOS Cocoa Framework:**
-
-- Framework: Cocoa
-- Package: `pyobjc-framework-cocoa` 12.1+
-- Usage: macOS-specific file system operations
-- Platform constraint: macOS only
-
-**macOS Quartz Framework:**
-
-- Framework: Quartz/CoreGraphics
-- Package: `pyobjc-framework-quartz` 12.1+
-- Usage: Low-level graphics/PDF rendering operations
-- Platform constraint: macOS only
-
-## Async HTTP Client
-
-**Library:** httpx 0.28.1+
-
-- Purpose: Async HTTP requests for ISBN/metadata lookups
-- Integration: Used by isbnlib indirectly for API calls
-- Credentials: None (public APIs)
-- Timeout: Varies by integration (5 seconds for geopy)
-
-## No External Integrations For
-
-- **Email:** Not integrated
-- **Cloud storage:** Not integrated (local filesystem only)
-- **Version control:** Git-aware (respects .gitignore) but no direct Git API integration
-- **Web APIs:** No webhook servers or REST API (CLI-only)
-- **Databases:** No SQL/NoSQL dependencies
-- **Message queues:** No async task queues
-- **Service discovery:** Not applicable (standalone app)
+**Validation Services:**
+- ISBN validation: Built-in via isbnlib (no external call for validation, only metadata)
+- File content: Local parsing via PyMuPDF, pypdf, openpyxl, etc.
+- No external validation APIs used
 
 ---
 
-*Integration audit: 2026-02-28*
+*Integration audit: 2026-03-22*
