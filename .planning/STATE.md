@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Reliability & Performance
 status: unknown
-stopped_at: Completed 09-02-PLAN.md
-last_updated: "2026-03-22T17:06:20.621Z"
+stopped_at: Completed 09-03-PLAN.md
+last_updated: "2026-03-22T17:10:33Z"
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 ## Current Position
 
 Phase: 09 (llm-service-reliability) — EXECUTING
-Plan: 1 of 3
+Plan: 3 of 3 (complete)
 
 ## Performance Metrics
 
@@ -50,6 +50,7 @@ Plan: 1 of 3
 | Phase 08 P02 | 29m | 2 tasks | 17 files |
 | Phase 08 P03 | 15m | 2 tasks | 7 files |
 | Phase 09 P02 | 10m | 2 tasks | 2 files |
+| Phase 09 P03 | 15m | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -68,6 +69,8 @@ Recent decisions affecting current work:
 - [Phase 08]: location and country are required placeholders — unresolved = None, not stripped (ERR-04)
 - [Phase 08]: taxonomy_classifier._resolve_pattern return type changed to str | None to propagate placeholder rejection
 - [Phase 09]: _coerce_confidence is @staticmethod; JSON-first strategy before regex fallback; allowlist uses prefix matching for template categories
+- [Phase 09]: OllamaEncoder LRU cache uses SHA256 of first 2000 chars; bounded at 500 entries (CACHE-01)
+- [Phase 09]: _ISBNLIB_ERRORS split into _TRANSIENT_ERRORS + _DATA_ERRORS; transient errors retry once, data errors skip immediately (ERR-05, RETRY-01)
 
 ### Pending Todos
 
@@ -80,6 +83,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T17:06:20.618Z
-Stopped at: Completed 09-02-PLAN.md
+Last session: 2026-03-22T17:10:33Z
+Stopped at: Completed 09-03-PLAN.md
 Resume file: None
