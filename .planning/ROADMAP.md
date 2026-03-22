@@ -60,7 +60,7 @@ Plans:
   3. After a configured number of consecutive Ollama failures, semantic and LLM classifiers are skipped for remaining files in the batch — no further connection attempts
   4. Starting the pipeline with Ollama unreachable disables semantic/LLM at init rather than failing per-file
   5. LLM response format tests cover: string confidence, trailing spaces, nested JSON, incomplete JSON — all parse without exception
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 
@@ -107,6 +107,6 @@ Plans:
 | 6. Extension Routing | v1.1 | 3/3 | Complete | 2026-03-01 |
 | 7. Inbox Processing UX | v1.1 | 2/2 | Complete | 2026-03-01 |
 | 8. Foundation Hardening | 2/3 | In Progress|  | - |
-| 9. LLM + Service Reliability | v1.2 | 0/3 | Not started | - |
+| 9. LLM + Service Reliability | 1/3 | In Progress|  | - |
 | 10. Classification Accuracy + Move Safety | v1.2 | 0/? | Not started | - |
 | 11. Performance + Pipeline Tests | v1.2 | 0/? | Not started | - |

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Reliability & Performance
 status: unknown
-stopped_at: Phase 9 context gathered
-last_updated: "2026-03-22T16:44:28.772Z"
+stopped_at: Completed 09-02-PLAN.md
+last_updated: "2026-03-22T17:06:20.621Z"
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 6
+  completed_plans: 4
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Files are classified correctly and transparently — users understand why, and failures surface loudly.
-**Current focus:** Phase 08 — Foundation Hardening
+**Current focus:** Phase 09 — llm-service-reliability
 
 ## Current Position
 
-Phase: 08 (Foundation Hardening) — COMPLETE
-Plan: 3 of 3 (all plans complete)
+Phase: 09 (llm-service-reliability) — EXECUTING
+Plan: 1 of 3
 
 ## Performance Metrics
 
@@ -49,6 +49,7 @@ Plan: 3 of 3 (all plans complete)
 | Phase 08 P01 | 8m | 2 tasks | 4 files |
 | Phase 08 P02 | 29m | 2 tasks | 17 files |
 | Phase 08 P03 | 15m | 2 tasks | 7 files |
+| Phase 09 P02 | 10m | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,7 @@ Recent decisions affecting current work:
 - [Phase 08]: macos_only marker in conftest.py + tests/ added to pythonpath for conftest import (EXC-04)
 - [Phase 08]: location and country are required placeholders — unresolved = None, not stripped (ERR-04)
 - [Phase 08]: taxonomy_classifier._resolve_pattern return type changed to str | None to propagate placeholder rejection
+- [Phase 09]: _coerce_confidence is @staticmethod; JSON-first strategy before regex fallback; allowlist uses prefix matching for template categories
 
 ### Pending Todos
 
@@ -78,6 +80,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T16:44:28.769Z
-Stopped at: Phase 9 context gathered
-Resume file: .planning/phases/09-llm-service-reliability/09-CONTEXT.md
+Last session: 2026-03-22T17:06:20.618Z
+Stopped at: Completed 09-02-PLAN.md
+Resume file: None
