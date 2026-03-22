@@ -566,6 +566,13 @@
             "Fibre optique",
             "Facture télécom"
           ],
+          "required_context": [
+            "facture",
+            "abonnement",
+            "montant",
+            "paiement",
+            "redevance"
+          ],
           "retention": "5_years",
           "paper_required": false,
           "issuers": [

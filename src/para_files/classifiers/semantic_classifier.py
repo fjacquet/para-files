@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import math
 import re
+import threading
 
 from loguru import logger
 
@@ -123,6 +124,7 @@ class SemanticClassifier(BaseClassifier):
         self._category_embeddings: dict[str, list[float]] = {}
         self._category_info: dict[str, dict[str, str]] = {}  # category -> metadata
         self._initialized = False
+        self._init_lock = threading.Lock()
 
     @property
     def name(self) -> str:
@@ -170,10 +172,16 @@ class SemanticClassifier(BaseClassifier):
         return " | ".join(parts)
 
     def _ensure_initialized(self) -> None:
-        """Lazily initialize encoder and compute category embeddings."""
+        """Lazily initialize encoder and compute category embeddings (thread-safe)."""
         if self._initialized:
             return
+        with self._init_lock:
+            if self._initialized:  # Double-checked locking (another thread won the race)
+                return  # type: ignore[unreachable]
+            self._do_initialize()
 
+    def _do_initialize(self) -> None:
+        """Perform actual initialization (called under lock)."""
         logger.info("Initializing SemanticClassifier with Ollama embeddings...")
 
         # Initialize encoder
@@ -308,7 +316,7 @@ class SemanticClassifier(BaseClassifier):
 
         if best_key is None or best_similarity < self._confidence_threshold:
             logger.debug(
-                "No semantic match found (best: %.2f, threshold: %.2f)",
+                "No semantic match found (best: {:.2f}, threshold: {:.2f})",
                 best_similarity,
                 self._confidence_threshold,
             )
@@ -355,7 +363,7 @@ class SemanticClassifier(BaseClassifier):
         adjusted_confidence = self.default_confidence * best_similarity
 
         logger.info(
-            "Semantic match: %s -> %s (similarity: %.2f, confidence: %.2f)",
+            "Semantic match: {} -> {} (similarity: {:.2f}, confidence: {:.2f})",
             info.get("name", best_key),
             category_path,
             best_similarity,

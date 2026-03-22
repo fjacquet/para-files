@@ -13,6 +13,7 @@ Chains classifiers in priority order: first match wins.
 
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -70,12 +71,19 @@ class ClassificationPipeline:
         self._classifiers: list[BaseClassifier] = []
         self._reference_tree: ReferenceTree | None = None
         self._initialized = False
+        self._init_lock = threading.Lock()
 
     def _ensure_initialized(self) -> None:
-        """Lazily initialize classifiers on first use."""
+        """Lazily initialize classifiers on first use (thread-safe)."""
         if self._initialized:
             return
+        with self._init_lock:
+            if self._initialized:  # Double-checked locking (another thread won the race)
+                return  # type: ignore[unreachable]
+            self._do_initialize()
 
+    def _do_initialize(self) -> None:
+        """Perform actual initialization (called under lock)."""
         # Load reference tree (for routing_rules only in v2.0)
         self._reference_tree = ReferenceTree(self._config.reference_tree_path)
         self._reference_tree.load()
@@ -336,7 +344,7 @@ class ClassificationPipeline:
         if should_skip:
             return file_path
 
-        logger.debug(f"Generic filename detected, attempting OCR rename: {file_path.name}")
+        logger.debug("Generic filename detected, attempting OCR rename: {}", file_path.name)
 
         # Read content for OCR (will trigger OCR if needed)
         from para_files.utils.file_utils import read_content_preview
@@ -344,7 +352,7 @@ class ClassificationPipeline:
         content = read_content_preview(file_path, max_chars=5000)
 
         if not content or len(content.strip()) < _MIN_CONTENT_FOR_RENAME:
-            logger.debug(f"Not enough content for OCR rename: {file_path.name}")
+            logger.debug("Not enough content for OCR rename: {}", file_path.name)
             return file_path
 
         # Extract metadata from content
@@ -354,7 +362,9 @@ class ClassificationPipeline:
         # Check if we have enough confidence to rename
         if metadata.confidence < self._config.ocr_rename.min_confidence:
             logger.debug(
-                f"OCR metadata confidence too low ({metadata.confidence:.2f}): {file_path.name}"
+                "OCR metadata confidence too low ({:.2f}): {}",
+                metadata.confidence,
+                file_path.name,
             )
             return file_path
 
@@ -371,7 +381,10 @@ class ClassificationPipeline:
 
         if new_path and new_path != file_path:
             logger.info(
-                f"OCR rename: {file_path.name} → {new_path.name} (confidence: {confidence:.2f})"
+                "OCR rename: {} → {} (confidence: {:.2f})",
+                file_path.name,
+                new_path.name,
+                confidence,
             )
             return new_path
 
