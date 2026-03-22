@@ -42,6 +42,12 @@ DEFAULT_LOG_RETENTION = "30 days"
 DEFAULT_LOG_LEVEL = "INFO"
 
 
+# Global config file location — searched before local .env so local .env takes precedence.
+# Users who run para-files outside the project directory should place their settings here.
+_HOME_ENV = Path.home() / ".config" / "para-files" / ".env"
+_ENV_FILES = (str(_HOME_ENV), ".env")
+
+
 def _load_yaml_config(yaml_path: Path | None = None) -> dict[str, Any]:
     """Load config section from reference tree YAML.
 
@@ -81,7 +87,7 @@ class MLXConfig(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_prefix="PARA_FILES_MLX_",
-        env_file=".env",
+        env_file=_ENV_FILES,
         env_file_encoding="utf-8",
         extra="ignore",  # Allow extra fields for backward compatibility
         populate_by_name=True,  # Accept both field name and alias
@@ -118,7 +124,7 @@ class LLMConfig(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_prefix="PARA_FILES_LLM_",
-        env_file=".env",
+        env_file=_ENV_FILES,
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -157,7 +163,7 @@ class LoggingConfig(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_prefix="PARA_FILES_LOG_",
-        env_file=".env",
+        env_file=_ENV_FILES,
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -208,7 +214,7 @@ class ExtensionRoutingConfig(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_prefix="PARA_FILES_EXT_ROUTING_",
-        env_file=".env",
+        env_file=_ENV_FILES,
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -245,7 +251,7 @@ class Config(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="PARA_FILES_",
         env_nested_delimiter="__",
-        env_file=".env",
+        env_file=_ENV_FILES,
         env_file_encoding="utf-8",
         extra="ignore",
     )

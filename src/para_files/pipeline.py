@@ -117,18 +117,25 @@ class ClassificationPipeline:
         taxonomy_classifier = TaxonomyClassifier(loader=taxonomy_loader)
         self._classifiers.append(taxonomy_classifier)
 
-        # Health check: probe Ollama before enabling Ollama-dependent classifiers
-        ollama_available = check_ollama_health(
+        # Health check: probe Ollama for embeddings (always local Ollama)
+        embedding_available = check_ollama_health(
+            api_base="http://localhost:11434",
+            timeout=3.0,
+        )
+        # Health check: probe LLM provider (may be OpenRouter or local Ollama)
+        llm_provider_available = check_ollama_health(
             api_base=self._config.llm.api_base or "http://localhost:11434",
             timeout=3.0,
         )
-        if not ollama_available:
-            logger.warning("Ollama unreachable at init — disabling semantic and LLM classifiers")
+        if not embedding_available:
+            logger.warning("Ollama unreachable at init — disabling semantic classifier (embeddings)")
+        if not llm_provider_available:
+            logger.warning("LLM provider unreachable at init — disabling LLM classifier")
         self._circuit_breaker = OllamaCircuitBreaker(threshold=3)
 
         # Signal 4: Semantic Classifier (85%) - MLX embedding similarity
         # Uses pre-computed embeddings for category descriptions
-        if self._config.mlx.semantic_enabled and ollama_available:
+        if self._config.mlx.semantic_enabled and embedding_available:
             semantic_classifier = SemanticClassifier(
                 loader=taxonomy_loader,
                 confidence_threshold=self._config.mlx.semantic_threshold,
@@ -142,7 +149,7 @@ class ClassificationPipeline:
         self._classifiers.append(extension_router)
 
         # Signal 6: LLM Fallback (configurable via PARA_FILES_LLM_* env vars)
-        if self._config.llm.enabled and ollama_available:
+        if self._config.llm.enabled and llm_provider_available:
             valid_categories = self._get_valid_categories(taxonomy_loader)
             llm = LLMClassifier(
                 enabled=True,
