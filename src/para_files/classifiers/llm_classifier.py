@@ -231,7 +231,7 @@ class LLMClassifier(BaseClassifier):
             logger.debug("LLM call interrupted")
             return None
 
-        text = response.choices[0].message.content or ""
+        text = response.choices[0].message.content or ""  # pyright: ignore[reportAttributeAccessIssue]
         logger.debug("LLM raw response: {}", text[:500])
 
         return self._parse_response(text)

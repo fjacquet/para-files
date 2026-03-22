@@ -14,6 +14,7 @@ from para_files.mover import (
     move_classified_file,
     validate_destination_permissions,
 )
+from para_files.types import ClassificationResult
 
 
 class TestMoveResult:
@@ -558,7 +559,9 @@ class TestBatchMover:
         dest = tmp_path / "dest"
         dest.mkdir()
 
-        items = [(src, dest, None) for src in sources]
+        items: list[tuple[Path, Path, ClassificationResult | None]] = [
+            (src, dest, None) for src in sources
+        ]
 
         batch_mover = BatchMover()
         result = batch_mover.move_batch(items)
@@ -592,7 +595,7 @@ class TestBatchMover:
         def mock_move(
             source: Path,
             destination_dir: Path,
-            classification: object = None,
+            classification: ClassificationResult | None = None,
         ) -> MoveResult:
             nonlocal call_count
             call_count += 1
@@ -608,7 +611,9 @@ class TestBatchMover:
 
         batch_mover._mover.move = mock_move  # type: ignore[method-assign]
 
-        items = [(src, dest, None) for src in sources]
+        items: list[tuple[Path, Path, ClassificationResult | None]] = [
+            (src, dest, None) for src in sources
+        ]
         result = batch_mover.move_batch(items)
 
         # First file succeeded, second failed, third not attempted
@@ -639,7 +644,7 @@ class TestBatchMover:
         def mock_move_tracking(
             source: Path,
             destination_dir: Path,
-            classification: object = None,
+            classification: ClassificationResult | None = None,
         ) -> MoveResult:
             nonlocal call_count
             call_count += 1
@@ -655,7 +660,9 @@ class TestBatchMover:
 
         batch_mover._mover.move = mock_move_tracking  # type: ignore[method-assign]
 
-        items = [(src, dest, None) for src in sources]
+        items: list[tuple[Path, Path, ClassificationResult | None]] = [
+            (src, dest, None) for src in sources
+        ]
         batch_mover.move_batch(items)
 
         # Only first file should be in completed_moves
@@ -707,7 +714,7 @@ class TestBatchMoverRollback:
         def mock_move_rollback(
             source: Path,
             destination_dir: Path,
-            classification: object = None,
+            classification: ClassificationResult | None = None,
         ) -> MoveResult:
             nonlocal call_count
             call_count += 1
@@ -723,7 +730,9 @@ class TestBatchMoverRollback:
 
         batch_mover._mover.move = mock_move_rollback  # type: ignore[method-assign]
 
-        items = [(src, dest, None) for src in sources]
+        items: list[tuple[Path, Path, ClassificationResult | None]] = [
+            (src, dest, None) for src in sources
+        ]
         result = batch_mover.move_batch(items)
 
         assert result.failed_at == 2
@@ -757,7 +766,7 @@ class TestBatchMoverRollback:
         dest.mkdir()
 
         batch_mover = BatchMover(dry_run=True)
-        items = [(src, dest, None)]
+        items: list[tuple[Path, Path, ClassificationResult | None]] = [(src, dest, None)]
         batch_mover.move_batch(items)
 
         # In dry_run, the move is simulated (success=True, action="would be moved")

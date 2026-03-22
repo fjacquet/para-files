@@ -70,7 +70,9 @@ def _extract_chm_to_temp(chm_path: Path, temp_dir: Path) -> bool:
     except subprocess.TimeoutExpired:
         logger.warning("CHM extraction timed out for {}", chm_path.name)
         return False
-    except (subprocess.SubprocessError, FileNotFoundError, OSError, UnicodeDecodeError, ValueError) as e:
+    except (
+        subprocess.SubprocessError, FileNotFoundError, OSError, UnicodeDecodeError, ValueError
+    ) as e:
         logger.warning("CHM extraction failed for {}: {}", chm_path.name, e)
         return False
     else:
@@ -130,7 +132,7 @@ def _scan_html_files_for_isbns(temp_dir: Path, max_files: int = 20) -> list[str]
                 if isbn not in seen:
                     seen.add(isbn)
                     all_isbns.append(isbn)
-        except (OSError, UnicodeDecodeError, ValueError):  # noqa: S112
+        except (OSError, UnicodeDecodeError, ValueError):
             continue
 
     return all_isbns
@@ -164,7 +166,7 @@ def _extract_title_from_files(temp_dir: Path) -> str | None:
                 title = _extract_title_from_html(content)
                 if title:
                     return title
-            except (OSError, UnicodeDecodeError, ValueError):  # noqa: S112
+            except (OSError, UnicodeDecodeError, ValueError):
                 continue
 
     # Try any HTML file
@@ -174,7 +176,7 @@ def _extract_title_from_files(temp_dir: Path) -> str | None:
             title = _extract_title_from_html(content)
             if title:
                 return title
-        except (OSError, UnicodeDecodeError, ValueError):  # noqa: S112
+        except (OSError, UnicodeDecodeError, ValueError):
             continue
 
     return None
