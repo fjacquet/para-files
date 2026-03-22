@@ -80,8 +80,8 @@ class OllamaEncoder(DenseEncoder):
             try:
                 result = self._encode_texts([candidate])
                 return result[0]
-            except Exception:  # noqa: BLE001
-                logger.debug("Encode failed for {}-char text, trying shorter", len(candidate))
+            except (ConnectionError, TimeoutError, OSError, ValueError, RuntimeError) as e:
+                logger.debug("Encode failed for {}-char text, trying shorter: {}", len(candidate), e)
                 continue
 
         # Absolute last resort: encode just the first 100 chars
@@ -89,8 +89,8 @@ class OllamaEncoder(DenseEncoder):
         try:
             result = self._encode_texts([last_chance])
             return result[0]
-        except Exception:  # noqa: BLE001
-            logger.exception("Ollama encoder failed on 100-char text — server may be down")
+        except (ConnectionError, TimeoutError, OSError, ValueError, RuntimeError) as e:
+            logger.exception("Ollama encoder failed on 100-char text — server may be down: {}", e)
             return [0.0] * 768
 
     def __call__(self, texts: list[str]) -> list[list[float]]:
@@ -110,7 +110,7 @@ class OllamaEncoder(DenseEncoder):
 
         try:
             return self._encode_texts(truncated_texts)
-        except Exception as e:  # noqa: BLE001
+        except (ConnectionError, TimeoutError, OSError, ValueError, RuntimeError) as e:
             # Batch failed — retry per-text with progressive truncation
             logger.warning("Batch encode failed, retrying per-text: {}", e)
             return [self._encode_single(t) for t in texts]
