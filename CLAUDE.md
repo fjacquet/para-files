@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Development guidance for Claude Code (claude.ai/code) when working with this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
@@ -115,18 +115,18 @@ taxonomy.build_para_path("UB")
 
 ## Architecture
 
-### 6-Signal Classification Pipeline
+### Classification Pipeline (v2.2)
 
-Files are classified using signals in priority order:
+Files are classified using a cascade — first match wins. Actual init order in `pipeline.py`:
 
-1. **Validated DB** (100%) - Manual mappings from user feedback
-2. **Book Detector** (96-100%) - PDF book detection via ISBN/metadata/Thema
-3. **Rules Engine** (95%) - Glob patterns on filename/path
-4. **Domain KB** (90%) - Known issuer to category mappings
-5. **Semantic Router** (85%) - Ollama embedding similarity (via litellm)
-6. **LLM Fallback** (configurable) - Ollama LLM classification (via litellm)
+1. **Book Detector** (96%, 100% with ISBN) - PDF book detection via ISBN/metadata/Thema
+2. **Rules Engine** (95%) - Glob patterns on filename/path from `personal_file_tree.yaml`
+3. **Taxonomy Classifier** (90%) - Issuers + keywords from `config/documents.json`
+4. **Semantic Classifier** (85%) - Ollama embedding similarity (via litellm)
+5. **Extension Router** (97%) - Deterministic routing by file extension (catch-all)
+6. **LLM Fallback** (60%) - Optional Ollama LLM via litellm
 
-For detailed architecture, see [docs/architecture/overview.md](docs/architecture/overview.md).
+If nothing matches, files go to `0_Inbox`.
 
 ## Key Technologies
 
@@ -201,104 +201,164 @@ ASCII boxes are fragile across renderers. Mermaid renders consistently.
 - **Link between docs** - Cross-reference related pages
 - **Tables over prose** - Use tables for reference material
 
-## Testing
+## Configuration via Environment Variables
 
+All config uses `pydantic-settings` with `.env` file support:
+
+| Prefix | Config class | Examples |
+|--------|-------------|----------|
+| `PARA_FILES_MLX_` | `MLXConfig` | `MODEL_NAME`, `SCORE_THRESHOLD`, `SEMANTIC_ENABLED` |
+| `PARA_FILES_LLM_` | `LLMConfig` | `ENABLED`, `MODEL`, `CONFIDENCE_THRESHOLD`, `API_BASE` |
+| `PARA_FILES_LOG_` | `LoggingConfig` | `LEVEL`, `ROTATION`, `RETENTION` |
+
+Priority: env vars > `.env` file > YAML `config:` section > defaults.
+
+## CLI Module Pattern
+
+Commands live in `src/para_files/cli/`. Each `*_cmd.py` imports `app` from `cli/app.py` and registers via `@app.command()`. `main.py` imports all command modules to trigger registration, then re-exports symbols for backward compatibility with tests.
+
+To add a new CLI command:
+1. Create `src/para_files/cli/yourcommand_cmd.py` with `@app.command()` (Typer, not Click)
+2. Import the module in `main.py`
+3. Add tests in `tests/test_yourcommand_cmd.py`
+
+## Performance Notes
+
+- Pipeline initializes lazily on first classification (thread-safe via `threading.Lock`)
+- Reference tree loaded once at startup
+- Embeddings calculated per-request (not cached)
+- Ollama server must be running for semantic/LLM signals
+
+<!-- rtk-instructions v2 -->
+# RTK (Rust Token Killer) - Token-Optimized Commands
+
+## Golden Rule
+
+**Always prefix commands with `rtk`**. If RTK has a dedicated filter, it uses it. If not, it passes through unchanged. This means RTK is always safe to use.
+
+**Important**: Even in command chains with `&&`, use `rtk`:
 ```bash
-# Run all tests
-uv run pytest
+# ❌ Wrong
+git add . && git commit -m "msg" && git push
 
-# With coverage
-uv run pytest --cov=src/para_files
-
-# Specific test file
-uv run pytest tests/test_classifiers.py
-
-# Specific test
-uv run pytest tests/test_classifiers.py::test_semantic_router
+# ✅ Correct
+rtk git add . && rtk git commit -m "msg" && rtk git push
 ```
 
-## Development Workflow
+## RTK Commands by Workflow
 
-1. Create feature branch
-2. Write tests first (TDD)
-3. Implement feature
-4. Run all checks (`ruff check/format`, `mypy`, `pytest`)
-5. Update documentation
-6. Create pull request
-
-## Common Tasks
-
-### Add a New CLI Command
-
-1. Add command function in `main.py`
-2. Add Click decorators for arguments/options
-3. Create command documentation page in `docs/cli/`
-4. Update `docs/cli/overview.md`
-5. Add tests in `tests/test_main.py`
-6. Update `CHANGELOG.md`
-
-### Add Configuration Option
-
-1. Add to `ConfigSettings` in `config.py`
-2. Document in `docs/configuration/`
-3. Update example `.env` file
-4. Add tests
-5. Update `CHANGELOG.md`
-
-### Add Classification Signal
-
-1. Create file in `src/para_files/classifiers/`
-2. Implement signal class
-3. Add to pipeline in `pipeline.py`
-4. Add tests
-5. Document in `docs/architecture/`
-6. Update pipeline diagram in docs
-
-## Troubleshooting Development
-
-**Type errors after changes?**
-
+### Build & Compile (80-90% savings)
 ```bash
-uv run mypy src/ --show-error-codes
+rtk cargo build         # Cargo build output
+rtk cargo check         # Cargo check output
+rtk cargo clippy        # Clippy warnings grouped by file (80%)
+rtk tsc                 # TypeScript errors grouped by file/code (83%)
+rtk lint                # ESLint/Biome violations grouped (84%)
+rtk prettier --check    # Files needing format only (70%)
+rtk next build          # Next.js build with route metrics (87%)
 ```
 
-**Formatting issues?**
-
+### Test (90-99% savings)
 ```bash
-uv run ruff format src/ tests/
+rtk cargo test          # Cargo test failures only (90%)
+rtk vitest run          # Vitest failures only (99.5%)
+rtk playwright test     # Playwright failures only (94%)
+rtk test <cmd>          # Generic test wrapper - failures only
 ```
 
-**Import errors?**
-
+### Git (59-80% savings)
 ```bash
-# Reinstall in dev mode
-uv sync --all-extras
+rtk git status          # Compact status
+rtk git log             # Compact log (works with all git flags)
+rtk git diff            # Compact diff (80%)
+rtk git show            # Compact show (80%)
+rtk git add             # Ultra-compact confirmations (59%)
+rtk git commit          # Ultra-compact confirmations (59%)
+rtk git push            # Ultra-compact confirmations
+rtk git pull            # Ultra-compact confirmations
+rtk git branch          # Compact branch list
+rtk git fetch           # Compact fetch
+rtk git stash           # Compact stash
+rtk git worktree        # Compact worktree
 ```
 
-**Tests failing?**
+Note: Git passthrough works for ALL subcommands, even those not explicitly listed.
 
+### GitHub (26-87% savings)
 ```bash
-# Run with verbose output
-uv run pytest -vv tests/
+rtk gh pr view <num>    # Compact PR view (87%)
+rtk gh pr checks        # Compact PR checks (79%)
+rtk gh run list         # Compact workflow runs (82%)
+rtk gh issue list       # Compact issue list (80%)
+rtk gh api              # Compact API responses (26%)
 ```
 
-## Performance Considerations
+### JavaScript/TypeScript Tooling (70-90% savings)
+```bash
+rtk pnpm list           # Compact dependency tree (70%)
+rtk pnpm outdated       # Compact outdated packages (80%)
+rtk pnpm install        # Compact install output (90%)
+rtk npm run <script>    # Compact npm script output
+rtk npx <cmd>           # Compact npx command output
+rtk prisma              # Prisma without ASCII art (88%)
+```
 
-- MLX model loads lazily (first call only)
-- Model cached in `~/.cache/huggingface/`
-- Embeddings are calculated per-request (not cached)
-- Reference tree is loaded once at startup
+### Files & Search (60-75% savings)
+```bash
+rtk ls <path>           # Tree format, compact (65%)
+rtk read <file>         # Code reading with filtering (60%)
+rtk grep <pattern>      # Search grouped by file (75%)
+rtk find <pattern>      # Find grouped by directory (70%)
+```
 
-## Security Notes
+### Analysis & Debug (70-90% savings)
+```bash
+rtk err <cmd>           # Filter errors only from any command
+rtk log <file>          # Deduplicated logs with counts
+rtk json <file>         # JSON structure without values
+rtk deps                # Dependency overview
+rtk env                 # Environment variables compact
+rtk summary <cmd>       # Smart summary of command output
+rtk diff                # Ultra-compact diffs
+```
 
-- Validates all file paths before operations
-- Doesn't execute arbitrary code from YAML
-- No automatic deletion without explicit confirmation
-- Proper error handling for permission issues
+### Infrastructure (85% savings)
+```bash
+rtk docker ps           # Compact container list
+rtk docker images       # Compact image list
+rtk docker logs <c>     # Deduplicated logs
+rtk kubectl get         # Compact resource list
+rtk kubectl logs        # Deduplicated pod logs
+```
 
-## Related Documents
+### Network (65-70% savings)
+```bash
+rtk curl <url>          # Compact HTTP responses (70%)
+rtk wget <url>          # Compact download output (65%)
+```
 
-- **[README.md](README.md)** - User-facing project overview
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
-- **[CHANGELOG.md](CHANGELOG.md)** - Version history
-- **[docs/](docs/)** - Complete user documentation
+### Meta Commands
+```bash
+rtk gain                # View token savings statistics
+rtk gain --history      # View command history with savings
+rtk discover            # Analyze Claude Code sessions for missed RTK usage
+rtk proxy <cmd>         # Run command without filtering (for debugging)
+rtk init                # Add RTK instructions to CLAUDE.md
+rtk init --global       # Add RTK to ~/.claude/CLAUDE.md
+```
+
+## Token Savings Overview
+
+| Category | Commands | Typical Savings |
+|----------|----------|-----------------|
+| Tests | vitest, playwright, cargo test | 90-99% |
+| Build | next, tsc, lint, prettier | 70-87% |
+| Git | status, log, diff, add, commit | 59-80% |
+| GitHub | gh pr, gh run, gh issue | 26-87% |
+| Package Managers | pnpm, npm, npx | 70-90% |
+| Files | ls, read, grep, find | 60-75% |
+| Infrastructure | docker, kubectl | 85% |
+| Network | curl, wget | 65-70% |
+
+Overall average: **60-90% token reduction** on common development operations.
+<!-- /rtk-instructions -->

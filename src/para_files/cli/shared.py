@@ -337,7 +337,7 @@ def print_classification_result(
     if verbose and result.signals:
         typer.echo("   Signals:")
         for s in result.signals:
-            marker = "[matched]" if s.matched else "[      ]"
+            marker = "[matched]" if s.matched else "[skipped]" if s.skipped else "[      ]"
             typer.echo(f"      {marker} {s.name}: {s.score:.0%}")
     if result.route_name:
         typer.echo(f"   Route: {result.route_name}")

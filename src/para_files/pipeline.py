@@ -229,7 +229,7 @@ class ClassificationPipeline:
         signals: list[SignalResult] = []
         winner: ClassificationResult | None = None
 
-        # Run all classifiers, recording each result, winner is first match
+        # Run classifiers in priority order; stop after first match
         for classifier in self._classifiers:
             raw_source = getattr(classifier, "source", ClassificationSource.DEFAULT)
             signal_source = (
@@ -237,6 +237,20 @@ class ClassificationPipeline:
                 if isinstance(raw_source, ClassificationSource)
                 else ClassificationSource.DEFAULT
             )
+
+            # Short-circuit: skip remaining classifiers once we have a winner
+            if winner is not None:
+                signals.append(
+                    SignalResult(
+                        source=signal_source,
+                        name=classifier.name,
+                        score=0.0,
+                        matched=False,
+                        skipped=True,
+                    )
+                )
+                continue
+
             try:
                 result = classifier.classify(content, metadata)
                 if result is not None:
@@ -248,14 +262,13 @@ class ClassificationPipeline:
                             matched=True,
                         )
                     )
-                    if winner is None:
-                        winner = result
-                        logger.debug(
-                            "Classified by {}: {} ({:.0f}%)",
-                            classifier.name,
-                            result.category,
-                            result.confidence.value * 100,
-                        )
+                    winner = result
+                    logger.debug(
+                        "Classified by {}: {} ({:.0f}%)",
+                        classifier.name,
+                        result.category,
+                        result.confidence.value * 100,
+                    )
                 else:
                     signals.append(
                         SignalResult(

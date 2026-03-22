@@ -140,6 +140,9 @@ class SignalResult(BaseModel):
     name: str = Field(description="Human-readable classifier name, e.g., 'rules_engine'")
     score: float = Field(description="Confidence score returned (0.0 if classifier skipped)")
     matched: bool = Field(description="True if this classifier returned a non-None result")
+    skipped: bool = Field(
+        default=False, description="True if classifier was skipped due to earlier match"
+    )
 
 
 class ClassificationResult(BaseModel):
