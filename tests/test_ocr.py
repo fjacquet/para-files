@@ -470,7 +470,7 @@ class TestExtractTextWithRegionsInternal:
         test_file = tmp_path / "test.png"
         test_file.touch()
 
-        mock_load.side_effect = Exception("Image loading error")
+        mock_load.side_effect = OSError("Image loading error")
 
         with patch("para_files.utils.ocr.is_vision_available", return_value=True):
             result = extract_text_with_regions(test_file)
@@ -561,7 +561,7 @@ class TestExtractTextVision:
         test_file = tmp_path / "test.png"
         test_file.touch()
 
-        mock_load.side_effect = Exception("Load error")
+        mock_load.side_effect = OSError("Load error")
 
         result = _extract_text_vision(test_file)
 

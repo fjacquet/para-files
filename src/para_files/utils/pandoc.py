@@ -56,6 +56,16 @@ PANDOC_FORMATS: dict[str, str] = {
 # Extensions that pandoc can handle
 PANDOC_EXTENSIONS = frozenset(PANDOC_FORMATS.keys())
 
+# Explicit allowlist of extensions permitted to reach the subprocess.
+# Must be a subset of PANDOC_FORMATS keys (no .md/.markdown/.tex/.latex/.xhtml
+# /.ipynb/.mediawiki/.wiki/.docbook/.man/.t2t/.twiki — those are handled by
+# PANDOC_FORMATS but excluded from the subprocess allowlist intentionally).
+ALLOWED_EXTENSIONS: frozenset[str] = frozenset({
+    ".docx", ".doc", ".rtf", ".odt", ".html", ".htm", ".epub",
+    ".pptx", ".fb2", ".textile", ".rst", ".org", ".opml",
+    ".muse", ".native", ".json", ".csv", ".tsv", ".bib",
+})
+
 
 class PandocResult(BaseModel):
     """Result of pandoc text extraction."""
@@ -93,6 +103,10 @@ def get_pandoc_format(file_path: Path) -> str | None:
 
 def _run_pandoc_to_plain(file_path: Path, fmt: str) -> str | None:
     """Run pandoc and return plain text output."""
+    if file_path.suffix.lower() not in ALLOWED_EXTENSIONS:
+        logger.warning("Rejected file with unsupported extension for pandoc: {}", file_path.suffix)
+        return None
+
     pandoc_args = [
         "pandoc",
         "--from",
@@ -119,8 +133,8 @@ def _run_pandoc_to_plain(file_path: Path, fmt: str) -> str | None:
     except subprocess.TimeoutExpired:
         logger.warning("pandoc timed out for: {}", file_path)
         return None
-    except Exception:  # noqa: BLE001
-        logger.exception("Failed to extract text with pandoc from: {}", file_path)
+    except (subprocess.SubprocessError, FileNotFoundError, OSError) as e:
+        logger.exception("Failed to extract text with pandoc from: {} ({})", file_path, e)
         return None
 
     return result.stdout or None
@@ -182,6 +196,10 @@ def extract_metadata(file_path: Path) -> dict[str, str] | None:
     if fmt is None or not file_path.exists():
         return None
 
+    if file_path.suffix.lower() not in ALLOWED_EXTENSIONS:
+        logger.warning("Rejected file with unsupported extension for pandoc: {}", file_path.suffix)
+        return None
+
     # Template to extract metadata fields
     template = (
         "$if(title)$title: $title$\n$endif$"
@@ -218,8 +236,8 @@ def extract_metadata(file_path: Path) -> dict[str, str] | None:
     except subprocess.TimeoutExpired:
         logger.warning("pandoc metadata extraction timed out for: {}", file_path)
         return None
-    except Exception:  # noqa: BLE001
-        logger.exception("Failed to extract metadata with pandoc from: {}", file_path)
+    except (subprocess.SubprocessError, FileNotFoundError, OSError) as e:
+        logger.exception("Failed to extract metadata with pandoc from: {} ({})", file_path, e)
         return None
 
     # Parse the output into a dictionary

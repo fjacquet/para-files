@@ -314,9 +314,9 @@ class TestFetchFromNominatim:
 
     @patch("para_files.utils.geolocation._get_nominatim_geolocator")
     def test_handles_generic_exception(self, mock_get_geo: MagicMock):
-        """Test handling of generic exceptions."""
+        """Test handling of connection/network exceptions."""
         mock_geolocator = MagicMock()
-        mock_geolocator.reverse.side_effect = Exception("Unknown error")
+        mock_geolocator.reverse.side_effect = ConnectionError("Unknown error")
         mock_get_geo.return_value = mock_geolocator
 
         result = _fetch_from_nominatim(46.2, 6.1)

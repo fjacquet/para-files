@@ -203,8 +203,9 @@ class TestExtractMetadata:
     @patch("subprocess.run")
     def test_extract_metadata_success(self, mock_run: MagicMock, tmp_path: Path):
         """Test successful metadata extraction."""
-        test_file = tmp_path / "document.md"
-        test_file.write_text("# Test\n\nContent here.")
+        # Use .rst (in ALLOWED_EXTENSIONS) rather than .md (excluded, read as text directly)
+        test_file = tmp_path / "document.rst"
+        test_file.write_text("Test document content.")
 
         mock_run.return_value = MagicMock(
             returncode=0,
@@ -222,7 +223,7 @@ class TestExtractMetadata:
     @patch("subprocess.run")
     def test_extract_metadata_no_metadata(self, mock_run: MagicMock, tmp_path: Path):
         """Test when document has no metadata."""
-        test_file = tmp_path / "plain.md"
+        test_file = tmp_path / "plain.rst"
         test_file.write_text("Just content.")
 
         mock_run.return_value = MagicMock(returncode=0, stdout="")
@@ -243,17 +244,21 @@ class TestExtractTextIntegration:
             pytest.skip("pandoc not installed")
 
     @pytest.mark.slow
-    def test_extract_from_markdown(self, check_pandoc, tmp_path: Path):
-        """Test extracting text from a Markdown file."""
-        md_file = tmp_path / "test.md"
-        md_file.write_text("# Hello World\n\nThis is a test document.\n\n- Item 1\n- Item 2")
+    def test_extract_from_rst(self, check_pandoc, tmp_path: Path):
+        """Test extracting text from a RST file.
 
-        result = extract_text(md_file)
+        Note: .md files are excluded from ALLOWED_EXTENSIONS (read as text directly),
+        so we use .rst which is in the subprocess allowlist.
+        """
+        rst_file = tmp_path / "test.rst"
+        rst_file.write_text("Hello World\n===========\n\nThis is a test document.\n\n- Item 1\n- Item 2")
+
+        result = extract_text(rst_file)
 
         assert result is not None
         assert "Hello World" in result.text
         assert "test document" in result.text
-        assert result.format == "markdown"
+        assert result.format == "rst"
         assert result.word_count > 0
 
     @pytest.mark.slow

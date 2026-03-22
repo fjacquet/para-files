@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+from pypdf.errors import PyPdfError
+
 from para_files.utils.pdf_metadata import (
     PdfMetadata,
     _try_pymupdf_metadata,
@@ -352,7 +354,7 @@ class TestExtractPdfMetadata:
         pdf_file.write_bytes(b"%PDF-1.4")
 
         mock_page = MagicMock()
-        mock_page.extract_text.side_effect = Exception("Page extraction failed")
+        mock_page.extract_text.side_effect = PyPdfError("Page extraction failed")
 
         mock_reader = MagicMock()
         mock_reader.metadata = {"/Title": "Test Book"}
@@ -372,7 +374,7 @@ class TestExtractPdfMetadata:
         pdf_file = tmp_path / "invalid.pdf"
         pdf_file.write_bytes(b"%PDF-1.4")
 
-        mock_reader_class.side_effect = Exception("Cannot read PDF")
+        mock_reader_class.side_effect = PyPdfError("Cannot read PDF")
 
         result = extract_pdf_metadata(pdf_file)
 
@@ -508,7 +510,7 @@ class TestPymupdfFallback:
         pdf_file.write_bytes(b"%PDF-1.4" + b"\x00" * 500)
 
         # Make pypdf fail
-        mock_reader_class.side_effect = Exception("Could not read Boolean object")
+        mock_reader_class.side_effect = PyPdfError("Could not read Boolean object")
 
         # The function should try pymupdf fallback, then return None if fitz unavailable
         result = extract_pdf_metadata(pdf_file)

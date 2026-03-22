@@ -180,8 +180,8 @@ def _extract_text_vision(image_path: Path) -> tuple[str, float] | None:
         if results is None:
             return None
 
-    except Exception:  # noqa: BLE001
-        logger.exception("Vision Framework OCR failed for: {}", image_path)
+    except (ImportError, OSError, RuntimeError, ValueError) as e:
+        logger.exception("Vision Framework OCR failed for: {} ({})", image_path, e)
         return None
 
     return _extract_text_from_results(results)
@@ -294,8 +294,8 @@ def extract_text_with_regions(
         if results is None:
             return None
 
-    except Exception:  # noqa: BLE001
-        logger.exception("Vision Framework region extraction failed for: {}", file_path)
+    except (ImportError, OSError, RuntimeError, ValueError) as e:
+        logger.exception("Vision Framework region extraction failed for: {} ({})", file_path, e)
         return None
 
     return _extract_regions_from_results(results)

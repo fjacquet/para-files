@@ -56,6 +56,10 @@ def _extract_chm_to_temp(chm_path: Path, temp_dir: Path) -> bool:
         logger.warning("7z not found - cannot extract CHM files")
         return False
 
+    if chm_path.suffix.lower() != ".chm":
+        logger.warning("Rejected non-CHM file for CHM extraction: {}", chm_path.suffix)
+        return False
+
     try:
         result = subprocess.run(  # noqa: S603
             [binary, "x", "-y", f"-o{temp_dir}", str(chm_path)],
@@ -66,7 +70,7 @@ def _extract_chm_to_temp(chm_path: Path, temp_dir: Path) -> bool:
     except subprocess.TimeoutExpired:
         logger.warning("CHM extraction timed out for {}", chm_path.name)
         return False
-    except Exception as e:  # noqa: BLE001
+    except (subprocess.SubprocessError, FileNotFoundError, OSError, UnicodeDecodeError, ValueError) as e:
         logger.warning("CHM extraction failed for {}: {}", chm_path.name, e)
         return False
     else:
@@ -126,7 +130,7 @@ def _scan_html_files_for_isbns(temp_dir: Path, max_files: int = 20) -> list[str]
                 if isbn not in seen:
                     seen.add(isbn)
                     all_isbns.append(isbn)
-        except Exception:  # noqa: BLE001, S112
+        except (OSError, UnicodeDecodeError, ValueError):  # noqa: S112
             continue
 
     return all_isbns
@@ -160,7 +164,7 @@ def _extract_title_from_files(temp_dir: Path) -> str | None:
                 title = _extract_title_from_html(content)
                 if title:
                     return title
-            except Exception:  # noqa: BLE001, S112
+            except (OSError, UnicodeDecodeError, ValueError):  # noqa: S112
                 continue
 
     # Try any HTML file
@@ -170,7 +174,7 @@ def _extract_title_from_files(temp_dir: Path) -> str | None:
             title = _extract_title_from_html(content)
             if title:
                 return title
-        except Exception:  # noqa: BLE001, S112
+        except (OSError, UnicodeDecodeError, ValueError):  # noqa: S112
             continue
 
     return None

@@ -301,8 +301,8 @@ def _fetch_from_nominatim(lat: float, lon: float) -> dict[str, str] | None:
         logger.debug("Geocoding timed out for: {}, {}", lat, lon)
     except GeocoderUnavailable:
         logger.debug("Geocoder service unavailable")
-    except Exception:  # noqa: BLE001
-        logger.debug("Geocoding failed for: {}, {}", lat, lon, exc_info=True)
+    except (ConnectionError, TimeoutError, OSError, ValueError) as e:
+        logger.debug("Geocoding failed for: {}, {} ({})", lat, lon, e)
 
     return result
 

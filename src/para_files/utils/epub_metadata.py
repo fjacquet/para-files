@@ -184,7 +184,7 @@ def _extract_isbns_from_content(zf: zipfile.ZipFile, max_files: int = 5) -> list
                 if isbn_clean not in isbns and len(isbn_clean) == ISBN_13_LENGTH:
                     isbns.append(isbn_clean)
             files_scanned += 1
-        except Exception as e:  # noqa: BLE001
+        except (OSError, ValueError, KeyError, UnicodeDecodeError) as e:
             logger.debug("Failed to read content file {}: {}", name, e)
             continue
 
@@ -279,7 +279,7 @@ def extract_epub_metadata(path: Path) -> EpubMetadata | None:
 
     except zipfile.BadZipFile:
         logger.debug("Invalid EPUB (bad ZIP): {}", path)
-    except Exception as e:  # noqa: BLE001
+    except (OSError, ValueError, KeyError, UnicodeDecodeError) as e:
         logger.debug("Failed to extract EPUB metadata from {}: {}", path, e)
 
     return _create_partial_metadata(filename_isbns, file_size_mb)

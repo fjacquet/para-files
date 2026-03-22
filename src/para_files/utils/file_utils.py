@@ -492,8 +492,8 @@ def _extract_pdf_with_pymupdf(file_path: Path, max_chars: int) -> str:
         if result.strip():
             logger.debug("pymupdf extracted {} chars: {}", len(result), file_path.name)
             return result
-    except Exception:  # noqa: BLE001
-        logger.debug("pymupdf text extraction failed: {}", file_path)
+    except (OSError, ValueError, RuntimeError) as e:
+        logger.debug("pymupdf text extraction failed: {} ({})", file_path, e)
     return ""
 
 
@@ -519,8 +519,8 @@ def _extract_pdf_with_pypdf(file_path: Path, max_chars: int) -> str:
 
     except ImportError:
         logger.debug("pypdf not installed: {}", file_path)
-    except Exception:  # noqa: BLE001
-        logger.debug("pypdf failed, trying pdftotext: {}", file_path)
+    except (OSError, ValueError, UnicodeDecodeError) as e:
+        logger.debug("pypdf failed, trying pdftotext: {} ({})", file_path, e)
 
     # 2. Fallback to pdftotext (poppler-utils)
     try:
@@ -537,8 +537,8 @@ def _extract_pdf_with_pypdf(file_path: Path, max_chars: int) -> str:
             return result.stdout[:max_chars]
     except (FileNotFoundError, subprocess.TimeoutExpired):
         logger.debug("pdftotext not available or timeout: {}", file_path)
-    except Exception:  # noqa: BLE001
-        logger.debug("pdftotext failed: {}", file_path)
+    except (subprocess.SubprocessError, OSError, UnicodeDecodeError) as e:
+        logger.debug("pdftotext failed: {} ({})", file_path, e)
 
     # 3. Fallback to pymupdf direct extraction (handles pre-PDF/1.4 files)
     return _extract_pdf_with_pymupdf(file_path, max_chars)
@@ -590,8 +590,8 @@ def _ocr_pdf_first_page(file_path: Path, max_chars: int) -> str:
 
     except FileNotFoundError:
         raise
-    except Exception:  # noqa: BLE001
-        logger.exception("OCR failed for PDF: {}", file_path)
+    except (OSError, ValueError, RuntimeError) as e:
+        logger.exception("OCR failed for PDF: {} ({})", file_path, e)
         return ""
 
     if result and result.text:
@@ -739,8 +739,8 @@ def _read_excel_file(file_path: Path, max_chars: int) -> str:
     except ImportError as e:
         logger.warning("Excel library not available for {}: {}", file_path, e)
         return f"Filename: {file_path.name}"
-    except Exception:  # noqa: BLE001
-        logger.warning("Failed to read Excel file (corrupt or encrypted?): {}", file_path)
+    except (OSError, ValueError, UnicodeDecodeError) as e:
+        logger.warning("Failed to read Excel file (corrupt or encrypted?): {} ({})", file_path, e)
         return f"Filename: {file_path.name}"
 
     text = "\n".join(parts)
@@ -809,8 +809,8 @@ def _read_ods_file(file_path: Path, max_chars: int) -> str:
     except ImportError as e:
         logger.warning("odfpy not available for {}: {}", file_path, e)
         return f"Filename: {file_path.name}"
-    except Exception:  # noqa: BLE001
-        logger.warning("Failed to read ODS file (corrupt?): {}", file_path)
+    except (OSError, ValueError, UnicodeDecodeError) as e:
+        logger.warning("Failed to read ODS file (corrupt?): {} ({})", file_path, e)
         return f"Filename: {file_path.name}"
 
     text = "\n".join(parts)
@@ -852,10 +852,11 @@ def _read_archive_manifest(file_path: Path, max_chars: int) -> str:
                 logger.debug("py7zr not installed, cannot read 7Z manifest: {}", file_path)
                 return f"Filename: {file_path.name}"
 
-    except Exception:  # noqa: BLE001
+    except (OSError, ValueError, UnicodeDecodeError) as e:
         logger.warning(
-            "Failed to read archive manifest (corrupt, encrypted, or unsupported?): {}",
+            "Failed to read archive manifest (corrupt, encrypted, or unsupported?): {} ({})",
             file_path,
+            e,
         )
         return f"Filename: {file_path.name}"
 

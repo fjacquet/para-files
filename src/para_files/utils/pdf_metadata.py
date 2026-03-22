@@ -166,7 +166,7 @@ def _try_pymupdf_metadata(
                     if found_isbn not in seen_isbns:
                         seen_isbns.add(found_isbn)
                         all_isbns.append(found_isbn)
-            except Exception:  # noqa: BLE001, S112
+            except (OSError, ValueError, KeyError):  # noqa: S112
                 continue
 
         doc.close()
@@ -185,7 +185,7 @@ def _try_pymupdf_metadata(
                 isbns=all_isbns,
                 file_size_mb=file_size_mb,
             )
-    except Exception as exc:  # noqa: BLE001
+    except (OSError, ValueError, KeyError, RuntimeError) as exc:
         logger.debug("pymupdf fallback also failed for {}: {}", path.name, exc)
     return None
 
@@ -205,6 +205,7 @@ def extract_pdf_metadata(path: Path, max_pages_for_isbn: int = 20) -> PdfMetadat
     """
     try:
         from pypdf import PdfReader
+        from pypdf.errors import PyPdfError
     except ImportError:
         logger.warning("pypdf not available for PDF metadata extraction")
         return None
@@ -248,7 +249,7 @@ def extract_pdf_metadata(path: Path, max_pages_for_isbn: int = 20) -> PdfMetadat
                         seen_isbns.add(found_isbn)
                         all_isbns.append(found_isbn)
                         logger.debug("Found ISBN {} on page {} of {}", found_isbn, i + 1, path.name)
-            except Exception as e:  # noqa: BLE001
+            except (OSError, ValueError, KeyError, PyPdfError) as e:
                 logger.debug(
                     "Failed to extract text from page {} of {}: {} {}",
                     i + 1,
@@ -273,7 +274,7 @@ def extract_pdf_metadata(path: Path, max_pages_for_isbn: int = 20) -> PdfMetadat
             file_size_mb=file_size_mb,
         )
 
-    except Exception as e:  # noqa: BLE001
+    except (OSError, ValueError, KeyError, RuntimeError, PyPdfError) as e:
         if path not in _warned_paths:
             _warned_paths.add(path)
             logger.warning("Failed to extract PDF metadata from {}: {}", path, e)
