@@ -24,7 +24,11 @@ from para_files.cli.shared import (
     signal_marker,
     signal_to_dict,
 )
-from para_files.mover import ConflictStrategy, move_classified_file
+from para_files.mover import (
+    ConflictStrategy,
+    move_classified_file,
+    validate_destination_permissions,
+)
 from para_files.pipeline import ClassificationPipeline
 from para_files.utils.validation import validate_file_exists
 
@@ -236,6 +240,100 @@ def _handle_move_file(
         return False, False
     else:
         return success, False
+
+
+def _move_files_sequential(
+    expanded_files: list[Path],
+    pipeline: ClassificationPipeline,
+    source_dirs: set[Path],
+    *,
+    dry_run: bool,
+    copy: bool,
+    conflict_strategy: ConflictStrategy,
+    date_prefix: bool,
+    smart_rename: bool,
+    skip_unclassifiable: bool,
+    enable_rollback: bool,
+    output_json: bool,
+    action_verb: str,
+    verbose: bool = False,
+) -> tuple[list[dict[str, Any]], int, int, int]:
+    """Move files sequentially with optional permission pre-check.
+
+    Returns:
+        Tuple of (json_results, success_count, skip_count, fail_count).
+    """
+    results: list[dict[str, Any]] = []
+    success_count = 0
+    fail_count = 0
+    skip_count = 0
+
+    # Pre-flight: validate destination write permissions before moving any file
+    if not dry_run and enable_rollback and not _check_destination_permissions(
+        expanded_files, pipeline
+    ):
+        raise typer.Exit(code=1)
+
+    for resolved in expanded_files:
+        source_dirs.add(resolved.parent)
+
+        success, skipped = _handle_move_file(
+            resolved,
+            pipeline,
+            results,
+            action_verb,
+            dry_run=dry_run,
+            copy=copy,
+            conflict_strategy=conflict_strategy,
+            date_prefix=date_prefix,
+            smart_rename=smart_rename,
+            skip_unclassifiable=skip_unclassifiable,
+            output_json=output_json,
+            verbose=verbose,
+        )
+        if skipped:
+            skip_count += 1
+        elif success:
+            success_count += 1
+        else:
+            fail_count += 1
+
+    return results, success_count, skip_count, fail_count
+
+
+def _check_destination_permissions(
+    expanded_files: list[Path],
+    pipeline: ClassificationPipeline,
+) -> bool:
+    """Pre-flight permission check for all destination directories.
+
+    Classifies all files to determine their destination directories, then checks
+    that each destination is writable. Prints an error and returns False if any
+    destination is unwritable.
+
+    Args:
+        expanded_files: List of source file paths to classify.
+        pipeline: The classification pipeline to determine destinations.
+
+    Returns:
+        True if all destinations are writable, False otherwise.
+    """
+    dest_dirs: set[Path] = set()
+    for resolved in expanded_files:
+        try:
+            classification = pipeline.classify_file(resolved)
+            dest_dirs.add(pipeline.get_target_path(classification))
+        except Exception:  # noqa: BLE001
+            logger.warning("Failed to classify {} during permission pre-check", resolved)
+
+    unwritable = validate_destination_permissions(dest_dirs)
+    if unwritable:
+        msg = "Permission denied for destination(s):\n" + "\n".join(
+            f"  - {p}" for p in unwritable
+        )
+        typer.echo(f"Error: {msg}", err=True)
+        return False
+    return True
 
 
 def _cleanup_source_dirs(
@@ -475,6 +573,10 @@ def move(
         bool,
         typer.Option("--skip-unclassifiable", help="Skip unclassifiable files"),
     ] = False,
+    enable_rollback: Annotated[
+        bool,
+        typer.Option("--rollback/--no-rollback", help="Enable rollback on batch failure"),
+    ] = True,
     cleanup_empty: Annotated[
         bool,
         typer.Option("--cleanup-empty/--no-cleanup-empty", help="Remove empty dirs after move"),
@@ -533,34 +635,21 @@ def move(
         )
         source_dirs.update(par_source_dirs)
     else:
-        results = []
-        success_count = 0
-        fail_count = 0
-        skip_count = 0
-
-        for resolved in expanded_files:
-            source_dirs.add(resolved.parent)
-
-            success, skipped = _handle_move_file(
-                resolved,
-                pipeline,
-                results,
-                action_verb,
-                dry_run=dry_run,
-                copy=copy,
-                conflict_strategy=conflict_strategy,
-                date_prefix=date_prefix,
-                smart_rename=smart_rename,
-                skip_unclassifiable=skip_unclassifiable,
-                output_json=output_json,
-                verbose=verbose,
-            )
-            if skipped:
-                skip_count += 1
-            elif success:
-                success_count += 1
-            else:
-                fail_count += 1
+        results, success_count, skip_count, fail_count = _move_files_sequential(
+            expanded_files,
+            pipeline,
+            source_dirs,
+            dry_run=dry_run,
+            copy=copy,
+            conflict_strategy=conflict_strategy,
+            date_prefix=date_prefix,
+            smart_rename=smart_rename,
+            skip_unclassifiable=skip_unclassifiable,
+            enable_rollback=enable_rollback,
+            output_json=output_json,
+            action_verb=action_verb,
+            verbose=verbose,
+        )
 
     # Cleanup empty directories if requested (only for move, not copy)
     if cleanup_empty and not copy:
