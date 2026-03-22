@@ -13,6 +13,7 @@ Chains classifiers in priority order: first match wins.
 
 from __future__ import annotations
 
+import json
 import threading
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -135,6 +136,7 @@ class ClassificationPipeline:
                 content_preview_chars=self._config.content_preview_chars,
                 api_base=self._config.llm.api_base,
                 valid_categories=valid_categories,
+                timeout=self._config.llm.timeout,
             )
             self._classifiers.append(llm)
 
@@ -269,8 +271,8 @@ class ClassificationPipeline:
                         matched=False,
                     )
                 )
-            except Exception:  # noqa: BLE001
-                logger.exception("Classifier {} failed", classifier.name)
+            except (ValueError, TypeError, KeyError, AttributeError, ConnectionError, TimeoutError, OSError, json.JSONDecodeError, RuntimeError) as e:
+                logger.exception("Classifier {} failed: {}", classifier.name, e)
                 signals.append(
                     SignalResult(
                         source=signal_source,

@@ -141,7 +141,7 @@ class TestClassificationPipeline:
         # Mock a classifier to raise an exception
         mock_classifier = MagicMock()
         mock_classifier.name = "failing_classifier"
-        mock_classifier.classify.side_effect = Exception("Test error")
+        mock_classifier.classify.side_effect = ValueError("Test error")
 
         # Insert at beginning
         pipeline._classifiers.insert(0, mock_classifier)

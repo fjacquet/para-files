@@ -108,6 +108,7 @@ class LLMClassifier(BaseClassifier):
         max_tokens: int = 256,
         api_base: str | None = None,
         valid_categories: list[str] | None = None,
+        timeout: float = 15.0,
     ) -> None:
         """Initialize LLM classifier.
 
@@ -119,6 +120,7 @@ class LLMClassifier(BaseClassifier):
             max_tokens: Maximum tokens to generate.
             api_base: API base URL for Ollama or other providers.
             valid_categories: List of valid PARA category paths from the taxonomy.
+            timeout: Request timeout in seconds.
         """
         self._enabled = enabled
         self._model_name = model
@@ -126,6 +128,7 @@ class LLMClassifier(BaseClassifier):
         self._content_preview_chars = content_preview_chars
         self._max_tokens = max_tokens
         self._api_base = api_base
+        self._timeout = timeout
         self._system_prompt = _build_system_prompt(valid_categories or [])
 
     @property
@@ -165,8 +168,8 @@ class LLMClassifier(BaseClassifier):
 
         try:
             return self._generate_classification(content, metadata)
-        except Exception:  # noqa: BLE001
-            logger.exception("LLM classification failed")
+        except (ValueError, TypeError, KeyError, json.JSONDecodeError, ConnectionError, TimeoutError, OSError) as e:
+            logger.exception("LLM classification failed: {}", e)
             return None
 
     def _generate_classification(
@@ -193,16 +196,23 @@ class LLMClassifier(BaseClassifier):
         if self._api_base:
             kwargs["api_base"] = self._api_base
 
-        response = litellm.completion(
-            model=self._model_name,
-            messages=[
-                {"role": "system", "content": self._system_prompt},
-                {"role": "user", "content": user_message},
-            ],
-            temperature=0.0,
-            max_tokens=self._max_tokens,
-            **kwargs,
-        )
+        try:
+            response = litellm.completion(
+                model=self._model_name,
+                messages=[
+                    {"role": "system", "content": self._system_prompt},
+                    {"role": "user", "content": user_message},
+                ],
+                temperature=0.0,
+                max_tokens=self._max_tokens,
+                timeout=self._timeout,
+                **kwargs,
+            )
+        except (KeyboardInterrupt, RuntimeError):
+            # Graceful Ctrl+C: litellm's internal ThreadPoolExecutor may raise
+            # RuntimeError("cannot schedule new futures after shutdown") on interrupt
+            logger.debug("LLM call interrupted")
+            return None
 
         text = response.choices[0].message.content or ""
         logger.debug("LLM raw response: {}", text[:500])
