@@ -5,15 +5,18 @@
 ## Test Framework
 
 **Runner:**
+
 - **pytest** 8.3.0+
 - Config: `pyproject.toml` under `[tool.pytest.ini_options]`
 - Python path: `src` (allows imports like `from para_files.config import ...`)
 
 **Assertion Library:**
+
 - Standard pytest assertions (no additional library needed)
 - Example: `assert result is not None`, `assert classifier.name == "rules_engine"`
 
 **Run Commands:**
+
 ```bash
 # Run all tests
 uv run pytest
@@ -35,6 +38,7 @@ uv run pytest --cov --cov-report=term-missing
 ```
 
 **Coverage:**
+
 - Fail-under threshold: **79%** (enforced via `tool.coverage.report.fail_under = 79`)
 - Branch coverage: **enabled** (`tool.coverage.run.branch = true`)
 - Source: `src/para_files` only (tests excluded)
@@ -42,14 +46,17 @@ uv run pytest --cov --cov-report=term-missing
 ## Test File Organization
 
 **Location:**
+
 - Co-located: Test files in `tests/` directory parallel to `src/para_files/`
 - Pattern: For source module `src/para_files/X/y.py`, test file is `tests/test_y.py`
 
 **Naming:**
+
 - `test_*.py` prefix for test modules
 - Example files: `test_rules_engine.py`, `test_book_detector.py`, `test_filename_sanitizer.py`
 
 **Structure:**
+
 ```
 tests/
 ├── conftest.py              # Shared fixtures
@@ -62,6 +69,7 @@ tests/
 ## Test Structure
 
 **Suite Organization:**
+
 ```python
 """Tests for rules engine classifier."""
 
@@ -104,6 +112,7 @@ class TestRulesEngineClassifierInit:
 ```
 
 **Patterns:**
+
 - One test class per concept/behavior (e.g., `TestRulesEngineClassifierInit`, `TestClassify`)
 - Test method names start with `test_` and describe what is tested
 - Docstrings required on all test classes and methods
@@ -113,10 +122,12 @@ class TestRulesEngineClassifierInit:
 ## Mocking
 
 **Framework:**
+
 - `unittest.mock` (standard library)
 - Import: `from unittest.mock import MagicMock, patch`
 
 **Patterns:**
+
 ```python
 # Mock a class method
 @patch("para_files.encoders.ollama_encoder.litellm")
@@ -134,18 +145,21 @@ def test_encode_calls_litellm(self, mock_litellm: MagicMock):
 ```
 
 **What to Mock:**
+
 - External API calls (litellm, isbnlib, geopy)
 - File I/O operations (when testing logic, not actual filesystem)
 - Network calls
 - Expensive operations (ISBN lookup, OCR, embedding generation)
 
 **What NOT to Mock:**
+
 - Core business logic (classifiers, routing, pattern matching)
 - Data validation (use real Pydantic models)
 - Local filesystem operations in integration tests
 - Configuration loading (test with real config files)
 
 **MagicMock Usage:**
+
 - For complex return values: `mock.return_value = MagicMock(...)`
 - For call assertions: `mock.assert_called_once()`, `mock.assert_called_with(...)`
 - For side effects: `mock.side_effect = [value1, value2]` for sequential returns
@@ -155,6 +169,7 @@ def test_encode_calls_litellm(self, mock_litellm: MagicMock):
 **Test Data:**
 
 Helper functions (not pytest fixtures) for creating test objects:
+
 ```python
 def make_metadata(**kwargs: object) -> FileMetadata:
     """Helper to create FileMetadata with required defaults."""
@@ -178,6 +193,7 @@ metadata = make_metadata(
 **Pytest Fixtures:**
 
 Shared fixtures in `tests/conftest.py`:
+
 ```python
 @pytest.fixture
 def project_root() -> Path:
@@ -191,11 +207,13 @@ def fixtures_dir() -> Path:
 ```
 
 **Location:**
+
 - Shared fixtures: `tests/conftest.py`
 - Test data files: `tests/fixtures/` directory
 - Example: `tests/fixtures/test_reference_tree.yaml`
 
 **Naming:**
+
 - Fixture names: lowercase with underscores (e.g., `project_root`, `fixtures_dir`)
 - Fixture functions: use `@pytest.fixture` decorator
 - Helper factory functions: descriptive names without decorator (e.g., `make_metadata()`)
@@ -203,10 +221,12 @@ def fixtures_dir() -> Path:
 ## Coverage
 
 **Requirements:**
+
 - Target: **79% branch coverage** (fail-under threshold)
 - Enforcement: CI/pre-commit hooks (if configured)
 
 **View Coverage:**
+
 ```bash
 # Generate and display coverage report
 uv run pytest --cov --cov-report=term-missing
@@ -217,6 +237,7 @@ uv run pytest --cov --cov-report=html
 ```
 
 **Coverage Configuration:**
+
 - Source: `src/para_files` (tests excluded)
 - Branch coverage: enabled (tracks both true/false paths)
 - Parallel: enabled (safe for running tests in parallel)
@@ -231,12 +252,14 @@ uv run pytest --cov --cov-report=html
 ## Test Types
 
 **Unit Tests:**
+
 - Scope: Single function or method in isolation
 - Mocking: Mock external dependencies (APIs, file I/O, expensive operations)
 - Examples: `test_sanitize_filename()`, `test_rules_engine_classifier_init()`, `test_book_structure_score()`
 - Location: Same file as functional tests (not separated)
 
 **Integration Tests:**
+
 - Scope: Multiple components working together
 - Mocking: Minimal; test real behavior
 - Marked with: `@pytest.mark.integration` (defined in `pyproject.toml`)
@@ -245,12 +268,14 @@ uv run pytest --cov --cov-report=html
 - Run: `pytest -m "not integration"` to skip integration tests
 
 **E2E Tests:**
+
 - Status: **Not used** in this codebase
 - Alternative: Integration tests cover end-to-end classification workflows
 
 ## Markers
 
 **Available Markers:**
+
 - `slow`: Marks tests as slow (long-running or expensive operations)
   - Usage: `@pytest.mark.slow`
   - Run: `pytest -m "not slow"` to skip slow tests
@@ -259,17 +284,20 @@ uv run pytest --cov --cov-report=html
   - Run: `pytest -m integration` to run only integration tests
 
 **Configuration:**
+
 - Defined in `pyproject.toml` under `[tool.pytest.ini_options].markers`
 - Enforced: `--strict-markers` prevents typos
 
 ## Common Patterns
 
 **Async Testing:**
+
 - Framework: Standard pytest (no special async support needed)
 - Library: `loguru` logger calls are not async
 - Pattern: No async/await in tests currently
 
 **Error Testing:**
+
 ```python
 def test_nonexistent_file_with_exit_on_error_raises(self, tmp_path: Path) -> None:
     """Test that exit_on_error=True raises SystemExit for nonexistent file."""
@@ -280,9 +308,11 @@ def test_nonexistent_file_with_exit_on_error_raises(self, tmp_path: Path) -> Non
 ```
 
 **Parameterized Testing:**
+
 - Not extensively used in codebase
 - Could use `@pytest.mark.parametrize` for repetitive test cases
 - Example (hypothetical):
+
   ```python
   @pytest.mark.parametrize("input,expected", [
       ("hello:world", "hello_world"),
@@ -293,10 +323,12 @@ def test_nonexistent_file_with_exit_on_error_raises(self, tmp_path: Path) -> Non
   ```
 
 **Temporary Filesystem:**
+
 - Fixture: pytest's built-in `tmp_path` fixture
 - Type: `Path` object pointing to temporary directory
 - Cleanup: Automatic after test
 - Example:
+
   ```python
   def test_existing_file_returns_true(self, tmp_path: Path) -> None:
       """Test that an existing file returns True."""
@@ -308,17 +340,20 @@ def test_nonexistent_file_with_exit_on_error_raises(self, tmp_path: Path) -> Non
 ## Test Execution Configuration
 
 **Pytest Options:**
+
 - `-ra`: Show all summary info
 - `-q`: Quiet mode
 - `--strict-markers`: Fail on unknown markers
 - `--strict-config`: Fail on configuration errors
 
 **Filter Warnings:**
+
 - Default: `error` (treat warnings as errors)
 - Allowed (ignored):
   - `DeprecationWarning` (expected from old dependencies)
 
 **Test Discovery:**
+
 - Path: `tests/` directory
 - Pattern: `test_*.py` files
 - Python path: `src` (allows direct imports)
@@ -326,6 +361,7 @@ def test_nonexistent_file_with_exit_on_error_raises(self, tmp_path: Path) -> Non
 ## Pre-commit Integration
 
 **Testing in pre-commit:**
+
 - Hook: Not auto-installed; must run manually or in CI
 - Command: `uv run pytest`
 - Coverage enforcement: Part of CI pipeline, not pre-commit hooks

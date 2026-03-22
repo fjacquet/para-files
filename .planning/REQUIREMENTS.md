@@ -46,9 +46,9 @@ Requirements for Reliability & Performance milestone. Each maps to roadmap phase
 
 ### Performance
 
-- [ ] **PERF-01**: Thread pool sizing adapts to file count — skip threading for < 5 files
-- [ ] **PERF-02**: File hash caching in mover (by path + mtime)
-- [ ] **PERF-03**: Centralized content truncation config (MAX_CONTENT_CHARS) respected by all classifiers/encoders
+- [x] **PERF-01**: Thread pool sizing adapts to file count — skip threading for < 5 files
+- [x] **PERF-02**: File hash caching in mover (by path + mtime)
+- [x] **PERF-03**: Centralized content truncation config (MAX_CONTENT_CHARS) respected by all classifiers/encoders
 
 ### Dependency Hygiene
 
@@ -57,9 +57,9 @@ Requirements for Reliability & Performance milestone. Each maps to roadmap phase
 
 ### Test Coverage
 
-- [ ] **TEST-01**: Pipeline tests: classifier order matters, disabled classifiers, partial failures
+- [x] **TEST-01**: Pipeline tests: classifier order matters, disabled classifiers, partial failures
 - [x] **TEST-02**: Placeholder resolution tests: missing year, empty issuer, multiple missing, double-slash
-- [ ] **TEST-03**: Concurrent threading tests: thread crash, timeout under load
+- [x] **TEST-03**: Concurrent threading tests: thread crash, timeout under load
 - [x] **TEST-04**: LLM response format tests: string confidence, trailing spaces, nested JSON, incomplete JSON
 - [x] **TEST-05**: Pandoc integration tests: broken install, timeout, wrong encoding
 
@@ -113,14 +113,14 @@ Deferred to v1.3+. Tracked but not in current roadmap.
 | ACC-05 | Phase 10 | Complete |
 | MOV-01 | Phase 10 | Complete |
 | MOV-02 | Phase 10 | Complete |
-| PERF-01 | Phase 11 | Pending |
-| PERF-02 | Phase 11 | Pending |
-| PERF-03 | Phase 11 | Pending |
+| PERF-01 | Phase 11 | Complete |
+| PERF-02 | Phase 11 | Complete |
+| PERF-03 | Phase 11 | Complete |
 | DEP-01 | Phase 8 | Deferred (keep semantic-router) |
 | DEP-02 | Phase 8 | Complete |
-| TEST-01 | Phase 11 | Pending |
+| TEST-01 | Phase 11 | Complete |
 | TEST-02 | Phase 8 | Complete |
-| TEST-03 | Phase 11 | Pending |
+| TEST-03 | Phase 11 | Complete |
 | TEST-04 | Phase 9 | Complete |
 | TEST-05 | Phase 8 | Complete |
 
