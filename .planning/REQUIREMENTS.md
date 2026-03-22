@@ -33,9 +33,9 @@ Requirements for Reliability & Performance milestone. Each maps to roadmap phase
 
 ### Classification Accuracy
 
-- [ ] **ACC-01**: Book detector reduces false positives on French financial documents
-- [ ] **ACC-02**: Book detector tests: invalid ISBNs, all-zero, IBAN-like patterns
-- [ ] **ACC-03**: Rules engine tests: date extraction edge cases (1989, 2041), pattern shadowing
+- [x] **ACC-01**: Book detector reduces false positives on French financial documents
+- [x] **ACC-02**: Book detector tests: invalid ISBNs, all-zero, IBAN-like patterns
+- [x] **ACC-03**: Rules engine tests: date extraction edge cases (1989, 2041), pattern shadowing
 - [ ] **ACC-04**: Reference tree YAML validates structure with Pydantic on load (fail fast on invalid)
 - [ ] **ACC-05**: Unclassifiable files (no classifier match) go to `6_unclassified` instead of `0_Inbox`
 
@@ -106,9 +106,9 @@ Deferred to v1.3+. Tracked but not in current roadmap.
 | SVC-03 | Phase 9 | Complete |
 | SVC-04 | Phase 9 | Complete |
 | SVC-05 | Phase 9 | Complete |
-| ACC-01 | Phase 10 | Pending |
-| ACC-02 | Phase 10 | Pending |
-| ACC-03 | Phase 10 | Pending |
+| ACC-01 | Phase 10 | Complete |
+| ACC-02 | Phase 10 | Complete |
+| ACC-03 | Phase 10 | Complete |
 | ACC-04 | Phase 10 | Pending |
 | ACC-05 | Phase 10 | Pending |
 | MOV-01 | Phase 10 | Pending |

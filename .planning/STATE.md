@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Reliability & Performance
 status: unknown
-stopped_at: Phase 10 context gathered
-last_updated: "2026-03-22T17:55:07.263Z"
+stopped_at: Completed 10-01-PLAN.md
+last_updated: "2026-03-22T18:16:01.677Z"
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 9
+  completed_plans: 7
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Files are classified correctly and transparently — users understand why, and failures surface loudly.
-**Current focus:** Phase 09 — llm-service-reliability
+**Current focus:** Phase 10 — classification-accuracy-move-safety
 
 ## Current Position
 
-Phase: 09 (llm-service-reliability) — EXECUTING
-Plan: 3 of 3 (complete)
+Phase: 10 (classification-accuracy-move-safety) — EXECUTING
+Plan: 1 of 3
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Plan: 3 of 3 (complete)
 | Phase 09 P02 | 10m | 2 tasks | 2 files |
 | Phase 09 P03 | 15m | 2 tasks | 4 files |
 | Phase 09 P01 | 9m | 2 tasks | 8 files |
+| Phase 10-classification-accuracy-move-safety P01 | 15m | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,8 @@ Recent decisions affecting current work:
 - [Phase 09]: _ISBNLIB_ERRORS split into _TRANSIENT_ERRORS + _DATA_ERRORS; transient errors retry once, data errors skip immediately (ERR-05, RETRY-01)
 - [Phase 09]: Used httpx instead of urllib for Ollama health check — semgrep CWE-939 blocks dynamic urlopen regardless of scheme validation
 - [Phase 09]: OllamaCircuitBreaker: record_success does not close open breaker — only reset() does; prevents premature re-enablement
+- [Phase 10-classification-accuracy-move-safety]: Book detector financial exclusion already correct — tests added to lock existing behavior
+- [Phase 10-classification-accuracy-move-safety]: Rules engine date boundary: MIN_YEAR=1990 MAX_YEAR=2040 documented via tests
 
 ### Pending Todos
 
@@ -86,6 +89,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T17:55:07.260Z
-Stopped at: Phase 10 context gathered
-Resume file: .planning/phases/10-classification-accuracy-move-safety/10-CONTEXT.md
+Last session: 2026-03-22T18:16:01.675Z
+Stopped at: Completed 10-01-PLAN.md
+Resume file: None
