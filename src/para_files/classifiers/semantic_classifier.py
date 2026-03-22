@@ -14,6 +14,7 @@ import threading
 from loguru import logger
 
 from para_files.classifiers.base import BaseClassifier
+from para_files.config import DEFAULT_CONTENT_PREVIEW_CHARS
 from para_files.encoders.ollama_encoder import OllamaEncoder
 from para_files.taxonomies.loader import TaxonomyLoader, get_taxonomy_loader
 from para_files.taxonomies.models import DocumentCategory, DocumentType
@@ -28,9 +29,6 @@ from para_files.utils.placeholder_resolver import clean_unreplaced_placeholders
 
 # Minimum content length for semantic matching
 MIN_CONTENT_LENGTH = 10
-
-# Maximum content length to encode
-MAX_CONTENT_LENGTH = 2000
 
 
 def _cosine_similarity(vec_a: list[float], vec_b: list[float]) -> float:
@@ -316,7 +314,7 @@ class SemanticClassifier(BaseClassifier):
 
         # Encode the document content
         try:
-            content_embedding = self._encoder([content[:MAX_CONTENT_LENGTH]])[0]
+            content_embedding = self._encoder([content[:DEFAULT_CONTENT_PREVIEW_CHARS]])[0]
         except (IndexError, ValueError, RuntimeError) as e:
             logger.debug("Failed to encode content: {}", e)
             return None

@@ -16,6 +16,7 @@ import re
 from loguru import logger
 
 from para_files.classifiers.base import BaseClassifier
+from para_files.config import DEFAULT_CONTENT_PREVIEW_CHARS
 from para_files.types import (
     ClassificationResult,
     ClassificationSource,
@@ -471,8 +472,8 @@ class BookDetector(BaseClassifier):
 
         # Try content if nothing else worked
         if content:
-            # Limit content to first 2000 chars for performance
-            code = self._thema_lookup.lookup_from_text(content[:2000])
+            # Limit content to first DEFAULT_CONTENT_PREVIEW_CHARS for performance
+            code = self._thema_lookup.lookup_from_text(content[:DEFAULT_CONTENT_PREVIEW_CHARS])
             if code:
                 logger.debug("Detected THEMA from content: {}", code)
                 return code

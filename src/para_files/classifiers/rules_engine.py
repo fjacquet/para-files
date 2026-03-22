@@ -14,6 +14,7 @@ from pathlib import Path
 from loguru import logger
 
 from para_files.classifiers.base import BaseClassifier
+from para_files.config import DEFAULT_CONTENT_PREVIEW_CHARS
 from para_files.types import (
     ClassificationResult,
     ClassificationSource,
@@ -493,8 +494,8 @@ class RulesEngineClassifier(BaseClassifier):
                 except ValueError:
                     continue
 
-        # Priority 3: Standalone year in first 2000 chars (document header)
-        header = content[:2000]
+        # Priority 3: Standalone year in first DEFAULT_CONTENT_PREVIEW_CHARS (document header)
+        header = content[:DEFAULT_CONTENT_PREVIEW_CHARS]
         year_match = re.search(r"\b(20[0-9]{2})\b", header)
         if year_match:
             year = int(year_match.group(1))
