@@ -27,6 +27,10 @@ Files are classified correctly and transparently — users can understand why a 
 - ✓ Excel/ODS content reading (openpyxl, odfpy) and ZIP/7Z manifest peeking — v1.1
 - ✓ `ExtensionRouterClassifier` as Signal 5: video/audio/images/security/scripts/catch-all — v1.1
 - ✓ `inbox` command: one-shot drain with per-file progress and by-signal summary — v1.1
+- ✓ Specific exception handling: zero BLE001 in pipeline, classifiers, utilities — v1.2 Phase 8
+- ✓ Placeholder resolution: required vs optional policy (reject on missing issuer/technology) — v1.2 Phase 8
+- ✓ Subprocess extension validation: pandoc/chm allowlists before execution — v1.2 Phase 8
+- ✓ macOS OCR test isolation with platform skip markers — v1.2 Phase 8
 
 ### Active
 
@@ -35,6 +39,7 @@ Files are classified correctly and transparently — users can understand why a 
 **Goal:** Make the classification pipeline trustworthy — fix silent failures, add timeouts and circuit breakers, harden error handling, and improve throughput.
 
 **Target features:**
+
 - LLM classifier timeout + graceful Ctrl+C handling
 - Ollama circuit breaker (skip after repeated failures)
 - Replace broad `except Exception` (BLE001) with specific exception types
@@ -86,4 +91,4 @@ Files are classified correctly and transparently — users can understand why a 
 | Migrate from MLX to litellm/Ollama | Cross-platform, unified API, no Apple Silicon requirement | ✓ Good — v1.2 prep |
 
 ---
-*Last updated: 2026-03-22 after v1.2 Reliability & Performance milestone start*
+*Last updated: 2026-03-22 after Phase 8 Foundation Hardening complete*
