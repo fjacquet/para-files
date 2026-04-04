@@ -53,9 +53,7 @@ class TestSingleThreadThreshold:
         uses_parallel = max_workers > 1 and batch_size >= SINGLE_THREAD_THRESHOLD
         assert not uses_parallel, "max_workers=1 should never trigger parallel mode"
 
-    def test_verbose_small_batch_contains_single_threaded_message(
-        self, tmp_path: Path
-    ) -> None:
+    def test_verbose_small_batch_contains_single_threaded_message(self, tmp_path: Path) -> None:
         """--verbose output for 3-file batch contains 'single-threaded' string."""
         echoed_messages: list[str] = []
 

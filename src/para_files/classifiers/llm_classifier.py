@@ -181,8 +181,13 @@ class LLMClassifier(BaseClassifier):
         try:
             return self._generate_classification(content, metadata)
         except (
-            ValueError, TypeError, KeyError, json.JSONDecodeError,
-            ConnectionError, TimeoutError, OSError,
+            ValueError,
+            TypeError,
+            KeyError,
+            json.JSONDecodeError,
+            ConnectionError,
+            TimeoutError,
+            OSError,
         ) as e:
             logger.exception("LLM classification failed: {}", e)
             return None

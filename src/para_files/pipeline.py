@@ -293,10 +293,7 @@ class ClassificationPipeline:
                 try:
                     result = classifier.classify(content, metadata)
                     if result is not None:
-                        if (
-                            self._circuit_breaker
-                            and classifier.name in _ollama_classifiers
-                        ):
+                        if self._circuit_breaker and classifier.name in _ollama_classifiers:
                             self._circuit_breaker.record_success()
                         signals.append(
                             SignalResult(
@@ -324,14 +321,17 @@ class ClassificationPipeline:
                         )
                     )
                 except (
-                    ValueError, TypeError, KeyError, AttributeError,
-                    ConnectionError, TimeoutError, OSError,
-                    json.JSONDecodeError, RuntimeError,
+                    ValueError,
+                    TypeError,
+                    KeyError,
+                    AttributeError,
+                    ConnectionError,
+                    TimeoutError,
+                    OSError,
+                    json.JSONDecodeError,
+                    RuntimeError,
                 ) as e:
-                    if (
-                        self._circuit_breaker
-                        and classifier.name in _ollama_classifiers
-                    ):
+                    if self._circuit_breaker and classifier.name in _ollama_classifiers:
                         self._circuit_breaker.record_failure()
                     logger.exception("Classifier {} failed: {}", classifier.name, e)
                     signals.append(

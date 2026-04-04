@@ -273,8 +273,10 @@ def _move_files_sequential(
     skip_count = 0
 
     # Pre-flight: validate destination write permissions before moving any file
-    if not dry_run and enable_rollback and not _check_destination_permissions(
-        expanded_files, pipeline
+    if (
+        not dry_run
+        and enable_rollback
+        and not _check_destination_permissions(expanded_files, pipeline)
     ):
         raise typer.Exit(code=1)
 
@@ -332,9 +334,7 @@ def _check_destination_permissions(
 
     unwritable = validate_destination_permissions(dest_dirs)
     if unwritable:
-        msg = "Permission denied for destination(s):\n" + "\n".join(
-            f"  - {p}" for p in unwritable
-        )
+        msg = "Permission denied for destination(s):\n" + "\n".join(f"  - {p}" for p in unwritable)
         typer.echo(f"Error: {msg}", err=True)
         return False
     return True

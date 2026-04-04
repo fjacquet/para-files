@@ -1,4 +1,5 @@
 """Tests for pipeline classifier ordering and failure isolation (TEST-01)."""
+
 from __future__ import annotations
 
 import threading

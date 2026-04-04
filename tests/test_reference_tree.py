@@ -226,8 +226,7 @@ class TestReferenceTreeValidation:
     def test_routing_rule_missing_destination_is_valid(self, tmp_path: Path):
         """Routing rule without destination is valid — some rules use action instead."""
         yaml_content = (
-            "routing_rules:\n  generic:\n    patterns:\n"
-            "      - '*'\n    action: flatten_to_inbox\n"
+            "routing_rules:\n  generic:\n    patterns:\n      - '*'\n    action: flatten_to_inbox\n"
         )
         yaml_file = tmp_path / "action_rule.yaml"
         yaml_file.write_text(yaml_content, encoding="utf-8")

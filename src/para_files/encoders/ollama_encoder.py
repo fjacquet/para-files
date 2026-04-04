@@ -112,7 +112,9 @@ class OllamaEncoder(DenseEncoder):
                 return [0.0] * 768
             except (ValueError, RuntimeError) as e:
                 # Payload-related error — retry with shorter candidate
-                logger.debug("Encode failed for {}-char text, trying shorter: {}", len(candidate), e)  # noqa: E501
+                logger.debug(
+                    "Encode failed for {}-char text, trying shorter: {}", len(candidate), e
+                )  # noqa: E501
                 continue
 
         # Absolute last resort: encode just the first 100 chars

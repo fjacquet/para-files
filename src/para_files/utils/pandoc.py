@@ -60,11 +60,29 @@ PANDOC_EXTENSIONS = frozenset(PANDOC_FORMATS.keys())
 # Must be a subset of PANDOC_FORMATS keys (no .md/.markdown/.tex/.latex/.xhtml
 # /.ipynb/.mediawiki/.wiki/.docbook/.man/.t2t/.twiki — those are handled by
 # PANDOC_FORMATS but excluded from the subprocess allowlist intentionally).
-ALLOWED_EXTENSIONS: frozenset[str] = frozenset({
-    ".docx", ".doc", ".rtf", ".odt", ".html", ".htm", ".epub",
-    ".pptx", ".fb2", ".textile", ".rst", ".org", ".opml",
-    ".muse", ".native", ".json", ".csv", ".tsv", ".bib",
-})
+ALLOWED_EXTENSIONS: frozenset[str] = frozenset(
+    {
+        ".docx",
+        ".doc",
+        ".rtf",
+        ".odt",
+        ".html",
+        ".htm",
+        ".epub",
+        ".pptx",
+        ".fb2",
+        ".textile",
+        ".rst",
+        ".org",
+        ".opml",
+        ".muse",
+        ".native",
+        ".json",
+        ".csv",
+        ".tsv",
+        ".bib",
+    }
+)
 
 
 class PandocResult(BaseModel):

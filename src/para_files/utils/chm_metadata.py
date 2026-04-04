@@ -71,7 +71,11 @@ def _extract_chm_to_temp(chm_path: Path, temp_dir: Path) -> bool:
         logger.warning("CHM extraction timed out for {}", chm_path.name)
         return False
     except (
-        subprocess.SubprocessError, FileNotFoundError, OSError, UnicodeDecodeError, ValueError
+        subprocess.SubprocessError,
+        FileNotFoundError,
+        OSError,
+        UnicodeDecodeError,
+        ValueError,
     ) as e:
         logger.warning("CHM extraction failed for {}: {}", chm_path.name, e)
         return False
