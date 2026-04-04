@@ -21,7 +21,7 @@ from para_files.config import load_config
 def config(
     show: Annotated[
         bool,
-        typer.Option("--show", "-s", help="Show current configuration values"),
+        typer.Option("--show/--no-show", "-s/-S", help="Show current configuration values"),
     ] = True,
     path: Annotated[
         bool,
