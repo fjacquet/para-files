@@ -90,7 +90,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: maincd
+          ref: main
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Compute source tarball SHA256
@@ -117,4 +117,4 @@ jobs:
           git add Formula/para-files.rb
           git diff --staged --quiet && exit 0
           git commit -m "chore: update Homebrew formula for ${{ github.ref_name }} [skip ci]"
-          git push origin HEAD:maincd
+          git push origin HEAD:main
