@@ -156,7 +156,7 @@ flowchart TB
 
 ### Contribution Workflow
 
-1. Create feature branch from `maincd`
+1. Create feature branch from `main`
 2. Make changes following code style (ruff, mypy)
 3. Add tests for new functionality
 4. Update documentation (README, CHANGELOG)
