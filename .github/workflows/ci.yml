@@ -10,7 +10,7 @@ jobs:
   test:
     runs-on: macos-14 # Apple Silicon required for MLX
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v7
