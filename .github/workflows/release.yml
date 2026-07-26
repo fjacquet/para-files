@@ -1,7 +1,9 @@
 name: Release
 
 # Trigger: push a semver tag, e.g.:
-#   git tag v0.2.0 && git push --tags
+#   git tag v1.5 && git push --tags
+#
+# Both vX.Y and vX.Y.Z are accepted; this repo has used vX.Y since v1.0.
 #
 # Before tagging, update both:
 #   - pyproject.toml             → version = "x.y.z"
@@ -10,6 +12,7 @@ name: Release
 on:
   push:
     tags:
+      - 'v[0-9]+.[0-9]+'
       - 'v[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
