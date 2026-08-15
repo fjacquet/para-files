@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from importlib.metadata import version
+
 from typer.testing import CliRunner
 
 from para_files import __version__
@@ -12,8 +14,8 @@ runner = CliRunner()
 
 
 def test_version():
-    """Verify package version is set."""
-    assert __version__ == "0.1.0"
+    """Verify package version is set and matches the distribution metadata."""
+    assert __version__ == version("para-files")
 
 
 def test_main_help():
