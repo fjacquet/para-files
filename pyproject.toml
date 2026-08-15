@@ -159,6 +159,7 @@ ignore = [
     "ARG",     # Unused arguments in fixtures
     "FBT",     # Boolean trap in test parameters
     "PLR2004", # Magic values in tests
+    "PLR0917", # Stacked @patch decorators add many positional mock arguments
     "ANN",     # Type annotations optional in tests
     "SLF001",  # Private member access allowed in tests
     "S108",    # Temp file paths allowed in tests
@@ -181,10 +182,12 @@ ignore = [
 "src/para_files/main.py" = [
     "FBT002",   # Boolean default positional arguments are standard for Typer CLI
     "PLR0913",  # CLI commands naturally have many parameters
+    "PLR0917",  # CLI commands naturally have many positional parameters
 ]
 "src/para_files/cli/**/*.py" = [
     "FBT002",   # Boolean default positional arguments are standard for Typer CLI
     "PLR0913",  # CLI commands naturally have many parameters
+    "PLR0917",  # CLI commands naturally have many positional parameters
 ]
 "src/para_files/classifiers/llm_classifier.py" = [
     "PLR0913",  # LLMClassifier.__init__ has many config parameters

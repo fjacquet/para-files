@@ -28,15 +28,19 @@ _DATE_PATTERNS: list[tuple[str, str]] = [
     (r"\b(\d{1,2})[./](\d{1,2})[./](\d{2})\b", "DMY_SHORT"),
     # French text date (15 janvier 2024)
     (
-        r"\b(\d{1,2})\s+"
-        r"(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)"
-        r"\s+(\d{4})\b",
+        (
+            r"\b(\d{1,2})\s+"
+            r"(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)"
+            r"\s+(\d{4})\b"
+        ),
         "FR_TEXT",
     ),
     # English text date (January 15, 2024)
     (
-        r"\b(january|february|march|april|may|june|july|august|september|october|november|december)"
-        r"\s+(\d{1,2}),?\s+(\d{4})\b",
+        (
+            r"\b(january|february|march|april|may|june|july|august|september|october|november|december)"
+            r"\s+(\d{1,2}),?\s+(\d{4})\b"
+        ),
         "EN_TEXT",
     ),
 ]
