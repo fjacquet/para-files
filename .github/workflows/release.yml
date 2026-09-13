@@ -22,6 +22,22 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # v1.4 and v1.5 were both tagged without bumping pyproject.toml (it is
+      # still "1.4" today, two tags behind). Nothing caught it: test_version
+      # only compares __version__ against the installed distribution
+      # metadata, which stays self-consistent even when both are stale — it
+      # never looks at the git tag. Fail fast, before build/publish, instead
+      # of shipping a wheel whose embedded version doesn't match its release.
+      - name: Verify Tag Matches Declared Version
+        run: |
+          set -euo pipefail
+          declared=$(grep -m1 '^version = ' pyproject.toml | sed -E 's/version = "(.*)"/\1/')
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$tag" != "$declared" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME}, but pyproject.toml declares ${declared}"
+            exit 1
+          fi
+
       - name: Set up uv
         uses: astral-sh/setup-uv@v7
         with:
