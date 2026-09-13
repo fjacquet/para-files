@@ -1875,7 +1875,7 @@ wheels = [
 
 [[package]]
 name = "para-files"
-version = "1.4"
+version = "1.6"
 source = { editable = "." }
 dependencies = [
     { name = "bandit" },

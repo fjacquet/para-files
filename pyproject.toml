@@ -1,6 +1,6 @@
 [project]
 name = "para-files"
-version = "1.4"
+version = "1.6"
 description = "Intelligent file classification using semantic routing with PARA method"
 readme = "README.md"
 license = { text = "MIT" }
