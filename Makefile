@@ -1,7 +1,7 @@
 # Makefile for para-files
 # Automates build, test, and quality checks
 
-.PHONY: all check-deps setup lint format typecheck test clean help
+.PHONY: all check-deps setup install lint format typecheck test clean help security vuln
 
 # Default target
 all: check-deps setup lint format typecheck test
@@ -105,3 +105,11 @@ help:
 	@echo "  pre-commit Run pre-commit on all files"
 	@echo "  build      Build distribution package"
 	@echo "  help       Show this help message"
+
+install: setup
+
+security:  # advisory: reports findings but never blocks the build (CodeQL/osv are the blocking gates)
+	uvx semgrep scan --config auto --skip-unknown-extensions || true
+
+vuln:
+	uvx osv-scanner scan --lockfile=uv.lock || true
