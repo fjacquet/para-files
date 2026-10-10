@@ -13,7 +13,6 @@ Chains classifiers in priority order: first match wins.
 
 from __future__ import annotations
 
-import json
 import threading
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -268,82 +267,73 @@ class ClassificationPipeline:
         # Classifier names that use Ollama (circuit-breaker guarded)
         _ollama_classifiers = frozenset({"SemanticClassifier", "llm"})
 
-        # Run classifiers in priority order; stop after first match
-        try:
-            for idx, classifier in enumerate(self._classifiers):
-                # Skip Ollama-dependent classifiers when circuit breaker is open
-                if (
-                    self._circuit_breaker
-                    and self._circuit_breaker.is_open
-                    and classifier.name in _ollama_classifiers
-                ):
-                    signal_source = self._get_signal_source(classifier)
-                    signals.append(
-                        SignalResult(
-                            source=signal_source,
-                            name=classifier.name,
-                            score=0.0,
-                            matched=False,
-                            skipped=True,
-                        )
-                    )
-                    continue
-
+        # Run classifiers in priority order; stop after first match.
+        # KeyboardInterrupt is deliberately not caught: Ctrl+C must abort the
+        # run instead of becoming a DEFAULT result that a caller would move.
+        for idx, classifier in enumerate(self._classifiers):
+            # Skip Ollama-dependent classifiers when circuit breaker is open
+            if (
+                self._circuit_breaker
+                and self._circuit_breaker.is_open
+                and classifier.name in _ollama_classifiers
+            ):
                 signal_source = self._get_signal_source(classifier)
-                try:
-                    result = classifier.classify(content, metadata)
-                    if result is not None:
-                        if self._circuit_breaker and classifier.name in _ollama_classifiers:
-                            self._circuit_breaker.record_success()
-                        signals.append(
-                            SignalResult(
-                                source=signal_source,
-                                name=classifier.name,
-                                score=result.confidence.value,
-                                matched=True,
-                            )
-                        )
-                        winner = result
-                        winner_idx = idx
-                        logger.debug(
-                            "Classified by {}: {} ({:.0f}%)",
-                            classifier.name,
-                            result.category,
-                            result.confidence.value * 100,
-                        )
-                        break
-                    signals.append(
-                        SignalResult(
-                            source=signal_source,
-                            name=classifier.name,
-                            score=0.0,
-                            matched=False,
-                        )
+                signals.append(
+                    SignalResult(
+                        source=signal_source,
+                        name=classifier.name,
+                        score=0.0,
+                        matched=False,
+                        skipped=True,
                     )
-                except (
-                    ValueError,
-                    TypeError,
-                    KeyError,
-                    AttributeError,
-                    ConnectionError,
-                    TimeoutError,
-                    OSError,
-                    json.JSONDecodeError,
-                    RuntimeError,
-                ) as e:
+                )
+                continue
+
+            signal_source = self._get_signal_source(classifier)
+            try:
+                result = classifier.classify(content, metadata)
+                if result is not None:
                     if self._circuit_breaker and classifier.name in _ollama_classifiers:
-                        self._circuit_breaker.record_failure()
-                    logger.exception("Classifier {} failed: {}", classifier.name, e)
+                        self._circuit_breaker.record_success()
                     signals.append(
                         SignalResult(
                             source=signal_source,
                             name=classifier.name,
-                            score=0.0,
-                            matched=False,
+                            score=result.confidence.value,
+                            matched=True,
                         )
                     )
-        except KeyboardInterrupt:
-            logger.info("Classification interrupted by user (Ctrl+C)")
+                    winner = result
+                    winner_idx = idx
+                    logger.debug(
+                        "Classified by {}: {} ({:.0f}%)",
+                        classifier.name,
+                        result.category,
+                        result.confidence.value * 100,
+                    )
+                    break
+                signals.append(
+                    SignalResult(
+                        source=signal_source,
+                        name=classifier.name,
+                        score=0.0,
+                        matched=False,
+                    )
+                )
+            # Any signal failure (including provider errors such as litellm's,
+            # which derive from Exception) must not abort the cascade.
+            except Exception as e:  # noqa: BLE001
+                if self._circuit_breaker and classifier.name in _ollama_classifiers:
+                    self._circuit_breaker.record_failure()
+                logger.exception("Classifier {} failed: {}", classifier.name, e)
+                signals.append(
+                    SignalResult(
+                        source=signal_source,
+                        name=classifier.name,
+                        score=0.0,
+                        matched=False,
+                    )
+                )
 
         # Record skipped classifiers for verbose display
         signals.extend(

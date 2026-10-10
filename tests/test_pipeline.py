@@ -348,3 +348,49 @@ def test_classify_file_does_not_rename_generic_pdf_by_default(
     preview.assert_not_called()
     assert pdf.exists()
     assert sorted(p.name for p in tmp_path.iterdir()) == ["scan_001.pdf"]
+
+
+class _FakeProviderError(Exception):
+    """Stands in for litellm's APIError, which derives from Exception, not OSError."""
+
+
+def test_pipeline_skips_classifier_raising_unlisted_exception(mock_config: Config) -> None:
+    """A provider error type the pipeline never listed must not abort the cascade."""
+    pipeline = ClassificationPipeline(mock_config)
+    pipeline._ensure_initialized()
+
+    failing = MagicMock()
+    failing.name = "llm"
+    failing.classify.side_effect = _FakeProviderError("provider down")
+
+    passing = MagicMock()
+    passing.name = "passing_classifier"
+    passing.classify.return_value = ClassificationResult(
+        category="3_Resources/test",
+        confidence=Confidence(value=0.85, source=ClassificationSource.TAXONOMY_CLASSIFIER),
+    )
+
+    breaker = MagicMock()
+    breaker.is_open = False
+    pipeline._classifiers = [failing, passing]
+    pipeline._circuit_breaker = breaker
+
+    result = pipeline.classify("any content")
+
+    assert result.category == "3_Resources/test"
+    breaker.record_failure.assert_called_once()
+
+
+def test_pipeline_propagates_keyboard_interrupt(mock_config: Config) -> None:
+    """Ctrl+C must abort classification, never become a DEFAULT result."""
+    pipeline = ClassificationPipeline(mock_config)
+    pipeline._ensure_initialized()
+
+    interrupted = MagicMock()
+    interrupted.name = "interrupted_classifier"
+    interrupted.classify.side_effect = KeyboardInterrupt
+
+    pipeline._classifiers = [interrupted]
+
+    with pytest.raises(KeyboardInterrupt):
+        pipeline.classify("any content")

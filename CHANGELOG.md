@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed (Stage 0 safety)
 
 - **OCR rename is off by default** — `ocr_rename.enabled` now defaults to `false`. Before, `scan`, `move --dry-run`, `inbox`, `rescan` and `learn` could rename generic PDFs on disk while classifying. Enable with `PARA_FILES_OCR_RENAME__ENABLED=true`.
+- **One failing signal no longer aborts classification** — the pipeline now catches any `Exception` from a classifier (litellm provider errors were not caught), so the next signal runs and the circuit breaker records the failure. Ctrl+C now aborts the run instead of returning a default result that `move` would act on.
 
 ### Fixed
 
