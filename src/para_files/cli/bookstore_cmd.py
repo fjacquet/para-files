@@ -368,6 +368,26 @@ def _display_book_info(
     typer.echo()
 
 
+def _display_duplicate_summary(
+    duplicates_skipped: int,
+    isbn_duplicates_kept: int,
+    *,
+    dry_run: bool,
+    keep_duplicates: bool,
+) -> None:
+    """Display ISBN duplicate counts, reporting kept files apart from deleted ones."""
+    deletable = duplicates_skipped - isbn_duplicates_kept
+    if isbn_duplicates_kept > 0:
+        typer.echo(f"⏭️  Kept {isbn_duplicates_kept} same-ISBN file(s) with different content")
+    if deletable > 0:
+        if keep_duplicates:
+            typer.echo(f"⏭️  Skipped {deletable} ISBN duplicate(s)")
+        elif dry_run:
+            typer.echo(f"🗑️  Would delete {deletable} ISBN duplicate(s)")
+        else:
+            typer.echo(f"🗑️  Deleted {deletable} ISBN duplicate(s)")
+
+
 def _display_summary(
     total_files: int,
     books_found: int,
@@ -380,6 +400,7 @@ def _display_summary(
     no_isbn_in_file: int = 0,
     api_lookup_failed: int = 0,
     coherence_rejected: int = 0,
+    isbn_duplicates_kept: int = 0,
 ) -> None:
     """Display summary of bookstore operation."""
     typer.echo("─" * 60)
@@ -396,13 +417,12 @@ def _display_summary(
         if coherence_rejected > 0:
             typer.echo(f"   • Title mismatch: {coherence_rejected}")
 
-    if duplicates_skipped > 0:
-        if keep_duplicates:
-            typer.echo(f"⏭️  Skipped {duplicates_skipped} ISBN duplicate(s)")
-        elif dry_run:
-            typer.echo(f"🗑️  Would delete {duplicates_skipped} ISBN duplicate(s)")
-        else:
-            typer.echo(f"🗑️  Deleted {duplicates_skipped} ISBN duplicate(s)")
+    _display_duplicate_summary(
+        duplicates_skipped,
+        isbn_duplicates_kept,
+        dry_run=dry_run,
+        keep_duplicates=keep_duplicates,
+    )
     if content_duplicates > 0:
         typer.echo(f"🔄 Removed {content_duplicates} content duplicate(s)")
     if not dry_run:
@@ -456,6 +476,7 @@ class _BookstoreContext:
     books_found: int = 0
     books_moved: int = 0
     duplicates_skipped: int = 0
+    isbn_duplicates_kept: int = 0
     content_duplicates: int = 0
 
     # Rejection stats (protected by lock)
@@ -490,6 +511,26 @@ def _check_and_register_isbn(
         ctx.isbn_hashes[isbn] = file_hash
         ctx.books_found += 1
         return False, None
+
+
+def _is_identical_to_first(isbn: str, file_hash: str, ctx: _BookstoreContext) -> bool:
+    """Check a duplicate against the first file with its ISBN (thread-safe).
+
+    Counts the duplicate as kept when its content differs.
+
+    Args:
+        isbn: The duplicated ISBN.
+        file_hash: SHA-256 of the duplicate file.
+        ctx: Shared context with thread-safe state.
+
+    Returns:
+        True if the duplicate has the same content as the first file.
+    """
+    with ctx.lock:
+        identical = ctx.isbn_hashes.get(isbn, "") == file_hash
+        if not identical:
+            ctx.isbn_duplicates_kept += 1
+    return identical
 
 
 def _process_book_file(book_file: Path, ctx: _BookstoreContext) -> None:
@@ -533,16 +574,19 @@ def _process_book_file(book_file: Path, ctx: _BookstoreContext) -> None:
     isbn = str(result["isbn"])
 
     # Thread-safe ISBN check and registration
-    file_hash = _sha256(book_file)
+    try:
+        file_hash = _sha256(book_file)
+    except OSError as e:
+        logger.warning("Cannot read {} for hashing: {}", book_file, e)
+        return
     is_duplicate, first_file = _check_and_register_isbn(isbn, book_file, ctx, file_hash=file_hash)
     if is_duplicate and first_file:
-        with ctx.lock:
-            first_hash = ctx.isbn_hashes.get(isbn, "")
+        identical = _is_identical_to_first(isbn, file_hash, ctx)
         _handle_isbn_duplicate(
             book_file,
             first_file,
             isbn,
-            identical=first_hash == file_hash,
+            identical=identical,
             keep_duplicates=ctx.keep_duplicates,
             dry_run=ctx.dry_run,
             verbose=ctx.verbose,
@@ -734,4 +778,5 @@ def bookstore(
         no_isbn_in_file=ctx.no_isbn_in_file,
         api_lookup_failed=ctx.api_lookup_failed,
         coherence_rejected=ctx.coherence_rejected,
+        isbn_duplicates_kept=ctx.isbn_duplicates_kept,
     )

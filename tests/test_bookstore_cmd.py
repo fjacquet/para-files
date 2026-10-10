@@ -683,3 +683,63 @@ class TestStage0BookstoreSafety:
 
         contents = sorted(p.read_bytes() for p in dest.iterdir())
         assert contents == sorted(f"book {i}".encode() for i in range(8))
+
+    def test_summary_separates_kept_from_deleted_isbn_duplicates(self, capsys) -> None:
+        """Kept different-content duplicates are not reported as deleted."""
+        from para_files.cli.bookstore_cmd import _display_summary
+
+        _display_summary(
+            10,
+            5,
+            5,
+            3,
+            0,
+            dry_run=False,
+            keep_duplicates=False,
+            isbn_duplicates_kept=2,
+        )
+
+        out = capsys.readouterr().out
+        assert "Kept 2 same-ISBN file(s) with different content" in out
+        assert "Deleted 1 ISBN duplicate(s)" in out
+        assert "Deleted 3" not in out
+
+    def test_unreadable_book_is_skipped_not_fatal(self, tmp_path: Path) -> None:
+        """A file that cannot be hashed is skipped with a warning; processing continues."""
+        from para_files.cli.bookstore_cmd import _process_book_file
+
+        book = tmp_path / "locked.pdf"
+        book.write_bytes(b"x")
+        ctx = _BookstoreContext(
+            para_root=tmp_path / "para",
+            mover=FileMover(dry_run=True),
+            dry_run=True,
+            rename=False,
+            keep_duplicates=False,
+            verbose=False,
+        )
+        detect = {
+            "isbn": "isbn-1",
+            "dest_dir": tmp_path / "para",
+            "new_filename": "x.pdf",
+            "title": "T",
+            "authors": "A",
+            "thema": "UB",
+            "category": "3_Resources/livres",
+        }
+        with (
+            patch("para_files.cli.bookstore_cmd._extract_isbns_from_file", return_value=["x"]),
+            patch(
+                "para_files.cli.bookstore_cmd.find_matching_book_info",
+                return_value=(MagicMock(), "x"),
+            ),
+            patch("para_files.cli.bookstore_cmd._detect_book", return_value=detect),
+            patch(
+                "para_files.cli.bookstore_cmd._sha256",
+                side_effect=PermissionError("denied"),
+            ),
+        ):
+            _process_book_file(book, ctx)
+
+        assert book.exists()
+        assert ctx.books_found == 0
