@@ -6,6 +6,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from para_files.cli.bookstore_cmd import (
     BOOK_EXTENSIONS,
     _BookstoreContext,
@@ -743,3 +745,112 @@ class TestStage0BookstoreSafety:
 
         assert book.exists()
         assert ctx.books_found == 0
+
+    @pytest.mark.parametrize(
+        ("second_bytes", "kept"),
+        [(b"edition two", 1), (b"edition one", 0)],
+    )
+    def test_same_isbn_duplicate_deleted_only_when_identical(
+        self, tmp_path: Path, second_bytes: bytes, kept: int
+    ) -> None:
+        """End to end: same ISBN + different content is kept and counted; identical is deleted."""
+        from para_files.cli.bookstore_cmd import _process_book_file
+
+        dest = tmp_path / "para" / "3_Resources" / "livres"
+        first = tmp_path / "in1" / "a.pdf"
+        second = tmp_path / "in2" / "b.pdf"
+        first.parent.mkdir()
+        second.parent.mkdir()
+        first.write_bytes(b"edition one")
+        second.write_bytes(second_bytes)
+        detect = {
+            "isbn": "9780134685991",
+            "dest_dir": dest,
+            "new_filename": "Author - Title (2020).pdf",
+            "title": "Title",
+            "authors": "Author",
+            "thema": "UB",
+            "category": "3_Resources/livres",
+        }
+        ctx = _BookstoreContext(
+            para_root=tmp_path / "para",
+            mover=FileMover(dry_run=False, deduplicate=True),
+            dry_run=False,
+            rename=False,
+            keep_duplicates=False,
+            verbose=False,
+        )
+
+        with (
+            patch("para_files.cli.bookstore_cmd._extract_isbns_from_file", return_value=["x"]),
+            patch(
+                "para_files.cli.bookstore_cmd.find_matching_book_info",
+                return_value=(MagicMock(), "x"),
+            ),
+            patch("para_files.cli.bookstore_cmd._detect_book", return_value=detect),
+        ):
+            _process_book_file(first, ctx)
+            _process_book_file(second, ctx)
+
+        assert ctx.isbn_duplicates_kept == kept
+        assert second.exists() is (kept == 1)
+
+    def test_move_and_rename_are_serialized(self, tmp_path: Path) -> None:
+        """With the rename lookup slowed down, unserialized threads would pick the same name."""
+        import time
+
+        from para_files.cli import bookstore_cmd
+        from para_files.cli.bookstore_cmd import _process_book_file
+
+        real_find = bookstore_cmd._find_unique_rename_path
+
+        def slow_find(base_path: Path) -> Path:
+            result = real_find(base_path)
+            time.sleep(0.05)
+            return result
+
+        para = tmp_path / "para"
+        dest = para / "3_Resources" / "livres" / "U_Informatique"
+        books: list[Path] = []
+        for i in range(4):
+            folder = tmp_path / f"in{i}"
+            folder.mkdir()
+            book = folder / f"scan{i}.pdf"
+            book.write_bytes(f"book {i}".encode())
+            books.append(book)
+
+        def fake_detect(book_file: Path, para_root: Path, *, rename: bool) -> dict:
+            n = books.index(book_file)
+            return {
+                "isbn": f"isbn-{n}",
+                "dest_dir": dest,
+                "new_filename": "Same Author - Same Title (2020).pdf",
+                "title": "Same Title",
+                "authors": "Same Author",
+                "thema": "UB",
+                "category": "3_Resources/livres/U_Informatique",
+            }
+
+        ctx = _BookstoreContext(
+            para_root=para,
+            mover=FileMover(dry_run=False, deduplicate=True),
+            dry_run=False,
+            rename=True,
+            keep_duplicates=False,
+            verbose=False,
+        )
+
+        with (
+            patch("para_files.cli.bookstore_cmd._extract_isbns_from_file", return_value=["x"]),
+            patch(
+                "para_files.cli.bookstore_cmd.find_matching_book_info",
+                return_value=(MagicMock(), "x"),
+            ),
+            patch("para_files.cli.bookstore_cmd._detect_book", side_effect=fake_detect),
+            patch("para_files.cli.bookstore_cmd._find_unique_rename_path", side_effect=slow_find),
+            ThreadPoolExecutor(max_workers=4) as pool,
+        ):
+            list(pool.map(lambda b: _process_book_file(b, ctx), books))
+
+        contents = sorted(p.read_bytes() for p in dest.iterdir())
+        assert contents == sorted(f"book {i}".encode() for i in range(4))
