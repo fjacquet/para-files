@@ -223,3 +223,12 @@ def test_pipeline_short_circuit() -> None:
     first_classifier.classify.assert_called_once()
     second_classifier.classify.assert_not_called()
     third_classifier.classify.assert_not_called()
+
+
+def test_classify_propagates_keyboard_interrupt(classifier: LLMClassifier) -> None:
+    """Ctrl+C during the LLM call aborts instead of returning None."""
+    with (
+        patch("litellm.completion", side_effect=KeyboardInterrupt),
+        pytest.raises(KeyboardInterrupt),
+    ):
+        classifier.classify("some document content")

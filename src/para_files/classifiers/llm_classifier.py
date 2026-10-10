@@ -230,9 +230,9 @@ class LLMClassifier(BaseClassifier):
                 timeout=self._timeout,
                 **kwargs,
             )
-        except (KeyboardInterrupt, RuntimeError):
-            # Graceful Ctrl+C: litellm's internal ThreadPoolExecutor may raise
-            # RuntimeError("cannot schedule new futures after shutdown") on interrupt
+        except RuntimeError:
+            # litellm's internal ThreadPoolExecutor may raise
+            # RuntimeError("cannot schedule new futures after shutdown") during shutdown
             logger.debug("LLM call interrupted")
             return None
 
