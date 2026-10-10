@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (Stage 0 safety)
+
+- **OCR rename is off by default** — `ocr_rename.enabled` now defaults to `false`. Before, `scan`, `move --dry-run`, `inbox`, `rescan` and `learn` could rename generic PDFs on disk while classifying. Enable with `PARA_FILES_OCR_RENAME__ENABLED=true`.
+
 ### Fixed
 
 - **LLM classifier returning 0_Inbox at 100% confidence** — PDFs with opaque filenames were

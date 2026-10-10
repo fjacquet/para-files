@@ -108,6 +108,12 @@ class TestOCRRenameConfig:
         with pytest.raises(ValidationError):
             OCRRenameConfig(min_confidence=1.5)
 
+    def test_ocr_rename_disabled_by_default(self):
+        """OCR rename is opt-in: classification must not rename files by default."""
+        from para_files.config import OCRRenameConfig
+
+        assert OCRRenameConfig().enabled is False
+
 
 class TestConfig:
     """Tests for Config."""

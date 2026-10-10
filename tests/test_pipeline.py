@@ -329,3 +329,20 @@ class TestDefaultUnclassifiedCategory:
         assert result.category == "6_unclassified"
         assert result.confidence.source == ClassificationSource.DEFAULT
         assert result.confidence.value == 0.0
+
+
+def test_classify_file_does_not_rename_generic_pdf_by_default(
+    mock_config: Config, tmp_path: Path
+) -> None:
+    """With default config, a generic scanner name is never renamed on disk."""
+    from para_files.utils.filename_detector import is_generic_filename
+
+    pdf = tmp_path / "scan_001.pdf"
+    pdf.write_bytes(b"%PDF-1.4\n%%EOF\n")
+    assert is_generic_filename(pdf.name)
+
+    pipeline = ClassificationPipeline(mock_config)
+
+    assert pipeline._maybe_rename_generic_pdf(pdf) == pdf
+    assert pdf.exists()
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["scan_001.pdf"]

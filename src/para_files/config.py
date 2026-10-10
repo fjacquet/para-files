@@ -190,8 +190,11 @@ class OCRRenameConfig(BaseModel):
     """Configuration for OCR-based file renaming."""
 
     enabled: bool = Field(
-        default=True,
-        description="Enable OCR-based renaming of generic filenames before classification",
+        default=False,
+        description=(
+            "Enable OCR-based renaming of generic filenames before classification. "
+            "Off by default: it renames files even in preview commands (scan, --dry-run)."
+        ),
     )
     min_confidence: float = Field(
         default=0.7,
