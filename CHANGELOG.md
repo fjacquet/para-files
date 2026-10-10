@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **OCR rename is off by default** — `ocr_rename.enabled` now defaults to `false`. Before, `scan`, `move --dry-run`, `inbox`, `rescan` and `learn` could rename generic PDFs on disk while classifying. Enable with `PARA_FILES_OCR_RENAME__ENABLED=true`.
 - **One failing signal no longer aborts classification** — the pipeline now catches any `Exception` from a classifier (litellm provider errors were not caught), so the next signal runs and the circuit breaker records the failure. Ctrl+C now aborts the run instead of returning a default result that `move` would act on. Ctrl+C during an LLM call or embedding initialization is no longer swallowed either.
 - **LLM categories cannot escape the PARA root** — `_sanitize_category` now rejects any category containing a `..` segment or a backslash, even behind an allowed prefix such as `3_Resources/documentation/`.
+- **Targets must stay inside the PARA root** — `get_target_path` now refuses any category that resolves outside `para_root` or to `para_root` itself (for example the `generic_folders` rule, which has no destination and used to drop files loose into the root). `inbox` reports such files as errors and continues.
 
 ### Fixed
 

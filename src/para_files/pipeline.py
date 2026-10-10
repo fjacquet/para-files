@@ -469,8 +469,18 @@ class ClassificationPipeline:
 
         Returns:
             Full path under PARA root.
+
+        Raises:
+            ValueError: If the target is the PARA root itself or lies outside it.
         """
-        return self._config.para_root / result.category
+        root = self._config.para_root
+        target = root / result.category
+        resolved_root = root.resolve()
+        resolved_target = target.resolve()
+        if resolved_target == resolved_root or not resolved_target.is_relative_to(resolved_root):
+            msg = f"Refusing target outside PARA root subfolders: {result.category!r}"
+            raise ValueError(msg)
+        return target
 
     @property
     def classifiers(self) -> list[BaseClassifier]:

@@ -394,3 +394,32 @@ def test_pipeline_propagates_keyboard_interrupt(mock_config: Config) -> None:
 
     with pytest.raises(KeyboardInterrupt):
         pipeline.classify("any content")
+
+
+@pytest.mark.parametrize(
+    "category",
+    ["../outside", "3_Resources/../../outside", "/etc", "", "."],
+)
+def test_get_target_path_refuses_escape_or_root(mock_config: Config, category: str) -> None:
+    """Targets must be a subfolder of para_root: never outside it, never the root itself."""
+    pipeline = ClassificationPipeline(mock_config)
+    result = ClassificationResult(
+        category=category,
+        confidence=Confidence(value=0.9, source=ClassificationSource.LLM_FALLBACK),
+    )
+
+    with pytest.raises(ValueError, match="PARA root"):
+        pipeline.get_target_path(result)
+
+
+def test_get_target_path_accepts_nested_category(mock_config: Config) -> None:
+    """A normal category still maps to para_root / category."""
+    pipeline = ClassificationPipeline(mock_config)
+    result = ClassificationResult(
+        category="4_Archives/5y_factures/Telephonie",
+        confidence=Confidence(value=0.9, source=ClassificationSource.RULES_ENGINE),
+    )
+
+    assert pipeline.get_target_path(result) == (
+        mock_config.para_root / "4_Archives/5y_factures/Telephonie"
+    )

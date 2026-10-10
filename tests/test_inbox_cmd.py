@@ -208,6 +208,30 @@ class TestProcessInboxFile:
         assert stats.failed == 1
         assert stats.moved == 0
 
+    def test_refused_target_is_counted_as_error_and_file_stays(self, tmp_path: Path) -> None:
+        """A target outside the PARA root is reported per file; the run continues."""
+        file_path = self._make_file(tmp_path)
+        pipeline = MagicMock()
+        pipeline.classify_file.return_value = self._make_result(ClassificationSource.RULES_ENGINE)
+        pipeline.get_target_path.side_effect = ValueError("Refusing target outside PARA root")
+
+        stats = _InboxStats(total=1)
+
+        _process_inbox_file(
+            file_path,
+            pipeline,
+            stats,
+            idx=1,
+            total=1,
+            dry_run=False,
+            conflict_strategy=ConflictStrategy.RENAME,
+            verbose=False,
+        )
+
+        assert stats.failed == 1
+        assert stats.moved == 0
+        assert file_path.exists()
+
 
 # ---------------------------------------------------------------------------
 # TestPrintInboxSummary — unit tests for _print_inbox_summary
