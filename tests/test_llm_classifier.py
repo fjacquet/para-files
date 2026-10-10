@@ -172,6 +172,24 @@ def test_sanitize_category_rejects_windows_path(classifier: LLMClassifier) -> No
     assert result is None
 
 
+def test_sanitize_category_rejects_parent_traversal(classifier: LLMClassifier) -> None:
+    """A '..' segment behind an allowed prefix is rejected."""
+    result = classifier._sanitize_category("3_Resources/documentation/../../../etc")
+    assert result is None
+
+
+def test_sanitize_category_rejects_backslash(classifier: LLMClassifier) -> None:
+    """Backslash separators are rejected."""
+    result = classifier._sanitize_category("3_Resources\\documentation\\Python")
+    assert result is None
+
+
+def test_sanitize_category_allows_dots_inside_a_name(classifier: LLMClassifier) -> None:
+    """Dots inside a folder name are not traversal."""
+    result = classifier._sanitize_category("3_Resources/documentation/Python..notes")
+    assert result == "3_Resources/documentation/Python..notes"
+
+
 # ---------------------------------------------------------------------------
 # Pipeline short-circuit (LLM-03): first match wins
 # ---------------------------------------------------------------------------

@@ -293,6 +293,12 @@ class LLMClassifier(BaseClassifier):
             logger.debug("LLM rejected hallucinated path: {}", category[:100])
             return None
 
+        # Reject traversal and backslash separators: the category becomes a
+        # directory under para_root, so it must never climb out of it.
+        if "\\" in category or ".." in category.split("/"):
+            logger.debug("LLM rejected path traversal: {}", category[:100])
+            return None
+
         # Must start with a valid PARA prefix
         if not any(category.startswith(p) for p in _VALID_PARA_PREFIXES):
             logger.debug("LLM rejected non-PARA category: {}", category[:100])
