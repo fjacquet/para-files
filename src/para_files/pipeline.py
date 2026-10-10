@@ -52,6 +52,21 @@ _MIN_CONTENT_FOR_RENAME = 50
 DEFAULT_UNCLASSIFIED_CATEGORY = "6_unclassified"
 
 
+def resolve_within_root(root: Path, category: str) -> Path:
+    """Return ``root / category`` when it is a strict subfolder of ``root``.
+
+    Raises:
+        ValueError: If the target is ``root`` itself or lies outside it.
+    """
+    target = root / category
+    resolved_root = root.resolve()
+    resolved_target = target.resolve()
+    if resolved_target == resolved_root or not resolved_target.is_relative_to(resolved_root):
+        msg = f"Refusing target outside PARA root subfolders: {category!r}"
+        raise ValueError(msg)
+    return target
+
+
 class ClassificationPipeline:
     """Orchestrates 6-signal classification cascade (v2.2).
 
@@ -473,14 +488,7 @@ class ClassificationPipeline:
         Raises:
             ValueError: If the target is the PARA root itself or lies outside it.
         """
-        root = self._config.para_root
-        target = root / result.category
-        resolved_root = root.resolve()
-        resolved_target = target.resolve()
-        if resolved_target == resolved_root or not resolved_target.is_relative_to(resolved_root):
-            msg = f"Refusing target outside PARA root subfolders: {result.category!r}"
-            raise ValueError(msg)
-        return target
+        return resolve_within_root(self._config.para_root, result.category)
 
     @property
     def classifiers(self) -> list[BaseClassifier]:

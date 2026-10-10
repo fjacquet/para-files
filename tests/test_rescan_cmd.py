@@ -20,6 +20,7 @@ from para_files.cli.rescan_cmd import (
     _run_rescan,
 )
 from para_files.config import Config
+from para_files.types import ClassificationResult, ClassificationSource, Confidence
 
 
 @pytest.fixture
@@ -405,3 +406,26 @@ class TestRescanCommand:
         mock_run.assert_called_once()
         call_kwargs = mock_run.call_args[1]
         assert call_kwargs["category"] == "fiscalite"
+
+
+@pytest.mark.parametrize("category", ["/etc", "../outside", "3_Resources/../../outside", "."])
+def test_build_expected_path_refuses_escape(tmp_path: Path, category: str) -> None:
+    """rescan never targets a path outside the PARA root or the root itself."""
+    file_path = tmp_path / "3_Resources" / "doc.pdf"
+    result = ClassificationResult(
+        category=category,
+        confidence=Confidence(value=0.9, source=ClassificationSource.RULES_ENGINE),
+    )
+    assert _build_expected_path(file_path, result, tmp_path) is None
+
+
+def test_build_expected_path_keeps_valid_category(tmp_path: Path) -> None:
+    """A normal category still maps under the PARA root."""
+    file_path = tmp_path / "3_Resources" / "doc.pdf"
+    result = ClassificationResult(
+        category="4_Archives/5y_factures",
+        confidence=Confidence(value=0.9, source=ClassificationSource.RULES_ENGINE),
+    )
+    assert _build_expected_path(file_path, result, tmp_path) == (
+        tmp_path / "4_Archives/5y_factures" / "doc.pdf"
+    )
