@@ -78,7 +78,7 @@ uv run para-files move *.pdf --conflict rename_with_date
 # Result: 2024-01-15_report.pdf, 2024-01-20_report.pdf, ...
 ```
 
-### Clean Overwrite
+### Move only files that don't exist yet
 
 ```bash
 # Keep only latest (if you're sure)
