@@ -482,3 +482,35 @@ class TestLearnCommand:
         assert result.exit_code == 0
         # Verify config was updated with custom tree path
         assert config.reference_tree_path == custom_tree
+
+    @patch("para_files.cli.learn_cmd.print_classification_result")
+    @patch("para_files.cli.learn_cmd.ClassificationPipeline")
+    @patch("para_files.cli.learn_cmd.load_config_or_exit")
+    @patch("para_files.cli.learn_cmd.validate_file_exists")
+    def test_learn_command_refused_target_exits_cleanly(
+        self,
+        mock_validate: MagicMock,
+        mock_config: MagicMock,
+        mock_pipeline_class: MagicMock,
+        mock_print: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """A target outside the PARA root ends learn with a clean error, not a traceback."""
+        test_file = tmp_path / "Untitled.docx"
+        test_file.touch()
+
+        mock_validate.return_value = True
+        mock_config.return_value = MagicMock()
+        mock_pipeline = MagicMock()
+        mock_pipeline.classify_file.return_value = MagicMock()
+        mock_pipeline.get_target_path.side_effect = ValueError(
+            "Refusing target outside PARA root subfolders: ''"
+        )
+        mock_pipeline_class.return_value = mock_pipeline
+
+        result = runner.invoke(app, ["learn", str(test_file)])
+
+        assert result.exit_code == 1
+        assert not isinstance(result.exception, ValueError)
+        assert "PARA root" in result.output
+        mock_print.assert_not_called()
