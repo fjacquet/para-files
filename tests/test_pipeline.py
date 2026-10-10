@@ -343,6 +343,8 @@ def test_classify_file_does_not_rename_generic_pdf_by_default(
 
     pipeline = ClassificationPipeline(mock_config)
 
-    assert pipeline._maybe_rename_generic_pdf(pdf) == pdf
+    with patch("para_files.utils.file_utils.read_content_preview") as preview:
+        assert pipeline._maybe_rename_generic_pdf(pdf) == pdf
+    preview.assert_not_called()
     assert pdf.exists()
     assert sorted(p.name for p in tmp_path.iterdir()) == ["scan_001.pdf"]
