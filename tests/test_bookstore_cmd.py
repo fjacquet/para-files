@@ -854,3 +854,91 @@ class TestStage0BookstoreSafety:
 
         contents = sorted(p.read_bytes() for p in dest.iterdir())
         assert contents == sorted(f"book {i}".encode() for i in range(4))
+
+    def test_failed_duplicate_delete_is_not_reported_as_deleted(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """An identical ISBN duplicate whose unlink fails is counted as failed, not deleted."""
+        from para_files.cli.bookstore_cmd import _display_summary, _process_book_file
+
+        dest = tmp_path / "para" / "3_Resources" / "livres"
+        first = tmp_path / "in1" / "a.pdf"
+        second = tmp_path / "in2" / "b.pdf"
+        first.parent.mkdir()
+        second.parent.mkdir()
+        first.write_bytes(b"same")
+        second.write_bytes(b"same")
+        detect = {
+            "isbn": "9780134685991",
+            "dest_dir": dest,
+            "new_filename": "Author - Title (2020).pdf",
+            "title": "Title",
+            "authors": "Author",
+            "thema": "UB",
+            "category": "3_Resources/livres",
+        }
+        ctx = _BookstoreContext(
+            para_root=tmp_path / "para",
+            mover=FileMover(dry_run=False, deduplicate=True),
+            dry_run=False,
+            rename=False,
+            keep_duplicates=False,
+            verbose=False,
+        )
+        real_unlink = Path.unlink
+
+        def failing_unlink(self: Path, missing_ok: bool = False) -> None:
+            if self == second:
+                msg = "busy"
+                raise OSError(msg)
+            real_unlink(self, missing_ok=missing_ok)
+
+        with (
+            patch("para_files.cli.bookstore_cmd._extract_isbns_from_file", return_value=["x"]),
+            patch(
+                "para_files.cli.bookstore_cmd.find_matching_book_info",
+                return_value=(MagicMock(), "x"),
+            ),
+            patch("para_files.cli.bookstore_cmd._detect_book", return_value=detect),
+            patch.object(Path, "unlink", failing_unlink),
+        ):
+            _process_book_file(first, ctx)
+            _process_book_file(second, ctx)
+
+        assert second.exists()
+        assert ctx.isbn_delete_failed == 1
+
+        _display_summary(
+            2,
+            ctx.books_found,
+            ctx.books_moved,
+            ctx.duplicates_skipped,
+            ctx.content_duplicates,
+            dry_run=False,
+            keep_duplicates=False,
+            isbn_duplicates_kept=ctx.isbn_duplicates_kept,
+            isbn_delete_failed=ctx.isbn_delete_failed,
+        )
+        out = capsys.readouterr().out
+        assert "Could not delete 1 ISBN duplicate(s)" in out
+        assert "Deleted 1" not in out
+
+    def test_rename_never_overwrites_when_no_free_name(self, tmp_path: Path) -> None:
+        """If no free name is found, the moved file keeps its name; nothing is overwritten."""
+        moved = tmp_path / "scan.pdf"
+        moved.write_bytes(b"new book")
+        occupied = tmp_path / "Author - Title (2020).pdf"
+        occupied.write_bytes(b"existing book")
+        move_result = MoveResult(
+            source=tmp_path / "in" / "scan.pdf",
+            destination=moved,
+            success=True,
+            action="moved",
+        )
+
+        with patch("para_files.cli.bookstore_cmd._find_unique_rename_path", return_value=occupied):
+            final = _rename_after_move(move_result, occupied.name, "scan.pdf", dry_run=False)
+
+        assert final == moved
+        assert occupied.read_bytes() == b"existing book"
+        assert moved.read_bytes() == b"new book"

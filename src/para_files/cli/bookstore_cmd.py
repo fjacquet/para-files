@@ -246,7 +246,7 @@ def _handle_isbn_duplicate(
     keep_duplicates: bool,
     dry_run: bool,
     verbose: bool,
-) -> None:
+) -> bool:
     """Handle ISBN duplicate file.
 
     A duplicate is deleted only when its content is identical to the first file
@@ -261,12 +261,15 @@ def _handle_isbn_duplicate(
         keep_duplicates: If True, skip without deleting.
         dry_run: If True, don't actually delete.
         verbose: If True, show detailed output.
+
+    Returns:
+        False only when the duplicate could not be deleted; True otherwise.
     """
     if not identical:
         typer.echo(f"⏭️  Kept: {book_file.name}")
         typer.echo(f"   Same ISBN {isbn} as {first_file.name}, but different content")
         typer.echo()
-        return
+        return True
     if keep_duplicates:
         if verbose:
             typer.echo(f"⏭️  Skipping duplicate: {book_file.name}")
@@ -285,6 +288,8 @@ def _handle_isbn_duplicate(
                 typer.echo()
         except OSError as e:
             logger.warning("Failed to delete duplicate {}: {}", book_file, e)
+            return False
+    return True
 
 
 def _find_unique_rename_path(base_path: Path) -> Path:
@@ -338,6 +343,9 @@ def _rename_after_move(
         renamed_dest = actual_dest.parent / new_filename
         # Find unique name if target already exists
         renamed_dest = _find_unique_rename_path(renamed_dest)
+        if renamed_dest.exists():
+            logger.warning("No free name for {}; keeping {}", new_filename, actual_dest.name)
+            return actual_dest
         try:
             actual_dest.rename(renamed_dest)
         except OSError as e:
@@ -375,9 +383,10 @@ def _display_duplicate_summary(
     *,
     dry_run: bool,
     keep_duplicates: bool,
+    isbn_delete_failed: int = 0,
 ) -> None:
-    """Display ISBN duplicate counts, reporting kept files apart from deleted ones."""
-    deletable = duplicates_skipped - isbn_duplicates_kept
+    """Display ISBN duplicate counts, reporting kept and failed files apart from deleted ones."""
+    deletable = duplicates_skipped - isbn_duplicates_kept - isbn_delete_failed
     if isbn_duplicates_kept > 0:
         typer.echo(f"⏭️  Kept {isbn_duplicates_kept} same-ISBN file(s) with different content")
     if deletable > 0:
@@ -387,6 +396,8 @@ def _display_duplicate_summary(
             typer.echo(f"🗑️  Would delete {deletable} ISBN duplicate(s)")
         else:
             typer.echo(f"🗑️  Deleted {deletable} ISBN duplicate(s)")
+    if isbn_delete_failed > 0:
+        typer.echo(f"⚠️  Could not delete {isbn_delete_failed} ISBN duplicate(s) (see log)")
 
 
 def _display_summary(
@@ -402,6 +413,7 @@ def _display_summary(
     api_lookup_failed: int = 0,
     coherence_rejected: int = 0,
     isbn_duplicates_kept: int = 0,
+    isbn_delete_failed: int = 0,
 ) -> None:
     """Display summary of bookstore operation."""
     typer.echo("─" * 60)
@@ -423,6 +435,7 @@ def _display_summary(
         isbn_duplicates_kept,
         dry_run=dry_run,
         keep_duplicates=keep_duplicates,
+        isbn_delete_failed=isbn_delete_failed,
     )
     if content_duplicates > 0:
         typer.echo(f"🔄 Removed {content_duplicates} content duplicate(s)")
@@ -478,6 +491,7 @@ class _BookstoreContext:
     books_moved: int = 0
     duplicates_skipped: int = 0
     isbn_duplicates_kept: int = 0
+    isbn_delete_failed: int = 0
     content_duplicates: int = 0
 
     # Rejection stats (protected by lock)
@@ -534,6 +548,28 @@ def _is_identical_to_first(isbn: str, file_hash: str, ctx: _BookstoreContext) ->
     return identical
 
 
+def _process_isbn_duplicate(
+    book_file: Path,
+    first_file: Path,
+    isbn: str,
+    file_hash: str,
+    ctx: _BookstoreContext,
+) -> None:
+    """Handle a duplicate ISBN and count a duplicate that could not be deleted (thread-safe)."""
+    identical = _is_identical_to_first(isbn, file_hash, ctx)
+    if not _handle_isbn_duplicate(
+        book_file,
+        first_file,
+        isbn,
+        identical=identical,
+        keep_duplicates=ctx.keep_duplicates,
+        dry_run=ctx.dry_run,
+        verbose=ctx.verbose,
+    ):
+        with ctx.lock:
+            ctx.isbn_delete_failed += 1
+
+
 def _process_book_file(book_file: Path, ctx: _BookstoreContext) -> None:
     """Process a single book file (thread-safe).
 
@@ -582,16 +618,7 @@ def _process_book_file(book_file: Path, ctx: _BookstoreContext) -> None:
         return
     is_duplicate, first_file = _check_and_register_isbn(isbn, book_file, ctx, file_hash=file_hash)
     if is_duplicate and first_file:
-        identical = _is_identical_to_first(isbn, file_hash, ctx)
-        _handle_isbn_duplicate(
-            book_file,
-            first_file,
-            isbn,
-            identical=identical,
-            keep_duplicates=ctx.keep_duplicates,
-            dry_run=ctx.dry_run,
-            verbose=ctx.verbose,
-        )
+        _process_isbn_duplicate(book_file, first_file, isbn, file_hash, ctx)
         return
 
     # Build destination path
@@ -783,4 +810,5 @@ def bookstore(
         api_lookup_failed=ctx.api_lookup_failed,
         coherence_rejected=ctx.coherence_rejected,
         isbn_duplicates_kept=ctx.isbn_duplicates_kept,
+        isbn_delete_failed=ctx.isbn_delete_failed,
     )
