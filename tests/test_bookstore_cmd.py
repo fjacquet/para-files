@@ -430,6 +430,7 @@ class TestHandleIsbnDuplicate:
             duplicate_file,
             first_file,
             "9780134685991",
+            identical=True,
             keep_duplicates=False,
             dry_run=False,
             verbose=False,
@@ -449,6 +450,7 @@ class TestHandleIsbnDuplicate:
             duplicate_file,
             first_file,
             "9780134685991",
+            identical=True,
             keep_duplicates=True,
             dry_run=False,
             verbose=False,
@@ -468,6 +470,7 @@ class TestHandleIsbnDuplicate:
             duplicate_file,
             first_file,
             "9780134685991",
+            identical=True,
             keep_duplicates=False,
             dry_run=True,
             verbose=False,
@@ -489,10 +492,31 @@ class TestHandleIsbnDuplicate:
                 duplicate_file,
                 first_file,
                 "9780134685991",
+                identical=True,
                 keep_duplicates=False,
                 dry_run=False,
                 verbose=False,
             )
+
+    def test_keeps_duplicate_with_different_content(self, tmp_path: Path):
+        """Same ISBN, different content (another edition or scan): never deleted."""
+        duplicate_file = tmp_path / "second_edition.pdf"
+        duplicate_file.write_bytes(b"%PDF-1.4 second edition")
+        first_file = tmp_path / "first.pdf"
+        first_file.write_bytes(b"%PDF-1.4 first edition")
+
+        _handle_isbn_duplicate(
+            duplicate_file,
+            first_file,
+            "9780134685991",
+            identical=False,
+            keep_duplicates=False,
+            dry_run=False,
+            verbose=False,
+        )
+
+        assert duplicate_file.exists()
+        assert first_file.exists()
 
 
 class TestConcurrentIsbnDeduplication:
@@ -589,3 +613,73 @@ class TestFileMoverConcurrentConflicts:
         assert all(r.success for r in move_results), (
             f"Unexpected failure: {[r for r in move_results if not r.success]}"
         )
+
+
+class TestStage0BookstoreSafety:
+    """Stage 0: no data loss in bookstore."""
+
+    def test_register_records_first_file_hash(self, tmp_path: Path) -> None:
+        """The first file of an ISBN has its content hash recorded."""
+        ctx = _BookstoreContext(
+            para_root=tmp_path,
+            mover=FileMover(dry_run=True),
+            dry_run=True,
+            rename=False,
+            keep_duplicates=False,
+            verbose=False,
+        )
+        book = tmp_path / "a.pdf"
+        book.write_bytes(b"x")
+
+        _check_and_register_isbn("9780134685991", book, ctx, file_hash="abc")
+
+        assert ctx.isbn_hashes["9780134685991"] == "abc"
+
+    def test_parallel_books_with_same_title_are_all_kept(self, tmp_path: Path) -> None:
+        """Eight different books renamed to one title in parallel: all eight survive."""
+        from para_files.cli.bookstore_cmd import _process_book_file
+
+        para = tmp_path / "para"
+        dest = para / "3_Resources" / "livres" / "U_Informatique"
+        books: list[Path] = []
+        for i in range(8):
+            folder = tmp_path / f"in{i}"
+            folder.mkdir()
+            book = folder / f"scan{i}.pdf"
+            book.write_bytes(f"book {i}".encode())
+            books.append(book)
+
+        def fake_detect(book_file: Path, para_root: Path, *, rename: bool) -> dict:
+            n = books.index(book_file)
+            return {
+                "isbn": f"isbn-{n}",
+                "dest_dir": dest,
+                "new_filename": "Same Author - Same Title (2020).pdf",
+                "title": "Same Title",
+                "authors": "Same Author",
+                "thema": "UB",
+                "category": "3_Resources/livres/U_Informatique",
+            }
+
+        ctx = _BookstoreContext(
+            para_root=para,
+            mover=FileMover(dry_run=False, deduplicate=True),
+            dry_run=False,
+            rename=True,
+            keep_duplicates=False,
+            verbose=False,
+        )
+
+        with (
+            patch("para_files.cli.bookstore_cmd._extract_isbns_from_file", return_value=["x"]),
+            patch(
+                "para_files.cli.bookstore_cmd.find_matching_book_info",
+                return_value=(MagicMock(), "x"),
+            ),
+            patch("para_files.cli.bookstore_cmd._detect_book", side_effect=fake_detect),
+            ThreadPoolExecutor(max_workers=8) as pool,
+        ):
+            list(pool.map(lambda b: _process_book_file(b, ctx), books))
+
+        contents = sorted(p.read_bytes() for p in dest.iterdir())
+        assert contents == sorted(f"book {i}".encode() for i in range(8))

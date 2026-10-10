@@ -9,6 +9,7 @@ Only books with confirmed ISBN are moved (100% confidence).
 
 from __future__ import annotations
 
+import hashlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -229,25 +230,42 @@ def _detect_book(
     }
 
 
+def _sha256(path: Path) -> str:
+    """Return the SHA-256 hex digest of a file's content."""
+    with path.open("rb") as f:
+        return hashlib.file_digest(f, "sha256").hexdigest()
+
+
 def _handle_isbn_duplicate(
     book_file: Path,
     first_file: Path,
     isbn: str,
     *,
+    identical: bool,
     keep_duplicates: bool,
     dry_run: bool,
     verbose: bool,
 ) -> None:
     """Handle ISBN duplicate file.
 
+    A duplicate is deleted only when its content is identical to the first file
+    with this ISBN. Same ISBN with different content (another edition or scan)
+    is always kept.
+
     Args:
         book_file: The duplicate file to handle.
         first_file: The first file with this ISBN (already processed).
         isbn: The ISBN that is duplicated.
+        identical: True if book_file has the same content as first_file.
         keep_duplicates: If True, skip without deleting.
         dry_run: If True, don't actually delete.
         verbose: If True, show detailed output.
     """
+    if not identical:
+        typer.echo(f"⏭️  Kept: {book_file.name}")
+        typer.echo(f"   Same ISBN {isbn} as {first_file.name}, but different content")
+        typer.echo()
+        return
     if keep_duplicates:
         if verbose:
             typer.echo(f"⏭️  Skipping duplicate: {book_file.name}")
@@ -430,6 +448,9 @@ class _BookstoreContext:
     # Thread-safe state
     lock: Lock = field(default_factory=Lock)
     processed_isbns: dict[str, Path] = field(default_factory=dict)
+    isbn_hashes: dict[str, str] = field(default_factory=dict)
+    # Serializes move + rename so two books renamed to one title never collide
+    move_lock: Lock = field(default_factory=Lock)
 
     # Counters (protected by lock)
     books_found: int = 0
@@ -447,6 +468,8 @@ def _check_and_register_isbn(
     isbn: str,
     book_file: Path,
     ctx: _BookstoreContext,
+    *,
+    file_hash: str = "",
 ) -> tuple[bool, Path | None]:
     """Thread-safe check and register ISBN, handling duplicates.
 
@@ -454,6 +477,7 @@ def _check_and_register_isbn(
         isbn: The ISBN to check and register.
         book_file: Path to the book file.
         ctx: Shared context with thread-safe state.
+        file_hash: SHA-256 of book_file, recorded for the first file of each ISBN.
 
     Returns:
         Tuple of (is_duplicate, first_file_if_duplicate).
@@ -463,6 +487,7 @@ def _check_and_register_isbn(
             ctx.duplicates_skipped += 1
             return True, ctx.processed_isbns[isbn]
         ctx.processed_isbns[isbn] = book_file
+        ctx.isbn_hashes[isbn] = file_hash
         ctx.books_found += 1
         return False, None
 
@@ -508,12 +533,16 @@ def _process_book_file(book_file: Path, ctx: _BookstoreContext) -> None:
     isbn = str(result["isbn"])
 
     # Thread-safe ISBN check and registration
-    is_duplicate, first_file = _check_and_register_isbn(isbn, book_file, ctx)
+    file_hash = _sha256(book_file)
+    is_duplicate, first_file = _check_and_register_isbn(isbn, book_file, ctx, file_hash=file_hash)
     if is_duplicate and first_file:
+        with ctx.lock:
+            first_hash = ctx.isbn_hashes.get(isbn, "")
         _handle_isbn_duplicate(
             book_file,
             first_file,
             isbn,
+            identical=first_hash == file_hash,
             keep_duplicates=ctx.keep_duplicates,
             dry_run=ctx.dry_run,
             verbose=ctx.verbose,
@@ -525,11 +554,20 @@ def _process_book_file(book_file: Path, ctx: _BookstoreContext) -> None:
     new_filename = str(result["new_filename"])
     final_dest = dest_dir / new_filename
 
-    # Move file using FileMover (handles content deduplication)
-    move_result = ctx.mover.move(book_file, dest_dir)
+    # Move, then rename, as one step: two books renamed to the same title must
+    # not both pick the same free name.
+    with ctx.move_lock:
+        # Move file using FileMover (handles content deduplication)
+        move_result = ctx.mover.move(book_file, dest_dir)
+        is_content_duplicate = bool(move_result.action) and "duplicate" in move_result.action
+        actual_dest = (
+            None
+            if is_content_duplicate
+            else _rename_after_move(move_result, new_filename, book_file.name, dry_run=ctx.dry_run)
+        )
 
     # Check if it was a content duplicate
-    if move_result.action and "duplicate" in move_result.action:
+    if is_content_duplicate:
         with ctx.lock:
             ctx.content_duplicates += 1
         if ctx.verbose:
@@ -537,9 +575,6 @@ def _process_book_file(book_file: Path, ctx: _BookstoreContext) -> None:
             typer.echo(f"   Identical to: {final_dest}")
             typer.echo()
         return
-
-    # Rename file if move succeeded and rename is requested
-    actual_dest = _rename_after_move(move_result, new_filename, book_file.name, dry_run=ctx.dry_run)
 
     _display_book_info(
         result,
