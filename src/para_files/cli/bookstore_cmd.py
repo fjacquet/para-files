@@ -21,6 +21,7 @@ from loguru import logger
 
 from para_files.cli.app import app
 from para_files.cli.shared import (
+    cancel_pending_on_interrupt,
     load_config_or_exit,
     setup_logging,
     validate_directory_or_exit,
@@ -754,7 +755,10 @@ def bookstore(
             _process_book_file(book_file, ctx)
     else:
         # Parallel processing with ThreadPoolExecutor
-        with ThreadPoolExecutor(max_workers=workers) as executor:
+        with (
+            ThreadPoolExecutor(max_workers=workers) as executor,
+            cancel_pending_on_interrupt(executor),
+        ):
             futures = {
                 executor.submit(_process_book_file, book_file, ctx): book_file
                 for book_file in book_files

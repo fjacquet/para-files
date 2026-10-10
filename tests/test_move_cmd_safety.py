@@ -75,3 +75,55 @@ def test_parallel_move_keeps_same_named_files(tmp_path: Path) -> None:
     assert (success, skipped, failed) == (6, 0, 0)
     contents = sorted(p.read_text() for p in target.iterdir())
     assert contents == sorted(f"payload {i}" for i in range(6))
+
+
+def test_ctrl_c_in_parallel_move_stops_queued_files(tmp_path: Path) -> None:
+    """Default parallel path: Ctrl+C after the first result leaves queued files unprocessed."""
+    import time
+    from concurrent.futures import as_completed as real_as_completed
+    from unittest.mock import patch
+
+    from para_files.cli.move_cmd import _move_files_parallel
+    from para_files.types import ClassificationResult, ClassificationSource, Confidence
+
+    files = []
+    for i in range(40):
+        f = tmp_path / f"f{i}.txt"
+        f.write_text(str(i))
+        files.append(f)
+
+    def slow_classify(_path: Path) -> ClassificationResult:
+        time.sleep(0.05)
+        return ClassificationResult(
+            category="3_Resources/test",
+            confidence=Confidence(value=0.9, source=ClassificationSource.RULES_ENGINE),
+        )
+
+    pipeline = MagicMock()
+    pipeline.classify_file.side_effect = slow_classify
+    pipeline.get_target_path.return_value = tmp_path / "para" / "3_Resources" / "test"
+
+    def interrupting(fs, timeout=None):
+        it = real_as_completed(fs, timeout)
+        yield next(it)
+        raise KeyboardInterrupt
+
+    with (
+        patch("para_files.cli.move_cmd.as_completed", side_effect=interrupting),
+        pytest.raises(KeyboardInterrupt),
+    ):
+        _move_files_parallel(
+            files,
+            pipeline,
+            4,
+            dry_run=True,
+            copy=False,
+            conflict_strategy=ConflictStrategy.RENAME,
+            date_prefix=False,
+            smart_rename=False,
+            skip_unclassifiable=False,
+            output_json=True,
+            action_verb="Would move",
+        )
+
+    assert pipeline.classify_file.call_count <= 8

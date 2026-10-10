@@ -17,6 +17,7 @@ from loguru import logger
 from para_files.cli.app import app
 from para_files.cli.shared import (
     ConflictChoice,
+    cancel_pending_on_interrupt,
     expand_paths_to_files,
     load_config_or_exit,
     parse_extensions_filter,
@@ -480,7 +481,10 @@ def _move_files_parallel(
     skip_count = 0
     fail_count = 0
 
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+    with (
+        ThreadPoolExecutor(max_workers=max_workers) as executor,
+        cancel_pending_on_interrupt(executor),
+    ):
         futures = {
             executor.submit(
                 _move_single_file,
