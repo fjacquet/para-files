@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import os
 import shutil
+import threading
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
@@ -30,6 +31,10 @@ _HASH_BUFFER_SIZE = 65536
 # Cache: (str(path), mtime_float) -> sha256_hex
 # Lives for process lifetime; mtime change naturally invalidates the key.
 _hash_cache: dict[tuple[str, float], str] = {}
+
+# Process-wide lock: moves run one at a time, so the destination check and the
+# filesystem operation never interleave between worker threads.
+_MOVE_LOCK = threading.Lock()
 
 
 def _compute_file_hash(file_path: Path) -> str:
@@ -77,7 +82,6 @@ class ConflictStrategy(StrEnum):
     """Strategy for handling filename conflicts."""
 
     SKIP = "skip"  # Skip if file exists
-    OVERWRITE = "overwrite"  # Overwrite existing file
     RENAME = "rename"  # Add counter suffix (file_1.txt, file_2.txt)
     RENAME_WITH_DATE = "rename_with_date"  # Add date prefix (2025-01-15_file.txt)
 
@@ -143,6 +147,28 @@ class FileMover:
     ) -> MoveResult:
         """Move or copy a file to the destination directory.
 
+        Moves are serialized process-wide so that the conflict check and the
+        filesystem operation are atomic with respect to other threads.
+
+        Args:
+            source: Source file path.
+            destination_dir: Target directory (will be created if needed).
+            classification: Optional classification result for smart renaming.
+
+        Returns:
+            MoveResult with operation details.
+        """
+        with _MOVE_LOCK:
+            return self._move_unlocked(source, destination_dir, classification)
+
+    def _move_unlocked(
+        self,
+        source: Path,
+        destination_dir: Path,
+        classification: ClassificationResult | None = None,
+    ) -> MoveResult:
+        """Move body; the caller must hold ``_MOVE_LOCK``.
+
         Args:
             source: Source file path.
             destination_dir: Target directory (will be created if needed).
@@ -171,6 +197,14 @@ class FileMover:
 
         # Build destination filename
         filename = self._build_filename(source, classification)
+        if filename in {"", ".", ".."} or Path(filename).name != filename:
+            return MoveResult(
+                source=source,
+                destination=destination_dir / source.name,
+                success=False,
+                action="error",
+                message=f"Refusing unsafe destination filename: {filename!r}",
+            )
         initial_destination = destination_dir / filename
 
         # CRITICAL: Never delete if source and destination are the same file
@@ -274,17 +308,13 @@ class FileMover:
         if self.conflict_strategy == ConflictStrategy.SKIP:
             return None
 
-        if self.conflict_strategy == ConflictStrategy.OVERWRITE:
-            return destination
-
         if self.conflict_strategy == ConflictStrategy.RENAME:
             return self._find_unique_name(destination)
 
-        # RENAME_WITH_DATE: Add current timestamp to make unique
+        # RENAME_WITH_DATE: add a timestamp, then a counter if that name is taken too
         timestamp = datetime.now(tz=UTC).strftime("%Y%m%d_%H%M%S")
-        stem = destination.stem
-        suffix = destination.suffix
-        return destination.with_name(f"{stem}_{timestamp}{suffix}")
+        dated = destination.with_name(f"{destination.stem}_{timestamp}{destination.suffix}")
+        return dated if not dated.exists() else self._find_unique_name(dated)
 
     def _find_unique_name(self, destination: Path) -> Path:
         """Find a unique filename by adding a counter suffix.
@@ -383,6 +413,15 @@ class FileMover:
                 success=True,
                 action=f"would be {action}",
                 message=f"Dry run: {source} -> {destination}",
+            )
+
+        if destination.exists():
+            return MoveResult(
+                source=source,
+                destination=destination,
+                success=False,
+                action="error",
+                message=f"Refusing to overwrite existing file: {destination}",
             )
 
         try:

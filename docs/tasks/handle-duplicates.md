@@ -15,7 +15,6 @@ When a file already exists, you have choices:
 
 ```bash
 --conflict skip           # Don't move
---conflict overwrite      # Replace existing (careful!)
 --conflict rename         # Rename: file.pdf → file_1.pdf
 --conflict rename_with_date # Rename: 2024-01-15_file.pdf
 ```
@@ -53,16 +52,6 @@ uv run para-files move *.pdf --conflict rename_with_date
 ```
 
 **When to use:** You want chronological versions
-
-## Overwrite (Careful!)
-
-```bash
-uv run para-files move *.pdf --conflict overwrite
-
-# Replaces existing files (data loss!)
-```
-
-**When to use:** Almost never—very dangerous
 
 ## Workflow
 

@@ -62,7 +62,6 @@ class ConflictChoice(StrEnum):
     """
 
     skip = "skip"
-    overwrite = "overwrite"
     rename = "rename"
     rename_with_date = "rename_with_date"
 

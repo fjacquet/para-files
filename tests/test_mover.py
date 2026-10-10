@@ -14,7 +14,7 @@ from para_files.mover import (
     move_classified_file,
     validate_destination_permissions,
 )
-from para_files.types import ClassificationResult
+from para_files.types import ClassificationResult, ClassificationSource, Confidence
 
 
 class TestMoveResult:
@@ -50,11 +50,11 @@ class TestConflictStrategy:
     """Tests for ConflictStrategy enum."""
 
     def test_all_strategies_defined(self):
-        """Test all conflict strategies are defined."""
+        """Test all conflict strategies are defined, and none overwrites."""
         assert ConflictStrategy.SKIP.value == "skip"
-        assert ConflictStrategy.OVERWRITE.value == "overwrite"
         assert ConflictStrategy.RENAME.value == "rename"
         assert ConflictStrategy.RENAME_WITH_DATE.value == "rename_with_date"
+        assert "overwrite" not in {s.value for s in ConflictStrategy}
 
 
 class TestFileMoverDryRun:
@@ -189,23 +189,6 @@ class TestConflictResolution:
         assert result.action == "skipped"
         assert source.exists()  # Source unchanged
         assert existing.read_text() == "old content"  # Destination unchanged
-
-    def test_overwrite_existing(self, tmp_path: Path):
-        """Test OVERWRITE strategy replaces existing files."""
-        source = tmp_path / "new.txt"
-        source.write_text("new content")
-
-        dest_dir = tmp_path / "dest"
-        dest_dir.mkdir()
-        existing = dest_dir / "new.txt"
-        existing.write_text("old content")
-
-        mover = FileMover(conflict_strategy=ConflictStrategy.OVERWRITE)
-        result = mover.move(source, dest_dir)
-
-        assert result.success is True
-        assert result.action == "moved"
-        assert (dest_dir / "new.txt").read_text() == "new content"
 
     def test_rename_adds_counter(self, tmp_path: Path):
         """Test RENAME strategy adds counter suffix."""
@@ -855,3 +838,86 @@ class TestBatchMoverRollback:
         assert rollback_results[0].action == "would rollback"
         # File should NOT have been moved since dry_run
         assert src.exists()  # Original still there
+
+
+class TestNoClobber:
+    """Stage 0: the mover never overwrites and never escapes the target directory."""
+
+    def test_existing_destination_never_overwritten(self, tmp_path: Path):
+        """_execute_move refuses to replace a file that exists at the destination."""
+        source = tmp_path / "new.txt"
+        source.write_text("new content")
+        dest = tmp_path / "dest" / "new.txt"
+        dest.parent.mkdir()
+        dest.write_text("old content")
+
+        result = FileMover()._execute_move(source, dest)
+
+        assert result.success is False
+        assert result.action == "error"
+        assert dest.read_text() == "old content"
+        assert source.read_text() == "new content"
+
+    def test_rename_with_date_never_reuses_taken_name(self, tmp_path: Path):
+        """Two moves in the same second get distinct names."""
+        from datetime import UTC, datetime
+        from unittest.mock import patch
+
+        dest_dir = tmp_path / "dest"
+        dest_dir.mkdir()
+        (dest_dir / "report.docx").write_text("existing")
+        (dest_dir / "report_20261010_120000.docx").write_text("earlier same-second move")
+        source = tmp_path / "report.docx"
+        source.write_text("new")
+
+        with patch("para_files.mover.datetime") as mock_dt:
+            mock_dt.now.return_value = datetime(2026, 10, 10, 12, 0, 0, tzinfo=UTC)
+            mock_dt.fromtimestamp = datetime.fromtimestamp
+            result = FileMover(conflict_strategy=ConflictStrategy.RENAME_WITH_DATE).move(
+                source, dest_dir
+            )
+
+        assert result.success is True
+        assert result.destination == dest_dir / "report_20261010_120000_1.docx"
+        assert (dest_dir / "report_20261010_120000.docx").read_text() == (
+            "earlier same-second move"
+        )
+
+    def test_smart_rename_with_path_separator_is_refused(self, tmp_path: Path):
+        """A suggested name containing a path cannot place the file elsewhere."""
+        source = tmp_path / "book.pdf"
+        source.write_bytes(b"%PDF-1.4")
+        dest_dir = tmp_path / "para" / "3_Resources" / "livres"
+        classification = ClassificationResult(
+            category="3_Resources/livres",
+            confidence=Confidence(value=1.0, source=ClassificationSource.BOOK_DETECTOR),
+            extracted_params={"suggested_name": "../../escaped"},
+        )
+
+        result = FileMover(smart_rename=True).move(source, dest_dir, classification)
+
+        assert result.success is False
+        assert "unsafe" in result.message
+        assert source.exists()
+        assert not (tmp_path / "para" / "escaped.pdf").exists()
+
+    def test_parallel_moves_of_same_name_keep_every_file(self, tmp_path: Path):
+        """Concurrent moves of different files with one name lose nothing."""
+        from concurrent.futures import ThreadPoolExecutor
+
+        dest_dir = tmp_path / "dest"
+        sources = []
+        for i in range(8):
+            src_dir = tmp_path / f"src{i}"
+            src_dir.mkdir()
+            f = src_dir / "same.txt"
+            f.write_text(f"content {i}")
+            sources.append(f)
+
+        mover = FileMover(conflict_strategy=ConflictStrategy.RENAME)
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            results = list(pool.map(lambda s: mover.move(s, dest_dir), sources))
+
+        assert all(r.success for r in results)
+        contents = sorted(p.read_text() for p in dest_dir.iterdir())
+        assert contents == sorted(f"content {i}" for i in range(8))

@@ -417,7 +417,7 @@ class TestHelperFunctions:
 
         assert ConflictChoice.skip.value == "skip"
         assert ConflictChoice.rename.value == "rename"
-        assert ConflictChoice.overwrite.value == "overwrite"
+        assert "overwrite" not in {c.value for c in ConflictChoice}
 
     def test_format_result_json(self):
         """Test _format_result_json helper function."""
@@ -647,15 +647,16 @@ class TestMoveAdvanced:
         result = runner.invoke(app, ["move", str(test_file), "--dry-run", "--conflict", "rename"])
         assert result.exit_code == 0
 
-    def test_move_with_conflict_overwrite(self, tmp_path):
-        """Test move with overwrite conflict strategy."""
+    def test_move_rejects_conflict_overwrite(self, tmp_path):
+        """The overwrite strategy no longer exists on the CLI."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("Test content")
 
         result = runner.invoke(
             app, ["move", str(test_file), "--dry-run", "--conflict", "overwrite"]
         )
-        assert result.exit_code == 0
+        assert result.exit_code == 2
+        assert test_file.read_text() == "Test content"
 
     def test_move_with_skip_unclassifiable(self, tmp_path):
         """Test move with skip-unclassifiable flag."""
