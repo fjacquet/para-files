@@ -190,6 +190,21 @@ def test_sanitize_category_allows_dots_inside_a_name(classifier: LLMClassifier) 
     assert result == "3_Resources/documentation/Python..notes"
 
 
+def test_sanitize_category_rejects_traversal_behind_template_allowlist() -> None:
+    """Production allowlists hold templates whose base prefix a traversal path can match."""
+    templated = LLMClassifier(
+        enabled=True,
+        model="test",
+        confidence_threshold=0.6,
+        valid_categories=["3_Resources/documentation/{technology}"],
+    )
+    assert templated._sanitize_category("3_Resources/documentation/../../../etc") is None
+    assert (
+        templated._sanitize_category("3_Resources/documentation/Python")
+        == "3_Resources/documentation/Python"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Pipeline short-circuit (LLM-03): first match wins
 # ---------------------------------------------------------------------------
