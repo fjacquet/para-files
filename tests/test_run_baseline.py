@@ -128,7 +128,8 @@ def test_old_pipeline_runs_signals_one_to_three_only(load_script, monkeypatch):
     monkeypatch.setattr("para_files.config.load_config", env_only_config)
     monkeypatch.setattr("para_files.pipeline.ClassificationPipeline", FakePipeline)
 
-    baseline.old_pipeline_classifier()
+    with baseline.old_pipeline_classifier():
+        pass
 
     (pipeline,) = built
     assert pipeline.config.mlx.semantic_enabled is False
@@ -201,8 +202,8 @@ def test_old_pipeline_switches_geocoding_off(load_script, monkeypatch):
 
     monkeypatch.setattr("para_files.config.load_config", lambda: None)
     monkeypatch.setattr("para_files.pipeline.ClassificationPipeline", FakePipeline)
-    baseline.old_pipeline_classifier()
-    assert rules_engine.reverse_geocode(46.5197, 6.6323) is None
+    with baseline.old_pipeline_classifier():
+        assert rules_engine.reverse_geocode(46.5197, 6.6323) is None
     assert fetched == []
 
 
@@ -220,7 +221,8 @@ def test_old_pipeline_disables_generic_pdf_rename(load_script, monkeypatch):
 
     monkeypatch.setattr("para_files.config.load_config", lambda: None)
     monkeypatch.setattr("para_files.pipeline.ClassificationPipeline", FakePipeline)
-    baseline.old_pipeline_classifier()
+    with baseline.old_pipeline_classifier():
+        pass
     (pipeline,) = built
     sentinel = object()
     assert pipeline._maybe_rename_generic_pdf(sentinel) is sentinel
@@ -283,3 +285,23 @@ def test_default_documents_path_is_repo_relative(load_script):
     baseline = load_script("run_baseline")
     assert baseline.DEFAULT_DOCUMENTS.is_file()
     assert baseline.DEFAULT_DOCUMENTS.parent.name == "config"
+
+
+def test_reverse_geocode_is_restored_when_the_classifier_closes(load_script, monkeypatch):
+    from para_files.classifiers import rules_engine
+
+    baseline = load_script("run_baseline")
+    original = rules_engine.reverse_geocode
+
+    class FakePipeline:
+        def __init__(self, config: object) -> None:
+            self._classifiers: list[object] = []
+
+        def _ensure_initialized(self) -> None:
+            return None
+
+    monkeypatch.setattr("para_files.config.load_config", lambda: None)
+    monkeypatch.setattr("para_files.pipeline.ClassificationPipeline", FakePipeline)
+    with baseline.old_pipeline_classifier():
+        assert rules_engine.reverse_geocode(46.5197, 6.6323) is None  # off for the whole run
+    assert rules_engine.reverse_geocode is original

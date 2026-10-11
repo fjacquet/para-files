@@ -17,7 +17,8 @@ import json
 import os
 import tempfile
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -60,8 +61,12 @@ def band_for(leaf: str | None, tree: Tree) -> str:
     return "yellow" if tree.leaves[leaf].kind == "knowledge" else "green"
 
 
-def old_pipeline_classifier() -> Classify:
-    """The old pipeline restricted to signals 1-3: book detector, rules engine, taxonomy."""
+@contextmanager
+def old_pipeline_classifier() -> Iterator[Classify]:
+    """The old pipeline restricted to signals 1-3: book detector, rules engine, taxonomy.
+
+    Geocoding stays off while the block runs; the original reverse_geocode is restored on exit.
+    """
     os.environ.update(
         PARA_FILES_MLX_SEMANTIC_ENABLED="false",
         PARA_FILES_LLM_ENABLED="false",
@@ -74,22 +79,26 @@ def old_pipeline_classifier() -> Classify:
 
     # Geocoding off: the rules engine calls this name, so GPS placeholders stay unresolved
     # and no Nominatim lookup can run during the measurement.
+    original_geocode = rules_engine.reverse_geocode
     rules_engine.reverse_geocode = lambda _latitude, _longitude: None
-    pipeline = ClassificationPipeline(load_config())
-    # never rename during a measurement
-    pipeline._maybe_rename_generic_pdf = lambda path: path  # noqa: SLF001 - pins the old pipeline
-    pipeline._ensure_initialized()  # noqa: SLF001 - the old pipeline needs its classifiers loaded
-    pipeline._classifiers = [  # noqa: SLF001 - signals 1-3 only: book detector, rules, taxonomy
-        c
-        for c in pipeline._classifiers  # noqa: SLF001 - see above
-        if not isinstance(c, ExtensionRouterClassifier)
-    ]
+    try:
+        pipeline = ClassificationPipeline(load_config())
+        # never rename during a measurement
+        pipeline._maybe_rename_generic_pdf = lambda path: path  # noqa: SLF001 - pins the old pipeline
+        pipeline._ensure_initialized()  # noqa: SLF001 - the old pipeline needs its classifiers loaded
+        pipeline._classifiers = [  # noqa: SLF001 - signals 1-3 only: book detector, rules, taxonomy
+            c
+            for c in pipeline._classifiers  # noqa: SLF001 - see above
+            if not isinstance(c, ExtensionRouterClassifier)
+        ]
 
-    def classify(path: Path) -> tuple[str, float, str]:
-        result = pipeline.classify_file(path)
-        return result.category, result.confidence.value, str(result.confidence.source)
+        def classify(path: Path) -> tuple[str, float, str]:
+            result = pipeline.classify_file(path)
+            return result.category, result.confidence.value, str(result.confidence.source)
 
-    return classify
+        yield classify
+    finally:
+        rules_engine.reverse_geocode = original_geocode
 
 
 def run_baseline(
@@ -145,10 +154,8 @@ def main(argv: list[str] | None = None) -> int:
     tree = load_tree_config(cfg_dir).tree
     taxonomy = retentions_by_stem(json.loads(args.documents.read_text(encoding="utf-8")))
     canon = make_canon(scan_folders(para_root), taxonomy)  # same canonical map as the seeder
-    with tempfile.TemporaryDirectory() as workdir:
-        preds = run_baseline(
-            para_root, golden, tree, canon, old_pipeline_classifier(), Path(workdir)
-        )
+    with tempfile.TemporaryDirectory() as workdir, old_pipeline_classifier() as classify:
+        preds = run_baseline(para_root, golden, tree, canon, classify, Path(workdir))
     out.write_text("".join(json.dumps(p, ensure_ascii=False) + "\n" for p in preds), "utf-8")
     decided = sum(1 for p in preds if p["leaf"])
     print(f"baseline: {decided}/{len(preds)} decided -> {out}")
