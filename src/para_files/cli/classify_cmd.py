@@ -16,6 +16,7 @@ from loguru import logger
 
 from para_files.cli.app import app
 from para_files.cli.shared import (
+    cancel_pending_on_interrupt,
     expand_paths_to_files,
     format_result_json,
     load_config_or_exit,
@@ -118,7 +119,10 @@ def _classify_files_parallel(
         List of classification result dictionaries.
     """
     results: list[dict[str, Any]] = []
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+    with (
+        ThreadPoolExecutor(max_workers=max_workers) as executor,
+        cancel_pending_on_interrupt(executor),
+    ):
         futures = {executor.submit(_classify_single_file, f, pipeline): f for f in expanded_files}
         for future in as_completed(futures):
             file_path = futures[future]

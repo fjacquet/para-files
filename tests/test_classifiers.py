@@ -222,3 +222,18 @@ class TestLLMClassifier:
         prompt = classifier._system_prompt
         assert "If unsure: use 0_Inbox" not in prompt
         assert "Use 0_Inbox ONLY" not in prompt
+
+
+def test_semantic_init_propagates_keyboard_interrupt() -> None:
+    """Ctrl+C while computing category embeddings aborts instead of disabling the classifier."""
+    from unittest.mock import MagicMock, patch
+
+    from para_files.classifiers.semantic_classifier import SemanticClassifier
+    from para_files.taxonomies.loader import get_taxonomy_loader
+
+    encoder = MagicMock()
+    encoder.encode_batch.side_effect = KeyboardInterrupt
+    with patch("para_files.classifiers.semantic_classifier.OllamaEncoder", return_value=encoder):
+        classifier = SemanticClassifier(loader=get_taxonomy_loader(), enabled=True)
+        with pytest.raises(KeyboardInterrupt):
+            classifier._ensure_initialized()

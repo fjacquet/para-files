@@ -230,9 +230,9 @@ class LLMClassifier(BaseClassifier):
                 timeout=self._timeout,
                 **kwargs,
             )
-        except (KeyboardInterrupt, RuntimeError):
-            # Graceful Ctrl+C: litellm's internal ThreadPoolExecutor may raise
-            # RuntimeError("cannot schedule new futures after shutdown") on interrupt
+        except RuntimeError:
+            # litellm's internal ThreadPoolExecutor may raise
+            # RuntimeError("cannot schedule new futures after shutdown") during shutdown
             logger.debug("LLM call interrupted")
             return None
 
@@ -291,6 +291,12 @@ class LLMClassifier(BaseClassifier):
         is_windows_path = len(category) > 1 and category[1:2] == ":"
         if category.startswith(("/", "~")) or ":\\" in category or is_windows_path:
             logger.debug("LLM rejected hallucinated path: {}", category[:100])
+            return None
+
+        # Reject traversal and backslash separators: the category becomes a
+        # directory under para_root, so it must never climb out of it.
+        if "\\" in category or ".." in category.split("/"):
+            logger.debug("LLM rejected path traversal: {}", category[:100])
             return None
 
         # Must start with a valid PARA prefix

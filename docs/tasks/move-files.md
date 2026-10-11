@@ -60,9 +60,6 @@ uv run para-files move *.pdf --conflict rename
 
 # Rename with date prefix
 uv run para-files move *.pdf --conflict rename_with_date
-
-# Overwrite (careful!)
-uv run para-files move *.pdf --conflict overwrite
 ```
 
 ## Copy Instead of Move

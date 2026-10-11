@@ -157,7 +157,11 @@ def learn(
 
     pipeline = ClassificationPipeline(config)
     result = pipeline.classify_file(file_path)
-    target_path = pipeline.get_target_path(result)
+    try:
+        target_path = pipeline.get_target_path(result)
+    except ValueError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1) from e
 
     print_classification_result(file_path, result, target_path)
 

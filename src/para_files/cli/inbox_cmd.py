@@ -79,7 +79,12 @@ def _process_inbox_file(
         typer.echo(f"[{idx}/{total}] INBOX: {file_path.name}")
         return
 
-    target_dir = pipeline.get_target_path(result)
+    try:
+        target_dir = pipeline.get_target_path(result)
+    except ValueError as e:
+        stats.failed += 1
+        typer.echo(f"[{idx}/{total}] ERROR: {file_path.name} - {e}", err=True)
+        return
     move_result: MoveResult = move_classified_file(
         file_path,
         target_dir,

@@ -329,3 +329,97 @@ class TestDefaultUnclassifiedCategory:
         assert result.category == "6_unclassified"
         assert result.confidence.source == ClassificationSource.DEFAULT
         assert result.confidence.value == 0.0
+
+
+def test_classify_file_does_not_rename_generic_pdf_by_default(
+    mock_config: Config, tmp_path: Path
+) -> None:
+    """With default config, a generic scanner name is never renamed on disk."""
+    from para_files.utils.filename_detector import is_generic_filename
+
+    pdf = tmp_path / "scan_001.pdf"
+    pdf.write_bytes(b"%PDF-1.4\n%%EOF\n")
+    assert is_generic_filename(pdf.name)
+
+    pipeline = ClassificationPipeline(mock_config)
+
+    with patch("para_files.utils.file_utils.read_content_preview") as preview:
+        assert pipeline._maybe_rename_generic_pdf(pdf) == pdf
+    preview.assert_not_called()
+    assert pdf.exists()
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["scan_001.pdf"]
+
+
+class _FakeProviderError(Exception):
+    """Stands in for litellm's APIError, which derives from Exception, not OSError."""
+
+
+def test_pipeline_skips_classifier_raising_unlisted_exception(mock_config: Config) -> None:
+    """A provider error type the pipeline never listed must not abort the cascade."""
+    pipeline = ClassificationPipeline(mock_config)
+    pipeline._ensure_initialized()
+
+    failing = MagicMock()
+    failing.name = "llm"
+    failing.classify.side_effect = _FakeProviderError("provider down")
+
+    passing = MagicMock()
+    passing.name = "passing_classifier"
+    passing.classify.return_value = ClassificationResult(
+        category="3_Resources/test",
+        confidence=Confidence(value=0.85, source=ClassificationSource.TAXONOMY_CLASSIFIER),
+    )
+
+    breaker = MagicMock()
+    breaker.is_open = False
+    pipeline._classifiers = [failing, passing]
+    pipeline._circuit_breaker = breaker
+
+    result = pipeline.classify("any content")
+
+    assert result.category == "3_Resources/test"
+    breaker.record_failure.assert_called_once()
+
+
+def test_pipeline_propagates_keyboard_interrupt(mock_config: Config) -> None:
+    """Ctrl+C must abort classification, never become a DEFAULT result."""
+    pipeline = ClassificationPipeline(mock_config)
+    pipeline._ensure_initialized()
+
+    interrupted = MagicMock()
+    interrupted.name = "interrupted_classifier"
+    interrupted.classify.side_effect = KeyboardInterrupt
+
+    pipeline._classifiers = [interrupted]
+
+    with pytest.raises(KeyboardInterrupt):
+        pipeline.classify("any content")
+
+
+@pytest.mark.parametrize(
+    "category",
+    ["../outside", "3_Resources/../../outside", "/etc", "", "."],
+)
+def test_get_target_path_refuses_escape_or_root(mock_config: Config, category: str) -> None:
+    """Targets must be a subfolder of para_root: never outside it, never the root itself."""
+    pipeline = ClassificationPipeline(mock_config)
+    result = ClassificationResult(
+        category=category,
+        confidence=Confidence(value=0.9, source=ClassificationSource.LLM_FALLBACK),
+    )
+
+    with pytest.raises(ValueError, match="PARA root"):
+        pipeline.get_target_path(result)
+
+
+def test_get_target_path_accepts_nested_category(mock_config: Config) -> None:
+    """A normal category still maps to para_root / category."""
+    pipeline = ClassificationPipeline(mock_config)
+    result = ClassificationResult(
+        category="4_Archives/5y_factures/Telephonie",
+        confidence=Confidence(value=0.9, source=ClassificationSource.RULES_ENGINE),
+    )
+
+    assert pipeline.get_target_path(result) == (
+        mock_config.para_root / "4_Archives/5y_factures/Telephonie"
+    )

@@ -49,7 +49,6 @@ uv run para-files move document.pdf --copy
 Handle duplicate filenames. Options:
 
 - `skip` - Don't move if file exists at destination
-- `overwrite` - Replace existing file
 - `rename` - Add number suffix (file.pdf → file_1.pdf)
 - `rename_with_date` - Add date prefix (2024-01-15_file.pdf)
 
@@ -174,7 +173,7 @@ uv run para-files move *.pdf --skip-unclassifiable
 ## Troubleshooting
 
 **"File already exists"?**
-Use `--conflict rename` or `--conflict overwrite`
+Use `--conflict rename` or `--conflict rename_with_date`. Existing files are never overwritten.
 
 **"Permission denied"?**
 Check folder permissions. You need write access to destination.

@@ -172,6 +172,39 @@ def test_sanitize_category_rejects_windows_path(classifier: LLMClassifier) -> No
     assert result is None
 
 
+def test_sanitize_category_rejects_parent_traversal(classifier: LLMClassifier) -> None:
+    """A '..' segment behind an allowed prefix is rejected."""
+    result = classifier._sanitize_category("3_Resources/documentation/../../../etc")
+    assert result is None
+
+
+def test_sanitize_category_rejects_backslash(classifier: LLMClassifier) -> None:
+    """Backslash separators are rejected."""
+    result = classifier._sanitize_category("3_Resources\\documentation\\Python")
+    assert result is None
+
+
+def test_sanitize_category_allows_dots_inside_a_name(classifier: LLMClassifier) -> None:
+    """Dots inside a folder name are not traversal."""
+    result = classifier._sanitize_category("3_Resources/documentation/Python..notes")
+    assert result == "3_Resources/documentation/Python..notes"
+
+
+def test_sanitize_category_rejects_traversal_behind_template_allowlist() -> None:
+    """Production allowlists hold templates whose base prefix a traversal path can match."""
+    templated = LLMClassifier(
+        enabled=True,
+        model="test",
+        confidence_threshold=0.6,
+        valid_categories=["3_Resources/documentation/{technology}"],
+    )
+    assert templated._sanitize_category("3_Resources/documentation/../../../etc") is None
+    assert (
+        templated._sanitize_category("3_Resources/documentation/Python")
+        == "3_Resources/documentation/Python"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Pipeline short-circuit (LLM-03): first match wins
 # ---------------------------------------------------------------------------
@@ -223,3 +256,12 @@ def test_pipeline_short_circuit() -> None:
     first_classifier.classify.assert_called_once()
     second_classifier.classify.assert_not_called()
     third_classifier.classify.assert_not_called()
+
+
+def test_classify_propagates_keyboard_interrupt(classifier: LLMClassifier) -> None:
+    """Ctrl+C during the LLM call aborts instead of returning None."""
+    with (
+        patch("litellm.completion", side_effect=KeyboardInterrupt),
+        pytest.raises(KeyboardInterrupt),
+    ):
+        classifier.classify("some document content")

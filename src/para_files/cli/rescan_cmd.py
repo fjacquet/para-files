@@ -24,6 +24,7 @@ from para_files.cli.shared import (
     setup_logging,
 )
 from para_files.config import Config
+from para_files.pipeline import resolve_within_root
 
 
 if TYPE_CHECKING:
@@ -105,7 +106,11 @@ def _build_expected_path(
     """Build the expected destination path from classification result."""
     if not result.category:
         return None
-    return base_path / result.category / file_path.name
+    try:
+        return resolve_within_root(base_path, result.category) / file_path.name
+    except ValueError as e:
+        logger.warning("Skipping {}: {}", file_path, e)
+        return None
 
 
 def _move_file(

@@ -7,6 +7,7 @@ code reuse and maintainability.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -25,6 +26,9 @@ from para_files.utils.validation import (
 
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from concurrent.futures import ThreadPoolExecutor
+
     from para_files.config import Config, LoggingConfig
     from para_files.types import ClassificationResult
 
@@ -62,7 +66,6 @@ class ConflictChoice(StrEnum):
     """
 
     skip = "skip"
-    overwrite = "overwrite"
     rename = "rename"
     rename_with_date = "rename_with_date"
 
@@ -353,3 +356,13 @@ def print_classification_result(
             typer.echo(f"      {signal_marker(s)} {s.name}: {s.score:.0%}")
     if result.route_name:
         typer.echo(f"   Route: {result.route_name}")
+
+
+@contextmanager
+def cancel_pending_on_interrupt(executor: ThreadPoolExecutor) -> Iterator[None]:
+    """On Ctrl+C, drop queued tasks so only in-flight files finish, then re-raise."""
+    try:
+        yield
+    except KeyboardInterrupt:
+        executor.shutdown(wait=False, cancel_futures=True)
+        raise

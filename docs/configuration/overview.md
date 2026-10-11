@@ -93,6 +93,7 @@ config:
 
 ### OCR Rename
 
+- **`PARA_FILES_OCR_RENAME__ENABLED`** - Rename generic PDF names (`scan_001.pdf`, `IMG_1234.pdf`) from their OCR content during classification (default: `false`). Off by default because it renames files even in preview commands such as `scan` and `move --dry-run`.
 - **`OCR_RENAME_MIN_CONFIDENCE`** - Minimum confidence for OCR-based file renaming (default: 0.7). Only renames files when OCR metadata extraction confidence exceeds this threshold — prevents bank statement headers and other weak signals from triggering renames.
 
 ### Other
