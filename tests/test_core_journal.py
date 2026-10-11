@@ -12,9 +12,11 @@ from para_files.core.journal import (
     Journal,
     confirmed_counts,
     is_undone,
+    journal_dir,
     last_run_id,
     mark_undone,
     new_run_id,
+    owner_examples,
     read_run,
     run_ids,
 )
@@ -201,3 +203,62 @@ def test_owner_examples_newest_first_one_per_file(tmp_path):
         ("a.pdf", "archives_10y_banques", "archives_5y_factures"),
         ("b.pdf", "archives_10y_banques", "archives_10y_banques"),
     ]
+
+
+def _owner_move(src: str, leaf: str = "archives_10y_banques") -> dict[str, str]:
+    return {"op": "move", "src": src, "sha256": src, "leaf": leaf, "decided_by": "owner"}
+
+
+def test_undone_run_gives_no_examples(tmp_path):
+    tree = make_config().tree
+    with Journal(tmp_path, "20260101-000000") as journal:
+        journal.append(_owner_move("/r/0_Inbox/a.pdf"))
+    mark_undone(tmp_path, "20260101-000000")
+    assert owner_examples(tmp_path, tree) == []
+
+
+def _write_raw_run(state_dir, run_id, lines):
+    directory = journal_dir(state_dir)
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / f"{run_id}.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def test_corrupt_middle_line_skips_only_that_run(tmp_path):
+    tree = make_config().tree
+    good = json.dumps(_owner_move("/r/0_Inbox/a.pdf"))
+    _write_raw_run(tmp_path, "20260101-000000", [good, "{not json", good])
+    with Journal(tmp_path, "20260102-000000") as journal:
+        journal.append(_owner_move("/r/0_Inbox/b.pdf"))
+    examples = owner_examples(tmp_path, tree)
+    assert [e.name for e in examples] == ["b.pdf"]
+
+
+def test_non_object_line_is_skipped(tmp_path):
+    tree = make_config().tree
+    _write_raw_run(tmp_path, "20260101-000000", ["[1, 2]", json.dumps(_owner_move("/r/a.pdf"))])
+    with Journal(tmp_path, "20260102-000000") as journal:
+        journal.append(_owner_move("/r/b.pdf"))
+    assert [e.name for e in owner_examples(tmp_path, tree)] == ["b.pdf", "a.pdf"]
+
+
+def test_corrupt_journal_does_not_crash_confirmed_counts(tmp_path):
+    tree = make_config().tree
+    _write_raw_run(
+        tmp_path,
+        "20260101-000000",
+        [
+            json.dumps({"op": "move", "leaf": "archives_10y_travail", "decided_by": "owner"}),
+            "{not json",
+            json.dumps({"op": "move", "leaf": "archives_10y_travail", "decided_by": "owner"}),
+        ],
+    )
+    with Journal(tmp_path, "20260102-000000") as journal:
+        journal.append({"op": "move", "leaf": "resources_it", "decided_by": "owner"})
+    assert confirmed_counts(tmp_path, tree) == {"knowledge": 1}
+
+
+def test_entry_without_src_is_skipped(tmp_path):
+    tree = make_config().tree
+    with Journal(tmp_path, "20260101-000000") as journal:
+        journal.append({"op": "confirm", "leaf": "archives_10y_banques", "decided_by": "owner"})
+    assert owner_examples(tmp_path, tree) == []

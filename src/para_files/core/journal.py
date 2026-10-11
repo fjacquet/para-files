@@ -14,6 +14,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal, Self, TextIO
 
+from loguru import logger
+
 from para_files.core.tree import Tree
 
 
@@ -157,13 +159,23 @@ class Example:
 
 
 def _owner_decisions(state_dir: Path, tree: Tree) -> Iterator[dict[str, Any]]:
-    """Owner-decided moves and confirmations, in order, of every run not undone."""
+    """Owner-decided moves and confirmations, in order, of every run not undone.
+
+    A run that cannot be parsed is skipped with a warning, so a damaged journal never stops a
+    sort. undo still reads runs strictly through read_run.
+    """
     for run_id in run_ids(state_dir):
         if is_undone(state_dir, run_id):
             continue
-        for entry in read_run(state_dir, run_id):
+        try:
+            entries = read_run(state_dir, run_id)
+        except (json.JSONDecodeError, OSError) as exc:
+            logger.warning("skipping unreadable journal {}: {}", run_id, exc)
+            continue
+        for entry in entries:
             if (
-                entry.get("op") in {"move", "confirm"}
+                isinstance(entry, dict)
+                and entry.get("op") in {"move", "confirm"}
                 and entry.get("decided_by") == "owner"
                 and tree.leaves.get(str(entry.get("leaf")))
             ):
@@ -174,6 +186,8 @@ def owner_examples(state_dir: Path, tree: Tree) -> list[Example]:
     """Owner-decided moves and confirmations of runs not undone; newest first, one per file."""
     found: dict[str, Example] = {}
     for entry in _owner_decisions(state_dir, tree):
+        if not entry.get("src"):
+            continue
         key = str(entry.get("sha256") or entry.get("src"))
         proposed = entry.get("proposed_leaf")
         found.pop(key, None)
