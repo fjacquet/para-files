@@ -143,3 +143,12 @@ def test_kept_folders_are_buckets_and_leaves(tmp_path):
     assert root / "3_Resources" / "IT" in kept
     assert root / "3_Resources" / "x" not in kept
     assert root / ".trash" not in kept
+
+
+def test_folder_holding_only_secret_junk_is_not_empty(tmp_path):
+    root = make_para_root(tmp_path)
+    secret = put(root, "2_Areas/vault/._passwords.txt", "x")
+    plan = plan_clean([root], root=root, duplicates=False)
+    assert secret.exists()
+    assert root / "2_Areas/vault" not in plan.empty_dirs
+    assert secret not in plan.junk

@@ -74,7 +74,9 @@ def _empty_after_junk(base: Path, keep: frozenset[Path]) -> list[Path]:
         if here.resolve() in keep:
             continue
         dirs_left = [name for name in dirnames if here / name not in empty]
-        files_left = [name for name in filenames if not is_junk(name)]
+        files_left = [
+            name for name in filenames if not is_junk(name) or secret_reason(name) is not None
+        ]
         if not dirs_left and not files_left:
             empty.add(here)
     return sorted(empty, key=lambda path: len(path.parts), reverse=True)
