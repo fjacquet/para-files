@@ -218,7 +218,7 @@ module = ["pypdf", "pypdf.*", "litellm.*", "Vision", "Cocoa", "Quartz", "odf.*",
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-# pymupdf ships partial, untyped stubs; treat it as Any like the old `fitz` import
+# pymupdf ships untyped modules; treat it as Any
 module = ["pymupdf"]
 follow_imports = "skip"
 

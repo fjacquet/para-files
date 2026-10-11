@@ -20,17 +20,12 @@ MODULES = {_name(path): path for path in PACKAGE.rglob("*.py")}
 
 def _imports(name: str) -> set[str]:
     path = MODULES[name]
-    package = name if path.name == "__init__.py" else name.rpartition(".")[0]
     found: set[str] = set()
     for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
         if isinstance(node, ast.Import):
             found |= {alias.name for alias in node.names}
-        elif isinstance(node, ast.ImportFrom):
-            base = node.module or ""
-            if node.level:
-                head = ".".join(package.split(".")[: len(package.split(".")) - node.level + 1])
-                base = f"{head}.{base}" if base else head
-            found |= {base} | {f"{base}.{alias.name}" for alias in node.names}
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            found |= {node.module} | {f"{node.module}.{alias.name}" for alias in node.names}
     reached: set[str] = set()
     for dotted in found:
         module = dotted
