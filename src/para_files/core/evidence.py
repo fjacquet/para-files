@@ -121,7 +121,7 @@ def _archive_listing(path: Path) -> tuple[str, ...]:
     except (OSError, zipfile.BadZipFile, tarfile.TarError) as exc:
         logger.warning("archive listing failed for {}: {}", path.name, exc)
         return ()
-    return tuple(names[:MAX_ARCHIVE_ENTRIES])
+    return tuple(names)
 
 
 def extract(path: Path, *, root: Path | None = None, preview_chars: int = 2000) -> Evidence:
@@ -153,5 +153,5 @@ def extract(path: Path, *, root: Path | None = None, preview_chars: int = 2000) 
         doc_meta=meta,
         isbns=isbns,
         exif_date=_exif_date(path, base.ext),
-        archive_listing=listing,
+        archive_listing=listing[:MAX_ARCHIVE_ENTRIES],
     )

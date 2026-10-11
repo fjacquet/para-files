@@ -111,3 +111,22 @@ def test_nfd_name_becomes_nfc(tmp_path):
     path = tmp_path / unicodedata.normalize("NFD", "décompte.txt")
     path.write_text("x")
     assert extract(path).name == unicodedata.normalize("NFC", "décompte.txt")
+
+
+def test_secret_entry_past_listing_cap(tmp_path):
+    path = tmp_path / "bundle.zip"
+    with zipfile.ZipFile(path, "w") as archive:
+        for i in range(250):
+            archive.writestr(f"doc{i}.txt", "x")
+        archive.writestr("keys/id_rsa", "x")
+    assert extract(path).secret == "archive"  # noqa: S105
+
+
+def test_archive_listing_capped_at_200(tmp_path):
+    path = tmp_path / "many.zip"
+    with zipfile.ZipFile(path, "w") as archive:
+        for i in range(250):
+            archive.writestr(f"doc{i}.txt", "x")
+    ev = extract(path)
+    assert ev.secret is None
+    assert len(ev.archive_listing) == 200
