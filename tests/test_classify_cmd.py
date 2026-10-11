@@ -73,6 +73,13 @@ def test_exit_one_when_single_file_fails_sequentially(
     assert result.exit_code == 1
 
 
+def test_sequential_failure_prints_the_warning_line(tmp_path: Path, failing_pipeline: None) -> None:
+    """The one-file human path names the failed file, as the parallel path does."""
+    files = _touch(tmp_path, "bad.txt")
+    result = runner.invoke(app, ["classify", *files])
+    assert "⚠️ bad.txt: classification failed" in result.output
+
+
 def test_exit_one_when_one_of_several_files_fails_in_parallel(
     tmp_path: Path, failing_pipeline: None
 ) -> None:

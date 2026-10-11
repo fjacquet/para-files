@@ -176,6 +176,8 @@ def _classify_files_sequential(
         except Exception:  # noqa: BLE001
             logger.exception("Failed to classify {}", file_path)
             results.append({"source_file": str(file_path), "error": "classification failed"})
+            if not output_json:
+                typer.echo(f"\n⚠️ {file_path.name}: classification failed")
     return results
 
 
