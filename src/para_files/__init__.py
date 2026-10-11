@@ -13,7 +13,7 @@ from para_files.pipeline import ClassificationPipeline
 from para_files.types import ClassificationResult, ClassificationSource, Confidence
 
 
-__version__ = "1.8"
+__version__ = "1.9"
 __author__ = "Your Name"
 __all__ = [
     "ClassificationPipeline",
