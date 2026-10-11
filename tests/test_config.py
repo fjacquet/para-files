@@ -296,3 +296,23 @@ class TestNonMappingYamlIsIgnored:
         finally:
             logger.remove(sink_id)
         assert any("not a mapping" in message for message in messages)
+
+
+def test_explicit_non_mapping_yaml_stops_the_fall_through(tmp_path: Path, monkeypatch):
+    from loguru import logger
+
+    explicit = tmp_path / "explicit.yaml"
+    explicit.write_text("- a\n- b\n", encoding="utf-8")
+    cfg = tmp_path / "cfg"
+    cfg.mkdir()
+    (cfg / "personal_file_tree.yaml").write_text(
+        "config:\n  para_root: ~/FromDefault\n", encoding="utf-8"
+    )
+    monkeypatch.setenv("PARA_FILES_CONFIG_DIR", str(cfg))
+    messages: list[str] = []
+    sink_id = logger.add(lambda message: messages.append(str(message)), level="WARNING")
+    try:
+        assert _load_yaml_config(explicit) == {}
+    finally:
+        logger.remove(sink_id)
+    assert any("not a mapping" in message for message in messages)

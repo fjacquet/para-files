@@ -83,12 +83,14 @@ def _load_yaml_config(yaml_path: Path | None = None) -> dict[str, Any]:
         ]
     )
 
-    for path in paths_to_try:
+    for index, path in enumerate(paths_to_try):
         if path.exists():
             with path.open() as f:
                 data = yaml.safe_load(f) or {}
             if not isinstance(data, dict):
                 logger.warning("Ignoring {}: the document is not a mapping", path)
+                if index == 0 and yaml_path:  # an explicit path is never silently replaced
+                    return {}
                 continue
             config_section: dict[str, Any] = data.get("config", {})
             return config_section
