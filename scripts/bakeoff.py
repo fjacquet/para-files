@@ -118,7 +118,7 @@ def parse_choices(text: str | None, menu: dict[str, str]) -> Ranked:
     return ranked[:3]
 
 
-def post_with_retry(post: Post, url: str, **kwargs: Any) -> httpx.Response:
+def post_with_retry(post: Post, url: str, **kwargs: object) -> httpx.Response:
     """POST, retrying rate limits and transient provider errors (Retry-After honoured)."""
     response = post(url, **kwargs)
     for attempt in range(4):
@@ -128,7 +128,7 @@ def post_with_retry(post: Post, url: str, **kwargs: Any) -> httpx.Response:
         delay = (
             min(RETRY_AFTER_CAP, float(retry_after))
             if retry_after.isdigit()
-            else min(30.0, 2**attempt + random.random())
+            else min(30.0, 2**attempt + random.random())  # noqa: S311 - jitter, not security
         )
         time.sleep(delay)
         response = post(url, **kwargs)
@@ -146,7 +146,8 @@ def _reply(response: httpx.Response) -> tuple[Any, float]:
     numeric = isinstance(raw, (int, float)) and not isinstance(raw, bool) and math.isfinite(raw)
     cost = float(raw) if numeric else 0.0
     if response.is_error:
-        raise ReplyError(f"HTTP {response.status_code}", cost)
+        message = f"HTTP {response.status_code}"
+        raise ReplyError(message, cost)
     return body, cost
 
 
@@ -290,7 +291,7 @@ def _refused(row: dict[str, Any], signal: str) -> dict[str, Any]:
     }
 
 
-def predict(
+def predict(  # noqa: PLR0913, PLR0917 - the seven inputs are pinned by the tests' call sites
     row: dict[str, Any],
     para_root: Path,
     menu: dict[str, str],
@@ -407,7 +408,8 @@ def main(argv: list[str] | None = None) -> int:
     errors = sum(1 for p in preds if "error" in p)
     secrets = sum(1 for p in preds if p["signal"] == "secret")
     print(
-        f"{args.candidate}: {len(preds)} files, {errors} errors, {secrets} secrets kept local -> {out}"
+        f"{args.candidate}: {len(preds)} files, {errors} errors, "
+        f"{secrets} secrets kept local -> {out}"
     )
     return 0
 

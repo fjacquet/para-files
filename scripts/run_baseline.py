@@ -28,6 +28,7 @@ from para_files.core.tree import Tree, config_dir, load_tree_config
 
 Classify = Callable[[Path], tuple[str, float, str]]
 INBOX = "0_Inbox"
+CATEGORY_SEGMENTS = 2  # bucket and folder
 DEFAULT_DOCUMENTS = Path(__file__).resolve().parent.parent / "config" / "documents.json"
 
 
@@ -37,7 +38,7 @@ def leaf_for_category(category: str, tree: Tree, canon: Callable[[str], str]) ->
     A category that lands in the inbox, or has fewer than two segments, decides nothing.
     """
     parts = [nfc(part).strip() for part in category.split("/") if part.strip()]
-    if len(parts) < 2:
+    if len(parts) < CATEGORY_SEGMENTS:
         return None
     path = nfc("/".join([canon("/".join(parts[:2])), *parts[2:]]))
     if path == INBOX or path.startswith(INBOX + "/"):
@@ -75,11 +76,14 @@ def old_pipeline_classifier() -> Classify:
     # and no Nominatim lookup can run during the measurement.
     rules_engine.reverse_geocode = lambda _latitude, _longitude: None
     pipeline = ClassificationPipeline(load_config())
-    pipeline._maybe_rename_generic_pdf = lambda path: path  # never rename during a measurement
-    pipeline._ensure_initialized()
-    pipeline._classifiers = [
-        c for c in pipeline._classifiers if not isinstance(c, ExtensionRouterClassifier)
-    ]  # signals 1-3 only: book detector, rules, taxonomy
+    # never rename during a measurement
+    pipeline._maybe_rename_generic_pdf = lambda path: path  # noqa: SLF001 - pins the old pipeline
+    pipeline._ensure_initialized()  # noqa: SLF001 - the old pipeline needs its classifiers loaded
+    pipeline._classifiers = [  # noqa: SLF001 - signals 1-3 only: book detector, rules, taxonomy
+        c
+        for c in pipeline._classifiers  # noqa: SLF001 - see above
+        if not isinstance(c, ExtensionRouterClassifier)
+    ]
 
     def classify(path: Path) -> tuple[str, float, str]:
         result = pipeline.classify_file(path)

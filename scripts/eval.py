@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from para_inventory import nfc, read_jsonl
+
 from para_files.core.tree import config_dir
 
 
@@ -35,7 +36,7 @@ def key(path: str) -> str:
     return nfc(path)
 
 
-def _number(value: Any) -> float:
+def _number(value: float | None) -> float:
     """A confidence as a float; a missing (null) value counts as 0.0."""
     return 0.0 if value is None else float(value)
 
@@ -168,8 +169,9 @@ def evaluate(
 
     Per-signal metrics are relative to that signal's own rows (used to set its band threshold);
     each signal block also reports top-3 over its own rows. Knowledge is scored as suggestions
-    only: its kind block reports top-3 alone and the precision curves leave knowledge rows out. The first prediction for a path
-    wins; later ones are counted as duplicates, and predictions with no golden row as unmatched.
+    only: its kind block reports top-3 alone and the precision curves leave knowledge rows out.
+    The first prediction for a path wins; later ones are counted as duplicates, and predictions
+    with no golden row as unmatched.
     """
     by_path, duplicates = _first_by_path(preds)
     golden_keys = {key(g["path"]) for g in golden}
@@ -191,7 +193,7 @@ def evaluate(
     return report
 
 
-def _cell(column: str, value: Any) -> str:
+def _cell(column: str, value: float | str | None) -> str:
     if value is None:
         return "-"
     if column in PCT:

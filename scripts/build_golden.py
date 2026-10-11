@@ -54,7 +54,7 @@ def leaf_files(root: Path, excluded: set[str], rng: random.Random) -> Walk:
     found: list[Path] = []
     unreadable: list[str] = []
     if not root.is_dir():
-        return Walk(found, False, unreadable)
+        return Walk(found, stopped_early=False, unreadable=unreadable)
 
     def note_unreadable(error: OSError) -> None:
         unreadable.append(os.path.relpath(str(error.filename), root))
@@ -78,8 +78,8 @@ def leaf_files(root: Path, excluded: set[str], rng: random.Random) -> Walk:
             and _regular_file(here / name)
         ]
         if len(found) >= WALK_CAP:
-            return Walk(found, next(walker, None) is not None, unreadable)
-    return Walk(found, False, unreadable)
+            return Walk(found, stopped_early=next(walker, None) is not None, unreadable=unreadable)
+    return Walk(found, stopped_early=False, unreadable=unreadable)
 
 
 def build_golden(
@@ -110,10 +110,10 @@ def build_golden(
             notes.append(f"leaf {leaf_id}: no files under {leaf.path}")
             continue
         wanted = knowledge_per_leaf if leaf.kind == "knowledge" else per_leaf
-        for path in sorted(rng.sample(walk.files, min(wanted, len(walk.files)))):
-            rows.append(
-                {"path": nfc(str(path.relative_to(para_root))), "leaf": leaf_id, "kind": leaf.kind}
-            )
+        rows += [
+            {"path": nfc(str(path.relative_to(para_root))), "leaf": leaf_id, "kind": leaf.kind}
+            for path in sorted(rng.sample(walk.files, min(wanted, len(walk.files))))
+        ]
     return rows, notes
 
 

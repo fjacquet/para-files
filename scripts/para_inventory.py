@@ -145,11 +145,11 @@ def scan_notes(para_root: Path, buckets: tuple[str, ...] = BUCKETS) -> list[str]
     for bucket in buckets:
         base = para_root / bucket
         entries = sorted(base.iterdir(), key=lambda path: path.name) if base.is_dir() else []
-        for entry in entries:
-            if entry.is_dir() and entry.name.startswith((".", "_")):
-                notes.append(
-                    f"skipped folder: {bucket}/{nfc(entry.name)} (name starts with . or _)"
-                )
+        notes += [
+            f"skipped folder: {bucket}/{nfc(entry.name)} (name starts with . or _)"
+            for entry in entries
+            if entry.is_dir() and entry.name.startswith((".", "_"))
+        ]
         loose = sum(1 for entry in entries if entry.is_file() and not entry.name.startswith("."))
         notes.append(f"loose files in {bucket}: {loose}")
     return notes

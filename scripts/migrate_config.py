@@ -47,6 +47,11 @@ TAGS = {
 }
 DRAFT_FILES = ("tree.yaml", "rules.yaml", "issuers.yaml", "review.md")
 RETENTIONS = frozenset({"ret", "10y", "5y", "2y", "ctr"})
+FOLDER_PARTS = 2  # bucket and folder
+FAMILY_MIN_FILES = 2
+SHORT_LITERALS = 3  # a '*xy*' glob with this few literal characters matches too much
+YEAR_SHARE_DIVISOR = 2  # year-keyed when at least half the subfolders are years
+COPY_SUFFIX = "_v2"
 RETENTION_FROM_DOCS = {
     "permanent": "permanent",
     "retirement": "ret",
@@ -71,7 +76,7 @@ def slug(text: str) -> str:
 def folder_of(pattern: str) -> str | None:
     """bucket/folder of a destination pattern, or None when that part is a placeholder."""
     parts = [nfc(part).strip() for part in pattern.split("/") if part.strip()]
-    if len(parts) < 2 or PLACEHOLDER.search(parts[0]) or PLACEHOLDER.search(parts[1]):
+    if len(parts) < FOLDER_PARTS or PLACEHOLDER.search(parts[0]) or PLACEHOLDER.search(parts[1]):
         return None
     return f"{parts[0]}/{parts[1]}"
 
@@ -111,7 +116,7 @@ def propose_leaf(
     name = strip_prefix(folder.name)
     subs = [s.strip() for s in folder.subfolders]
     years = [s for s in subs if YEAR.match(s)]
-    year_subkey = "{year}" if subs and len(years) * 2 >= len(subs) else None
+    year_subkey = "{year}" if subs and len(years) * YEAR_SHARE_DIVISOR >= len(subs) else None
     others = [s for s in subs if not YEAR.match(s)][:10]
     describe = folder.name.strip() + (f" (contains: {', '.join(others)})" if others else "")
     leaf: dict[str, Any] = {"path": rel, "describe": describe}
@@ -200,7 +205,7 @@ def combine_globs(patterns: list[str], extensions: list[str]) -> list[str]:
 def is_short_substring(glob: str) -> bool:
     """A '*xy*'-style glob with 3 or fewer literal characters (matches far too much)."""
     literals = re.sub(r"[*?\[\]]", "", glob)
-    return glob.startswith("*") and glob.endswith("*") and len(literals) <= 3
+    return glob.startswith("*") and glob.endswith("*") and len(literals) <= SHORT_LITERALS
 
 
 def draft_rules(
@@ -214,8 +219,9 @@ def draft_rules(
         if not isinstance(rule, dict) or not rule.get("destination"):
             notes.append(f"rule {name}: no destination, dropped")
             continue
-        if name.endswith("_v2") and name[:-3] in legacy_rules:
-            notes.append(f"rule {name}: copy of {name[:-3]}, dropped")
+        original = name.removesuffix(COPY_SUFFIX)
+        if original != name and original in legacy_rules:
+            notes.append(f"rule {name}: copy of {original}, dropped")
             continue
         folder = folder_of(rule["destination"])
         target = canon(folder) if folder else None
@@ -295,7 +301,9 @@ def inbox_families(inbox: Path) -> list[tuple[str, int, str]]:
             family = re.sub(r"[#_\-\s.()]+", " ", stem).strip() + path.suffix.lower()
             counts[family] += 1
             example.setdefault(family, path.name)
-    return [(family, n, example[family]) for family, n in counts.most_common() if n >= 2]
+    return [
+        (family, n, example[family]) for family, n in counts.most_common() if n >= FAMILY_MIN_FILES
+    ]
 
 
 def write_review(
@@ -312,8 +320,10 @@ def write_review(
     lines = [
         "# Draft review",
         "",
-        f"{len(leaves)} leaves proposed ({summary}). Target 20-30: merge or drop leaves, "
-        "then copy tree.yaml, rules.yaml and issuers.yaml one level up.",
+        (
+            f"{len(leaves)} leaves proposed ({summary}). Target 20-30: merge or drop leaves, "
+            "then copy tree.yaml, rules.yaml and issuers.yaml one level up."
+        ),
         "",
         "## Notes",
         "",
