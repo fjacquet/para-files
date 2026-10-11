@@ -13,7 +13,6 @@ from para_files.core.tree import (
     RETENTION_PREFIX,
     Retention,
     TreeError,
-    config_dir,
     load_tree_config,
     validation_warnings,
 )
@@ -189,11 +188,6 @@ class TestWarnings:
             "'3_Resources/5y_screenshots'"
         ) in warnings
         assert not any("career" in warning for warning in warnings)
-
-
-def test_config_dir_honours_override(monkeypatch, tmp_path):
-    monkeypatch.setenv("PARA_FILES_CONFIG_DIR", str(tmp_path))
-    assert config_dir() == tmp_path
 
 
 class TestReferenceErrorsNameTheirFile:

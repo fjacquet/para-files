@@ -1,6 +1,7 @@
 """Canonical tree, rules and issuers: strict loading and validation (spec §4.1).
 
-Personal config lives in ``config_dir()``: ``$PARA_FILES_CONFIG_DIR`` or ``~/.config/para-files``.
+Personal config lives in ``config_dir_path()``: ``$PARA_FILES_CONFIG_DIR`` or
+``~/.config/para-files``.
 The repository ships only ``examples/``.
 """
 
@@ -38,11 +39,6 @@ NonEmpty = Annotated[str, Field(min_length=1)]
 
 class TreeError(ValueError):
     """Tree, rules or issuers config breaks a strict rule."""
-
-
-def config_dir() -> Path:
-    """Return the personal config directory (shared rule with the settings loader)."""
-    return config_dir_path()
 
 
 class Leaf(BaseModel):
@@ -226,7 +222,7 @@ def _reference_problems(tree: Tree, rules: RulesFile, issuers: IssuersFile) -> l
 
 def load_tree_config(directory: Path | None = None) -> TreeConfig:
     """Load tree.yaml (required), rules.yaml and issuers.yaml (optional), strictly."""
-    base = directory or config_dir()
+    base = directory or config_dir_path()
     rules_path = base / "rules.yaml"
     issuers_path = base / "issuers.yaml"
     tree = _parse(Tree, base / "tree.yaml")

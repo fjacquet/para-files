@@ -10,8 +10,8 @@ import typer
 from para_files.cli.app import app
 from para_files.cli.common import config_or_exit, settings_or_exit
 from para_files.core.journal import confirmation_stats
-from para_files.core.settings import CoreSettings
-from para_files.core.tree import TreeConfig, config_dir, validation_warnings
+from para_files.core.settings import CoreSettings, config_dir_path
+from para_files.core.tree import TreeConfig, validation_warnings
 
 
 def _print_leaves(config: TreeConfig) -> None:
@@ -66,7 +66,7 @@ def tree_command(
 ) -> None:
     """Show the leaves, the effective settings and the calibration progress."""
     settings = settings_or_exit()
-    directory = config_dir()
+    directory = config_dir_path()
     config = config_or_exit(directory)
     typer.echo(f"config: {directory}")
     _print_leaves(config)

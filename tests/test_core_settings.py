@@ -83,10 +83,9 @@ def test_defaults(tmp_path, cfg_dir):
 
 def test_config_dir_follows_the_environment(tmp_path, monkeypatch):
     from para_files.core.settings import config_dir_path
-    from para_files.core.tree import config_dir
 
     monkeypatch.setenv("PARA_FILES_CONFIG_DIR", str(tmp_path / "cfg"))
-    assert config_dir_path() == tmp_path / "cfg" == config_dir()
+    assert config_dir_path() == tmp_path / "cfg"
 
 
 def test_config_dir_defaults_to_home(tmp_path, monkeypatch):

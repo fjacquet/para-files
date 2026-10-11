@@ -13,8 +13,8 @@ from para_files.core.clean import kept_folders
 from para_files.core.decide import Context, Decision, classify
 from para_files.core.fallback import make_fallback
 from para_files.core.journal import Journal, confirmed_counts, new_run_id
-from para_files.core.settings import CoreSettings
-from para_files.core.tree import config_dir, load_tree_config
+from para_files.core.settings import CoreSettings, config_dir_path
+from para_files.core.tree import load_tree_config
 
 
 SKIPPED_PREFIXES = (".", "~$")
@@ -38,7 +38,7 @@ def iter_files(paths: Sequence[Path]) -> Iterator[Path]:
 
 def build_context(settings: CoreSettings, config_directory: Path | None = None) -> Context:
     """Strict config, cache, fingerprint, calibration counts and fallback for one run."""
-    directory = config_directory or config_dir()
+    directory = config_directory or config_dir_path()
     config = load_tree_config(directory)
     return Context(
         config=config,
