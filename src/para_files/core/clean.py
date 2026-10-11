@@ -131,12 +131,16 @@ def _check_base(base: Path, root: Path) -> None:
         raise ValueError(msg)
 
 
-def _unique(paths: Sequence[Path]) -> list[Path]:
-    """Drop repeats by resolved path (inputs may overlap), keeping the first, in order."""
+def _bases(paths: Sequence[Path]) -> list[Path]:
+    """Inputs without repeats (by resolved path) and without any inside another, in order."""
     first: dict[Path, Path] = {}
     for path in paths:
         first.setdefault(path.resolve(), path)
-    return list(first.values())
+    return [
+        path
+        for resolved, path in first.items()
+        if not any(resolved != other and resolved.is_relative_to(other) for other in first)
+    ]
 
 
 def plan_clean(
@@ -153,10 +157,11 @@ def plan_clean(
     """
     for base in paths:
         _check_base(base, root)
+    bases = _bases(paths)
     kept = frozenset(path.resolve() for path in keep)
     plan = CleanPlan()
     files: list[Path] = []
-    for base in paths:
+    for base in bases:
         for here, _dirs, names in _walk(base):
             for name in names:
                 path = here / name
@@ -167,11 +172,10 @@ def plan_clean(
                         plan.junk.append(path)
                 elif not name.startswith("."):
                     files.append(path)
-    plan.junk = _unique(plan.junk)
     if duplicates:
-        plan.duplicates = _duplicates(_unique(files), root)
+        plan.duplicates = _duplicates(files, root)
     gone = frozenset(copy for copy, _kept in plan.duplicates)
-    plan.empty_dirs = _unique([d for base in paths for d in _empty_after_junk(base, kept, gone)])
+    plan.empty_dirs = [d for base in bases for d in _empty_after_junk(base, kept, gone)]
     return plan
 
 
