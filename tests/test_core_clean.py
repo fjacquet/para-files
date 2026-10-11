@@ -182,3 +182,20 @@ def test_overlapping_inputs_never_pair_a_file_with_itself(tmp_path):
     assert copy != kept
     assert len(plan.junk) == 1
     assert len(plan.empty_dirs) == len(set(plan.empty_dirs))
+
+
+def test_duplicates_empty_their_folder_which_is_then_removed(tmp_path):
+    root = make_para_root(tmp_path)
+    put(root, "3_Resources/x/report.pdf", "same")
+    copy = put(root, "2_Areas/old/report copy.pdf", "same")
+    put(root, "3_Resources/y/b.pdf", "other")
+    leaf_copy = put(root, "3_Resources/IT/b copy.pdf", "other")
+    plan = plan_clean([root], root=root, duplicates=True, keep=kept_folders(root, make_config()))
+    assert {pair[0] for pair in plan.duplicates} == {copy, leaf_copy}
+    assert root / "2_Areas/old" in plan.empty_dirs
+    assert root / "3_Resources/IT" not in plan.empty_dirs
+    with Journal(tmp_path / "state", "20261011-100000") as journal:
+        report = apply_clean(plan, root=root, journal=journal)
+    assert not (root / "2_Areas/old").exists()
+    assert (root / "3_Resources/IT").is_dir()
+    assert len(report.trashed) == 2

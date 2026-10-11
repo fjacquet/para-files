@@ -63,8 +63,10 @@ def _walk(base: Path) -> Iterator[tuple[Path, list[str], list[str]]]:
         yield Path(dirpath), dirnames, sorted(filenames)
 
 
-def _empty_after_junk(base: Path, keep: frozenset[Path]) -> list[Path]:
-    """Folders strictly below base left empty once junk is gone, deepest first.
+def _empty_after_junk(base: Path, keep: frozenset[Path], gone: frozenset[Path]) -> list[Path]:
+    """Folders strictly below base left empty once junk and the files in gone are removed.
+
+    Deepest first.
 
     Folders in keep (resolved) are never listed; their parents then stay too.
     """
@@ -77,7 +79,9 @@ def _empty_after_junk(base: Path, keep: frozenset[Path]) -> list[Path]:
             continue
         dirs_left = [name for name in dirnames if here / name not in empty]
         files_left = [
-            name for name in filenames if not is_junk(name) or secret_reason(name) is not None
+            name
+            for name in filenames
+            if here / name not in gone and (not is_junk(name) or secret_reason(name) is not None)
         ]
         if not dirs_left and not files_left:
             empty.add(here)
@@ -166,11 +170,11 @@ def plan_clean(
                         plan.junk.append(path)
                 elif not name.startswith("."):
                     files.append(path)
-        plan.empty_dirs += _empty_after_junk(base, kept)
     plan.junk = _unique(plan.junk)
-    plan.empty_dirs = _unique(plan.empty_dirs)
     if duplicates:
         plan.duplicates = _duplicates(_unique(files), root)
+    gone = frozenset(copy for copy, _kept in plan.duplicates)
+    plan.empty_dirs = _unique([d for base in paths for d in _empty_after_junk(base, kept, gone)])
     return plan
 
 
