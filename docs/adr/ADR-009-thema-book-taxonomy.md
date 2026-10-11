@@ -1,7 +1,7 @@
 # ADR-009: Thema v1.6 for Book Subject Classification
 
 **Date**: 2024-06-01
-**Status**: Accepted
+**Status**: Accepted (amended by [ADR-013](ADR-013-redesign-records-first.md))
 **Deciders**: Frédéric Jacquet
 
 ---
@@ -60,6 +60,10 @@ Thema descriptions use accented French characters (standard ISO). Path component
 ### Scope
 
 The `thema.json` covers 9,187 codes but the system uses only the top 2 levels (single letter + 2-letter codes) for path construction, giving ~200 practical categories.
+
+## Amendment (2026-10-11)
+
+Only the 234 level-1/level-2 folder names ship, as package data `para_files/data/thema_l1l2.json`, read by `core/thema.py`; subjects match keywords as whole words.
 
 ## Consequences
 

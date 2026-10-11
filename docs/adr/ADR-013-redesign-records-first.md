@@ -28,3 +28,4 @@ The tree, not the model, was the bottleneck: merging twin folders helped more th
 - Issuers and the model stay yellow until a kind has 100 confirmed decisions.
 - The source shrank to about a third of its former size; every module is reachable from the CLI.
 - ADR-010 is superseded. ADR-002 and ADR-004 stay superseded.
+- ADR-005 and ADR-011 are superseded; ADR-009 is amended (Thema as package data).
