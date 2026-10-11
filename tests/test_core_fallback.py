@@ -134,10 +134,51 @@ def test_unknown_or_malformed_choices_are_dropped():
     assert choice == FallbackChoice("resources_docs", 1.0, "m1", (("resources_docs", 1.0),))
 
 
-def test_empty_choices_mean_no_decision():
-    complete = FakeComplete(reply([]))
-    fallback = OpenRouterFallback(KEY, ["m1"], complete=complete)
+def test_empty_reply_from_primary_moves_on_to_backup():
+    complete = FakeComplete(
+        reply([]),
+        reply([{"leaf": "resources_docs", "confidence": 0.4}]),
+    )
+    choice = OpenRouterFallback(KEY, ["m1", "m2"], complete=complete).decide(
+        ev(), make_config().tree
+    )
+    assert choice.model == "m2"
+    assert [call["model"] for call in complete.calls] == ["openrouter/m1", "openrouter/m2"]
+
+
+def test_empty_replies_from_all_models_give_none_and_a_breaker_failure():
+    breaker = OllamaCircuitBreaker(threshold=1)
+    complete = FakeComplete(reply([]), reply([]))
+    fallback = OpenRouterFallback(KEY, ["m1", "m2"], complete=complete, breaker=breaker)
     assert fallback.decide(ev(), make_config().tree) is None
+    assert breaker.is_open
+
+
+def test_secret_leaf_never_reaches_the_model():
+    tree = Tree.model_validate(
+        {
+            "leaves": {
+                "resources_docs": {
+                    "kind": "library",
+                    "path": "3_Resources/docs",
+                    "describe": "Vendor documentation",
+                },
+                "areas_passwords": {
+                    "kind": "knowledge",
+                    "path": "2_Areas/passwords",
+                    "describe": "Stored logins",
+                },
+            }
+        }
+    )
+    complete = FakeComplete(reply([{"leaf": "resources_docs", "confidence": 0.7}]))
+    OpenRouterFallback(KEY, ["m1"], complete=complete).decide(ev(), tree)
+    call = complete.calls[0]
+    schema = call["response_format"]["json_schema"]["schema"]
+    leaf = schema["properties"]["choices"]["items"]["properties"]["leaf"]
+    assert "areas_passwords" not in leaf["enum"]
+    assert leaf["enum"] == ["resources_docs"]
+    assert "areas_passwords" not in call["messages"][1]["content"]
 
 
 def test_archive_entries_are_sent():

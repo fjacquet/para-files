@@ -189,7 +189,11 @@ class OpenRouterFallback:
         except (AttributeError, IndexError, TypeError) as exc:
             msg = f"malformed reply: {type(exc).__name__}"
             raise FallbackError(msg) from exc
-        return parse_choices(content, menu)
+        ranked = parse_choices(content, menu)
+        if not ranked:
+            msg = "reply has no usable choice"
+            raise FallbackError(msg)
+        return ranked
 
     def decide(self, evidence: Evidence, tree: Tree) -> FallbackChoice | None:
         """First choice of the first model that answers; None for secrets or failures."""
@@ -205,8 +209,6 @@ class OpenRouterFallback:
                 logger.warning("fallback {} failed on {}: {}", model, evidence.name, exc)
                 continue
             self._breaker.record_success()
-            if not ranked:
-                return None
             leaf_id, confidence = ranked[0]
             return FallbackChoice(leaf_id, confidence, model, tuple(ranked))
         self._breaker.record_failure()
