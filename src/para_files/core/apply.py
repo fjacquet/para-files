@@ -38,13 +38,17 @@ class ApplyReport:
     removed_dirs: list[Path] = field(default_factory=list)
 
 
+def _taken(path: Path) -> bool:
+    return path.exists() or path.is_symlink()
+
+
 def free_path(path: Path) -> Path:
-    """path, or 'stem (2).ext', 'stem (3).ext'… whichever does not exist yet."""
-    if not path.exists():
+    """path, or 'stem (2).ext', 'stem (3).ext'… whichever is not taken yet (links count)."""
+    if not _taken(path):
         return path
     for number in range(2, MAX_SUFFIX):
         candidate = path.with_name(f"{path.stem} ({number}){path.suffix}")
-        if not candidate.exists():
+        if not _taken(candidate):
             return candidate
     msg = f"no free name for {path}"
     raise FileExistsError(msg)

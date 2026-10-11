@@ -205,3 +205,17 @@ def test_invalid_suggested_name_is_skipped(tmp_path, name):
     assert src.exists()
     assert sorted(p.relative_to(root) for p in root.rglob("*")) == before
     assert {p.name for p in tmp_path.iterdir()} <= {"PARA", "cache", "state"}
+
+
+def test_dangling_symlink_at_destination_is_not_overwritten(tmp_path):
+    root, state = setup(tmp_path)
+    src = inbox(root, "Payslip_2025.txt")
+    target = root / "4_Archives" / "10y_travail" / "2025"
+    target.mkdir(parents=True)
+    link = target / "Payslip_2025.txt"
+    link.symlink_to(root / "nowhere.txt")
+    report, _ = run(root, state, [Op(decision(src), "archives_10y_travail", "auto")])
+    assert link.is_symlink()
+    assert not link.exists()
+    assert (target / "Payslip_2025 (2).txt").read_text() == "payslip"
+    assert report.moved == [(src, target / "Payslip_2025 (2).txt")]
