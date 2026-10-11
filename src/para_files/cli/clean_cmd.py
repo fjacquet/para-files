@@ -9,21 +9,9 @@ import typer
 
 from para_files.cli.app import app
 from para_files.cli.common import fail, relative, settings_or_exit
-from para_files.core.clean import CleanPlan, apply_clean, plan_clean
+from para_files.core.clean import CleanPlan, apply_clean, kept_folders, plan_clean
 from para_files.core.journal import Journal, new_run_id
-from para_files.core.settings import BUCKET_NAME
 from para_files.core.tree import TreeError, load_tree_config
-
-
-def _keep_folders(root: Path) -> frozenset[Path]:
-    """Bucket folders and the leaf folders of tree.yaml: never removed, even when empty."""
-    buckets = [path for path in root.iterdir() if path.is_dir() and BUCKET_NAME.match(path.name)]
-    try:
-        config = load_tree_config()
-    except TreeError as exc:
-        fail(str(exc))
-    leaves = [root / leaf.path for leaf in config.tree.leaves.values()]
-    return frozenset([*buckets, *leaves])
 
 
 def _print_plan(plan: CleanPlan, root: Path) -> None:
@@ -59,7 +47,11 @@ def clean_command(
         fail(f"clean only works inside the PARA root ({root})")
     if any(part.startswith(".") for part in base.resolve().relative_to(root.resolve()).parts):
         fail(f"clean never works inside dot-folders such as .git or .trash ({base})")
-    plan = plan_clean([base], root=root, duplicates=duplicates, keep=_keep_folders(root))
+    try:
+        config = load_tree_config()
+    except TreeError as exc:
+        fail(str(exc))
+    plan = plan_clean([base], root=root, duplicates=duplicates, keep=kept_folders(root, config))
     _print_plan(plan, root)
     if not apply_:
         typer.echo("preview only; add --apply to move these to .trash")

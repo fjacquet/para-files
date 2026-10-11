@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from para_files.core.clean import CleanPlan, apply_clean, is_junk, plan_clean
+from para_files.core.clean import CleanPlan, apply_clean, is_junk, kept_folders, plan_clean
 from para_files.core.journal import Journal
 from para_files.core.undo import undo_run
-from tests.core_helpers import make_para_root
+from tests.core_helpers import make_config, make_para_root
 
 
 def put(root, rel, text="x"):
@@ -133,3 +133,13 @@ def test_secret_named_junk_is_not_planned(tmp_path):
     plan = plan_clean([root], root=root, duplicates=False)
     assert secret not in plan.junk
     assert junk in plan.junk
+
+
+def test_kept_folders_are_buckets_and_leaves(tmp_path):
+    root = make_para_root(tmp_path)
+    put(root, "3_Resources/x/keep.txt")
+    kept = kept_folders(root, make_config())
+    assert root / "3_Resources" in kept
+    assert root / "3_Resources" / "IT" in kept
+    assert root / "3_Resources" / "x" not in kept
+    assert root / ".trash" not in kept

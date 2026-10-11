@@ -17,6 +17,8 @@ from para_files.core.apply import TRASH, free_path, make_dirs
 from para_files.core.evidence import extract, sha256_of
 from para_files.core.journal import Journal
 from para_files.core.secrets import secret_reason
+from para_files.core.settings import BUCKET_NAME
+from para_files.core.tree import TreeConfig
 
 
 JUNK_NAMES = frozenset({".ds_store", "thumbs.db", "desktop.ini"})
@@ -39,6 +41,13 @@ class CleanReport:
     trashed: list[tuple[Path, Path]] = field(default_factory=list)
     removed_dirs: list[Path] = field(default_factory=list)
     skipped: list[tuple[Path, str]] = field(default_factory=list)
+
+
+def kept_folders(root: Path, config: TreeConfig) -> frozenset[Path]:
+    """Bucket folders and the leaf folders of the tree: never removed, even when empty."""
+    buckets = [path for path in root.iterdir() if path.is_dir() and BUCKET_NAME.match(path.name)]
+    leaves = [root / leaf.path for leaf in config.tree.leaves.values()]
+    return frozenset([*buckets, *leaves])
 
 
 def is_junk(name: str) -> bool:

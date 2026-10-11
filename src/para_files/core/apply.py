@@ -165,13 +165,15 @@ class _Applier:
         shutil.move(src, dst)
         self.report.trashed.append((src, dst))
 
-    def remove_emptied(self, roots: Sequence[Path]) -> None:
+    def remove_emptied(self, roots: Sequence[Path], keep: frozenset[Path]) -> None:
         bases = [root.resolve() for root in roots]
+        kept = {path.resolve() for path in keep}
         sources = {src.parent.resolve() for src, _ in self.report.moved + self.report.trashed}
         for directory in sorted(sources, key=lambda path: len(path.parts), reverse=True):
             current = directory
             while (
                 any(current != base and current.is_relative_to(base) for base in bases)
+                and current not in kept
                 and current.is_dir()
                 and not any(current.iterdir())
             ):
@@ -188,10 +190,14 @@ def apply_ops(
     para_root: Path,
     journal: Journal,
     roots: Sequence[Path],
+    keep: frozenset[Path] = frozenset(),
 ) -> ApplyReport:
-    """Run every operation in order, then remove folders this run emptied inside roots."""
+    """Run every operation in order, then remove folders this run emptied inside roots.
+
+    Folders in keep (bucket and leaf folders) are never removed.
+    """
     applier = _Applier(config, para_root, journal)
     for op in ops:
         applier.apply(op)
-    applier.remove_emptied(roots)
+    applier.remove_emptied(roots, keep)
     return applier.report

@@ -9,6 +9,7 @@ from pathlib import Path
 
 from para_files.core.apply import ApplyReport, Op, apply_ops
 from para_files.core.cache import Cache, config_fingerprint
+from para_files.core.clean import kept_folders
 from para_files.core.decide import Context, Decision, classify
 from para_files.core.fallback import make_fallback
 from para_files.core.journal import Journal, confirmed_counts, new_run_id
@@ -93,5 +94,6 @@ def apply(ops: Sequence[Op], ctx: Context, roots: Sequence[Path]) -> tuple[str, 
             para_root=ctx.settings.para_root,
             journal=journal,
             roots=roots,
+            keep=kept_folders(ctx.settings.para_root, ctx.config),
         )
     return run_id, report

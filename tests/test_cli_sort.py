@@ -154,3 +154,14 @@ def test_folder_outside_the_root_is_previewed(tmp_path, monkeypatch):
     put(outside, "note.txt", "x")
     result = runner.invoke(app, ["sort", str(outside)])
     assert result.exit_code == 0, result.output
+
+
+def test_sorting_a_bucket_keeps_its_leaf_folders(tmp_path, monkeypatch):
+    root = setup_cli(tmp_path, monkeypatch)
+    payslip = put(root, "3_Resources/IT/Payslip_2025.txt", "payslip")
+    result = runner.invoke(app, ["sort", str(root / "3_Resources"), "--apply"])
+    assert result.exit_code == 0, result.output
+    assert not payslip.exists()
+    assert (root / "4_Archives/10y_travail/2025/Payslip_2025.txt").exists()
+    assert (root / "3_Resources/IT").is_dir()
+    assert (root / "3_Resources").is_dir()
