@@ -4,6 +4,9 @@ Each first-level folder maps to its canonical folder, or to INBOX when it is dou
 (spec §4.1 "Tree cleanup policy": doubtful content goes back to 0_Inbox in a later batch).
 A retention prefix is part of a folder's identity: name-based rules never merge two
 different prefixes; only a prefix the taxonomy does not define for a stem is remapped.
+R3 exception (owner-approved rule R3): when documents.json files a stem under one prefix, the
+other prefixes of that stem are remapped onto that prefix (a stray prefix becomes the taxonomy
+folder), so a stem with one taxonomy prefix never keeps a second prefix.
 """
 
 from __future__ import annotations
