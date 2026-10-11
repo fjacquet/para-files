@@ -10,7 +10,7 @@ _NAME = re.compile(
     r"|recovery[_ -]?(?:phrase|code|key)|seed[_ -]?phrase"
     r"|licen[cs]e[_ -]?(?:key|string|code)"
     r"|mots?[_ -]?de[_ -]?passe|(?<![a-z])mdp(?![a-z])|identifiants"
-    r"|id_(?:rsa|dsa|ecdsa|ed25519)|^\.netrc$|\.(?:pem|key|p12|pfx|kdbx|env)$",
+    r"|id_(?:rsa|dsa|ecdsa|ed25519)|^\.netrc$|\.(?:pem|key|p12|pfx|kdbx)$|^\.env(?:\.[\w-]+)?$|\.env$",
     re.IGNORECASE,
 )
 _TEXT: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -25,8 +25,9 @@ _TEXT: tuple[tuple[str, re.Pattern[str]], ...] = (
         "credential_value",
         re.compile(
             r"^[^\S\n]*(?:[\w.'-]+[^\S\n]+){0,3}?[\"']?[\w.-]*"
-            r"(?:password|passwd|pwd|secret|token|api[_-]?key|mot[^\S\n]+de[^\S\n]+passe)"
-            r"[\"']?[^\S\n]*[:=]\s*\S{4,}",
+            r"(?:password|passwd|pwd|secret|token|api[_-]?key"
+            r"|mots?[^\S\n]+de[^\S\n]+passe|mdp|identifiants)"
+            r"[\w.-]*[\"']?[^\S\n]*[:=]\s*\S{4,}",
             re.IGNORECASE | re.MULTILINE,
         ),
     ),

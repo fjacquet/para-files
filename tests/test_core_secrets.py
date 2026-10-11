@@ -28,6 +28,8 @@ SWITCH_POLICY = "passwdcfg.minlength: 8\npasswdcfg.oldpasswd: 1\npasswdcfg.locko
         "prod.env",
         ".netrc",
         "id_ecdsa",
+        ".env.local",
+        ".env.production",
     ],
 )
 def test_secret_names_are_flagged(name):
@@ -43,6 +45,8 @@ def test_secret_names_are_flagged(name):
         "rack-front.jpg",
         "identifiant_fiscal.pdf",
         "commande.pdf",
+        "envelope.env.pdf",
+        "environment.pdf",
     ],
 )
 def test_ordinary_names_pass(name):
@@ -64,6 +68,11 @@ def test_ordinary_names_pass(name):
         ("Mot de\xa0passe : abcd1234", "credential_value"),
         ("Initial Root Token: s.abcdefgh", "credential_value"),
         ('  "db_password": "abcd1234",', "credential_value"),
+        ("Mots de passe : abcd1234", "credential_value"),
+        ("mdp: abcd1234", "credential_value"),
+        ("Identifiants : abcd1234", "credential_value"),
+        ("SECRET_KEY = 'abcd1234efgh'", "credential_value"),
+        ("AWS_SECRET_ACCESS_KEY=abcd1234", "credential_value"),
     ],
 )
 def test_secret_content_is_flagged(text, reason):
@@ -72,7 +81,12 @@ def test_secret_content_is_flagged(text, reason):
 
 @pytest.mark.parametrize(
     "text",
-    [SWITCH_POLICY, "Chapter 3: Backup and Recovery: restore", "password: abc"],
+    [
+        SWITCH_POLICY,
+        "Chapter 3: Backup and Recovery: restore",
+        "password: abc",
+        "Mot de passe oublié ? Cliquez ici",
+    ],
 )
 def test_settings_without_values_pass(text):
     assert secret_reason("switch-config.txt", text) is None
