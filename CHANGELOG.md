@@ -20,6 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`--conflict overwrite`** and `ConflictStrategy.OVERWRITE` — the tool no longer replaces existing files. Use `rename` or `rename_with_date`.
 
+### Documentation
+
+- **Mission re-grounded** — records file themselves, everything else is suggested. `4_Archives` is defined as the records retention vault ([ADR-012](docs/adr/ADR-012-records-and-para.md), amending ADR-001). The redesign spec gains content kinds, band caps by kind, a secrets guard, per-kind success criteria and the preliminary bake-off results. VISION.md mission and principles updated.
+- **Local AI dropped from the redesign** — in the preliminary bake-off, gemma4 on Ollama was the slowest candidate and less accurate than every cloud model (17% exact, 78 minutes for 206 files, 50 server disconnects). Ollama code is removed in Stage 4.
+- **Signal-4 candidates: Gemini 3.8 Flash > Claude Sonnet 5.5 > Jev 1.13** — the owner's order of preference, which also breaks ties in the Stage 1 bake-off. Every request enforces zero data retention. In the preliminary run, Gemini and Sonnet beat Jev and Haiku 5.5, which is dropped, mostly on knowledge files (51% and 46% exact, against 33%). None beat the old rules on records.
+- **Inbox first, tree cleanup in batches** — the redesign now starts with the inbox. The existing PARA tree is reorganized in batches on demand (one complete folder per batch, quick wins first), following a written cleanup policy: retention prefixes the taxonomy defines never merge, legacy twins fold into their prefixed folder, and doubtful files go back to `0_Inbox`.
+
 ### Fixed
 
 - **LLM classifier returning 0_Inbox at 100% confidence** — PDFs with opaque filenames were

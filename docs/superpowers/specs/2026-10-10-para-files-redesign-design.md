@@ -1,7 +1,7 @@
 # para-files Redesign — Design Spec
 
-**Date:** 2026-10-10
-**Status:** Draft — awaiting owner review
+**Date:** 2026-10-10 (amended 2026-10-11)
+**Status:** Approved 2026-10-10. Amendment of 2026-10-11 (mission, content kinds, preliminary bake-off) awaiting owner review.
 **Approach:** B — staged rebuild around a canonical tree
 
 ---
@@ -15,9 +15,26 @@
 | Audience | Personal tool — "just me". Generality, onboarding, packaging for others are cost, not value. |
 | Pains | Wrong/inbox routing; don't trust moves; slow / Ollama friction. (Config editing friction: *not* a pain.) |
 | Core workflows | Recurring inbox drain; library (book) curation; re-org of files already in PARA. Bulk backlog cleanup is *not* core. |
-| AI backend | Decide from evidence (bake-off). Cloud models acceptable for the bake-off with OpenRouter ZDR enabled. |
+| AI backend | Decide from evidence (bake-off). Cloud models acceptable with zero data retention (ZDR) enforced. |
 | Approach | B — staged rebuild (all six design sections approved). |
 | Retention prefixes | Keep them in folder names (`5y_factures`, `10y_banques`), but make the scheme consistent. |
+| Mission (2026-10-11) | **Records file themselves; everything else is suggested.** Recurring admin records (payslips, invoices, bank, tax, insurance) are filed automatically at ≥ 98% precision; books via ISBN. Every other file gets a suggested destination the owner confirms. |
+| `4_Archives` (2026-10-11) | The retention vault (`10y_`, `5y_`, `2y_`, `ret_`, `ctr_`). Legacy unprefixed twins (`factures`, `banques`, `travail`, …) merge into their prefixed folders through a reviewed, journaled migration. |
+| Scope (2026-10-11) | Records, books, vendor docs and courses, photos and videos, and suggestions for Areas/Resources. |
+| Working source (2026-10-11) | `0_Inbox` is the main working source. The owner files project material by hand. |
+
+### PARA, as this tool uses it
+
+Forte's PARA organizes by actionability ("where will I use this?"), not by subject: Projects are short-term efforts with a goal, Areas need ongoing attention, Resources are topics of interest, Archives hold what is no longer active. PARA says nothing about retention periods.
+
+This tool keeps PARA for Projects, Areas and Resources, and deliberately uses `4_Archives` for something PARA does not define: records under Swiss legal retention periods (CO Art. 127/128, see `taxonomies/models.py`). The tree therefore holds four kinds of content, each with its own policy:
+
+| Kind | Examples | Policy |
+|---|---|---|
+| `record` | payslips, invoices, bank, tax, insurance, civil-status papers | issuer + document type + year decide; automatic at ≥ 98% precision |
+| `library` | books, vendor documentation, courses, certificates | books by ISBN; vendor docs by vendor/issuer match; otherwise suggested |
+| `media` | photos, videos | by extension and EXIF year |
+| `knowledge` | Areas and Resources material (decks, notes, configs) | always suggested, never moved automatically: only the owner knows actionability |
 
 ### Assumptions (owner may correct)
 
@@ -75,6 +92,40 @@ The rules engine fired on ~0.3% of files (PRD target ≥ 60%). All 7 low-confide
 - VISION Horizon 1: 0/5 Mac-native signals, 0/3 "smarter classification" items, no undo.
 - Docs describe at least seven different pipelines and still claim MLX / macOS-only.
 
+### Tree inventory (2026-10-11)
+
+Read-only inventory of the PARA root (counts only):
+
+- `2_Areas` 11 folders, `3_Resources` 27, `4_Archives` 66 (+14 loose files). Outside PARA: `5_others`, `6_unclassified` (180 loose files), `others`, `JTI`, `logs`.
+- **Half-done retention migration in `4_Archives`:** legacy folders sit next to their prefixed twins: `factures` (~2.2k files) beside `5y_factures` (~2.7k), `banques` (~2k) beside `10y_banques` (~2.2k), and the same for `travail`, `prevoyance`, `dons`, `fiscalite`, `impots-france`, `crypto`, `immobilier`, `administratif`, `juridique`, `loisirs`, `voyages`.
+- **Placeholder bugs on disk:** literal folders `3_Resources/documentation/{technology}` and `4_Archives/5y_travail/{year}`; some folder names end with a space.
+- **Same topic in several buckets:** `administratif`, `carriere`, `immobilier`, `IT`, `mindmaps`, `sante`, `prevoyance`, `photos`, `videos`.
+- **Libraries and media:** `livres` (~4.3k, Thema), `docs` + `documentation` (~11k vendor docs), `formations` (~2.9k); `4_Archives/photos` (~26k) and `videos` (~3.7k).
+- **Secrets on disk:** a credentials folder under `2_Areas/IT` and secret-named files in `0_Inbox`.
+- **Real inbox:** 110 files; 29 belong to 8 recurring families (payslips 16, card invoices 3, vendor decks).
+- **Full scan (2026-10-11), the five buckets:** about 71k files (`0_Inbox` 111, `1_Projets` 6.8k, `2_Areas` 1.2k, `3_Resources` 19k, `4_Archives` 43.7k). 13 literal placeholder folders (`{issuer}`, `{vendor}`, `{year}`, `{technology}`, `{document_type}`) hold 348 files; 74 names start with a space, 15 of them books named `" - Title (Year)"` by the old rename when the author was empty; 131 folders are empty. Below level 1, case and separator variants exist (for example one bank's three spellings). Top-level folders outside the five buckets are special and out of scope.
+
+### Preliminary bake-off (2026-10-11)
+
+206 files already filed (2 per first-level folder, 103 labels), identical evidence for every candidate (filename + 2000-char preview incl. archive listing). Cloud requests forced `provider: {"zdr": true}`. Throwaway harness, read-only on files.
+
+| Candidate | Exact folder | Top-10% most confident: precision | p50 latency | $/1000 files |
+|---|---|---|---|---|
+| Old pipeline, signals 1–3 (semantic and LLM off) | 42% | 40% | 0.19 s | 0 |
+| Claude Sonnet 5.5 (reasoning effort low) | 36% | 85% | 2.1 s | 13.88 |
+| Gemini 3.8 Flash (reasoning effort low) | 34% | 80% | 3.2 s | 4.22 |
+| Jev 1.13 (Decisions API) | 28% | 50% | 0.35 s | 0.22 |
+| Claude Haiku 5.5 (reasoning disabled) | 24% | 55% | 1.9 s | 0.69 |
+| gemma4:e4b (local, Ollama) | 17% | 65% | 24.7 s | 0 |
+| nomic-embed-text cosine | 5% | 5% | 0.06 s | 0 |
+
+- No candidate reaches 98% precision at any useful coverage. Even when the old pipeline and Jev agree, 38% of those files are wrong: the labels (today's tree) are the bottleneck, not the model.
+- **With twins merged, by kind (old pipeline):** records 50% → 66% exact and 56% → 75% precision when it decides; knowledge stays at 26–36% for every method. Residual record errors are records pulled into `livres`/`docs` by the book detector and broad rules, retention-class mix-ups (tax filed as invoice), and the extension catch-all.
+- Haiku 5.5 reasons by default and returned empty answers under a 200-token cap until `reasoning: {"enabled": false}` was set.
+- Sonnet 5.5 and Gemini 3.8 Flash reject `reasoning: {"enabled": false}`; they ran with `{"effort": "low"}` and a 4000-token cap, so the comparison with Haiku and Jev is not strictly like for like. With twins merged, both reach 40% exact. On `knowledge` files they reach 46% (Sonnet) and 51% (Gemini), against 33% for Jev and Haiku and 26% for the old pipeline. On records they reach about 36%, against 66% for the old pipeline: records stay with rules and issuers.
+- Mistral was dropped by the owner; nomic embeddings are dropped on this evidence.
+- gemma4:e4b took 78 minutes for the 206 files, and 50 of them failed with the Ollama server disconnecting. Its top-10% figure covers about 20 files. On this evidence the owner dropped local AI (2026-10-11): no local model in the bake-off or in the new core.
+
 ---
 
 ## 3. Goals, Non-Goals, Success Criteria
@@ -82,8 +133,8 @@ The rules engine fired on ~0.3% of files (PRD target ≥ 60%). All 7 low-confide
 ### Goals
 
 1. **Trust:** nothing changes on disk without `--apply`; every applied change is journaled and undoable; nothing is ever overwritten or hard-deleted.
-2. **Accuracy:** every destination comes from one closed list of leaves; automatic moves are measured and held to ≥ 98% precision.
-3. **Speed:** one evidence extraction per file; network and model calls cached; Ollama only if the bake-off says it earns its place.
+2. **Accuracy:** every destination comes from one closed list of leaves; automatic moves happen only for `record`, `library` (ISBN or vendor match) and `media` leaves, are measured, and are held to ≥ 98% precision. `knowledge` files are suggested, never moved automatically.
+3. **Speed:** one evidence extraction per file; network and model calls cached; no local model (dropped 2026-10-11, §2).
 4. **Simplicity:** 4 signals instead of 6; 6 commands instead of 18; roughly half of today's 18.8k source lines.
 
 ### Non-Goals
@@ -97,13 +148,15 @@ The rules engine fired on ~0.3% of files (PRD target ≥ 60%). All 7 low-confide
 
 | # | Criterion | How verified |
 |---|---|---|
-| S1 | Green precision ≥ 98% on the golden corpus | `scripts/eval.py` |
+| S1 | Green precision ≥ 98% on the golden corpus, for every kind | `scripts/eval.py` |
 | S2 | Green coverage on the golden corpus ≥ the old pipeline's correct-routing rate on the same corpus | `scripts/eval.py`, old vs new |
-| S3 | Green share on a real `0_Inbox` run ≥ 60% (initial target; revisit after the Stage 1 baseline) | `sort --json` summary |
+| S3 | Records: green coverage ≥ 80% of the inbox's recurring records (issuer families) on a real `0_Inbox` run | `sort --json` summary |
+| S3b | Knowledge: top-3 suggestion hit rate measured and reported (no threshold until the Stage 1 baseline) | `scripts/eval.py` |
 | S4 | A preview run leaves the file tree byte-identical (names, inodes, mtimes) | integration test on a temp tree |
 | S5 | `undo` after an apply restores a byte-identical tree | integration test on a temp tree |
 | S6 | No personal identifiers in tracked files | manual review before Stage 1 merge |
 | S7 | `uv run pytest` passes from a clean clone, without Ollama or network | CI |
+| S8 | A file flagged as secret is never sent to any network signal and never moved | unit test on the secrets guard |
 
 ---
 
@@ -119,15 +172,19 @@ Every classifier returns a `leaf_id` from a list the owner controls. Free-form p
 # ~/.config/para-files/tree.yaml
 leaves:
   telecom_invoices:
+    kind: record
+    retention: 5y
     path: 4_Archives/5y_factures/Telephonie
     subkey: "{issuer}/{year}"
     describe: "Phone, mobile and internet invoices"
     keywords: [facture, invoice, abonnement]
   books:
+    kind: library
     path: 3_Resources/livres
     subkey: "{thema}"
     describe: "Books and ebooks"
   photos:
+    kind: media
     path: 3_Resources/photos
     subkey: "{year}/{month}"
     describe: "Photos and screenshots"
@@ -136,14 +193,17 @@ leaves:
 | Field | Required | Rule |
 |---|---|---|
 | key (`leaf_id`) | yes | unique, snake_case |
-| `path` | yes | bucket + at most 2 levels; must start with `2_`, `3_` or `4_` (never `0_Inbox`, never `1_Projects`) |
+| `kind` | yes | `record`, `library`, `media` or `knowledge` (see §1) |
+| `retention` | `record` only | `permanent`, `ret`, `10y`, `5y`, `2y` or `ctr` |
+| `path` | yes | bucket + at most 2 levels; starts with a `1_`–`4_` bucket (never `0_Inbox`) |
 | `subkey` | no | at most 2 segments; placeholders limited to `{year}`, `{month}`, `{issuer}`, `{thema}` |
 | `describe` | yes | one line; used as the choice criterion by the fuzzy fallback |
 | `keywords` | no | used by the issuer signal for agreement |
 
 - Target: 20–30 leaves.
 - **Unfillable subkey → leaf root.** A missing issuer or date never rejects a match (fixes the photo/GPS bug).
-- **Retention prefixes** stay in path names. Consistent scheme: `<N>y_<name>` only on second-level folders under `4_Archives`; nowhere else. `tree --validate` warns on deviations.
+- **Retention prefixes** come from data, not code: a `record` leaf with `retention` other than `permanent` must live at `4_Archives/<retention>_<name>/…`, and the loader rejects a mismatch. `permanent` records keep their owner-chosen path (e.g. `2_Areas/Officiel`, which stays where it is). Prefixes anywhere else (today `3_Resources/5y_screenshots`, `3_Resources/ret_prevoyance`) are reported by `tree --validate`.
+- **Band caps by kind:** `knowledge` leaves are capped at yellow. `library` leaves go green only on ISBN or vendor/issuer match. `record` and `media` leaves follow the per-signal thresholds.
 - One extractor per placeholder: one `extract_year`, one `extract_month`, issuer from the issuer signal, thema from the book signal.
 
 #### Config files
@@ -184,7 +244,7 @@ Glob matching is case-insensitive (removes 28 case-variant duplicates).
 
 #### Settings precedence
 
-`pydantic-settings` sources: **env > `.env` > YAML > defaults**, via `settings_customise_sources`. Fixes today's bug where YAML beats env. The embedding model and Ollama URL become settings (today hardcoded). `MLXConfig` and the `PARA_FILES_MLX_*` prefix are removed.
+`pydantic-settings` sources: **env > `.env` > YAML > defaults**, via `settings_customise_sources`. Fixes today's bug where YAML beats env. `MLXConfig`, the `PARA_FILES_MLX_*` prefix, the hardcoded embedding model and the Ollama URL are removed (no local model).
 
 > The precedence fix and the `.env` correction (`PARA_FILES_PARA_ROOT` currently points at `…/PARA/0_Inbox`) must ship together. Fixing precedence alone would route every file under `0_Inbox/…`.
 
@@ -193,11 +253,42 @@ Glob matching is case-insensitive (removes 28 case-variant duplicates).
 `scripts/migrate_config.py` (throwaway, not a command):
 
 1. Read the current YAML rules and `documents.json`.
-2. Propose a mapping from the 291 current destinations to leaves, informed by the folders that actually exist on disk.
+2. Propose a mapping from the 291 current destinations to leaves, informed by the folders that actually exist on disk: legacy twins fold into their prefixed folder, synonym pairs merge, and every leaf gets a proposed `kind` (and `retention` for records).
 3. The owner reviews and edits the mapping.
 4. Emit `tree.yaml`, `rules.yaml`, `issuers.yaml`, pruning dead rules, shadowed rules, `*_v2` copies and short substring globs.
 
 Files already filed under old paths reach their canonical leaves through the normal re-org flow (`sort` over `3_`/`4_`, see 4.4).
+
+#### Tree cleanup policy (batches, on demand)
+
+The existing tree is reorganized in batches when needed, never in one run. One batch is one complete folder or group; quick wins go first; each batch is previewed, applied through the journaled executor (Stage 2) and can be undone. The owner picks when each batch runs. The first real `sort` run is `0_Inbox`.
+
+**Invariant:** a retention prefix is part of a folder's identity at every depth. `config/documents.json` gives one retention per document type (`10y_` CO art. 127, `5y_` CO art. 128, `2y_` warranty, `ctr_` contract duration + 5 years, `ret_` retirement, no prefix = permanent), so name-based rules (R4–R6) never merge two different prefixes. Only R3 changes a prefix, and only one the taxonomy does not define for that stem. Only `factures` (2y/5y/ctr), `administratif` (5y/ret) and `mobilite` (5y/ctr) are split by document type on purpose.
+
+| # | Rule |
+|---|---|
+| R1 | An unprefixed `4_Archives` folder whose stem has a single retention folds into its prefixed twin |
+| R2 | Legacy unprefixed content of a split stem (`factures`, `administratif`, `mobilite`) is doubtful: it goes back to `0_Inbox` |
+| R3 | A prefix the taxonomy does not define for a stem folds into the taxonomy's prefix (for example `5y_travail` → `10y_travail`) |
+| R4 | Name variants (case, accents, separators, plural, padding; prefix kept) fold into the member with the most files |
+| R5 | Synonyms: `docs`/`documentation`, `livres`/`books`, `formation`/`formations` |
+| R6 | R4 applied recursively below level 1, outside `1_Projets` (owner-filed, may hold code repositories) |
+| R7 | Padding trimmed; a leading `" - "` stripped |
+| R8 | Content of literal placeholder folders goes back to `0_Inbox` |
+| R9 | Retention-prefixed folders outside `4_Archives`: records go to the vault (`4_Archives/<prefix>_<name>`); media drop the prefix |
+| R10 | Empty folders: handled later, not part of the batches |
+| R11 | Same name in several buckets: reported only (PARA allows the same topic in Areas, Resources and Archives) |
+| R12 | Any other doubtful file goes back to `0_Inbox` (for example a book found in a bank folder) |
+
+A file sent back goes to `0_Inbox/<source folder>/…` with its relative path kept: the batch stays together, the old path stays as evidence for the classifier, and names cannot collide. The normal inbox sort then files it.
+
+| Batch | Content | Files |
+|---|---|---|
+| Quick wins | single-retention twins of 35 files or fewer, the 1-file synonym and prefix fixes, case variants under `docs` | ≈170 |
+| Back to inbox (small) | the 13 placeholder folders, legacy `administratif` and `mobilite`, misfiled items | ≈410 |
+| Medium | twins of 60–100 files, one bank's three spellings, the padded names | ≈600 |
+| Large, on demand | `travail`, `documentation` → `docs`, `banques` | ≈4.5k |
+| Back to inbox (large, on demand) | legacy `factures`, possibly split by subfolder | ≈2.3k |
 
 ### 4.2 Pipeline
 
@@ -240,7 +331,7 @@ flowchart TD
 | # | Signal | Decides from | Confidence |
 |---|---|---|---|
 | 1 | Rules | user globs, then package default extension rules | 1.0 (owner-asserted) |
-| 2 | Books | ISBN + coherent lookup (title/author match); ebook publisher/subject heuristics move here | 1.0 with ISBN; book-score otherwise |
+| 2 | Books | ISBN + coherent lookup (title/author match); ebook publisher/subject heuristics move here | 1.0 with ISBN; otherwise book-score, capped at yellow (the preliminary bake-off showed records pulled into `livres` without ISBN) |
 | 3 | Issuers | issuer pattern in `name` or `text_preview`; leaf chosen among the issuer's `leaves` by keyword agreement | high when issuer and keyword agree; medium otherwise |
 | 4 | Fuzzy fallback | bake-off winner, choosing only among leaf ids | calibrated probability from the model |
 
@@ -257,9 +348,10 @@ class Fallback(Protocol):
 
 Implementations are written only for the bake-off winner. Candidates:
 
-- **LLM via litellm** (gemma4:e4b / mistral-small / Claude Haiku 5.5): JSON-schema output with an enum of leaf ids; self-reported confidence.
-- **Jev via OpenRouter Decisions API** (`POST /api/alpha/decisions`, model pinned to `typesafe/jev-1.13`): one `choice` question whose criteria are the leaves' `describe`; returns a probability per leaf.
-- **Embeddings** (nomic-embed-text): cosine against leaf `describe`.
+- **LLM via litellm** (Gemini 3.8 Flash or Claude Sonnet 5.5 on OpenRouter, with `reasoning: {"effort": "low"}`): JSON-schema output with an enum of leaf ids; self-reported confidence.
+- **Jev via OpenRouter Decisions API** (`POST /api/alpha/decisions`, model pinned to `typesafe/jev-1.13`): one `choice` question whose criteria are the leaves' `describe`; returns a probability per leaf. Several questions about the same file can share one request; files are parallelized as separate requests.
+
+Every cloud request carries `provider: {"zdr": true}`, so it fails rather than reach a provider that retains data.
 
 #### Decision
 
@@ -279,6 +371,8 @@ Per-signal thresholds in settings, defaults set from the Stage 1 eval:
 - **yellow** → listed for review; moved only after confirmation (`sort --review`)
 - **red** → the file stays where it is
 
+The kind caps of §4.1 apply after the thresholds, so a `knowledge` decision is at most yellow.
+
 There is no `6_unclassified` bucket and no extension catch-all. A re-org never pulls a curated file out of its folder.
 
 #### Robustness and caching
@@ -292,7 +386,7 @@ There is no `6_unclassified` bucket and no extension catch-all. A re-org never p
 
 #### Removed from the pipeline
 
-Semantic classifier (unless it wins the bake-off), `TechnologyExtractor` and the `{technology}` placeholder (vendors become issuers), geolocation, `ExtensionRouterClassifier` (becomes default rules), `book_detector` blacklists, `TaxonomyClassifier`'s `RETENTION_PREFIXES`, the 3.6MB Thema load.
+Semantic classifier (5% accuracy in the preliminary bake-off), `TechnologyExtractor` and the `{technology}` placeholder (vendors become issuers), geolocation, `ExtensionRouterClassifier` (becomes default rules), `book_detector` blacklists, `TaxonomyClassifier`'s `RETENTION_PREFIXES`, the 3.6MB Thema load.
 
 ### 4.3 Moves and Safety
 
@@ -342,6 +436,16 @@ Nothing is ever hard-deleted or overwritten.
 
 `sort` and `clean` never descend into dot-directories (`.trash`, `.git`, …) or follow symlinks.
 
+#### Secrets guard
+
+Before any signal runs, `extract` checks the filename and the text preview against secret patterns (private-key headers, cloud access keys, credential/password/token/recovery-phrase markers with a value). A match makes the decision red with reason `secret`:
+
+- the file is never passed to signal 4 or to any other network call, and its preview is not cached;
+- it is never moved, renamed or trashed by `sort` or `clean`;
+- `sort` lists it under a "secrets" heading so the owner can move it to a password manager; `explain` shows which pattern matched.
+
+Field names without a value (for example a switch config's password-policy settings) do not match.
+
 #### Config is read-only to the tool
 
 No command writes YAML. Corrections are made by editing `rules.yaml` / `issuers.yaml`; `explain` points at the entry to change.
@@ -366,31 +470,33 @@ One parallel executor, one band-grouped printer, one JSON shape shared by all co
 #### Golden corpus
 
 - Built from files already filed in PARA, labeled through the Stage 1 destination → leaf mapping. Ambiguous folders excluded.
-- Up to ~10 files per leaf (~250 total). Files stay in place; the corpus stores paths and expected leaf ids.
+- Up to ~10 files per leaf (~250 total). Files stay in place; the corpus stores paths, expected leaf ids and kinds.
+- Weighted like the real inbox: records from recurring issuer families (payslips, card and utility invoices, bank, insurance, tax) come first; `knowledge` files are labeled too but scored only as suggestions.
 - Stored at `~/.config/para-files/golden.jsonl` (personal paths stay out of the repo).
 - The repo holds a small sanitized fixture set for CI regression of signals 1–3.
 
 #### `scripts/eval.py` (developer tool)
 
-Reports per signal and overall: accuracy, green precision, green coverage, yellow/red share, precision-vs-coverage curve per signal (used to set band thresholds), latency p50/p95, cost per 1000 files.
+Reports per signal, per kind and overall: accuracy, green precision, green coverage, yellow/red share, precision-vs-coverage curve per signal (used to set band thresholds), top-3 suggestion hit rate for `knowledge`, latency p50/p95, cost per 1000 files.
 
 #### Bake-off (fills signal 4)
 
 | Item | Value |
 |---|---|
-| Candidates | gemma4:e4b (Ollama), mistral-small-2603 (OpenRouter), Claude Haiku 5.5 (OpenRouter, enum-constrained), Jev 1.13 (Decisions API), nomic-embed-text cosine, **no-fallback baseline** (signals 1–3 only) |
+| Candidates | In the owner's order of preference: Gemini 3.8 Flash, Claude Sonnet 5.5 (both OpenRouter, enum-constrained, reasoning effort low), Jev 1.13 (Decisions API); plus the **no-fallback baseline** (signals 1–3 only). Mistral, nomic-embed-text, gemma4 (local AI) and Haiku 5.5 dropped after the preliminary run. |
 | Input | identical: evidence text (name, 2000-char preview, archive listing) + leaf list with `describe` |
-| Privacy | OpenRouter ZDR enabled on the account before any cloud call |
+| Privacy | `provider: {"zdr": true}` on every cloud request; secrets-guarded files never sent |
 | Code | throwaway, read-only on files |
-| Winner | highest green coverage at ≥ 98% precision; ties → local > cheaper > faster |
-| Drop rule | if no candidate adds ≥ 5 points of green coverage over the baseline, signal 4 and the Ollama dependency are removed |
+| Scope | (a) `record`, `library` and `media` files left undecided by signals 1–3; (b) `knowledge` files as suggestions |
+| Winner | (a) highest green coverage at ≥ 98% precision; (b) highest top-3 hit rate. Ties → owner preference: Gemini 3.8 Flash > Sonnet 5.5 > Jev 1.13 |
+| Drop rule | if no candidate adds ≥ 5 points of green coverage on (a) over the baseline and none beats the baseline's suggestions on (b), signal 4 is removed |
 
 Runs:
 
-1. **Preliminary (now):** as soon as the PARA volume is mounted and ZDR is on; labels are current first-level folders with synonyms merged (`livres`/`books`, `formation`/`formations`, `docs`/`documentation`). Informs whether signal 4 matters.
+1. **Preliminary (done 2026-10-11):** labels were current first-level folders with synonyms merged (`livres`/`books`, `formation`/`formations`, `docs`/`documentation`). Results in §2: the current tree, not the model, limits precision.
 2. **Authoritative (Stage 1):** on canonical leaves and the golden corpus.
 
-Reference prices at time of writing (OpenRouter, USD per million tokens, input/output): mistral-small-2603 0.15/0.60, Claude Haiku 5.5 0.10/0.50, Jev 1.13 0.042/0. At ~2k input tokens per file every option costs under $0.50 per 1000 files; cost does not decide.
+Reference prices at time of writing (OpenRouter, USD per million tokens, input/output): Gemini 3.8 Flash 0.375/1.875, Claude Sonnet 5.5 2/10, Jev 1.13 0.042/0. Measured in the preliminary run with a 103-label list, per 1000 files: Gemini $4.22, Sonnet $13.88, Jev $0.22 (Haiku $0.69). Cost does not decide.
 
 ---
 
@@ -412,29 +518,33 @@ Exit: tests for each fix pass; existing suite green.
 
 ### Stage 1 — Canonical tree, golden corpus, bake-off
 
-1. `scripts/migrate_config.py` → draft mapping → owner review → `tree.yaml`, `rules.yaml`, `issuers.yaml` in `~/.config/para-files/`.
+1. `scripts/migrate_config.py` → draft mapping (with `kind` and `retention`) → owner review → `tree.yaml`, `rules.yaml`, `issuers.yaml` in `~/.config/para-files/`. `issuers.yaml` is seeded from the inbox's recurring families and the existing `documents.json` issuers.
 2. Remove personal config and identifiers from tracked files; add sanitized `examples/`.
-3. `golden.jsonl` + `scripts/eval.py`; baseline the old pipeline.
+3. `golden.jsonl` + `scripts/eval.py` (per-kind metrics); baseline the old pipeline.
 4. Authoritative bake-off → choose signal 4 (or drop it).
 
 Exit: owner-approved tree; eval baseline recorded; signal 4 decision recorded.
 
 ### Stage 2 — New core (alongside the old pipeline)
 
-Evidence extractor; signals 1–4 on leaf ids; bands; SQLite cache; strict config loader with the precedence fix **and** the `.env` correction; plan/apply executor; journal; `undo`.
+Evidence extractor with the secrets guard; signals 1–4 on leaf ids; bands with kind caps; SQLite cache; strict config loader with the precedence fix **and** the `.env` correction; plan/apply executor; journal; `undo`.
 
-Exit: S1, S2, S4, S5 pass.
+Exit: S1, S2, S4, S5, S8 pass.
+
+### Batch reorganization (on demand, from Stage 2)
+
+`scripts/plan_tree_cleanup.py --scope <bucket/folder>` writes a reviewable JSONL for one complete folder or group, following the tree cleanup policy (§4.1). The owner reviews it; the Stage 2 executor applies it with a journal and `undo`. Quick wins first. Not an exit criterion of any stage.
 
 ### Stage 3 — CLI cut-over
 
-Six commands; old commands and modules deleted; PARA re-org (`sort` over `3_`/`4_`: preview → apply, bucket by bucket, with `undo` available).
+Six commands; old commands and modules deleted; the first real `sort` run is `0_Inbox`; the existing tree is reorganized in batches on demand (see Batch reorganization).
 
-Exit: S3 measured on a real inbox; re-org completed or explicitly paused.
+Exit: S3 measured on a real inbox.
 
 ### Stage 4 — Purge
 
-- Dead code from the audits; dependencies `einops`, `faker`, `bandit`, `semantic-router`, `geopy` (re-check `cryptography` and `pymupdf`).
-- Docs reduced to ~5 pages (README, architecture, configuration, CLI, ADR index) + ADR-012 recording this redesign; VISION, PRD and `.planning/` moved to `docs/archive/`.
+- Dead code from the audits; local-AI code (`encoders/ollama_encoder.py`, `classifiers/semantic_classifier.py`, Ollama defaults); dependencies `einops`, `faker`, `bandit`, `semantic-router`, `geopy` (re-check `cryptography` and `pymupdf`).
+- Docs reduced to ~5 pages (README, architecture, configuration, CLI, ADR index) + ADR-013 recording this redesign and the end of local AI (supersedes ADR-010; ADR-012 already records the records/PARA decision); VISION, PRD and `.planning/` moved to `docs/archive/`.
 - Remove `Formula/` and the failing `update-formula` release job, `TODO-routing-fixes.md`, `docs/how-to-better-claude-code.md`; untrack `.serena/` and `.claude/`.
 
 Exit: S6, S7 pass; source ≈ half of 18.8k lines.
@@ -446,7 +556,7 @@ Exit: S6, S7 pass; source ≈ half of 18.8k lines.
 - Version bumps and releases only for product changes; Dependabot merges never cut a release.
 - Each release's CHANGELOG entry records the eval numbers (green precision, green coverage, inbox green share).
 - Specs and plans live in `docs/superpowers/`; the GSD `.planning/` ceremony stops.
-- `uv run pytest` works out of the box (dev dependencies in the default group); CLI tests mock Ollama/network and never read the owner's `.env`.
+- `uv run pytest` works out of the box (dev dependencies in the default group); CLI tests mock the network and never read the owner's `.env`.
 - Tests for deleted code are deleted with it.
 
 ---
@@ -457,10 +567,12 @@ Exit: S6, S7 pass; source ≈ half of 18.8k lines.
 |---|---|
 | Jev Decisions API is alpha (`/api/alpha/`) | Pin `typesafe/jev-1.13`; `Fallback` protocol isolates it; bake-off includes non-Jev candidates |
 | Golden labels inherit inconsistent historical placement | Owner reviews the mapping; ambiguous folders excluded |
-| Re-org moves many files on a synced volume | Preview first; apply bucket by bucket; journal + `undo`; `.trash` on the same volume |
+| Re-org moves many files on a synced volume | Preview first; apply batch by batch; journal + `undo`; `.trash` on the same volume |
 | Precedence fix flips `para_root` | Ships together with the `.env` correction (Stage 2) |
-| Cloud fallback sends document text off the machine | ZDR enforced on the account; owner may choose the local candidate; drop rule may remove signal 4 entirely |
-| Personal identifiers remain in public git history | Out of scope for this spec; owner decides between making the repo private or rewriting history |
+| Cloud fallback sends document text off the machine | `provider: {"zdr": true}` on every request; secrets guard; drop rule may remove signal 4 entirely |
+| No local model: offline or OpenRouter outage silences signal 4 | Signals 1–3 run locally and still decide records, books and media; undecided files stay in place as yellow/red |
+| Reorganization moves thousands of archived files | Batches on demand, one complete folder at a time, quick wins first; preview; journal + `undo`; doubtful files go back to `0_Inbox` |
+| Personal identifiers remain in public git history | Owner decided (2026-10-11): the repo stays public and history is not rewritten; new content is checked for identifiers before each push |
 
 ---
 
@@ -475,4 +587,16 @@ Exit: S6, S7 pass; source ≈ half of 18.8k lines.
 | Moves | Preview default, sequential apply, containment, no-clobber, `.trash`, JSONL journal, `undo` |
 | CLI | `sort`, `explain`, `undo`, `clean`, `tree`, `init` |
 | Learning | Removed; corrections by editing YAML guided by `explain` |
-| Bake-off | All candidates incl. cloud (ZDR on); preliminary run now + authoritative run in Stage 1 |
+| Bake-off | Preliminary run done 2026-10-11 (tree, not model, is the bottleneck); authoritative run in Stage 1 with Gemini 3.8 Flash, Sonnet 5.5 and Jev 1.13 (owner preference in that order); Mistral, nomic, gemma4 and Haiku 5.5 dropped; GPT-6 Luna excluded (owner does not trust it) |
+| Local AI (2026-10-11) | Dropped: gemma4 17% exact, 78 min for 206 files, 50 server disconnects; Ollama removed in Stage 4 |
+| Mission (2026-10-11) | Records file themselves; everything else is suggested |
+| `4_Archives` (2026-10-11) | Retention vault; legacy twins merged via reviewed, journaled migration |
+| Content kinds (2026-10-11) | `record`, `library`, `media`, `knowledge`; `knowledge` never green |
+| Secrets (2026-10-11) | Secret-flagged files are never sent off-machine and never moved |
+| Repo visibility (2026-10-11) | Stays public; history not rewritten |
+| Working order (2026-10-11) | Inbox first; the existing tree is reorganized in batches on demand, quick wins first |
+| Doubtful files (2026-10-11) | Go back to `0_Inbox` (placeholder folders, split-stem legacy content, misfiled items) |
+| Retention overlap (2026-10-11) | None: a retention prefix is part of a folder's identity; only `factures`, `administratif`, `mobilite` are split by document type |
+| Special top-level folders (2026-10-11) | Folders outside the five buckets are out of scope |
+| Prefixes outside `4_Archives` (2026-10-11) | Records move to the vault; media drop the prefix |
+| Empty folders (2026-10-11) | Handled later |

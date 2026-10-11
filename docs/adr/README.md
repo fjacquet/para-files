@@ -8,7 +8,7 @@ ADRs document significant architectural choices — what was decided, why, and w
 
 | ADR | Title | Status |
 |-----|-------|--------|
-| [ADR-001](ADR-001-para-method.md) | Use PARA Method for File Organization | Accepted |
+| [ADR-001](ADR-001-para-method.md) | Use PARA Method for File Organization | Accepted (amended by ADR-012) |
 | [ADR-002](ADR-002-apple-silicon-only.md) | Apple Silicon (macOS) Only Platform | Accepted |
 | [ADR-003](ADR-003-cascading-pipeline.md) | Cascading Classification Pipeline (First-Match Wins) | Accepted |
 | [ADR-004](ADR-004-mlx-embeddings.md) | MLX Embeddings with nomic-embed-text-v1.5 | Accepted |
@@ -17,6 +17,7 @@ ADRs document significant architectural choices — what was decided, why, and w
 | [ADR-007](ADR-007-typer-cli.md) | Typer for CLI Framework | Accepted |
 | [ADR-008](ADR-008-uv-package-manager.md) | uv as Package Manager | Accepted |
 | [ADR-009](ADR-009-thema-book-taxonomy.md) | Thema v1.6 for Book Subject Classification | Accepted |
+| [ADR-012](ADR-012-records-and-para.md) | Records Retention Vault Alongside PARA | Proposed |
 
 ## ADR Status Definitions
 

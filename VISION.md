@@ -1,24 +1,24 @@
 # VISION.md — para-files
 
-**Last updated**: 2026-03-01
+**Last updated**: 2026-10-11 (mission and principles; the sections below them predate the redesign and are revisited in its Stage 4)
 
 ---
 
 ## Mission
 
-**Spend one weekend scanning your filing cabinet. Never file a document manually again.**
+**Records file themselves. Everything else is suggested.**
 
-para-files is a personal document intelligence system for macOS. It classifies, names, routes, and watches over your files — so you can find what you need, know what's missing, and trust that nothing is lost.
+para-files is a personal tool that sorts `0_Inbox` into a PARA tree. Recurring admin records (payslips, invoices, bank, tax, insurance) go automatically into the retention vault, `4_Archives`, under Swiss legal retention periods. Books are filed by ISBN, photos and videos by date. Everything else, the material for Areas and Resources, gets a suggested destination the owner confirms: only the owner knows what is actionable. Project material is filed by hand. See [ADR-012](docs/adr/ADR-012-records-and-para.md).
 
 ---
 
 ## Core Principles
 
-1. **Privacy first** — Every byte stays on your Mac. No cloud AI, no API keys, no telemetry. On-device MLX inference, on-device OCR, on-device everything.
+1. **Privacy by default** — Secrets never leave the machine. Cloud models are used only with zero data retention enforced, and only where measurement shows they earn their place.
 2. **Transparency over magic** — Every decision is explainable. Users can always ask "why was this file put here?" and get a clear answer with signal sources and confidence scores.
 3. **Safety over speed** — Never delete without consent. Never overwrite without warning. Dry-run by default for destructive operations. Undo is always possible.
-4. **Progressive trust** — Start cautious (inbox fallback), earn confidence through corrections, become fully automatic over time. The system gets smarter as you use it.
-5. **Shallow hierarchy** — PARA's four buckets keep things findable. No 8-level folder trees. No ambiguous placement decisions. Maximum 3-4 levels deep.
+4. **Measured trust** — A file moves automatically only where moves are measured at ≥ 98% precision (records, books, media). Everything else is suggested.
+5. **Shallow hierarchy** — PARA's four buckets keep things findable: a bucket, at most two folder levels, and an optional year or issuer subfolder.
 
 ---
 

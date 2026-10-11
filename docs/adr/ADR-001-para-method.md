@@ -1,7 +1,7 @@
 # ADR-001: Use PARA Method for File Organization
 
 **Date**: 2024-01-01
-**Status**: Accepted
+**Status**: Accepted — amended by [ADR-012](ADR-012-records-and-para.md) (`4_Archives` is the records retention vault)
 **Deciders**: Frédéric Jacquet
 
 ---
