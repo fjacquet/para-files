@@ -11,7 +11,7 @@ from pydantic import ValidationError
 from para_files.core.decide import Context
 from para_files.core.settings import CoreSettings, load_settings
 from para_files.core.sort import build_context
-from para_files.core.tree import TreeError
+from para_files.core.tree import TreeConfig, TreeError, load_tree_config
 
 
 EXIT_FAILURE = 1
@@ -46,6 +46,14 @@ def context_or_exit(settings: CoreSettings) -> Context:
     """Load the tree config and open the cache, or exit with the config error."""
     try:
         return build_context(settings)
+    except TreeError as exc:
+        fail(str(exc))
+
+
+def config_or_exit(directory: Path | None = None) -> TreeConfig:
+    """Load tree.yaml and its companions, or exit with the config error."""
+    try:
+        return load_tree_config(directory)
     except TreeError as exc:
         fail(str(exc))
 

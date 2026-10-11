@@ -8,10 +8,9 @@ from typing import Annotated
 import typer
 
 from para_files.cli.app import app
-from para_files.cli.common import fail, relative, settings_or_exit
+from para_files.cli.common import config_or_exit, fail, relative, settings_or_exit
 from para_files.core.clean import CleanPlan, apply_clean, kept_folders, plan_clean
 from para_files.core.journal import Journal, new_run_id
-from para_files.core.tree import TreeError, load_tree_config
 
 
 def _print_plan(plan: CleanPlan, root: Path) -> None:
@@ -47,10 +46,7 @@ def clean_command(
         fail(f"clean only works inside the PARA root ({root})")
     if any(part.startswith(".") for part in base.resolve().relative_to(root.resolve()).parts):
         fail(f"clean never works inside dot-folders such as .git or .trash ({base})")
-    try:
-        config = load_tree_config()
-    except TreeError as exc:
-        fail(str(exc))
+    config = config_or_exit()
     plan = plan_clean([base], root=root, duplicates=duplicates, keep=kept_folders(root, config))
     _print_plan(plan, root)
     if not apply_:

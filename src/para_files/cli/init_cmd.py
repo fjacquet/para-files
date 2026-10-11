@@ -8,11 +8,10 @@ from typing import Annotated
 import typer
 
 from para_files.cli.app import app
-from para_files.cli.common import ROOT_HINT, fail
+from para_files.cli.common import ROOT_HINT, config_or_exit, fail
 from para_files.core.apply import make_dirs
 from para_files.core.journal import Journal, new_run_id
 from para_files.core.settings import BUCKET_NAME, INBOX, load_path_settings
-from para_files.core.tree import TreeError, load_tree_config
 
 
 @app.command("init")
@@ -34,10 +33,7 @@ def init_command(
         fail(f"{base} is a bucket; pass the folder that holds the buckets")
     if not base.parent.is_dir():
         fail(f"parent folder does not exist: {base.parent}")
-    try:
-        config = load_tree_config()
-    except TreeError as exc:
-        fail(str(exc))
+    config = config_or_exit()
     wanted = [base / INBOX, *sorted({base / leaf.path for leaf in config.tree.leaves.values()})]
     missing = [path for path in wanted if not path.is_dir()]
     if not missing:
