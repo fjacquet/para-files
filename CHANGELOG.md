@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (Stage 1)
+
+- **Canonical tree loader** — `para_files.core.tree` loads `tree.yaml`, `rules.yaml` and `issuers.yaml` from `~/.config/para-files/` strictly (unknown keys, unknown leaves, duplicate issuer patterns and retention/path mismatches are errors) and reports review warnings. Sanitized examples in `examples/`.
+
 ### Changed (Stage 1)
 
 - **Personal reference tree moved out of the repo** — the default is now `~/.config/para-files/personal_file_tree.yaml`; `config/personal_file_tree.yaml` is untracked and still used as a fallback when the personal copy is missing. Tests run on the sanitized fixture tree. Two remaining personal identifiers were removed from tracked files.
