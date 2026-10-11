@@ -9,10 +9,10 @@ from __future__ import annotations
 
 import argparse
 import json
-import unicodedata
 from pathlib import Path
 from typing import Any
 
+from para_inventory import nfc, read_jsonl
 from para_files.core.tree import config_dir
 
 
@@ -29,17 +29,21 @@ PCT = (
 COLUMNS = ("n", *PCT, "p50_secs", "p95_secs", "cost_per_1000")
 
 
-def read_jsonl(path: Path) -> list[dict[str, Any]]:
-    """Rows of a JSONL file."""
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
-
-
 def key(path: str) -> str:
     """Join key for paths: NFC, so NFD names from macOS volumes still match."""
-    return unicodedata.normalize("NFC", path)
+    return nfc(path)
+
+
+def _number(value: Any) -> float:
+    """A confidence as a float; a missing (null) value counts as 0.0."""
+    return 0.0 if value is None else float(value)
 
 
 def _quantile(values: list[float], q: float) -> float:
+    """Nearest-rank quantile of sorted values: the value at index int(q * n), capped at n - 1.
+
+    For an even n the median is therefore the upper of the two middle values.
+    """
     return values[min(len(values) - 1, int(q * len(values)))]
 
 
@@ -51,14 +55,14 @@ def _candidates(pred: dict[str, Any]) -> list[str]:
 def curve(rows: list[dict[str, Any]], n: int) -> list[tuple[float, float, float]]:
     """(threshold, precision, coverage of n) at each distinct confidence of decided rows."""
     decided = [r for r in rows if r["pred"].get("leaf")]
-    ranked = sorted(decided, key=lambda r: -float(r["pred"].get("confidence", 0.0)))
+    ranked = sorted(decided, key=lambda r: -_number(r["pred"].get("confidence")))
     points: list[tuple[float, float, float]] = []
     correct = 0
     for index, row in enumerate(ranked, 1):
         correct += row["pred"]["leaf"] == row["gold"]["leaf"]
-        confidence = float(row["pred"].get("confidence", 0.0))
+        confidence = _number(row["pred"].get("confidence"))
         following = ranked[index]["pred"].get("confidence") if index < len(ranked) else None
-        if following is None or float(following) != confidence:
+        if following is None or _number(following) != confidence:
             points.append((confidence, correct / index, index / n))
     return points
 
@@ -99,9 +103,17 @@ def evaluate(golden: list[dict[str, Any]], preds: list[dict[str, Any]]) -> dict[
     """Join predictions to golden rows by NFC path and compute all metrics.
 
     Per-signal metrics are relative to that signal's own rows (used to set its band threshold);
-    top-3 candidates are compared on the overall and per-kind rows.
+    each signal block also reports top-3 over its own rows. The first prediction for a path
+    wins; later ones are counted as duplicates, and predictions with no golden row as unmatched.
     """
-    by_path = {key(p["path"]): p for p in preds}
+    by_path: dict[str, dict[str, Any]] = {}
+    duplicates = 0
+    for pred in preds:
+        if key(pred["path"]) in by_path:
+            duplicates += 1
+        else:
+            by_path[key(pred["path"])] = pred
+    golden_keys = {key(g["path"]) for g in golden}
     rows = [{"gold": g, "pred": by_path.get(key(g["path"]), {"band": "red"})} for g in golden]
     report: dict[str, Any] = {"overall": summarize(rows), "kinds": {}, "signals": {}}
     for kind in sorted({g["kind"] for g in golden}):
@@ -110,6 +122,8 @@ def evaluate(golden: list[dict[str, Any]], preds: list[dict[str, Any]]) -> dict[
         subset = [r for r in rows if r["pred"].get("signal") == signal]
         report["signals"][signal] = {**summarize(subset), "curve": curve(subset, len(subset))}
     report["missing_predictions"] = sum(1 for r in rows if "path" not in r["pred"])
+    report["duplicate_predictions"] = duplicates
+    report["unmatched_predictions"] = sum(1 for k in by_path if k not in golden_keys)
     return report
 
 
@@ -136,6 +150,8 @@ def render(report: dict[str, Any]) -> str:
             cells = " | ".join(_cell(column, stats.get(column)) for column in COLUMNS)
             lines.append(f"| {name} | {cells} |")
     lines.append(f"\nmissing predictions: {report['missing_predictions']}")
+    lines.append(f"duplicate predictions: {report['duplicate_predictions']}")
+    lines.append(f"unmatched predictions: {report['unmatched_predictions']}")
     return "\n".join(lines)
 
 
