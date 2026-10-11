@@ -407,3 +407,27 @@ def test_secret_subfolder_is_dropped_from_the_menu_sent(bakeoff):
     sent = json.dumps(post.calls[0]["json"], ensure_ascii=False)
     assert "wallet_passwords" not in sent
     assert "Telephonie" in sent
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        '{"choices": "inv"}',
+        '{"choices": ["inv"]}',
+        '{"choices": [{"leaf": "inv", "confidence": ' + "9" * 400 + "}]}",
+    ],
+    ids=["non-list-choices", "non-dict-item", "integer-overflow"],
+)
+def test_malformed_choices_raise_the_reply_error(bakeoff, content):
+    with pytest.raises(bakeoff.ReplyError):
+        bakeoff.parse_choices(content, MENU)
+
+
+def test_malformed_choices_keep_the_reply_cost(bakeoff, tmp_path: Path):
+    reply = {"choices": [{"message": {"content": '{"choices": "inv"}'}}], "usage": {"cost": 0.002}}
+    post = FakePost(httpx.Response(200, json=reply))
+    row = {"path": "4_Archives/x/a.pdf", "leaf": "inv", "kind": "record", "scope": "a"}
+    pred = bakeoff.predict(row, tmp_path, MENU, bakeoff.ask_gemini, post, "k", lambda _p: "x")
+    assert pred["cost"] == pytest.approx(0.002)
+    assert pred["leaf"] is None
+    assert "malformed" in pred["error"]

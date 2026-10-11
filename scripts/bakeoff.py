@@ -117,13 +117,26 @@ def parse_choices(text: str | None, menu: dict[str, str]) -> Ranked:
         data = json.loads(match.group(0)) if match else {}
     except json.JSONDecodeError:
         return []
+    choices = data.get("choices", []) if isinstance(data, dict) else []
+    if not isinstance(choices, list):
+        msg = "malformed reply: choices is not a list"
+        raise ReplyError(msg, 0.0)
     ranked: Ranked = []
-    for item in data.get("choices", []) if isinstance(data, dict) else []:
+    for item in choices:
+        if not isinstance(item, dict):
+            msg = "malformed reply: choice is not an object"
+            raise ReplyError(msg, 0.0)
         leaf, confidence = item.get("leaf"), item.get("confidence")
         known = leaf in menu and leaf not in [seen for seen, _ in ranked]
         valid = isinstance(confidence, (int, float)) and not isinstance(confidence, bool)
-        if known and valid and math.isfinite(confidence):
-            ranked.append((leaf, max(0.0, min(1.0, float(confidence)))))
+        if known and valid:
+            try:
+                finite = math.isfinite(confidence)
+            except OverflowError as exc:
+                msg = "malformed reply: confidence out of range"
+                raise ReplyError(msg, 0.0) from exc
+            if finite:
+                ranked.append((leaf, max(0.0, min(1.0, float(confidence)))))
     return ranked[:3]
 
 
@@ -189,7 +202,10 @@ def ask_llm(
     except (KeyError, IndexError, TypeError, AttributeError) as exc:
         msg = f"malformed reply: {type(exc).__name__}"
         raise ReplyError(msg, cost) from exc
-    return parse_choices(content, menu), cost
+    try:
+        return parse_choices(content, menu), cost
+    except ReplyError as exc:
+        raise ReplyError(str(exc), cost) from exc
 
 
 def ask_gemini(
