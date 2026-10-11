@@ -87,6 +87,10 @@ def test_ordinary_names_pass(name):
             "CLIENT_SECRET_FOR_PRODUCTION_ENVIRONMENT_EU_WEST_RELEASE_KEY=abcd1234",
             "credential_value",
         ),
+        ("password:\n  hunter22", "credential_value"),
+        ("Password:\nabcd1234", "credential_value"),
+        ("Password:\r\nabcd1234", "credential_value"),
+        ("password: https://user:pass@host", "credential_value"),
     ],
 )
 def test_secret_content_is_flagged(text, reason):
@@ -101,6 +105,7 @@ def test_secret_content_is_flagged(text, reason):
         "password: abc",
         "Mot de passe oublié ? Cliquez ici",
         "Password:\n\nDear customer, your account is ready",
+        "Password:\nDear customer here",
         "Reset your password: https://example.com/reset",
         "password\n: abcd1234",
         "mdpfoo: abcd1234",

@@ -30,7 +30,8 @@ _TEXT: tuple[tuple[str, re.Pattern[str]], ...] = (
             r"(?:password|passwd|pwd|secret|token|api[_-]?key"
             r"|mots?[^\S\n]+de[^\S\n]+passe|(?<![a-z])mdp(?![a-z])"
             r"|(?<![a-z])identifiants(?![a-z]))"
-            r"[\w.-]{0,60}[\"']?[^\S\n]*[:=][^\S\n]*(?!https?://)\S{4,}",
+            r"[\w.-]{0,60}[\"']?[^\S\n]*"
+            r"[:=][^\S\n]*(?:\r?\n[^\S\n]*)?(?!https?://(?![^\s/]*:[^\s/@]*@))\S{4,}[^\S\n]*$",
             re.IGNORECASE | re.MULTILINE,
         ),
     ),
