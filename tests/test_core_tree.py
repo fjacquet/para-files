@@ -194,3 +194,37 @@ class TestWarnings:
 def test_config_dir_honours_override(monkeypatch, tmp_path):
     monkeypatch.setenv("PARA_FILES_CONFIG_DIR", str(tmp_path))
     assert config_dir() == tmp_path
+
+
+class TestReferenceErrorsNameTheirFile:
+    def test_unknown_leaf_in_rules_names_rules_yaml(self, tmp_path):
+        rules = [{"name": "cv", "leaf": "nope", "globs": ["*cv*"]}]
+        _write(tmp_path, {"career": _leaf()}, rules=rules)
+        with pytest.raises(TreeError, match=r"rules\.yaml: rule 'cv' points to unknown leaf"):
+            load_tree_config(tmp_path)
+
+    def test_duplicate_rule_name_names_rules_yaml(self, tmp_path):
+        rule = {"name": "cv", "leaf": "career", "globs": ["*cv*"]}
+        _write(tmp_path, {"career": _leaf()}, rules=[rule, dict(rule)])
+        with pytest.raises(TreeError, match=r"rules\.yaml: duplicate rule name 'cv'"):
+            load_tree_config(tmp_path)
+
+    def test_unknown_leaf_in_issuers_names_issuers_yaml(self, tmp_path):
+        issuers = {"hp": {"patterns": ["HP"], "leaves": ["nope"]}}
+        _write(tmp_path, {"career": _leaf()}, issuers=issuers)
+        with pytest.raises(TreeError, match=r"issuers\.yaml: issuer 'hp' points to unknown leaf"):
+            load_tree_config(tmp_path)
+
+    def test_duplicate_pattern_names_issuers_yaml(self, tmp_path):
+        issuers = {
+            "a": {"patterns": ["Swisscom"], "leaves": ["career"]},
+            "b": {"patterns": ["swisscom"], "leaves": ["career"]},
+        }
+        _write(tmp_path, {"career": _leaf()}, issuers=issuers)
+        with pytest.raises(TreeError, match=r"issuers\.yaml: pattern 'swisscom'"):
+            load_tree_config(tmp_path)
+
+    def test_unreadable_file_is_a_tree_error_naming_the_file(self, tmp_path):
+        (tmp_path / "tree.yaml").mkdir()  # reading a directory raises an OSError
+        with pytest.raises(TreeError, match=r"tree\.yaml: cannot read"):
+            load_tree_config(tmp_path)

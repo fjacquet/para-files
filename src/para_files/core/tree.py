@@ -172,6 +172,9 @@ def _read_yaml(path: Path) -> dict[str, object]:
     except FileNotFoundError as exc:
         msg = f"{path}: file not found"
         raise TreeError(msg) from exc
+    except OSError as exc:
+        msg = f"{path}: cannot read: {exc}"
+        raise TreeError(msg) from exc
     except UnicodeDecodeError as exc:
         msg = f"{path}: not valid UTF-8: {exc}"
         raise TreeError(msg) from exc
@@ -195,25 +198,28 @@ def _parse[M: BaseModel](model: type[M], path: Path) -> M:
 
 
 def _reference_problems(tree: Tree, rules: RulesFile, issuers: IssuersFile) -> list[str]:
+    """Cross-file problems; each names the file it comes from (rules.yaml or issuers.yaml)."""
     names = [rule.name for rule in rules.rules]
     duplicates = sorted({name for name in names if names.count(name) > 1})
-    problems = [f"duplicate rule name {name!r}" for name in duplicates]
+    problems = [f"rules.yaml: duplicate rule name {name!r}" for name in duplicates]
     problems += [
-        f"rule {rule.name!r} points to unknown leaf {rule.leaf!r}"
+        f"rules.yaml: rule {rule.name!r} points to unknown leaf {rule.leaf!r}"
         for rule in rules.rules
         if rule.leaf not in tree.leaves
     ]
     owner: dict[str, str] = {}
     for name, issuer in issuers.issuers.items():
         problems += [
-            f"issuer {name!r} points to unknown leaf {leaf!r}"
+            f"issuers.yaml: issuer {name!r} points to unknown leaf {leaf!r}"
             for leaf in issuer.leaves
             if leaf not in tree.leaves
         ]
         for pattern in issuer.patterns:
             first = owner.setdefault(pattern.casefold(), name)
             if first != name:
-                problems.append(f"pattern {pattern!r} is used by issuers {first!r} and {name!r}")
+                problems.append(
+                    f"issuers.yaml: pattern {pattern!r} is used by issuers {first!r} and {name!r}"
+                )
     return problems
 
 
