@@ -7,6 +7,7 @@ import signal
 import threading
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
 import httpx
 import pytest
@@ -393,3 +394,16 @@ def test_baseline_option_and_blank_lines(bakeoff, tmp_path: Path, monkeypatch, f
     argv = ["--candidate", "gemini", "--para-root", str(para), "--config-dir", str(cfg)]
     assert bakeoff.main([*argv, "--baseline", str(alt)]) == 0
     assert (cfg / "pred_gemini.jsonl").read_text(encoding="utf-8") == ""  # green: out of scope
+
+
+def test_secret_subfolder_is_dropped_from_the_menu_sent(bakeoff):
+    tree = SimpleNamespace(
+        leaves={
+            "inv": SimpleNamespace(describe="Invoices (contains: wallet_passwords, Telephonie)")
+        }
+    )
+    post = FakePost(_chat('{"choices": [{"leaf": "inv", "confidence": 0.8}]}'))
+    bakeoff.ask_gemini(post, "k", bakeoff.leaf_menu(tree), "a.pdf", "text")
+    sent = json.dumps(post.calls[0]["json"], ensure_ascii=False)
+    assert "wallet_passwords" not in sent
+    assert "Telephonie" in sent

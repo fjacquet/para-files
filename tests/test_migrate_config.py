@@ -623,3 +623,13 @@ def test_merge_into_an_unrelated_name_gets_no_rename_note(load_script):
     migrate.draft_tree([folder], lambda rel: "2_Areas/career", {}, notes)
     assert "merge: 2_Areas/carriere -> 2_Areas/career" in notes
     assert not any("rename on disk" in note for note in notes)
+
+
+def test_secret_subfolder_is_left_out_of_the_describe(load_script):
+    migrate = load_script("migrate_config")
+    folder = migrate.Folder(
+        "4_Archives", "5y_factures", 1, ["wallet_recovery_phrase", "Telephonie", "2024"]
+    )
+    leaf = migrate.propose_leaf(folder, {}, [])
+    assert leaf["describe"] == "5y_factures (contains: Telephonie)"
+    assert "wallet" not in leaf["describe"]

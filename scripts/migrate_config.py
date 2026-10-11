@@ -35,6 +35,7 @@ from para_inventory import (
 )
 
 from para_files.config import default_reference_tree
+from para_files.core.secrets import secret_reason
 from para_files.core.tree import TreeError, config_dir, load_tree_config, validation_warnings
 
 
@@ -117,7 +118,7 @@ def propose_leaf(
     subs = [s.strip() for s in folder.subfolders]
     years = [s for s in subs if YEAR.match(s)]
     year_subkey = "{year}" if subs and len(years) * YEAR_SHARE_DIVISOR >= len(subs) else None
-    others = [s for s in subs if not YEAR.match(s)][:10]
+    others = [s for s in subs if not YEAR.match(s) and not secret_reason(s)][:10]
     describe = folder.name.strip() + (f" (contains: {', '.join(others)})" if others else "")
     leaf: dict[str, Any] = {"path": rel, "describe": describe}
     prefix = retention_of(folder.name)

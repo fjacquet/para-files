@@ -63,9 +63,18 @@ class ReplyError(RuntimeError):
         self.cost = cost
 
 
+def _without_secret_parts(describe: str) -> str:
+    """The describe with every secret-named part of its "(contains: ...)" list left out."""
+    head, marker, tail = describe.partition(" (contains: ")
+    if not marker:
+        return describe
+    kept = [part for part in tail.removesuffix(")").split(", ") if not secret_reason(part)]
+    return f"{head} (contains: {', '.join(kept)})" if kept else head
+
+
 def leaf_menu(tree: Tree) -> dict[str, str]:
-    """Leaf id -> describe, the choice list every candidate sees."""
-    return {leaf_id: leaf.describe for leaf_id, leaf in tree.leaves.items()}
+    """Leaf id -> describe, the choice list every candidate sees (no secret-named folders)."""
+    return {leaf_id: _without_secret_parts(leaf.describe) for leaf_id, leaf in tree.leaves.items()}
 
 
 def evidence_text(name: str, preview: str) -> str:
