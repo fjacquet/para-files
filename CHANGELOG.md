@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0] - 2026-10-11
+
+Stages 3 and 4 of the redesign: a new six-command CLI on the new core, and the old pipeline removed.
+
+### Breaking (migrating from 1.x)
+
+- The old commands are gone. Use `sort`, `explain`, `undo`, `clean`, `tree` and `init` (see `docs/cli/overview.md`).
+- Configuration lives in `~/.config/para-files/`: `tree.yaml`, `rules.yaml` and `issuers.yaml` replace `personal_file_tree.yaml`. Settings are the `PARA_FILES_` names in `.env.example`.
+- `PARA_FILES_PARA_ROOT` is the folder that holds `0_Inbox`, not the inbox itself.
+- No local model (Ollama, MLX). The optional model fallback needs `OPENROUTER_API_KEY`.
+
 ### Fixed
 
 - Book subjects match Thema keywords as whole words, and the most specific match wins: "Tax laws" no longer files a book under cloud computing ("aws"), nor "Fiction" + "Algorithms" a novel under programming languages ("go").
