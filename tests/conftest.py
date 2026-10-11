@@ -25,3 +25,12 @@ def project_root() -> Path:
 def fixtures_dir() -> Path:
     """Return the test fixtures directory."""
     return Path(__file__).parent / "fixtures"
+
+
+FIXTURE_TREE = Path(__file__).parent / "fixtures" / "test_reference_tree.yaml"
+
+
+@pytest.fixture(autouse=True)
+def _sanitized_reference_tree(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Run every test on the sanitized fixture tree, never the owner's personal tree."""
+    monkeypatch.setenv("PARA_FILES_REFERENCE_TREE_PATH", str(FIXTURE_TREE))
