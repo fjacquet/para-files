@@ -23,7 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 
 - **Mission re-grounded** — records file themselves, everything else is suggested. `4_Archives` is defined as the records retention vault ([ADR-012](docs/adr/ADR-012-records-and-para.md), amending ADR-001). The redesign spec gains content kinds, band caps by kind, a secrets guard, per-kind success criteria and the preliminary bake-off results. VISION.md mission and principles updated.
-- **Local AI dropped from the redesign** — in the preliminary bake-off, gemma4 on Ollama was the slowest candidate and less accurate than both cloud models (17% exact, 78 minutes for 206 files, 50 server disconnects). The redesign keeps only cloud candidates with zero data retention (Jev 1.13, Claude Haiku 5.5); Ollama code is removed in Stage 4.
+- **Local AI dropped from the redesign** — in the preliminary bake-off, gemma4 on Ollama was the slowest candidate and less accurate than every cloud model (17% exact, 78 minutes for 206 files, 50 server disconnects). Ollama code is removed in Stage 4.
+- **Signal-4 candidates: Gemini 3.8 Flash > Claude Sonnet 5.5 > Jev 1.13** — the owner's order of preference, which also breaks ties in the Stage 1 bake-off. Every request enforces zero data retention. In the preliminary run, Gemini and Sonnet beat Jev and Haiku 5.5, which is dropped, mostly on knowledge files (51% and 46% exact, against 33%). None beat the old rules on records.
 
 ### Fixed
 

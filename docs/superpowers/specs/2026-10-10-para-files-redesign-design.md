@@ -111,6 +111,8 @@ Read-only inventory of the PARA root (counts only):
 | Candidate | Exact folder | Top-10% most confident: precision | p50 latency | $/1000 files |
 |---|---|---|---|---|
 | Old pipeline, signals 1–3 (semantic and LLM off) | 42% | 40% | 0.19 s | 0 |
+| Claude Sonnet 5.5 (reasoning effort low) | 36% | 85% | 2.1 s | 13.88 |
+| Gemini 3.8 Flash (reasoning effort low) | 34% | 80% | 3.2 s | 4.22 |
 | Jev 1.13 (Decisions API) | 28% | 50% | 0.35 s | 0.22 |
 | Claude Haiku 5.5 (reasoning disabled) | 24% | 55% | 1.9 s | 0.69 |
 | gemma4:e4b (local, Ollama) | 17% | 65% | 24.7 s | 0 |
@@ -119,6 +121,7 @@ Read-only inventory of the PARA root (counts only):
 - No candidate reaches 98% precision at any useful coverage. Even when the old pipeline and Jev agree, 38% of those files are wrong: the labels (today's tree) are the bottleneck, not the model.
 - **With twins merged, by kind (old pipeline):** records 50% → 66% exact and 56% → 75% precision when it decides; knowledge stays at 26–36% for every method. Residual record errors are records pulled into `livres`/`docs` by the book detector and broad rules, retention-class mix-ups (tax filed as invoice), and the extension catch-all.
 - Haiku 5.5 reasons by default and returned empty answers under a 200-token cap until `reasoning: {"enabled": false}` was set.
+- Sonnet 5.5 and Gemini 3.8 Flash reject `reasoning: {"enabled": false}`; they ran with `{"effort": "low"}` and a 4000-token cap, so the comparison with Haiku and Jev is not strictly like for like. With twins merged, both reach 40% exact. On `knowledge` files they reach 46% (Sonnet) and 51% (Gemini), against 33% for Jev and Haiku and 26% for the old pipeline. On records they reach about 36%, against 66% for the old pipeline: records stay with rules and issuers.
 - Mistral was dropped by the owner; nomic embeddings are dropped on this evidence.
 - gemma4:e4b took 78 minutes for the 206 files, and 50 of them failed with the Ollama server disconnecting. Its top-10% figure covers about 20 files. On this evidence the owner dropped local AI (2026-10-11): no local model in the bake-off or in the new core.
 
@@ -313,7 +316,7 @@ class Fallback(Protocol):
 
 Implementations are written only for the bake-off winner. Candidates:
 
-- **LLM via litellm** (Claude Haiku 5.5 on OpenRouter, with `reasoning: {"enabled": false}`): JSON-schema output with an enum of leaf ids; self-reported confidence.
+- **LLM via litellm** (Gemini 3.8 Flash or Claude Sonnet 5.5 on OpenRouter, with `reasoning: {"effort": "low"}`): JSON-schema output with an enum of leaf ids; self-reported confidence.
 - **Jev via OpenRouter Decisions API** (`POST /api/alpha/decisions`, model pinned to `typesafe/jev-1.13`): one `choice` question whose criteria are the leaves' `describe`; returns a probability per leaf. Several questions about the same file can share one request; files are parallelized as separate requests.
 
 Every cloud request carries `provider: {"zdr": true}`, so it fails rather than reach a provider that retains data.
@@ -448,12 +451,12 @@ Reports per signal, per kind and overall: accuracy, green precision, green cover
 
 | Item | Value |
 |---|---|
-| Candidates | Claude Haiku 5.5 (OpenRouter, enum-constrained, reasoning disabled), Jev 1.13 (Decisions API), **no-fallback baseline** (signals 1–3 only). Mistral, nomic-embed-text and gemma4 (local AI) dropped after the preliminary run. |
+| Candidates | In the owner's order of preference: Gemini 3.8 Flash, Claude Sonnet 5.5 (both OpenRouter, enum-constrained, reasoning effort low), Jev 1.13 (Decisions API); plus the **no-fallback baseline** (signals 1–3 only). Mistral, nomic-embed-text, gemma4 (local AI) and Haiku 5.5 dropped after the preliminary run. |
 | Input | identical: evidence text (name, 2000-char preview, archive listing) + leaf list with `describe` |
 | Privacy | `provider: {"zdr": true}` on every cloud request; secrets-guarded files never sent |
 | Code | throwaway, read-only on files |
 | Scope | (a) `record`, `library` and `media` files left undecided by signals 1–3; (b) `knowledge` files as suggestions |
-| Winner | (a) highest green coverage at ≥ 98% precision; (b) highest top-3 hit rate. Ties → cheaper > faster |
+| Winner | (a) highest green coverage at ≥ 98% precision; (b) highest top-3 hit rate. Ties → owner preference: Gemini 3.8 Flash > Sonnet 5.5 > Jev 1.13 |
 | Drop rule | if no candidate adds ≥ 5 points of green coverage on (a) over the baseline and none beats the baseline's suggestions on (b), signal 4 is removed |
 
 Runs:
@@ -461,7 +464,7 @@ Runs:
 1. **Preliminary (done 2026-10-11):** labels were current first-level folders with synonyms merged (`livres`/`books`, `formation`/`formations`, `docs`/`documentation`). Results in §2: the current tree, not the model, limits precision.
 2. **Authoritative (Stage 1):** on canonical leaves and the golden corpus.
 
-Reference prices at time of writing (OpenRouter, USD per million tokens, input/output): Claude Haiku 5.5 0.10/0.50, Jev 1.13 0.042/0. Measured in the preliminary run: Haiku $0.69 and Jev $0.22 per 1000 files with a 103-label list; cost does not decide.
+Reference prices at time of writing (OpenRouter, USD per million tokens, input/output): Gemini 3.8 Flash 0.375/1.875, Claude Sonnet 5.5 2/10, Jev 1.13 0.042/0. Measured in the preliminary run with a 103-label list, per 1000 files: Gemini $4.22, Sonnet $13.88, Jev $0.22 (Haiku $0.69). Cost does not decide.
 
 ---
 
@@ -549,7 +552,7 @@ Exit: S6, S7 pass; source ≈ half of 18.8k lines.
 | Moves | Preview default, sequential apply, containment, no-clobber, `.trash`, JSONL journal, `undo` |
 | CLI | `sort`, `explain`, `undo`, `clean`, `tree`, `init` |
 | Learning | Removed; corrections by editing YAML guided by `explain` |
-| Bake-off | Preliminary run done 2026-10-11 (tree, not model, is the bottleneck); authoritative run in Stage 1 with Haiku 5.5 and Jev 1.13; Mistral, nomic and gemma4 dropped |
+| Bake-off | Preliminary run done 2026-10-11 (tree, not model, is the bottleneck); authoritative run in Stage 1 with Gemini 3.8 Flash, Sonnet 5.5 and Jev 1.13 (owner preference in that order); Mistral, nomic, gemma4 and Haiku 5.5 dropped; GPT-6 Luna excluded (owner does not trust it) |
 | Local AI (2026-10-11) | Dropped: gemma4 17% exact, 78 min for 206 files, 50 server disconnects; Ollama removed in Stage 4 |
 | Mission (2026-10-11) | Records file themselves; everything else is suggested |
 | `4_Archives` (2026-10-11) | Retention vault; legacy twins merged via reviewed, journaled migration |

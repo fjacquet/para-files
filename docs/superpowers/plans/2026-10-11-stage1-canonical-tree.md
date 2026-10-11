@@ -30,7 +30,7 @@
 
 **Spec rules:**
 - Leaf schema exactly as spec §4.1: `kind` (`record|library|media|knowledge`), `retention` (`permanent|ret|10y|5y|2y|ctr`, records only), `path` (bucket + ≤ 2 levels, `1_`–`4_` bucket), `subkey` (≤ 2 of `{year}`, `{month}`, `{issuer}`, `{thema}`), `describe`, `keywords`.
-- Every cloud request carries `"provider": {"zdr": true, "data_collection": "deny"}`. Haiku 5.5 requests carry `"reasoning": {"enabled": false}`. A file for which `secret_reason(...)` returns a value is never sent anywhere.
+- Every cloud request carries `"provider": {"zdr": true, "data_collection": "deny"}`. Gemini 3.8 Flash and Sonnet 5.5 requests carry `"reasoning": {"effort": "low"}` and `max_tokens` 4000 (both reject disabled reasoning). A file for which `secret_reason(...)` returns a value is never sent anywhere.
 - Spec S7: tests never touch the network, Ollama or the owner's real config; use `tmp_path` trees.
 
 **Repo and git hygiene:**
@@ -2915,8 +2915,9 @@ Claude-Session: https://claude.ai/code/session_01TnHHvHPS4t1tVuqpTZiEJx"
   - `para_files.core.tree.Tree`, `config_dir`, `load_tree_config` (Task 2);
   - `para_inventory.nfc` (Task 4).
 - Produces: `scripts/bakeoff.py` with:
-  - `CANDIDATES = {"haiku", "jev"}`, each mapping to `(ask, workers)` (no local model: the owner dropped local AI on 2026-10-11)
-  - `ask_haiku`, `ask_jev`, each `(post, key, menu, name, preview) -> (ranked, cost)`, where `ranked` is a list of `(leaf_id, probability)` pairs, at most 3
+  - `CANDIDATES = {"gemini", "sonnet", "jev"}`, each mapping to `(ask, workers)`. Insertion order is the owner's preference and breaks ties. There is no local model: the owner dropped local AI on 2026-10-11.
+  - `ask_llm(model, post, key, menu, name, preview)`: the shared OpenRouter chat call
+  - `ask_gemini`, `ask_sonnet`, `ask_jev`, each `(post, key, menu, name, preview) -> (ranked, cost)`, where `ranked` is a list of `(leaf_id, probability)` pairs, at most 3
   - `select_scope(golden, baseline) -> list[dict]`
   - `predict(row, para_root, menu, ask, post, key, preview_of) -> dict`
   - `read_preview(path) -> str`, the default `preview_of`
@@ -2968,16 +2969,23 @@ def bakeoff(load_script):
     return load_script("bakeoff")
 
 
-def test_haiku_request_enforces_zdr_and_disables_reasoning(bakeoff):
+@pytest.mark.parametrize(("ask", "model"), [("ask_gemini", "GEMINI"), ("ask_sonnet", "SONNET")])
+def test_llm_request_enforces_zdr_and_low_reasoning(bakeoff, ask, model):
     post = FakePost(_chat('{"choices": [{"leaf": "notes", "confidence": 0.7}]}'))
-    ranked, cost = bakeoff.ask_haiku(post, "k", MENU, "a.pdf", "text")
+    ranked, cost = getattr(bakeoff, ask)(post, "k", MENU, "a.pdf", "text")
     body = post.calls[0]["json"]
+    assert body["model"] == getattr(bakeoff, model)
     assert body["provider"] == {"zdr": True, "data_collection": "deny"}
-    assert body["reasoning"] == {"enabled": False}
+    assert body["reasoning"] == {"effort": "low"}
+    assert body["max_tokens"] == 4000
     schema = body["response_format"]["json_schema"]["schema"]
     assert schema["properties"]["choices"]["items"]["properties"]["leaf"]["enum"] == ["inv", "notes"]
     assert ranked == [("notes", 0.7)]
     assert cost == pytest.approx(0.001)
+
+
+def test_candidates_follow_owner_preference(bakeoff):
+    assert list(bakeoff.CANDIDATES) == ["gemini", "sonnet", "jev"]
 
 
 def test_jev_request_enforces_zdr_and_ranks_probabilities(bakeoff):
@@ -3010,7 +3018,7 @@ def test_secret_named_file_is_never_sent(bakeoff, tmp_path: Path):
 def test_secret_content_is_never_sent(bakeoff, tmp_path: Path):
     row = {"path": "4_Archives/x/key.txt", "leaf": "inv", "kind": "record", "scope": "a"}
     pred = bakeoff.predict(
-        row, tmp_path, MENU, bakeoff.ask_haiku, _never, "k",
+        row, tmp_path, MENU, bakeoff.ask_gemini, _never, "k",
         lambda _p: "-----BEGIN RSA PRIVATE KEY-----\nMIIE",
     )
     assert pred["signal"] == "secret"
@@ -3023,7 +3031,7 @@ def test_unreadable_file_is_still_predicted(bakeoff, tmp_path: Path):
 
     post = FakePost(_chat('{"choices": [{"leaf": "inv", "confidence": 0.8}]}'))
     row = {"path": "4_Archives/x/a.pdf", "leaf": "inv", "kind": "record", "scope": "a"}
-    pred = bakeoff.predict(row, tmp_path, MENU, bakeoff.ask_haiku, post, "k", unreadable)
+    pred = bakeoff.predict(row, tmp_path, MENU, bakeoff.ask_gemini, post, "k", unreadable)
     assert pred["leaf"] == "inv"
     assert pred["top3"] == ["inv"]
     assert "(no text)" in post.calls[0]["json"]["messages"][1]["content"]
@@ -3035,7 +3043,7 @@ def test_rate_limit_is_retried(bakeoff, monkeypatch):
         httpx.Response(429, headers={"Retry-After": "1"}),
         _chat('{"choices": [{"leaf": "inv", "confidence": 0.5}]}'),
     )
-    ranked, _cost = bakeoff.ask_haiku(post, "k", MENU, "a.pdf", "")
+    ranked, _cost = bakeoff.ask_gemini(post, "k", MENU, "a.pdf", "")
     assert ranked == [("inv", 0.5)]
     assert len(post.calls) == 2
 
@@ -3095,9 +3103,13 @@ from para_files.core.secrets import secret_reason
 from para_files.core.tree import Tree, config_dir, load_tree_config
 
 OPENROUTER = "https://openrouter.ai"
-HAIKU = "anthropic/claude-haiku-5.5"
+GEMINI = "google/gemini-3.8-flash"
+SONNET = "anthropic/claude-sonnet-5.5"
 JEV = "typesafe/jev-1.13"
 PRIVACY = {"zdr": True, "data_collection": "deny"}
+# Gemini 3.8 Flash and Sonnet 5.5 reject reasoning.enabled=false; reasoning tokens need room.
+REASONING = {"effort": "low"}
+MAX_TOKENS = 4000
 RETRY_STATUS = frozenset({429, 502, 503, 524, 529})
 SYSTEM = (
     "You file documents into a person's PARA folder tree. Rank the three most likely folder "
@@ -3174,19 +3186,21 @@ def post_with_retry(post: Post, url: str, **kwargs: Any) -> httpx.Response:
     return response
 
 
-def ask_haiku(post: Post, key: str, menu: dict[str, str], name: str, preview: str) -> tuple[Ranked, float]:
-    """Claude Haiku 5.5 via OpenRouter: enum-constrained, reasoning off, ZDR enforced."""
+def ask_llm(
+    model: str, post: Post, key: str, menu: dict[str, str], name: str, preview: str
+) -> tuple[Ranked, float]:
+    """An OpenRouter chat model: enum-constrained, low reasoning effort, ZDR enforced."""
     response = post_with_retry(
         post,
         f"{OPENROUTER}/api/v1/chat/completions",
         timeout=120,
         headers={"Authorization": f"Bearer {key}"},
         json={
-            "model": HAIKU,
+            "model": model,
             "messages": llm_messages(menu, name, preview),
             "temperature": 0,
-            "max_tokens": 400,
-            "reasoning": {"enabled": False},
+            "max_tokens": MAX_TOKENS,
+            "reasoning": REASONING,
             "provider": PRIVACY,
             "usage": {"include": True},
             "response_format": {
@@ -3199,6 +3213,20 @@ def ask_haiku(post: Post, key: str, menu: dict[str, str], name: str, preview: st
     data = response.json()
     cost = float(data.get("usage", {}).get("cost", 0.0) or 0.0)
     return parse_choices(data["choices"][0]["message"].get("content"), menu), cost
+
+
+def ask_gemini(
+    post: Post, key: str, menu: dict[str, str], name: str, preview: str
+) -> tuple[Ranked, float]:
+    """Gemini 3.8 Flash, the owner's first choice."""
+    return ask_llm(GEMINI, post, key, menu, name, preview)
+
+
+def ask_sonnet(
+    post: Post, key: str, menu: dict[str, str], name: str, preview: str
+) -> tuple[Ranked, float]:
+    """Claude Sonnet 5.5, the owner's second choice."""
+    return ask_llm(SONNET, post, key, menu, name, preview)
 
 
 def ask_jev(post: Post, key: str, menu: dict[str, str], name: str, preview: str) -> tuple[Ranked, float]:
@@ -3232,8 +3260,10 @@ def ask_jev(post: Post, key: str, menu: dict[str, str], name: str, preview: str)
     return ranked[:3], float(data.get("usage", {}).get("cost", 0.0) or 0.0)
 
 
+# Insertion order is the owner's preference; it breaks ties between equal results (spec §4.5).
 CANDIDATES: dict[str, tuple[Callable[..., tuple[Ranked, float]], int]] = {
-    "haiku": (ask_haiku, 6),
+    "gemini": (ask_gemini, 6),
+    "sonnet": (ask_sonnet, 6),
     "jev": (ask_jev, 8),
 }
 
@@ -3356,7 +3386,7 @@ uv run python scripts/eval.py --pred ~/.config/para-files/pred_baseline.jsonl
 uv run python scripts/eval.py --pred ~/.config/para-files/pred_jev.jsonl --only-predicted
 ```
 
-Cloud candidates (`jev`, `haiku`) need `OPENROUTER_API_KEY` (or `PARA_FILES_LLM_API_KEY` in `.env`). Every request enforces zero data retention, and secret-looking files are never sent.
+The candidates (`gemini`, `sonnet`, `jev`; owner preference in that order) need `OPENROUTER_API_KEY` (or `PARA_FILES_LLM_API_KEY` in `.env`). Every request enforces zero data retention, and secret-looking files are never sent.
 ````
 
 - [ ] **Step 6: Changelog**
@@ -3364,7 +3394,7 @@ Cloud candidates (`jev`, `haiku`) need `OPENROUTER_API_KEY` (or `PARA_FILES_LLM_
 Under `### Added (Stage 1)` in `CHANGELOG.md`, append:
 
 ```markdown
-- **Bake-off runner** — `scripts/bakeoff.py` runs Jev 1.13 or Claude Haiku 5.5 (reasoning off) over the files the baseline leaves undecided (and over knowledge files as top-3 suggestions). Every cloud request enforces zero data retention, and secret-looking files are never sent.
+- **Bake-off runner** — `scripts/bakeoff.py` runs Gemini 3.8 Flash, Claude Sonnet 5.5 (both at low reasoning effort) or Jev 1.13 over the files the baseline leaves undecided (and over knowledge files as top-3 suggestions). Every cloud request enforces zero data retention, and secret-looking files are never sent.
 ```
 
 - [ ] **Step 7: Commit**
@@ -3440,15 +3470,16 @@ Keep the printed table; Step 8 records it.
 The cloud candidates send each in-scope file's name and first 2000 characters to OpenRouter. ZDR is enforced per request and secret-looking files stay local. The owner consented to this for the bake-off.
 
 ```bash
+uv run python scripts/bakeoff.py --candidate gemini --para-root "$PARA"
+uv run python scripts/bakeoff.py --candidate sonnet --para-root "$PARA"
 uv run python scripts/bakeoff.py --candidate jev --para-root "$PARA"
-uv run python scripts/bakeoff.py --candidate haiku --para-root "$PARA"
-for c in jev haiku; do uv run python scripts/eval.py --pred ~/.config/para-files/pred_$c.jsonl --only-predicted; done
+for c in gemini sonnet jev; do uv run python scripts/eval.py --pred ~/.config/para-files/pred_$c.jsonl --only-predicted; done
 ```
 
 - [ ] **Step 7: Apply the spec's winner and drop rules**
 
 Spec §4.5 defines both rules:
-- **Scope (a), winner:** the highest `max_coverage_at_98` on record/library/media files. Ties go to the cheaper, then the faster.
+- **Scope (a), winner:** the highest `max_coverage_at_98` on record/library/media files. Ties follow the owner's preference: Gemini 3.8 Flash, then Sonnet 5.5, then Jev 1.13.
 - **Scope (b), winner:** the highest `top3_hit` on knowledge files.
 - **Drop rule:** if no candidate adds ≥ 5 points of green coverage on (a) over the baseline, and none beats the baseline on (b), signal 4 is removed.
 
