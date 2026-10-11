@@ -103,6 +103,7 @@ Read-only inventory of the PARA root (counts only):
 - **Libraries and media:** `livres` (~4.3k, Thema), `docs` + `documentation` (~11k vendor docs), `formations` (~2.9k); `4_Archives/photos` (~26k) and `videos` (~3.7k).
 - **Secrets on disk:** a credentials folder under `2_Areas/IT` and secret-named files in `0_Inbox`.
 - **Real inbox:** 110 files; 29 belong to 8 recurring families (payslips 16, card invoices 3, vendor decks).
+- **Full scan (2026-10-11), the five buckets:** about 71k files (`0_Inbox` 111, `1_Projets` 6.8k, `2_Areas` 1.2k, `3_Resources` 19k, `4_Archives` 43.7k). 13 literal placeholder folders (`{issuer}`, `{vendor}`, `{year}`, `{technology}`, `{document_type}`) hold 348 files; 74 names start with a space, 15 of them books named `" - Title (Year)"` by the old rename when the author was empty; 131 folders are empty. Below level 1, case and separator variants exist (for example one bank's three spellings). Top-level folders outside the five buckets are special and out of scope.
 
 ### Preliminary bake-off (2026-10-11)
 
@@ -257,6 +258,37 @@ Glob matching is case-insensitive (removes 28 case-variant duplicates).
 4. Emit `tree.yaml`, `rules.yaml`, `issuers.yaml`, pruning dead rules, shadowed rules, `*_v2` copies and short substring globs.
 
 Files already filed under old paths reach their canonical leaves through the normal re-org flow (`sort` over `3_`/`4_`, see 4.4).
+
+#### Tree cleanup policy (batches, on demand)
+
+The existing tree is reorganized in batches when needed, never in one run. One batch is one complete folder or group; quick wins go first; each batch is previewed, applied through the journaled executor (Stage 2) and can be undone. The owner picks when each batch runs. The first real `sort` run is `0_Inbox`.
+
+**Invariant:** a retention prefix is part of a folder's identity at every depth. `config/documents.json` gives one retention per document type (`10y_` CO art. 127, `5y_` CO art. 128, `2y_` warranty, `ctr_` contract duration + 5 years, `ret_` retirement, no prefix = permanent), so name-based rules (R4–R6) never merge two different prefixes. Only R3 changes a prefix, and only one the taxonomy does not define for that stem. Only `factures` (2y/5y/ctr), `administratif` (5y/ret) and `mobilite` (5y/ctr) are split by document type on purpose.
+
+| # | Rule |
+|---|---|
+| R1 | An unprefixed `4_Archives` folder whose stem has a single retention folds into its prefixed twin |
+| R2 | Legacy unprefixed content of a split stem (`factures`, `administratif`, `mobilite`) is doubtful: it goes back to `0_Inbox` |
+| R3 | A prefix the taxonomy does not define for a stem folds into the taxonomy's prefix (for example `5y_travail` → `10y_travail`) |
+| R4 | Name variants (case, accents, separators, plural, padding; prefix kept) fold into the member with the most files |
+| R5 | Synonyms: `docs`/`documentation`, `livres`/`books`, `formation`/`formations` |
+| R6 | R4 applied recursively below level 1, outside `1_Projets` (owner-filed, may hold code repositories) |
+| R7 | Padding trimmed; a leading `" - "` stripped |
+| R8 | Content of literal placeholder folders goes back to `0_Inbox` |
+| R9 | Retention-prefixed folders outside `4_Archives`: records go to the vault (`4_Archives/<prefix>_<name>`); media drop the prefix |
+| R10 | Empty folders: handled later, not part of the batches |
+| R11 | Same name in several buckets: reported only (PARA allows the same topic in Areas, Resources and Archives) |
+| R12 | Any other doubtful file goes back to `0_Inbox` (for example a book found in a bank folder) |
+
+A file sent back goes to `0_Inbox/<source folder>/…` with its relative path kept: the batch stays together, the old path stays as evidence for the classifier, and names cannot collide. The normal inbox sort then files it.
+
+| Batch | Content | Files |
+|---|---|---|
+| Quick wins | single-retention twins of 35 files or fewer, the 1-file synonym and prefix fixes, case variants under `docs` | ≈170 |
+| Back to inbox (small) | the 13 placeholder folders, legacy `administratif` and `mobilite`, misfiled items | ≈410 |
+| Medium | twins of 60–100 files, one bank's three spellings, the padded names | ≈600 |
+| Large, on demand | `travail`, `documentation` → `docs`, `banques` | ≈4.5k |
+| Back to inbox (large, on demand) | legacy `factures`, possibly split by subfolder | ≈2.3k |
 
 ### 4.2 Pipeline
 
@@ -490,9 +522,8 @@ Exit: tests for each fix pass; existing suite green.
 2. Remove personal config and identifiers from tracked files; add sanitized `examples/`.
 3. `golden.jsonl` + `scripts/eval.py` (per-kind metrics); baseline the old pipeline.
 4. Authoritative bake-off → choose signal 4 (or drop it).
-5. **Tree-cleanup plan (generator only):** a reviewable JSONL/CSV of moves that folds legacy twins into their prefixed folders, renames the literal `{technology}`/`{year}` folders and trims trailing spaces. Nothing is applied in Stage 1; applying needs the Stage 2 journal and `undo`.
 
-Exit: owner-approved tree; eval baseline recorded; signal 4 decision recorded; tree-cleanup plan reviewed by the owner.
+Exit: owner-approved tree; eval baseline recorded; signal 4 decision recorded.
 
 ### Stage 2 — New core (alongside the old pipeline)
 
@@ -500,11 +531,15 @@ Evidence extractor with the secrets guard; signals 1–4 on leaf ids; bands with
 
 Exit: S1, S2, S4, S5, S8 pass.
 
+### Batch reorganization (on demand, from Stage 2)
+
+`scripts/plan_tree_cleanup.py --scope <bucket/folder>` writes a reviewable JSONL for one complete folder or group, following the tree cleanup policy (§4.1). The owner reviews it; the Stage 2 executor applies it with a journal and `undo`. Quick wins first. Not an exit criterion of any stage.
+
 ### Stage 3 — CLI cut-over
 
-Six commands; old commands and modules deleted; apply the reviewed tree-cleanup plan (twin merge) through the journaled executor; PARA re-org (`sort` over `3_`/`4_`: preview → apply, bucket by bucket, with `undo` available).
+Six commands; old commands and modules deleted; the first real `sort` run is `0_Inbox`; the existing tree is reorganized in batches on demand (see Batch reorganization).
 
-Exit: S3 measured on a real inbox; re-org completed or explicitly paused.
+Exit: S3 measured on a real inbox.
 
 ### Stage 4 — Purge
 
@@ -532,11 +567,11 @@ Exit: S6, S7 pass; source ≈ half of 18.8k lines.
 |---|---|
 | Jev Decisions API is alpha (`/api/alpha/`) | Pin `typesafe/jev-1.13`; `Fallback` protocol isolates it; bake-off includes non-Jev candidates |
 | Golden labels inherit inconsistent historical placement | Owner reviews the mapping; ambiguous folders excluded |
-| Re-org moves many files on a synced volume | Preview first; apply bucket by bucket; journal + `undo`; `.trash` on the same volume |
+| Re-org moves many files on a synced volume | Preview first; apply batch by batch; journal + `undo`; `.trash` on the same volume |
 | Precedence fix flips `para_root` | Ships together with the `.env` correction (Stage 2) |
 | Cloud fallback sends document text off the machine | `provider: {"zdr": true}` on every request; secrets guard; drop rule may remove signal 4 entirely |
 | No local model: offline or OpenRouter outage silences signal 4 | Signals 1–3 run locally and still decide records, books and media; undecided files stay in place as yellow/red |
-| Twin merge moves thousands of archived files | Plan-only in Stage 1; owner reviews it; applied in Stage 3 through the journal with `undo`, folder by folder |
+| Reorganization moves thousands of archived files | Batches on demand, one complete folder at a time, quick wins first; preview; journal + `undo`; doubtful files go back to `0_Inbox` |
 | Personal identifiers remain in public git history | Owner decided (2026-10-11): the repo stays public and history is not rewritten; new content is checked for identifiers before each push |
 
 ---
@@ -559,3 +594,9 @@ Exit: S6, S7 pass; source ≈ half of 18.8k lines.
 | Content kinds (2026-10-11) | `record`, `library`, `media`, `knowledge`; `knowledge` never green |
 | Secrets (2026-10-11) | Secret-flagged files are never sent off-machine and never moved |
 | Repo visibility (2026-10-11) | Stays public; history not rewritten |
+| Working order (2026-10-11) | Inbox first; the existing tree is reorganized in batches on demand, quick wins first |
+| Doubtful files (2026-10-11) | Go back to `0_Inbox` (placeholder folders, split-stem legacy content, misfiled items) |
+| Retention overlap (2026-10-11) | None: a retention prefix is part of a folder's identity; only `factures`, `administratif`, `mobilite` are split by document type |
+| Special top-level folders (2026-10-11) | Folders outside the five buckets are out of scope |
+| Prefixes outside `4_Archives` (2026-10-11) | Records move to the vault; media drop the prefix |
+| Empty folders (2026-10-11) | Handled later |

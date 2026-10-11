@@ -24,7 +24,7 @@
 - After writing code in any task, run `uv run ruff check --fix src/ tests/` and `uv run ruff format src/ tests/ scripts/` before the checks. They may re-order imports and re-wrap the code shown here; that is expected.
 
 **Personal data and the PARA root:**
-- Personal data lives only in `config_dir()` (`$PARA_FILES_CONFIG_DIR`, else `~/.config/para-files`). That covers `tree.yaml`, `rules.yaml`, `issuers.yaml`, `golden.jsonl`, `pred_*.jsonl`, `cleanup-plan.jsonl` and `draft/`.
+- Personal data lives only in `config_dir()` (`$PARA_FILES_CONFIG_DIR`, else `~/.config/para-files`). That covers `tree.yaml`, `rules.yaml`, `issuers.yaml`, `golden.jsonl`, `pred_*.jsonl` and `draft/`.
 - Never write these into the repo or commit them.
 - Every Stage 1 script is read-only on the PARA root. A script refuses an output path inside the PARA root.
 
@@ -47,7 +47,7 @@
 **Deliberately not in this plan:**
 - the shadowed-glob warning: it belongs to Stage 3's `tree --validate`;
 - case-insensitive glob matching: it belongs to Stage 2's rule signal;
-- applying the cleanup plan: Stage 3, through the journal.
+- the tree-cleanup generator and the reorganization of the existing tree: batches on demand after Stage 2, following the spec's tree cleanup policy (§4.1). Task 5 is intentionally empty.
 
 ## Review Focus
 
@@ -55,9 +55,10 @@ Failure modes the spec implies but no feature test exercises, most likely first.
 
 1. **NFD names from macOS/SMB volumes.** Folder and file names compared against NFC strings (documents.json, golden paths) must still match, never fail silently. Tests: Task 4 (NFD folder becomes a leaf), Task 7 (NFD golden path joins an NFC prediction).
 2. **Huge folders** (tens of thousands of photos). Counting and sampling stop at a cap, so a run takes minutes, not hours. Tests: Task 4 (`count_files` cap), Task 6 (`WALK_CAP`).
-3. **Symlinked folders inside PARA pointing outside.** Never followed, never planned. Test: Task 5.
+3. **Symlinked folders inside PARA pointing outside.** Never followed, never planned. Test: Task 4 (`scan_folders` skips symlinked folders).
 4. **Unreadable or online-only files.** One bad file never stops a run. Tests: Task 8 (classifier raises → red row), Task 9 (preview raises → still predicted).
 5. **Secrets inside PARA.** Never sampled into the golden corpus, never sent to a cloud model. Tests: Task 6, Task 9.
+6. **Retention prefixes never merge.** `2y_x`, `5y_x` and `ctr_x` stay three folders at every depth; only an unprefixed legacy folder or a stray prefix is remapped. Test: Task 4.
 
 ---
 
@@ -1008,14 +1009,16 @@ Claude-Session: https://claude.ai/code/session_01TnHHvHPS4t1tVuqpTZiEJx"
   - `para_files.core.tree.config_dir`, `load_tree_config`, `validation_warnings` (Task 2)
   - `para_files.config.default_reference_tree` (Task 1)
 - Produces:
-  - **`scripts/para_inventory.py`:**
-    - `BUCKETS`, `RETENTION_PREFIX`, `SYNONYMS`, `COUNT_CAP`
+  - **`scripts/para_inventory.py`** (spec §4.1 "Tree cleanup policy", rules R1–R5 and R9; doubtful folders map to `INBOX`):
+    - `BUCKETS` (`1_Projets`–`4_Archives`; other top-level folders are never read), `ARCHIVES`, `INBOX`, `RETENTION_PREFIX`, `SYNONYMS`, `MEDIA`, `LIBRARY`, `COUNT_CAP`
     - `nfc(text) -> str`, `strip_prefix(name) -> str`, `retention_of(name) -> str | None`
-    - `@dataclass Folder(bucket, name, files, subfolders)` with property `rel`
+    - `name_key(name) -> str` (variant key, prefix kept), `stem_key(name) -> str` (prefix dropped; twins and stray prefixes only)
+    - `@dataclass Folder(bucket, name, files, subfolders)` with properties `rel` and `trimmed`
     - `count_files(root, cap=COUNT_CAP) -> int`
     - `scan_folders(para_root, buckets=BUCKETS) -> list[Folder]`
-    - `canonical_map(folders) -> dict[str, str]`
-    - `make_canon(folders) -> Callable[[str], str]`
+    - `retentions_by_stem(documents) -> dict[str, set[str]]` (the taxonomy from `documents.json`)
+    - `canonical_map(folders, taxonomy=None) -> dict[str, str]`
+    - `make_canon(folders, taxonomy=None) -> Callable[[str], str]`
   - **`scripts/migrate_config.py`:** `main(argv: list[str] | None = None) -> int`. It writes `tree.yaml`, `rules.yaml`, `issuers.yaml` and `review.md` into `--out` (default `config_dir()/"draft"`).
   - **Fixtures in `tests/conftest.py`:**
     - `load_script` → `Callable[[str], ModuleType]`
@@ -1102,6 +1105,12 @@ def para(tmp_path: Path) -> Path:
         "4_Archives/5y_factures/2024/b.pdf",
         "4_Archives/5y_factures/2025/c.pdf",
         "4_Archives/2y_factures/d.pdf",
+        "4_Archives/ctr_factures/e.pdf",
+        "4_Archives/travail/2019/p.pdf",
+        "4_Archives/10y_travail/2020/q.pdf",
+        "4_Archives/10y_travail/2021/q.pdf",
+        "4_Archives/5y_travail/{year}/r.pdf",
+        "4_Archives/ret_prevoyance/lpp.pdf",
         "4_Archives/photos/2020/x.jpg",
         "4_Archives/evernote/note.enex",
         "3_Resources/docs/one.pdf",
@@ -1109,7 +1118,17 @@ def para(tmp_path: Path) -> Path:
         "3_Resources/documentation/three.pdf",
         "3_Resources/livres/book.epub",
         "3_Resources/administratif/identite/passport.pdf",
+        "3_Resources/ret_prevoyance/avs.pdf",
+        "3_Resources/prevoyance/avs-old.pdf",
+        "3_Resources/5y_screenshots/s1.png",
+        "3_Resources/5y_screenshots/s2.png",
+        "3_Resources/screenshots/s3.png",
         "2_Areas/carriere/cv.pdf",
+        "2_Areas/sante/a.txt",
+        "2_Areas/sante/b.txt",
+        "2_Areas/santé/c.txt",
+        "1_Projets/alpha/readme.md",
+        "5_others/kept.txt",
         "0_Inbox/2026-01-23_acme_facture.pdf",
         "0_Inbox/2026-02-23_acme_facture.pdf",
         "0_Inbox/random.txt",
@@ -1124,57 +1143,69 @@ def legacy(tmp_path: Path) -> Path:
         "phone": {
             "patterns": ["*swisscom*"],
             "extensions": [".pdf"],
-            "destination": "4_Archives/factures/Telephonie/{YYYY}",
+            "destination": "4_Archives/5y_factures/Telephonie/{YYYY}",
         },
-        "phone_v2": {"patterns": ["*swisscom*"], "destination": "4_Archives/factures"},
+        "phone_v2": {"patterns": ["*swisscom*"], "destination": "4_Archives/5y_factures"},
         "vmware_docs": {
             "patterns": ["*vmware*"],
             "destination": "3_Resources/documentation/{technology}",
             "known_vendors": ["VMware", "Broadcom"],
         },
+        "old_bills": {"patterns": ["*bill*"], "destination": "4_Archives/factures"},
         "photos": {"extensions": [".jpg"], "destination": "4_Archives/photos/{YYYY}"},
         "tiny": {"patterns": ["*ab*", "*cv*.pdf"], "destination": "2_Areas/carriere"},
         "nowhere": {"patterns": ["*zzz*"], "destination": "9_Nowhere/x"},
         "flatten": {"patterns": ["*tmp*"], "action": "flatten_to_inbox"},
     }
     path = tmp_path / "legacy.yaml"
-    path.write_text(yaml.safe_dump({"routing_rules": rules}))
+    path.write_text(yaml.safe_dump({"routing_rules": rules}, sort_keys=False))
     return path
+
+
+def _doc(sub_id: str, retention: str, pattern: str, **extra: object) -> dict[str, object]:
+    return {
+        "sub_id": sub_id,
+        "name": sub_id,
+        "examples": [],
+        "keywords": [],
+        "retention": retention,
+        "paper_required": False,
+        "para_pattern": pattern,
+        **extra,
+    }
 
 
 @pytest.fixture
 def documents(tmp_path: Path) -> Path:
-    telecom = {
-        "sub_id": "telecom",
-        "name": "Telecom",
-        "examples": [],
-        "keywords": ["facture"],
-        "retention": "5_years",
-        "paper_required": False,
-        "para_pattern": "4_Archives/5y_factures/{issuer}/{year}",
-        "issuers": [
-            {"name": "Swisscom", "patterns": ["Swisscom"]},
-            {"name": "Salt", "patterns": ["Salt Mobile", "swisscom"]},
-        ],
-    }
-    identity = {
-        "sub_id": "id",
-        "name": "ID",
-        "examples": [],
-        "keywords": [],
-        "retention": "permanent",
-        "paper_required": True,
-        "para_pattern": "3_Resources/administratif/identite",
-    }
+    issuers = [
+        {"name": "Swisscom", "patterns": ["Swisscom"]},
+        {"name": "Salt", "patterns": ["Salt Mobile", "swisscom"]},
+    ]
+    invoices = [
+        _doc("telecom", "5_years", "4_Archives/5y_factures/{issuer}/{year}", issuers=issuers),
+        _doc("warranty", "warranty_2_years", "4_Archives/2y_factures/{issuer}/{year}"),
+        _doc("tenant", "contract_duration", "4_Archives/ctr_factures/{issuer}"),
+    ]
+    other = [
+        _doc("payslips", "10_years", "4_Archives/10y_travail/{issuer}/{year}"),
+        _doc("id", "permanent", "3_Resources/administratif/identite"),
+    ]
     data = {
         "categories": [
-            {"id": "A", "name": "Telecom", "description": "", "documents": [telecom]},
-            {"id": "B", "name": "Identity", "description": "", "documents": [identity]},
+            {"id": "A", "name": "Invoices", "description": "", "documents": invoices},
+            {"id": "B", "name": "Other", "description": "", "documents": other},
         ]
     }
     path = tmp_path / "documents.json"
     path.write_text(json.dumps(data))
     return path
+
+
+@pytest.fixture
+def mapping(load_script, para, documents):
+    inventory = load_script("para_inventory")
+    taxonomy = inventory.retentions_by_stem(json.loads(documents.read_text()))
+    return inventory.canonical_map(inventory.scan_folders(para), taxonomy)
 
 
 @pytest.fixture
@@ -1194,35 +1225,82 @@ class TestInventory:
             _touch(tmp_path, f"many/{index}.jpg")
         assert inventory.count_files(tmp_path / "many", cap=5) == 5
 
-    def test_canonical_map_folds_twins_and_synonyms(self, load_script, para):
+    def test_only_buckets_are_scanned_and_symlinks_are_skipped(self, load_script, para, tmp_path):
+        _touch(tmp_path, "outside/secret.txt")
+        (para / "3_Resources/linked").symlink_to(tmp_path / "outside", target_is_directory=True)
         inventory = load_script("para_inventory")
-        mapping = inventory.canonical_map(inventory.scan_folders(para))
-        assert mapping["4_Archives/factures"] == "4_Archives/5y_factures"
-        assert mapping["4_Archives/2y_factures"] == "4_Archives/2y_factures"
+        rels = {folder.rel for folder in inventory.scan_folders(para)}
+        assert "1_Projets/alpha" in rels
+        assert "3_Resources/linked" not in rels
+        assert not any(rel.startswith(("0_Inbox", "5_others")) for rel in rels)
+
+    def test_retention_prefixes_never_merge(self, mapping):
+        for prefix in ("2y", "5y", "ctr"):
+            assert mapping[f"4_Archives/{prefix}_factures"] == f"4_Archives/{prefix}_factures"
+
+    def test_split_stem_legacy_folder_is_doubtful(self, mapping):
+        assert mapping["4_Archives/factures"] == "0_Inbox"
+
+    def test_twin_and_stray_prefix_fold_into_the_taxonomy_prefix(self, mapping):
+        assert mapping["4_Archives/travail"] == "4_Archives/10y_travail"
+        assert mapping["4_Archives/5y_travail"] == "4_Archives/10y_travail"
+        assert mapping["4_Archives/10y_travail"] == "4_Archives/10y_travail"
+
+    def test_name_variants_fold_into_the_largest(self, mapping):
+        assert mapping["2_Areas/santé"] == "2_Areas/sante"
+        assert mapping["2_Areas/sante"] == "2_Areas/sante"
+
+    def test_synonyms_fold_into_the_larger(self, mapping):
         assert mapping["3_Resources/documentation"] == "3_Resources/docs"
         assert mapping["2_Areas/carriere"] == "2_Areas/carriere"
+
+    def test_prefixes_outside_archives(self, mapping):
+        assert mapping["3_Resources/ret_prevoyance"] == "4_Archives/ret_prevoyance"
+        assert mapping["3_Resources/prevoyance"] == "4_Archives/ret_prevoyance"
+        assert mapping["3_Resources/5y_screenshots"] == "3_Resources/screenshots"
+        assert mapping["3_Resources/screenshots"] == "3_Resources/screenshots"
+
+    def test_canon_resolves_unknown_paths_by_variant_and_synonym(self, load_script, para):
+        inventory = load_script("para_inventory")
+        canon = inventory.make_canon(inventory.scan_folders(para))
+        assert canon("3_Resources/books") == "3_Resources/livres"
+        assert canon("3_Resources/Documentation") == "3_Resources/docs"
+        assert canon("9_Nowhere/x") == "9_Nowhere/x"
 
 
 class TestDraftTree:
     def test_draft_is_valid_and_kinds_are_proposed(self, draft):
         leaves = load_tree_config(draft).tree.leaves
-        assert "archives_factures" not in leaves
-        assert "resources_documentation" not in leaves
+        for absent in (
+            "archives_factures",
+            "archives_travail",
+            "archives_5y_travail",
+            "resources_documentation",
+            "resources_ret_prevoyance",
+            "resources_5y_screenshots",
+        ):
+            assert absent not in leaves
         invoices = leaves["archives_5y_factures"]
         assert (invoices.kind, invoices.retention) == ("record", "5y")
         assert invoices.subkey == "{issuer}/{year}"
         assert leaves["archives_2y_factures"].retention == "2y"
+        assert leaves["archives_ctr_factures"].retention == "ctr"
+        assert leaves["archives_10y_travail"].retention == "10y"
+        assert leaves["archives_ret_prevoyance"].retention == "ret"
         assert leaves["resources_docs"].kind == "library"
         assert leaves["resources_livres"].subkey == "{thema}"
+        assert leaves["resources_screenshots"].kind == "media"
         assert leaves["archives_photos"].kind == "media"
         identity = leaves["resources_administratif"]
         assert (identity.kind, identity.retention) == ("record", "permanent")
         assert leaves["archives_evernote"].retention == "permanent"
         assert leaves["areas_carriere"].kind == "knowledge"
+        assert leaves["projects_alpha"].kind == "knowledge"
+        assert not any(leaf.path.startswith("5_others") for leaf in leaves.values())
 
     def test_nfd_folder_names_become_nfc_leaves(self, load_script, tmp_path, legacy, documents):
         root = tmp_path / "PARA"
-        _touch(root, "2_Areas/matière/notes.txt")
+        _touch(root, "2_Areas/matière/notes.txt")
         out = tmp_path / "nfd-draft"
         migrate = load_script("migrate_config")
         argv = ["--para-root", str(root), "--legacy-tree", str(legacy)]
@@ -1240,7 +1318,7 @@ class TestDraftRules:
         assert rules["vmware_docs"].leaf == "resources_docs"
         assert rules["photos"].globs == ("*.jpg",)
         assert rules["tiny"].globs == ("*cv*.pdf",)
-        assert {"phone_v2", "nowhere", "flatten"}.isdisjoint(rules)
+        assert {"phone_v2", "old_bills", "nowhere", "flatten"}.isdisjoint(rules)
 
     def test_extension_only_rules_come_last(self, draft):
         names = [rule.name for rule in load_tree_config(draft).rules.rules]
@@ -1257,9 +1335,11 @@ class TestDraftIssuers:
 
 
 class TestReview:
-    def test_review_lists_merges_conflicts_and_inbox_families(self, draft):
+    def test_review_lists_merges_doubtful_conflicts_and_inbox_families(self, draft):
         review = (draft / "review.md").read_text()
-        assert "4_Archives/factures -> 4_Archives/5y_factures" in review
+        assert "merge: 4_Archives/5y_travail -> 4_Archives/10y_travail" in review
+        assert "doubtful: 4_Archives/factures -> 0_Inbox" in review
+        assert "rule old_bills: destination 4_Archives/factures is doubtful" in review
         assert "already used by swisscom" in review
         assert "acme facture.pdf: 2 files" in review
         assert "random" not in review
@@ -1290,9 +1370,12 @@ Expected: FAIL with `FileNotFoundError` (no `scripts/para_inventory.py` yet).
 - [ ] **Step 4: Implement `scripts/para_inventory.py`**
 
 ```python
-"""Read-only inventory of a PARA tree, shared by the Stage 1 scripts.
+"""Inventory of the PARA buckets and the canonical folder map (Stage 1, read-only).
 
-Never writes anything under the PARA root.
+Each first-level folder maps to its canonical folder, or to INBOX when it is doubtful
+(spec §4.1 "Tree cleanup policy": doubtful content goes back to 0_Inbox in a later batch).
+A retention prefix is part of a folder's identity: name-based rules never merge two
+different prefixes; only a prefix the taxonomy does not define for a stem is remapped.
 """
 
 from __future__ import annotations
@@ -1300,13 +1383,34 @@ from __future__ import annotations
 import os
 import re
 import unicodedata
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
-BUCKETS = ("2_Areas", "3_Resources", "4_Archives")
+
+BUCKETS = ("1_Projets", "2_Areas", "3_Resources", "4_Archives")
+ARCHIVES = "4_Archives"
+INBOX = "0_Inbox"
 RETENTION_PREFIX = re.compile(r"^(\d+y|ret|ctr)_")
 SYNONYMS = (("livres", "books"), ("formation", "formations"), ("docs", "documentation"))
+MEDIA = frozenset({"photos", "videos", "media", "screenshots"})
+LIBRARY = frozenset(
+    {
+        "livres",
+        "books",
+        "docs",
+        "documentation",
+        "formation",
+        "formations",
+        "certifications",
+        "courses-completed",
+        "licences",
+        "isos",
+        "programmes",
+    }
+)
 COUNT_CAP = 5000
 
 
@@ -1326,6 +1430,19 @@ def retention_of(name: str) -> str | None:
     return match.group(1) if match else None
 
 
+def name_key(name: str) -> str:
+    """Variant key: case, accents, separators, plural and padding folded; prefix KEPT."""
+    text = unicodedata.normalize("NFKD", nfc(name).strip().lower())
+    text = "".join(char for char in text if not unicodedata.combining(char))
+    text = re.sub(r"[\s_\-.]+", " ", text).strip()
+    return re.sub(r"(?<=\w\w)[sx]$", "", text)
+
+
+def stem_key(name: str) -> str:
+    """name_key without the retention prefix; only used to find twins and stray prefixes."""
+    return name_key(RETENTION_PREFIX.sub("", nfc(name).strip()))
+
+
 @dataclass
 class Folder:
     """A first-level folder of a PARA bucket."""
@@ -1340,6 +1457,11 @@ class Folder:
         """bucket/name as on disk (NFC)."""
         return f"{self.bucket}/{self.name}"
 
+    @property
+    def trimmed(self) -> str:
+        """bucket/name with the padding removed."""
+        return f"{self.bucket}/{self.name.strip()}"
+
 
 def count_files(root: Path, cap: int = COUNT_CAP) -> int:
     """Count non-hidden files under root, stopping at cap; never follows symlinks."""
@@ -1353,7 +1475,7 @@ def count_files(root: Path, cap: int = COUNT_CAP) -> int:
 
 
 def scan_folders(para_root: Path, buckets: tuple[str, ...] = BUCKETS) -> list[Folder]:
-    """First-level folders of each bucket with capped file counts and subfolder names."""
+    """First-level folders of each bucket; other top-level folders are never read."""
     folders: list[Folder] = []
     for bucket in buckets:
         base = para_root / bucket
@@ -1371,44 +1493,106 @@ def scan_folders(para_root: Path, buckets: tuple[str, ...] = BUCKETS) -> list[Fo
     return folders
 
 
-def canonical_map(folders: list[Folder]) -> dict[str, str]:
-    """Map each folder's rel path (as on disk) to its canonical, trimmed rel path.
+def retentions_by_stem(documents: dict[str, Any]) -> dict[str, set[str]]:
+    """Archive stem -> retention prefixes documents.json files it under (the taxonomy)."""
+    found: dict[str, set[str]] = {}
+    for category in documents.get("categories", []):
+        for doc in category.get("documents", []):
+            parts = (doc.get("para_pattern") or "").split("/")
+            prefix = retention_of(parts[1]) if len(parts) > 1 and parts[0] == ARCHIVES else None
+            if prefix:
+                found.setdefault(stem_key(parts[1]), set()).add(prefix)
+    return found
 
-    - Legacy twin: an unprefixed folder with prefixed siblings of the same stripped name
-      folds into the prefixed sibling with the most files.
-    - Synonyms: the two members of a SYNONYMS pair fold into the one with more files.
-    """
+
+def _group_targets(
+    bucket: str, stem: str, group: list[Folder], taxonomy: dict[str, set[str]]
+) -> dict[str, str]:
+    """Targets for one (bucket, stem) group of folders."""
+    reps: dict[str, Folder] = {}
+    for folder in sorted(group, key=lambda f: (-f.files, f.name)):
+        reps.setdefault(name_key(folder.name), folder)  # R4: variants fold into the largest
+    rep_target = {key: rep.trimmed for key, rep in reps.items()}
+    prefixed = [rep for rep in reps.values() if retention_of(rep.name)]
+    plain = [rep for rep in reps.values() if not retention_of(rep.name)]
+    if bucket != ARCHIVES and prefixed:  # R9: retention prefixes belong to the vault
+        largest = max(prefixed, key=lambda f: f.files)
+        if strip_prefix(largest.name) in MEDIA | LIBRARY:
+            bare = RETENTION_PREFIX.sub("", largest.name.strip())
+            target = plain[0].trimmed if plain else f"{bucket}/{bare}"
+        else:
+            target = f"{ARCHIVES}/{largest.name.strip()}"
+        rep_target = dict.fromkeys(rep_target, target)
+    elif bucket == ARCHIVES and (prefixed or stem in taxonomy):
+        allowed = taxonomy.get(stem) or {retention_of(rep.name) for rep in prefixed}
+        keepers = [rep.trimmed for rep in prefixed if retention_of(rep.name) in allowed]
+        single = keepers[0] if len(allowed) == 1 and len(keepers) == 1 else None
+        for key, rep in reps.items():
+            prefix = retention_of(rep.name)
+            if prefix in allowed:
+                continue  # a prefix the taxonomy defines: its own canonical folder
+            if single is not None:
+                rep_target[key] = single  # R1 legacy twin, R3 stray prefix
+            elif len(allowed) > 1:
+                rep_target[key] = INBOX  # R2: legacy or stray folder of a split stem, doubtful
+    return {folder.rel: rep_target[name_key(folder.name)] for folder in group}
+
+
+def _target_named(targets: list[str], bucket: str, word: str) -> str | None:
+    """The target in bucket whose folder name has the same variant key as word, if any."""
+    for target in targets:
+        target_bucket, _, name = target.partition("/")
+        if target_bucket == bucket and name_key(name) == name_key(word):
+            return target
+    return None
+
+
+def canonical_map(
+    folders: list[Folder], taxonomy: dict[str, set[str]] | None = None
+) -> dict[str, str]:
+    """Map each folder's rel path (as on disk) to its canonical rel path, or to INBOX."""
+    taxonomy = taxonomy or {}
     groups: dict[tuple[str, str], list[Folder]] = {}
     for folder in folders:
-        groups.setdefault((folder.bucket, strip_prefix(folder.name)), []).append(folder)
+        groups.setdefault((folder.bucket, stem_key(folder.name)), []).append(folder)
     mapping: dict[str, str] = {}
-    for group in groups.values():
-        prefixed = [f for f in group if retention_of(f.name)]
-        target = max(prefixed, key=lambda f: f.files) if prefixed else None
-        for folder in group:
-            keep = target if target is not None and not retention_of(folder.name) else folder
-            mapping[folder.rel] = f"{keep.bucket}/{keep.name.strip()}"
-    by_rel = {f"{f.bucket}/{f.name.strip()}": f for f in folders}
-    for first, second in SYNONYMS:
-        for bucket in sorted({f.bucket for f in folders}):
-            a, b = by_rel.get(f"{bucket}/{first}"), by_rel.get(f"{bucket}/{second}")
-            if a is None or b is None:
+    for (bucket, stem), group in groups.items():
+        mapping.update(_group_targets(bucket, stem, group, taxonomy))
+    size: Counter[str] = Counter()
+    for folder in folders:
+        size[mapping[folder.rel]] += folder.files
+    for first, second in SYNONYMS:  # R5: the smaller folds into the larger
+        for bucket in BUCKETS:
+            a = _target_named(list(size), bucket, first)
+            b = _target_named(list(size), bucket, second)
+            if a is None or b is None or a == b:
                 continue
-            keep, drop = (a, b) if a.files >= b.files else (b, a)
-            for rel, target_rel in mapping.items():
-                if target_rel == f"{bucket}/{drop.name.strip()}":
-                    mapping[rel] = f"{bucket}/{keep.name.strip()}"
+            keep, drop = (a, b) if size[a] >= size[b] else (b, a)
+            mapping = {rel: keep if target == drop else target for rel, target in mapping.items()}
+            size[keep] += size.pop(drop)
     return mapping
 
 
-def make_canon(folders: list[Folder]) -> Callable[[str], str]:
-    """Return canon(rel) -> canonical rel; unknown paths come back trimmed and NFC."""
-    mapping = canonical_map(folders)
-    by_trimmed = {f"{f.bucket}/{f.name.strip()}": mapping[f.rel] for f in folders}
+def make_canon(
+    folders: list[Folder], taxonomy: dict[str, set[str]] | None = None
+) -> Callable[[str], str]:
+    """Return canon(rel) -> canonical rel or INBOX; unknown paths match by variant key."""
+    mapping = canonical_map(folders, taxonomy)
+    by_trimmed = {folder.trimmed: mapping[folder.rel] for folder in folders}
+    by_key = {(folder.bucket, name_key(folder.name)): mapping[folder.rel] for folder in folders}
+    for first, second in SYNONYMS:
+        for bucket in BUCKETS:
+            for word, other in ((first, second), (second, first)):
+                known = by_key.get((bucket, name_key(other)))
+                if known is not None:
+                    by_key.setdefault((bucket, name_key(word)), known)
 
     def canon(rel: str) -> str:
         key = nfc(rel).strip()
-        return by_trimmed.get(key, key)
+        if key in by_trimmed:
+            return by_trimmed[key]
+        bucket, _, name = key.partition("/")
+        return by_key.get((bucket, name_key(name)), key)
 
     return canon
 ```
@@ -1437,27 +1621,39 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from para_inventory import Folder, make_canon, nfc, retention_of, scan_folders, strip_prefix
+from para_inventory import (
+    INBOX,
+    LIBRARY,
+    MEDIA,
+    Folder,
+    make_canon,
+    nfc,
+    retention_of,
+    retentions_by_stem,
+    scan_folders,
+    strip_prefix,
+)
 
 from para_files.config import default_reference_tree
 from para_files.core.tree import config_dir, load_tree_config, validation_warnings
 
-MEDIA = frozenset({"photos", "videos", "media", "screenshots"})
-LIBRARY = frozenset(
-    {
-        "livres", "books", "docs", "documentation", "formation", "formations",
-        "certifications", "courses-completed", "licences", "isos", "programmes",
-    }
-)
+
 BOOKS = frozenset({"livres", "books"})
 TAGS = {
-    "1_Projects": "projects", "1_Projets": "projects", "2_Areas": "areas",
-    "3_Resources": "resources", "4_Archives": "archives",
+    "1_Projects": "projects",
+    "1_Projets": "projects",
+    "2_Areas": "areas",
+    "3_Resources": "resources",
+    "4_Archives": "archives",
 }
 RETENTIONS = frozenset({"ret", "10y", "5y", "2y", "ctr"})
 RETENTION_FROM_DOCS = {
-    "permanent": "permanent", "retirement": "ret", "10_years": "10y",
-    "5_years": "5y", "contract_duration": "ctr", "warranty_2_years": "2y",
+    "permanent": "permanent",
+    "retirement": "ret",
+    "10_years": "10y",
+    "5_years": "5y",
+    "contract_duration": "ctr",
+    "warranty_2_years": "2y",
 }
 YEAR = re.compile(r"^(19|20)\d{2}$")
 PLACEHOLDER = re.compile(r"\{[^}]+\}")
@@ -1490,7 +1686,9 @@ def document_folders(documents: dict[str, Any], canon: Canon) -> dict[str, tuple
                 continue
             subkey = "/".join(p for p in SUBKEY_FROM_DOCS if p in pattern) or None
             retention = RETENTION_FROM_DOCS.get(doc.get("retention", ""), "permanent")
-            found.setdefault(canon(folder), (retention, subkey))
+            target = canon(folder)
+            if target != INBOX:
+                found.setdefault(target, (retention, subkey))
     return found
 
 
@@ -1528,12 +1726,16 @@ def propose_leaf(
 def draft_tree(
     folders: list[Folder], canon: Canon, docs: dict[str, tuple[str, str | None]], notes: list[str]
 ) -> dict[str, dict[str, Any]]:
-    """One proposed leaf per canonical folder; merged folders are noted, not leaves."""
+    """One proposed leaf per canonical folder; merged and doubtful folders are noted only."""
     leaves: dict[str, dict[str, Any]] = {}
     for folder in folders:
-        rel = f"{folder.bucket}/{folder.name.strip()}"
-        if canon(rel) != rel:
-            notes.append(f"merge: {rel} -> {canon(rel)}")
+        rel = folder.trimmed
+        target = canon(rel)
+        if target == INBOX:
+            notes.append(f"doubtful: {rel} -> {INBOX} (later batch)")
+            continue
+        if target != rel:
+            notes.append(f"merge: {rel} -> {target}")
             continue
         base = f"{TAGS.get(folder.bucket, slug(folder.bucket))}_{slug(folder.name)}"
         leaf_id, counter = base, 2
@@ -1581,13 +1783,17 @@ def draft_rules(
             notes.append(f"rule {name}: copy of {name[:-3]}, dropped")
             continue
         folder = folder_of(rule["destination"])
-        leaf = leaf_of.get(canon(folder)) if folder else None
+        target = canon(folder) if folder else None
+        leaf = leaf_of.get(target) if target else None
         if leaf is None:
-            notes.append(f"rule {name}: destination {rule['destination']} has no leaf, dropped")
+            reason = "is doubtful" if target == INBOX else "has no leaf"
+            notes.append(f"rule {name}: destination {rule['destination']} {reason}, dropped")
             continue
         if rule.get("action"):
             notes.append(f"rule {name}: action {rule['action']} ignored")
-        issuers += [(i["name"], list(i.get("patterns") or []), leaf) for i in rule.get("issuers") or []]
+        issuers += [
+            (i["name"], list(i.get("patterns") or []), leaf) for i in rule.get("issuers") or []
+        ]
         vendors = [*(rule.get("known_vendors") or []), *(rule.get("known_technologies") or [])]
         issuers += [(vendor, [vendor], leaf) for vendor in vendors]
         patterns = list(rule.get("patterns") or [])
@@ -1617,7 +1823,9 @@ def draft_issuers(
         for doc in category.get("documents", []):
             folder = folder_of(doc.get("para_pattern") or category.get("para_pattern") or "")
             leaf = leaf_of.get(canon(folder)) if folder else None
-            entries += [(i["name"], list(i.get("patterns") or []), leaf) for i in doc.get("issuers") or []]
+            entries += [
+                (i["name"], list(i.get("patterns") or []), leaf) for i in doc.get("issuers") or []
+            ]
     entries += extra
     issuers: dict[str, dict[str, list[str]]] = {}
     owner: dict[str, str] = {}
@@ -1708,7 +1916,7 @@ def main(argv: list[str] | None = None) -> int:
     documents = json.loads(args.documents.read_text(encoding="utf-8"))
 
     folders = scan_folders(para_root)
-    canon = make_canon(folders)
+    canon = make_canon(folders, retentions_by_stem(documents))
     notes: list[str] = []
     leaves = draft_tree(folders, canon, document_folders(documents, canon), notes)
     leaf_of = {leaf["path"]: leaf_id for leaf_id, leaf in leaves.items()}
@@ -1742,7 +1950,7 @@ Expected: clean.
 Under `### Added (Stage 1)` in `CHANGELOG.md`, append:
 
 ```markdown
-- **Config migration seeder** — `scripts/migrate_config.py` drafts `tree.yaml`, `rules.yaml` and `issuers.yaml` from the current PARA tree, the legacy routing rules and `config/documents.json`. It folds legacy twins and synonym folders, proposes a kind and retention per leaf, keeps the legacy pattern-and-extension semantics, and lists recurring inbox families as issuer candidates in `review.md`. Read-only on the PARA root.
+- **Config migration seeder** — `scripts/migrate_config.py` drafts `tree.yaml`, `rules.yaml` and `issuers.yaml` from the current PARA tree, the legacy routing rules and `config/documents.json`. It folds legacy twins, name variants, stray retention prefixes and synonym folders (retention prefixes defined by the taxonomy never merge), marks doubtful folders for a later return to `0_Inbox`, proposes a kind and retention per leaf, keeps the legacy pattern-and-extension semantics, and lists recurring inbox families as issuer candidates in `review.md`. Read-only on the PARA root.
 ```
 
 - [ ] **Step 8: Commit**
@@ -1755,297 +1963,9 @@ Claude-Session: https://claude.ai/code/session_01TnHHvHPS4t1tVuqpTZiEJx"
 
 ---
 
-### Task 5: Tree-cleanup plan generator (dry-run only)
+### Task 5: (removed) Tree-cleanup plan generator
 
-**Files:**
-- Create: `scripts/plan_tree_cleanup.py`
-- Test: `tests/test_plan_tree_cleanup.py`
-- Modify: `CHANGELOG.md`
-
-**Interfaces:**
-- Consumes:
-  - `para_inventory.Folder`, `make_canon`, `nfc`, `scan_folders`, `strip_prefix` (Task 4)
-  - `para_files.core.tree.config_dir` (Task 2)
-- Produces: `scripts/plan_tree_cleanup.py` with:
-  - `merge_moves(para_root, folders) -> list[dict]`
-  - `name_fixes(para_root) -> list[dict]`
-  - `main(argv) -> int`
-
-  It writes JSONL lines to `--out` (default `config_dir()/"cleanup-plan.jsonl"`). Each line has `op` (`move`, `rename`, `review_dir`), `reason` (`twin_merge`, `synonym_merge`, `padded_name`, `placeholder_literal`), `status` (`ok`, `duplicate`, `conflict`, `review`), `src`, and `dst` where it applies. Paths are relative to the PARA root, in NFC.
-
-- [ ] **Step 1: Write the failing tests**
-
-Create `tests/test_plan_tree_cleanup.py`:
-
-```python
-"""Tests for scripts/plan_tree_cleanup.py: plans the one-time cleanup, never applies it."""
-
-from __future__ import annotations
-
-import json
-from pathlib import Path
-
-import pytest
-
-
-def _write(root: Path, rel: str, content: str = "x") -> None:
-    path = root / rel
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content)
-
-
-@pytest.fixture
-def para(tmp_path: Path) -> Path:
-    root = tmp_path / "PARA"
-    _write(root, "4_Archives/5y_factures/2024/same.pdf", "same")
-    _write(root, "4_Archives/factures/2024/same.pdf", "same")
-    _write(root, "4_Archives/5y_factures/2024/diff.pdf", "one")
-    _write(root, "4_Archives/factures/2024/diff.pdf", "two")
-    _write(root, "4_Archives/factures/new.pdf", "new")
-    _write(root, "3_Resources/docs/a.pdf")
-    _write(root, "3_Resources/docs/b.pdf")
-    _write(root, "3_Resources/documentation/{technology}/c.pdf")
-    _write(root, "3_Resources/docs/Citrix /d.pdf")
-    outside = tmp_path / "outside"
-    _write(outside, "elsewhere.pdf")
-    (root / "4_Archives/factures/linked").symlink_to(outside, target_is_directory=True)
-    return root
-
-
-@pytest.fixture
-def ops(load_script, para, tmp_path):
-    planner = load_script("plan_tree_cleanup")
-    out = tmp_path / "plan.jsonl"
-    assert planner.main(["--para-root", str(para), "--out", str(out)]) == 0
-    return [json.loads(line) for line in out.read_text().splitlines()]
-
-
-def _find(ops, **fields):
-    return [op for op in ops if all(op.get(k) == v for k, v in fields.items())]
-
-
-def test_twin_merge_moves_carry_a_status(ops):
-    moves = {op["src"]: op for op in _find(ops, reason="twin_merge")}
-    assert moves["4_Archives/factures/2024/same.pdf"]["status"] == "duplicate"
-    assert moves["4_Archives/factures/2024/diff.pdf"]["status"] == "conflict"
-    assert moves["4_Archives/factures/new.pdf"]["status"] == "ok"
-    assert moves["4_Archives/factures/new.pdf"]["dst"] == "4_Archives/5y_factures/new.pdf"
-
-
-def test_synonym_folder_folds_into_the_larger_one(ops):
-    [move] = _find(ops, reason="synonym_merge")
-    assert move["src"] == "3_Resources/documentation/{technology}/c.pdf"
-    assert move["dst"] == "3_Resources/docs/{technology}/c.pdf"
-
-
-def test_literal_placeholder_folder_is_flagged_for_review(ops):
-    [review] = _find(ops, reason="placeholder_literal")
-    assert review == {
-        "op": "review_dir",
-        "reason": "placeholder_literal",
-        "status": "review",
-        "src": "3_Resources/documentation/{technology}",
-    }
-
-
-def test_padded_names_get_a_trim_rename(ops):
-    [rename] = _find(ops, reason="padded_name")
-    assert rename["src"] == "3_Resources/docs/Citrix "
-    assert rename["dst"] == "3_Resources/docs/Citrix"
-    assert rename["status"] == "ok"
-
-
-def test_symlinked_folders_are_not_followed(ops):
-    assert not any("elsewhere.pdf" in op["src"] for op in ops)
-    assert not any("linked/" in op["src"] for op in ops)
-
-
-def test_para_root_is_untouched(load_script, para, tmp_path, snapshot):
-    before = snapshot(para)
-    planner = load_script("plan_tree_cleanup")
-    assert planner.main(["--para-root", str(para), "--out", str(tmp_path / "p.jsonl")]) == 0
-    assert snapshot(para) == before
-
-
-def test_out_inside_para_root_is_refused(load_script, para):
-    planner = load_script("plan_tree_cleanup")
-    with pytest.raises(SystemExit):
-        planner.main(["--para-root", str(para), "--out", str(para / "plan.jsonl")])
-```
-
-- [ ] **Step 2: Run the tests to verify they fail**
-
-Run: `uv run pytest tests/test_plan_tree_cleanup.py -q`
-Expected: FAIL with `FileNotFoundError` for `scripts/plan_tree_cleanup.py`.
-
-- [ ] **Step 3: Implement**
-
-Create `scripts/plan_tree_cleanup.py`:
-
-```python
-"""Plan (never apply) the one-time tree cleanup (spec §5, Stage 1 item 5).
-
-Proposes:
-- folding legacy twins and synonym folders into their canonical folder;
-- a review entry for literal placeholder folders such as "{technology}";
-- trimming padded names.
-
-Read-only on the PARA root; writes one JSONL file outside it. Applying the plan waits for the
-Stage 2 journal and undo.
-
-Usage:
-    uv run python scripts/plan_tree_cleanup.py --para-root "$PARA"
-"""
-
-from __future__ import annotations
-
-import argparse
-import hashlib
-import json
-import os
-import re
-from collections import Counter
-from collections.abc import Iterator
-from pathlib import Path
-from typing import Any
-
-from para_inventory import Folder, make_canon, nfc, scan_folders, strip_prefix
-
-from para_files.core.tree import config_dir
-
-PLACEHOLDER_DIR = re.compile(r"^\{[A-Za-z_]+\}$")
-
-
-def sha256(path: Path) -> str:
-    """Hex SHA-256 of a file's content."""
-    with path.open("rb") as handle:
-        return hashlib.file_digest(handle, "sha256").hexdigest()
-
-
-def iter_files(root: Path) -> Iterator[Path]:
-    """Non-hidden files under root in sorted order; symlinked folders are not followed."""
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
-        for name in sorted(filenames):
-            if not name.startswith("."):
-                yield Path(dirpath) / name
-
-
-def _rel(path: Path, para_root: Path) -> str:
-    return nfc(str(path.relative_to(para_root)))
-
-
-def merge_moves(para_root: Path, folders: list[Folder]) -> list[dict[str, Any]]:
-    """One move per file of every folder that folds into another (twin or synonym)."""
-    canon = make_canon(folders)
-    ops: list[dict[str, Any]] = []
-    for folder in folders:
-        own = f"{folder.bucket}/{folder.name.strip()}"
-        target = canon(own)
-        if target == own:
-            continue
-        same_name = strip_prefix(target.split("/", 1)[1]) == strip_prefix(folder.name)
-        reason = "twin_merge" if same_name else "synonym_merge"
-        src_root, dst_root = para_root / folder.rel, para_root / target
-        for src in iter_files(src_root):
-            dst = dst_root / src.relative_to(src_root)
-            if not dst.exists():
-                status = "ok"
-            elif sha256(src) == sha256(dst):
-                status = "duplicate"
-            else:
-                status = "conflict"
-            ops.append(
-                {
-                    "op": "move",
-                    "reason": reason,
-                    "status": status,
-                    "src": _rel(src, para_root),
-                    "dst": _rel(dst, para_root),
-                }
-            )
-    return ops
-
-
-def name_fixes(para_root: Path) -> list[dict[str, Any]]:
-    """Padded names to trim and literal placeholder folders to review, anywhere in the tree."""
-    ops: list[dict[str, Any]] = []
-    for dirpath, dirnames, filenames in os.walk(para_root):
-        dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
-        here = Path(dirpath)
-        for name in [*dirnames, *sorted(filenames)]:
-            if name.startswith("."):
-                continue
-            src = here / name
-            if name in dirnames and PLACEHOLDER_DIR.match(name.strip()):
-                ops.append(
-                    {
-                        "op": "review_dir",
-                        "reason": "placeholder_literal",
-                        "status": "review",
-                        "src": _rel(src, para_root),
-                    }
-                )
-            if name != name.strip():
-                dst = src.with_name(name.strip())
-                ops.append(
-                    {
-                        "op": "rename",
-                        "reason": "padded_name",
-                        "status": "conflict" if dst.exists() else "ok",
-                        "src": _rel(src, para_root),
-                        "dst": _rel(dst, para_root),
-                    }
-                )
-    return ops
-
-
-def main(argv: list[str] | None = None) -> int:
-    """Write the cleanup plan and print a summary; return 0."""
-    parser = argparse.ArgumentParser(description="Plan the one-time PARA tree cleanup.")
-    parser.add_argument("--para-root", type=Path, required=True)
-    parser.add_argument("--out", type=Path, default=None)
-    args = parser.parse_args(argv)
-    para_root = args.para_root.expanduser().resolve()
-    out = (args.out or config_dir() / "cleanup-plan.jsonl").expanduser().resolve()
-    if out.is_relative_to(para_root):
-        parser.error("--out must be outside the PARA root")
-    ops = merge_moves(para_root, scan_folders(para_root)) + name_fixes(para_root)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text("".join(json.dumps(op, ensure_ascii=False) + "\n" for op in ops), "utf-8")
-    for (reason, status), count in sorted(Counter((o["reason"], o["status"]) for o in ops).items()):
-        print(f"{count:7}  {reason:20} {status}")
-    print(f"plan -> {out}")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
-```
-
-- [ ] **Step 4: Run the tests to verify they pass**
-
-Run: `uv run ruff format scripts/ tests/ && uv run pytest tests/test_plan_tree_cleanup.py -q`
-Expected: PASS.
-
-Run: `uv run ruff check src/ tests/`
-Expected: clean.
-
-- [ ] **Step 5: Changelog**
-
-Under `### Added (Stage 1)` in `CHANGELOG.md`, append:
-
-```markdown
-- **Tree-cleanup planner** — `scripts/plan_tree_cleanup.py` writes a reviewable JSONL plan for folding legacy twins and synonym folders (each move marked `ok`, `duplicate` or `conflict`), trimming padded names and reviewing literal `{placeholder}` folders. It never moves anything; applying waits for the Stage 2 journal and undo.
-```
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add scripts/plan_tree_cleanup.py tests/test_plan_tree_cleanup.py CHANGELOG.md
-git commit -m "feat(scripts): plan the one-time tree cleanup without applying it" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01TnHHvHPS4t1tVuqpTZiEJx"
-```
+Moved out of Stage 1: the owner starts with the inbox, and the existing tree is reorganized later in batches on demand (spec §4.1 "Tree cleanup policy", §5 "Batch reorganization"). Nothing to implement; skip to Task 6.
 
 ---
 
@@ -2638,7 +2558,7 @@ Claude-Session: https://claude.ai/code/session_01TnHHvHPS4t1tVuqpTZiEJx"
 **Interfaces:**
 - Consumes:
   - golden rows (Task 6) and the prediction row format (Task 7);
-  - `para_inventory.make_canon`, `nfc`, `scan_folders` (Task 4);
+  - `para_inventory.make_canon`, `nfc`, `retentions_by_stem`, `scan_folders` (Task 4);
   - `para_files.core.tree.Tree`, `config_dir`, `load_tree_config` (Task 2).
 - Produces: `scripts/run_baseline.py` with:
   - `leaf_for_category(category, tree, canon) -> str | None`
@@ -2771,7 +2691,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from para_inventory import make_canon, nfc, scan_folders
+from para_inventory import make_canon, nfc, retentions_by_stem, scan_folders
 
 from para_files.core.tree import Tree, config_dir, load_tree_config
 
@@ -2853,6 +2773,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the old pipeline over the golden corpus.")
     parser.add_argument("--para-root", type=Path, required=True)
     parser.add_argument("--config-dir", type=Path, default=None)
+    parser.add_argument("--documents", type=Path, default=Path("config/documents.json"))
     parser.add_argument("--out", type=Path, default=None)
     args = parser.parse_args(argv)
     para_root = args.para_root.expanduser().resolve()
@@ -2862,7 +2783,8 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--out must be outside the PARA root")
     golden = [json.loads(line) for line in (cfg_dir / "golden.jsonl").read_text().splitlines()]
     tree = load_tree_config(cfg_dir).tree
-    canon = make_canon(scan_folders(para_root))
+    taxonomy = retentions_by_stem(json.loads(args.documents.read_text(encoding="utf-8")))
+    canon = make_canon(scan_folders(para_root), taxonomy)  # same canonical map as the seeder
     with tempfile.TemporaryDirectory() as workdir:
         preds = run_baseline(para_root, golden, tree, canon, old_pipeline_classifier(), Path(workdir))
     out.write_text("".join(json.dumps(p, ensure_ascii=False) + "\n" for p in preds), "utf-8")
@@ -3378,7 +3300,6 @@ All scripts are read-only on the PARA root and write only into the config direct
 
 ```bash
 uv run python scripts/migrate_config.py --para-root "$PARA"    # draft/ + review.md
-uv run python scripts/plan_tree_cleanup.py --para-root "$PARA" # cleanup-plan.jsonl (never applied)
 uv run python scripts/build_golden.py --para-root "$PARA"      # golden.jsonl
 uv run python scripts/run_baseline.py --para-root "$PARA"      # pred_baseline.jsonl
 uv run python scripts/bakeoff.py --candidate jev --para-root "$PARA"   # pred_jev.jsonl
@@ -3409,7 +3330,7 @@ Claude-Session: https://claude.ai/code/session_01TnHHvHPS4t1tVuqpTZiEJx"
 
 ### Task 10: Real-data run, owner checkpoints, results
 
-This task runs the tools on the owner's PARA volume. The controller (not a subagent) runs it, and it stops at each **CHECKPOINT** for the owner. Nothing in it moves a file. Set `PARA` to the PARA root in the shell first. Its value is personal: never write it into a tracked file.
+This task runs the tools on the owner's PARA volume. The controller (not a subagent) runs it, and it stops at **CHECKPOINT A** and **CHECKPOINT C** for the owner. Nothing in it moves a file. Set `PARA` to the PARA root in the shell first. Its value is personal: never write it into a tracked file.
 
 **Files:**
 - Modify: `docs/superpowers/specs/2026-10-10-para-files-redesign-design.md` (§4.5 results, §8 decisions)
@@ -3429,6 +3350,7 @@ Expected: `~/.config/para-files/draft/` holds `tree.yaml`, `rules.yaml`, `issuer
 Owner and controller edit the draft into `~/.config/para-files/tree.yaml`, `rules.yaml` and `issuers.yaml`:
 - 20–30 leaves;
 - every leaf has the right `kind` and `retention`;
+- non-canonical folders listed in `review.md` (legacy twins, stray prefixes, variants, and doubtful folders whose content later goes back to `0_Inbox`) are not leaves;
 - issuers added for the recurring inbox families listed in `review.md`.
 
 Validate:
@@ -3440,15 +3362,7 @@ c = load_tree_config(); print(len(c.tree.leaves), 'leaves'); print(*validation_w
 
 Expected: loads without error and prints 20–30 leaves. The owner accepts the remaining warnings or fixes them. Do not continue without the owner's explicit approval of the tree.
 
-- [ ] **Step 3: Cleanup plan, then CHECKPOINT B**
-
-```bash
-uv run python scripts/plan_tree_cleanup.py --para-root "$PARA"
-```
-
-The owner reviews the printed summary and skims `~/.config/para-files/cleanup-plan.jsonl`, especially the `conflict` rows and every `review_dir` row. The plan is applied only in Stage 3. Record the owner's acceptance of the plan.
-
-- [ ] **Step 4: Golden corpus, then CHECKPOINT C**
+- [ ] **Step 3: Golden corpus, then CHECKPOINT C**
 
 ```bash
 uv run python scripts/build_golden.py --para-root "$PARA"
@@ -3456,16 +3370,16 @@ uv run python scripts/build_golden.py --para-root "$PARA"
 
 The owner deletes lines for ambiguous files from `~/.config/para-files/golden.jsonl`, then confirms.
 
-- [ ] **Step 5: Baseline**
+- [ ] **Step 4: Baseline**
 
 ```bash
 uv run python scripts/run_baseline.py --para-root "$PARA"
 uv run python scripts/eval.py --pred ~/.config/para-files/pred_baseline.jsonl
 ```
 
-Keep the printed table; Step 8 records it.
+Keep the printed table; Step 7 records it.
 
-- [ ] **Step 6: Bake-off**
+- [ ] **Step 5: Bake-off**
 
 The cloud candidates send each in-scope file's name and first 2000 characters to OpenRouter. ZDR is enforced per request and secret-looking files stay local. The owner consented to this for the bake-off.
 
@@ -3476,7 +3390,7 @@ uv run python scripts/bakeoff.py --candidate jev --para-root "$PARA"
 for c in gemini sonnet jev; do uv run python scripts/eval.py --pred ~/.config/para-files/pred_$c.jsonl --only-predicted; done
 ```
 
-- [ ] **Step 7: Apply the spec's winner and drop rules**
+- [ ] **Step 6: Apply the spec's winner and drop rules**
 
 Spec §4.5 defines both rules:
 - **Scope (a), winner:** the highest `max_coverage_at_98` on record/library/media files. Ties follow the owner's preference: Gemini 3.8 Flash, then Sonnet 5.5, then Jev 1.13.
@@ -3485,7 +3399,7 @@ Spec §4.5 defines both rules:
 
 Write the decision down with its numbers.
 
-- [ ] **Step 8: Record the results (no personal data) and commit**
+- [ ] **Step 7: Record the results (no personal data) and commit**
 
 1. In the spec, add a subsection `#### Stage 1 results (<date>)` at the end of §4.5. It holds:
    - the per-kind tables from `eval.py` for the baseline and each candidate: n, accuracy, green precision and coverage, top-3 hit, `max_coverage_at_98`, p50 latency, cost per 1000;
@@ -3502,8 +3416,17 @@ git commit -m "docs(spec): record Stage 1 baseline, bake-off and signal-4 decisi
 Claude-Session: https://claude.ai/code/session_01TnHHvHPS4t1tVuqpTZiEJx"
 ```
 
+- [ ] **Step 8: Inbox preview (old pipeline, nothing moves)**
+
+```bash
+PARA_FILES_LLM_ENABLED=false PARA_FILES_MLX_SEMANTIC_ENABLED=false \
+  uv run para-files scan "$PARA/0_Inbox" --recursive --json > ~/.config/para-files/inbox-preview.json
+```
+
+`scan` only previews (OCR rename has been off by default since Stage 0); the two variables keep it local (no cloud call, no Ollama). Report to the owner, per recurring inbox family from `review.md`, where the old pipeline would send the files and whether that matches the approved leaves. Nothing is moved.
+
 Stage 1 exit (spec §5) is met when all of these are true:
 - the tree is owner-approved;
 - the eval baseline is recorded;
 - the signal-4 decision is recorded;
-- the owner has reviewed the cleanup plan.
+- the owner has reviewed the inbox preview.
