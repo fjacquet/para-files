@@ -1,4 +1,9 @@
-"""Pytest configuration and shared fixtures."""
+"""Pytest configuration and shared fixtures.
+
+Every test runs hermetically: HOME and the personal config dir point into tmp_path, the working
+directory is tmp_path, `.env` loading is disabled on every settings class, and the reference tree
+is the sanitized fixture. No test reads the owner's real PARA configuration or volume.
+"""
 
 from __future__ import annotations
 
@@ -36,9 +41,27 @@ FIXTURE_TREE = Path(__file__).parent / "fixtures" / "test_reference_tree.yaml"
 
 
 @pytest.fixture(autouse=True)
-def _sanitized_reference_tree(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Run every test on the sanitized fixture tree, never the owner's personal tree."""
+def _sanitized_reference_tree(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """Sandbox configuration: fixture tree, per-test HOME and config dir, no .env, tmp cwd."""
+    from para_files.config import (
+        Config,
+        ExtensionRoutingConfig,
+        LLMConfig,
+        LoggingConfig,
+        MLXConfig,
+    )
+
+    for name in [k for k in os.environ if k.startswith("PARA_FILES_")]:
+        monkeypatch.delenv(name)  # inherited shell values (e.g. sourced ~/.env) never leak in
+    home = tmp_path_factory.mktemp("home")  # outside tmp_path so tests listing it stay exact
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("PARA_FILES_CONFIG_DIR", str(home / ".config" / "para-files"))
     monkeypatch.setenv("PARA_FILES_REFERENCE_TREE_PATH", str(FIXTURE_TREE))
+    monkeypatch.chdir(tmp_path)  # cwd YAML fallbacks and ./.env resolve to empty tmp_path
+    for settings_cls in (Config, MLXConfig, LLMConfig, LoggingConfig, ExtensionRoutingConfig):
+        monkeypatch.setitem(settings_cls.model_config, "env_file", None)
 
 
 SCRIPTS_DIR = Path(__file__).parent.parent / "scripts"

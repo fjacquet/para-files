@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed (Stage 1)
 
-- **Personal reference tree moved out of the repo** — the default is now `~/.config/para-files/personal_file_tree.yaml`; `config/personal_file_tree.yaml` is untracked and still used as a fallback when the personal copy is missing. Tests run on the sanitized fixture tree. Two remaining personal identifiers were removed from tracked files.
+- **Personal reference tree moved out of the repo** — the default is now `~/.config/para-files/personal_file_tree.yaml`; `config/personal_file_tree.yaml` is untracked and still used as a fallback when the personal copy is missing. `$PARA_FILES_CONFIG_DIR` (default `~/.config/para-files`) now also locates the personal reference tree and home `.env`, with one rule shared by the settings loader and `core.tree.config_dir`. Tests are sandboxed: HOME, the config dir and the working directory point into a temp dir, `.env` loading and inherited `PARA_FILES_*` variables are disabled, and the reference tree is the sanitized fixture, so no test reads the owner's PARA configuration. Two remaining personal identifiers were removed from tracked files.
 
 ### Fixed (Stage 0 safety)
 

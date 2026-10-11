@@ -18,6 +18,7 @@ Example config section in YAML:
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -28,12 +29,18 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Default reference tree location
 LEGACY_REFERENCE_TREE = Path("config/personal_file_tree.yaml")
-DEFAULT_REFERENCE_TREE = Path.home() / ".config" / "para-files" / "personal_file_tree.yaml"
+
+
+def _config_dir() -> Path:
+    """Personal config directory: $PARA_FILES_CONFIG_DIR if set, else ~/.config/para-files."""
+    override = os.environ.get("PARA_FILES_CONFIG_DIR")
+    return Path(override).expanduser() if override else Path.home() / ".config" / "para-files"
 
 
 def default_reference_tree() -> Path:
     """Return the personal reference tree if it exists, else the legacy in-repo path."""
-    return DEFAULT_REFERENCE_TREE if DEFAULT_REFERENCE_TREE.exists() else LEGACY_REFERENCE_TREE
+    personal = _config_dir() / "personal_file_tree.yaml"
+    return personal if personal.exists() else LEGACY_REFERENCE_TREE
 
 
 # Default configuration values (centralized to avoid duplication)
@@ -51,7 +58,7 @@ DEFAULT_LOG_LEVEL = "INFO"
 
 # Global config file location — searched before local .env so local .env takes precedence.
 # Users who run para-files outside the project directory should place their settings here.
-_HOME_ENV = Path.home() / ".config" / "para-files" / ".env"
+_HOME_ENV = _config_dir() / ".env"
 _ENV_FILES = (str(_HOME_ENV), ".env")
 
 
@@ -69,7 +76,7 @@ def _load_yaml_config(yaml_path: Path | None = None) -> dict[str, Any]:
         paths_to_try.append(yaml_path)
     paths_to_try.extend(
         [
-            DEFAULT_REFERENCE_TREE,
+            _config_dir() / "personal_file_tree.yaml",
             Path.cwd() / "config" / "personal_file_tree.yaml",
             Path.cwd() / "personal_file_tree.yaml",  # Backwards compatibility
         ]
@@ -268,7 +275,7 @@ class Config(BaseSettings):
 
     # PARA filesystem root
     para_root: Path = Field(
-        default=Path.home() / "Documents" / "PARA",
+        default_factory=lambda: Path.home() / "Documents" / "PARA",
         description="Root directory for PARA folders (0_Inbox, 1_Projects, etc.)",
     )
 

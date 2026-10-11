@@ -6,13 +6,14 @@ The repository ships only ``examples/``.
 
 from __future__ import annotations
 
-import os
 import re
 from pathlib import Path
 from typing import Literal, Self
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
+
+from para_files.config import _config_dir
 
 
 Kind = Literal["record", "library", "media", "knowledge"]
@@ -35,9 +36,8 @@ class TreeError(ValueError):
 
 
 def config_dir() -> Path:
-    """Return the personal config directory."""
-    override = os.environ.get("PARA_FILES_CONFIG_DIR")
-    return Path(override).expanduser() if override else Path.home() / ".config" / "para-files"
+    """Return the personal config directory (shared rule with the settings loader)."""
+    return _config_dir()
 
 
 class Leaf(BaseModel):
