@@ -9,8 +9,10 @@ _NAME = re.compile(
     r"credential|passw|secret|token|api[_-]?key|login"
     r"|recovery[_ -]?(?:phrase|code|key)|seed[_ -]?phrase"
     r"|licen[cs]e[_ -]?(?:key|string|code)"
-    r"|mots?[_ -]?de[_ -]?passe|(?<![a-z])mdp(?![a-z])|identifiants"
-    r"|id_(?:rsa|dsa|ecdsa|ed25519)|^\.netrc$|\.(?:pem|key|p12|pfx|kdbx)$|^\.env(?:\.[\w-]+)?$|\.env$",
+    r"|mots?[_ -]?de[_ -]?passe|(?<![a-z])mdp(?![a-z])"
+    r"|identifiants(?![_ -]?(?:tva|fiscaux|fiscal))"
+    r"|id_(?:rsa|dsa|ecdsa|ed25519)(?!\.pub)|^\.netrc$|\.(?:pem|p12|pfx|kdbx)$"
+    r"|^\.env(?:\.[\w-]+)*$|\.env$",
     re.IGNORECASE,
 )
 _TEXT: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -26,8 +28,9 @@ _TEXT: tuple[tuple[str, re.Pattern[str]], ...] = (
         re.compile(
             r"^[^\S\n]*(?:[\w.'-]+[^\S\n]+){0,3}?[\"']?[\w.-]*"
             r"(?:password|passwd|pwd|secret|token|api[_-]?key"
-            r"|mots?[^\S\n]+de[^\S\n]+passe|mdp|identifiants)"
-            r"[\w.-]{0,30}[\"']?[^\S\n]*[:=]\s*\S{4,}",
+            r"|mots?[^\S\n]+de[^\S\n]+passe|(?<![a-z])mdp(?![a-z])"
+            r"|(?<![a-z])identifiants(?![a-z]))"
+            r"[\w.-]{0,60}[\"']?[^\S\n]*[:=][^\S\n]*(?!https?://)\S{4,}",
             re.IGNORECASE | re.MULTILINE,
         ),
     ),
@@ -38,7 +41,9 @@ def secret_reason(name: str, text: str = "") -> str | None:
     """Return why a file looks secret ("name" or a content pattern id), else None.
 
     Values shorter than 4 characters do not count, so settings such as a switch's
-    password-policy lines (``passwdcfg.minlength: 8``) pass.
+    password-policy lines (``passwdcfg.minlength: 8``) pass. A content value must sit on the
+    same line as its label and must not be a URL, so a bare "Password:" heading or a reset link
+    is not a secret. Logins are usernames: ``login`` is a name marker only, never a content one.
     """
     if _NAME.search(name):
         return "name"
