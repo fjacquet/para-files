@@ -109,3 +109,21 @@ def test_settings_read_the_env_file_in_the_config_dir(tmp_path, monkeypatch):
     settings = load_settings()
     assert settings.para_root == root
     assert settings.max_workers == 7
+
+
+def test_env_example_names_only_real_settings():
+    """Every NAME= in .env.example (commented or not) is a real CoreSettings field."""
+    import re
+
+    from para_files.core.settings import CoreSettings
+
+    repo = Path(__file__).parent.parent
+    text = (repo / ".env.example").read_text(encoding="utf-8")
+    names = re.findall(r"^#?\s*([A-Z][A-Z0-9_]*)=", text, flags=re.MULTILINE)
+    assert names, "no settings found in .env.example"
+    fields = set(CoreSettings.model_fields)
+    for name in names:
+        if name == "OPENROUTER_API_KEY":
+            continue
+        assert name.startswith("PARA_FILES_"), name
+        assert name.removeprefix("PARA_FILES_").lower() in fields, name

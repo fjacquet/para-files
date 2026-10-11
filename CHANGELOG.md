@@ -13,10 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Spec §4.4: a file is moved or renamed only when its target path differs (books are renamed in place); an undone green move is not yet counted as a miss (decisions log).
 - Books whose subject is "medieval history" go to the history folder (Thema `NH`) instead of the library root (the old map used a code that does not exist); a blank subject no longer files a book under computing.
 - `cryptography` stays a direct dependency: pypdf needs it to read AES-encrypted PDFs (bank statements are often encrypted this way); a test pins it.
+- `.env.example` lists the current settings (it still described the removed MLX/LLM configuration).
 
 ### Removed (Stage 4)
 
-- The old pipeline (`pipeline`, `mover`, `learner`, `reference_tree`, `classifiers/`, `encoders/`, `learning/`, `taxonomies/`), local AI (Ollama embeddings and local LLM), `config.py`, `types.py`, the Stage 1 `scripts/`, `config/thema.json` and `config/documents.json`, and ten unused `utils` modules. Every remaining module is reachable from the CLI.
+- The old pipeline (`pipeline`, `mover`, `learner`, `reference_tree`, `classifiers/`, `encoders/`, `learning/`, `taxonomies/`), local AI (Ollama embeddings and local LLM), `config.py`, `types.py`, the Stage 1 `scripts/`, `config/thema.json` and `config/documents.json`, and ten unused `utils` modules. Every remaining module is reachable from the CLI. (6517 source lines left; 704 tests pass offline from a clean clone.)
 - Dependencies `semantic-router`, `einops`, `geopy`, `faker`, `bandit` and `httpx` (still installed through litellm).
 - `.serena/` and `.claude/` are no longer tracked; `.planning/` moved to `docs/archive/planning/`. The root `VISION.md` moved to `docs/archive/vision-2026-10.md`, and the owner's home path in the archived planning notes is now `~/`.
 

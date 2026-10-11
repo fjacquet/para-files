@@ -219,7 +219,7 @@ All personal config lives under `~/.config/para-files/`. The repo ships only gen
 
 Package data (via `importlib.resources`):
 
-- `thema_l1l2.json` — the 234 Thema level-1/level-2 folder names (≈10 KB, replaces the 3.6 MB `thema.json`); the subject-keyword map stays in `core/thema.py`. No `default_rules.yaml`: rules name personal `leaf_id`s, so the owner's `rules.yaml` carries the extension rules (decision 2026-10-11).
+- `thema_l1l2.json` — the 234 Thema level-1/level-2 folder names (≈8 KB, replaces the 3.6 MB `thema.json`); the subject-keyword map stays in `core/thema.py`. No `default_rules.yaml`: rules name personal `leaf_id`s, so the owner's `rules.yaml` carries the extension rules (decision 2026-10-11).
 
 #### Loading and validation
 
