@@ -3,9 +3,10 @@
 Scope (a): golden record/library/media files the baseline left non-green.
 Scope (b): golden knowledge files, scored as top-3 suggestions.
 
-Every cloud request carries provider.zdr=true. Predictions are yellow; files flagged by the
-secrets guard are red and never sent. The verdict is eval.py's curve (max coverage at >= 98%
-precision).
+Every cloud request carries provider.zdr=true. A prediction is yellow when a leaf came back;
+failed and empty answers are red. Files outside the PARA root, and files the secrets guard
+flags by name (file or folder) or by content, are red and never sent. The verdict is eval.py's
+curve (max coverage at >= 98% precision).
 
 Usage:
     uv run python scripts/bakeoff.py --candidate jev --para-root "$PARA"
@@ -16,18 +17,19 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import random
 import re
 import time
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
 import httpx
 from dotenv import dotenv_values
-from para_inventory import nfc
+from para_inventory import nfc, read_jsonl
 
 from para_files.core.secrets import secret_reason
 from para_files.core.tree import Tree, config_dir, load_tree_config
@@ -49,6 +51,16 @@ SYSTEM = (
 )
 Post = Callable[..., httpx.Response]
 Ranked = list[tuple[str, float]]
+PREVIEW_CHARS = 2000
+RETRY_AFTER_CAP = 60.0
+
+
+class ReplyError(RuntimeError):
+    """A failed call that still reported what it cost (its body's usage.cost)."""
+
+    def __init__(self, message: str, cost: float) -> None:
+        super().__init__(message)
+        self.cost = cost
 
 
 def leaf_menu(tree: Tree) -> dict[str, str]:
@@ -58,6 +70,7 @@ def leaf_menu(tree: Tree) -> dict[str, str]:
 
 def evidence_text(name: str, preview: str) -> str:
     """Identical evidence for every candidate: filename + preview."""
+    preview = preview[:PREVIEW_CHARS]
     body = preview if preview.strip() and preview.strip() != name else "(no text)"
     return f"Filename: {name}\n\nContent preview:\n{body}"
 
@@ -99,7 +112,8 @@ def parse_choices(text: str | None, menu: dict[str, str]) -> Ranked:
     for item in data.get("choices", []) if isinstance(data, dict) else []:
         leaf, confidence = item.get("leaf"), item.get("confidence")
         known = leaf in menu and leaf not in [seen for seen, _ in ranked]
-        if known and isinstance(confidence, (int, float)):
+        valid = isinstance(confidence, (int, float)) and not isinstance(confidence, bool)
+        if known and valid and math.isfinite(confidence):
             ranked.append((leaf, max(0.0, min(1.0, float(confidence)))))
     return ranked[:3]
 
@@ -112,11 +126,28 @@ def post_with_retry(post: Post, url: str, **kwargs: Any) -> httpx.Response:
             return response
         retry_after = response.headers.get("Retry-After", "")
         delay = (
-            float(retry_after) if retry_after.isdigit() else min(30.0, 2**attempt + random.random())
+            min(RETRY_AFTER_CAP, float(retry_after))
+            if retry_after.isdigit()
+            else min(30.0, 2**attempt + random.random())
         )
         time.sleep(delay)
         response = post(url, **kwargs)
     return response
+
+
+def _reply(response: httpx.Response) -> tuple[Any, float]:
+    """Body and cost of a reply; an HTTP error raises ReplyError carrying the cost."""
+    try:
+        body: Any = response.json()
+    except ValueError:
+        body = None
+    usage = body.get("usage") if isinstance(body, dict) else None
+    raw = usage.get("cost") if isinstance(usage, dict) else None
+    numeric = isinstance(raw, (int, float)) and not isinstance(raw, bool) and math.isfinite(raw)
+    cost = float(raw) if numeric else 0.0
+    if response.is_error:
+        raise ReplyError(f"HTTP {response.status_code}", cost)
+    return body, cost
 
 
 def ask_llm(
@@ -142,10 +173,13 @@ def ask_llm(
             },
         },
     )
-    response.raise_for_status()
-    data = response.json()
-    cost = float(data.get("usage", {}).get("cost", 0.0) or 0.0)
-    return parse_choices(data["choices"][0]["message"].get("content"), menu), cost
+    body, cost = _reply(response)
+    try:
+        content = body["choices"][0]["message"].get("content")
+    except (KeyError, IndexError, TypeError, AttributeError) as exc:
+        msg = f"malformed reply: {type(exc).__name__}"
+        raise ReplyError(msg, cost) from exc
+    return parse_choices(content, menu), cost
 
 
 def ask_gemini(
@@ -185,14 +219,17 @@ def ask_jev(
             "state": {"filename": name, "content_preview": evidence_text(name, preview)},
         },
     )
-    response.raise_for_status()
-    data = response.json()
-    probabilities = data["answers"]["leaf"].get("probabilities", {})
-    ranked = sorted(
-        ((leaf, float(p)) for leaf, p in probabilities.items() if leaf in menu),
-        key=lambda pair: -pair[1],
-    )
-    return ranked[:3], float(data.get("usage", {}).get("cost", 0.0) or 0.0)
+    body, cost = _reply(response)
+    try:
+        probabilities = body["answers"]["leaf"].get("probabilities", {})
+        ranked = sorted(
+            ((leaf, float(p)) for leaf, p in probabilities.items() if leaf in menu),
+            key=lambda pair: -pair[1],
+        )
+    except (KeyError, TypeError, AttributeError, ValueError) as exc:
+        msg = f"malformed reply: {type(exc).__name__}"
+        raise ReplyError(msg, cost) from exc
+    return ranked[:3], cost
 
 
 # Insertion order is the owner's preference; it breaks ties between equal results (spec §4.5).
@@ -224,6 +261,35 @@ def read_preview(path: Path) -> str:
     return read_content_preview(path, max_chars=2000)
 
 
+def resolve_inside(para_root: Path, rel: str) -> Path | None:
+    """The file a PARA-relative path points at, or None when it resolves outside the root."""
+    root = para_root.resolve()
+    path = (root / rel).resolve()
+    return path if path.is_relative_to(root) else None
+
+
+def _is_secret(rel: str, preview: str) -> bool:
+    """A secret name in the file or any folder above it, or secret content in the preview."""
+    parts = Path(rel).parts
+    return secret_reason(parts[-1], preview) is not None or any(
+        secret_reason(part) is not None for part in parts
+    )
+
+
+def _refused(row: dict[str, Any], signal: str) -> dict[str, Any]:
+    """A red row for a file that was never sent: no leaf, no cost."""
+    return {
+        "path": row["path"],
+        "scope": row["scope"],
+        "leaf": None,
+        "confidence": 0.0,
+        "band": "red",
+        "signal": signal,
+        "secs": 0.0,
+        "cost": 0.0,
+    }
+
+
 def predict(
     row: dict[str, Any],
     para_root: Path,
@@ -234,32 +300,35 @@ def predict(
     preview_of: Callable[[Path], str],
 ) -> dict[str, Any]:
     """One prediction row; secret files are never sent; one bad file never stops the run."""
-    path = para_root / row["path"]
     start = time.monotonic()
     try:
-        preview = preview_of(path)
-    except Exception:  # noqa: BLE001 - unreadable or online-only: classify by name alone
-        preview = ""
-    base = {"path": row["path"], "scope": row["scope"], "band": "yellow", "cost": 0.0}
-    if secret_reason(path.name, preview):
-        return {
-            **base,
-            "leaf": None,
-            "confidence": 0.0,
-            "band": "red",
-            "signal": "secret",
-            "secs": 0.0,
-        }
+        path = resolve_inside(para_root, row["path"])
+        if path is None:
+            return _refused(row, "outside")
+        try:
+            preview = preview_of(path)
+        except Exception:  # noqa: BLE001 - unreadable or online-only: classify by name alone
+            preview = ""
+        if _is_secret(row["path"], preview):
+            return _refused(row, "secret")
+    except Exception as exc:  # noqa: BLE001 - a file that cannot be checked is never sent
+        return {**_refused(row, "error"), "error": f"{type(exc).__name__}: {exc}"[:200]}
     error = None
     try:
-        ranked, cost = ask(post, key, menu, path.name, preview)
+        ranked, cost = ask(post, key, menu, Path(row["path"]).name, preview)
     except Exception as exc:  # noqa: BLE001 - one bad reply must not stop the run
-        ranked, cost, error = [], 0.0, f"{type(exc).__name__}: {exc}"[:200]
+        ranked, error = [], f"{type(exc).__name__}: {exc}"[:200]
+        cost = exc.cost if isinstance(exc, ReplyError) else 0.0
+    if error is None and not ranked:
+        error = "empty answer"
+    leaf = ranked[0][0] if ranked else None
     pred = {
-        **base,
-        "leaf": ranked[0][0] if ranked else None,
+        "path": row["path"],
+        "scope": row["scope"],
+        "leaf": leaf,
         "confidence": ranked[0][1] if ranked else 0.0,
-        "top3": [leaf for leaf, _ in ranked],
+        "band": "yellow" if leaf else "red",
+        "top3": [candidate for candidate, _ in ranked],
         "signal": "fallback",
         "secs": round(time.monotonic() - start, 3),
         "cost": cost,
@@ -269,23 +338,29 @@ def predict(
     return pred
 
 
+def _finished(futures: list[Future[dict[str, Any]]]) -> list[dict[str, Any]]:
+    """Results of the calls that completed without an error, in row order."""
+    return [f.result() for f in futures if f.done() and not f.cancelled() and f.exception() is None]
+
+
 def predict_all(
     rows: list[dict[str, Any]],
     run: Callable[[dict[str, Any]], dict[str, Any]],
     workers: int,
     out: Path,
 ) -> list[dict[str, Any]]:
-    """Predict rows in order; on Ctrl+C cancel pending calls, keep what is done, re-raise."""
-    preds: list[dict[str, Any]] = []
+    """Predict rows in order. On Ctrl+C or any error: cancel pending calls, keep every finished
+    prediction, write them, and re-raise."""
     pool = ThreadPoolExecutor(workers)
     futures = [pool.submit(run, row) for row in rows]
     try:
-        for future in futures:
-            preds.append(future.result())
-    except KeyboardInterrupt:
+        preds = [future.result() for future in futures]
+    except BaseException as exc:
         pool.shutdown(wait=False, cancel_futures=True)
+        preds = _finished(futures)
         _write_preds(out, preds)
-        print(f"interrupted: kept {len(preds)} of {len(rows)} predictions -> {out}")
+        if isinstance(exc, KeyboardInterrupt):
+            print(f"interrupted: kept {len(preds)} of {len(rows)} predictions -> {out}")
         raise
     pool.shutdown()
     _write_preds(out, preds)
@@ -303,18 +378,22 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--para-root", type=Path, required=True)
     parser.add_argument("--config-dir", type=Path, default=None)
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument(
+        "--baseline", type=Path, default=None, help="default: <config dir>/pred_baseline.jsonl"
+    )
     args = parser.parse_args(argv)
     cfg_dir = args.config_dir or config_dir()
     para_root = args.para_root.expanduser().resolve()
     key = (
         os.environ.get("OPENROUTER_API_KEY")
         or dotenv_values(".env").get("PARA_FILES_LLM_API_KEY")
+        or dotenv_values(cfg_dir / ".env").get("PARA_FILES_LLM_API_KEY")
         or ""
     )
     if not key:
         parser.error("set OPENROUTER_API_KEY or PARA_FILES_LLM_API_KEY in .env")
-    read = lambda path: [json.loads(line) for line in path.read_text().splitlines() if line]  # noqa: E731
-    rows = select_scope(read(cfg_dir / "golden.jsonl"), read(cfg_dir / "pred_baseline.jsonl"))
+    baseline_path = args.baseline or cfg_dir / "pred_baseline.jsonl"
+    rows = select_scope(read_jsonl(cfg_dir / "golden.jsonl"), read_jsonl(baseline_path))
     rows = rows[: args.limit]
     menu = leaf_menu(load_tree_config(cfg_dir).tree)
     ask, workers = CANDIDATES[args.candidate]
