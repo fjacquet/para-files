@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - `sort --apply --review` refuses to start without a terminal instead of moving the green files and stopping at the first question.
+- A file sent to another folder in `--review` keeps its year (and issuer, when it fits) subfolder instead of landing in the folder root.
 
 ## [2.0] - 2026-10-11
 

@@ -407,3 +407,13 @@ def test_calibrated_library_model_verdict_with_a_fitting_issuer_is_green(tmp_pat
     ctx.config = TreeConfig(tree=tree, rules=RulesFile(), issuers=issuers)
     d = classify(inbox_file(ctx, "AcmeCorp guide.txt", "AcmeCorp manual"), ctx)
     assert (d.leaf_id, d.signal, d.band) == ("resources_vendor", "fallback", "green")
+
+
+def test_fill_subkey_needs_every_placeholder():
+    leaf = make_config().tree.leaves["archives_10y_banques"]
+    assert decide.fill_subkey(leaf, (("{year}", "2026"), ("{issuer}", "acmecard"))) == (
+        "4_Archives/10y_banques/acmecard/2026"
+    )
+    assert decide.fill_subkey(leaf, (("{year}", "2026"), ("{issuer}", None))) == (
+        "4_Archives/10y_banques"
+    )

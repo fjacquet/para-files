@@ -74,6 +74,8 @@ class Decision:
     suggested_name: str | None = None
     ranked: tuple[tuple[str, float], ...] = ()
     about: str | None = None
+    issuer: str | None = None
+    fill: tuple[tuple[str, str | None], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -258,22 +260,27 @@ def file_date(evidence: Evidence) -> tuple[str | None, str | None]:
     return (match.group(1), match.group(2)) if match else (None, None)
 
 
-def target_dir(leaf: Leaf, evidence: Evidence, verdict: Verdict) -> str:
-    """Leaf path plus its filled subkey; any unfillable placeholder -> the leaf root."""
+def placeholders(evidence: Evidence, verdict: Verdict) -> tuple[tuple[str, str | None], ...]:
+    """The subkey values this file can give, whatever the leaf: date and Thema folders."""
+    year, month = file_date(evidence)
+    return (("{year}", year), ("{month}", month), ("{thema}", verdict.thema))
+
+
+def fill_subkey(leaf: Leaf, fill: Sequence[tuple[str, str | None]]) -> str:
+    """Leaf path plus its subkey filled from fill; any unfillable placeholder -> the leaf root."""
     if not leaf.subkey:
         return leaf.path
-    year, month = file_date(evidence)
-    values = {
-        "{year}": year,
-        "{month}": month,
-        "{issuer}": verdict.issuer,
-        "{thema}": verdict.thema,
-    }
-    parts = [values[placeholder] for placeholder in leaf.subkey.split("/")]
+    values = dict(fill)
+    parts = [values.get(placeholder) for placeholder in leaf.subkey.split("/")]
     filled = [part for part in parts if part]
     if len(filled) != len(parts):
         return leaf.path
     return "/".join([leaf.path, *filled])
+
+
+def target_dir(leaf: Leaf, evidence: Evidence, verdict: Verdict) -> str:
+    """Leaf path plus its filled subkey (verdict.issuer already fitted to the leaf)."""
+    return fill_subkey(leaf, (*placeholders(evidence, verdict), ("{issuer}", verdict.issuer)))
 
 
 def _cap(band: Band, kind: Kind, verdict: Verdict) -> Band:
@@ -357,6 +364,8 @@ def decision_for(evidence: Evidence, verdict: Verdict, ctx: Context) -> Decision
         suggested_name=verdict.suggested_name,
         ranked=verdict.ranked,
         about=verdict.about,
+        issuer=verdict.issuer,
+        fill=placeholders(evidence, verdict),
     )
 
 

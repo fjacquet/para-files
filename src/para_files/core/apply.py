@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from para_files.core.decide import Decision
+from para_files.core.decide import Decision, fill_subkey, issuer_for
 from para_files.core.evidence import sha256_of
 from para_files.core.journal import DecidedBy, Journal
 from para_files.core.tree import TreeConfig
@@ -142,7 +142,9 @@ class _Applier:
         decision = op.decision
         if op.leaf_id == decision.leaf_id and decision.target_dir:
             return self.root / decision.target_dir
-        return self.root / self.config.tree.leaves[op.leaf_id].path
+        leaf = self.config.tree.leaves[op.leaf_id]
+        issuer = issuer_for(op.leaf_id, decision.issuer, self.config)
+        return self.root / fill_subkey(leaf, (*decision.fill, ("{issuer}", issuer)))
 
     def apply(self, op: Op) -> None:
         src = op.decision.path

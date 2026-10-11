@@ -259,3 +259,19 @@ def test_review_picks_a_ranked_alternative(tmp_path, monkeypatch):
     entries = read_run(tmp_path / "state", last_run_id(tmp_path / "state"))
     moves = [(e["leaf"], e["proposed_leaf"]) for e in entries if e["op"] == "move"]
     assert moves == [("archives_10y_banques", "resources_it")]
+
+
+def test_alternative_keeps_issuer_and_year(tmp_path, monkeypatch):
+    root = setup_cli(tmp_path, monkeypatch)
+    put(root, "0_Inbox/acme_2026.md", "AcmeCard statement")
+    result = runner.invoke(app, ["sort", "--apply", "--review"], input="2\n")
+    assert result.exit_code == 0, result.output
+    assert (root / "4_Archives/10y_banques/acmecard/2026/acme_2026.md").exists()
+
+
+def test_retarget_keeps_the_year(tmp_path, monkeypatch):
+    root = setup_cli(tmp_path, monkeypatch)
+    put(root, "0_Inbox/notes_2025.md", "# n")
+    result = runner.invoke(app, ["sort", "--apply", "--review"], input="archives_5y\n")
+    assert result.exit_code == 0, result.output
+    assert (root / "4_Archives/5y_factures/2025/notes_2025.md").exists()
