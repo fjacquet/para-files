@@ -399,7 +399,10 @@ def test_baseline_option_and_blank_lines(bakeoff, tmp_path: Path, monkeypatch, f
 def test_secret_subfolder_is_dropped_from_the_menu_sent(bakeoff):
     tree = SimpleNamespace(
         leaves={
-            "inv": SimpleNamespace(describe="Invoices (contains: wallet_passwords, Telephonie)")
+            "inv": SimpleNamespace(
+                path="4_Archives/inv",
+                describe="Invoices (contains: wallet_passwords, Telephonie)",
+            )
         }
     )
     post = FakePost(_chat('{"choices": [{"leaf": "inv", "confidence": 0.8}]}'))
@@ -407,6 +410,45 @@ def test_secret_subfolder_is_dropped_from_the_menu_sent(bakeoff):
     sent = json.dumps(post.calls[0]["json"], ensure_ascii=False)
     assert "wallet_passwords" not in sent
     assert "Telephonie" in sent
+
+
+def test_secret_named_leaf_is_left_out_of_the_request(bakeoff):
+    tree = SimpleNamespace(
+        leaves={
+            "archives_wallet_passwords": SimpleNamespace(
+                path="4_Archives/wallet_passwords", describe="Wallet passwords"
+            ),
+            "notes": SimpleNamespace(path="3_Resources/notes", describe="Notes"),
+        }
+    )
+    post = FakePost(_chat('{"choices": [{"leaf": "notes", "confidence": 0.8}]}'))
+    bakeoff.ask_gemini(post, "k", bakeoff.leaf_menu(tree), "a.pdf", "text")
+    body = post.calls[0]["json"]
+    sent = json.dumps(body, ensure_ascii=False)
+    enum = body["response_format"]["json_schema"]["schema"]["properties"]["choices"]["items"]
+    assert enum["properties"]["leaf"]["enum"] == ["notes"]
+    assert "archives_wallet_passwords" not in sent
+    assert "wallet" not in sent.lower()
+    assert "Notes" in sent
+
+
+@pytest.mark.parametrize("leaf", [["inv"], {"leaf": "inv"}], ids=["list", "dict"])
+def test_unhashable_leaf_raises_the_reply_error(bakeoff, leaf):
+    content = json.dumps({"choices": [{"leaf": leaf, "confidence": 0.8}]})
+    with pytest.raises(bakeoff.ReplyError):
+        bakeoff.parse_choices(content, MENU)
+
+
+@pytest.mark.parametrize("leaf", [["inv"], {"leaf": "inv"}], ids=["list", "dict"])
+def test_unhashable_leaf_keeps_the_reply_cost(bakeoff, tmp_path: Path, leaf):
+    content = json.dumps({"choices": [{"leaf": leaf, "confidence": 0.8}]})
+    reply = {"choices": [{"message": {"content": content}}], "usage": {"cost": 0.002}}
+    post = FakePost(httpx.Response(200, json=reply))
+    row = {"path": "4_Archives/x/a.pdf", "leaf": "inv", "kind": "record", "scope": "a"}
+    pred = bakeoff.predict(row, tmp_path, MENU, bakeoff.ask_gemini, post, "k", lambda _p: "x")
+    assert pred["cost"] == pytest.approx(0.002)
+    assert pred["leaf"] is None
+    assert "malformed" in pred["error"]
 
 
 @pytest.mark.parametrize(

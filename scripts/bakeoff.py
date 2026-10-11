@@ -72,9 +72,20 @@ def _without_secret_parts(describe: str) -> str:
     return f"{head} (contains: {', '.join(kept)})" if kept else head
 
 
+def _is_secret_leaf(leaf_id: str, path: str, describe: str) -> bool:
+    """A leaf whose id, path folders or describe head is secret-named; its files are refused."""
+    head = describe.partition(" (contains: ")[0]
+    names = [leaf_id, head, *Path(path).parts]
+    return any(secret_reason(name) is not None for name in names)
+
+
 def leaf_menu(tree: Tree) -> dict[str, str]:
-    """Leaf id -> describe, the choice list every candidate sees (no secret-named folders)."""
-    return {leaf_id: _without_secret_parts(leaf.describe) for leaf_id, leaf in tree.leaves.items()}
+    """Leaf id -> describe, the choice list every candidate sees: no secret-named leaves."""
+    return {
+        leaf_id: _without_secret_parts(leaf.describe)
+        for leaf_id, leaf in tree.leaves.items()
+        if not _is_secret_leaf(leaf_id, leaf.path, leaf.describe)
+    }
 
 
 def evidence_text(name: str, preview: str) -> str:
@@ -127,6 +138,9 @@ def parse_choices(text: str | None, menu: dict[str, str]) -> Ranked:
             msg = "malformed reply: choice is not an object"
             raise ReplyError(msg, 0.0)
         leaf, confidence = item.get("leaf"), item.get("confidence")
+        if not isinstance(leaf, str):
+            msg = "malformed reply: leaf is not a string"
+            raise ReplyError(msg, 0.0)
         known = leaf in menu and leaf not in [seen for seen, _ in ranked]
         valid = isinstance(confidence, (int, float)) and not isinstance(confidence, bool)
         if known and valid:
