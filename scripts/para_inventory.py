@@ -143,31 +143,24 @@ def _group_targets(
     rep_target = {key: rep.trimmed for key, rep in reps.items()}
     prefixed = [rep for rep in reps.values() if retention_of(rep.name)]
     plain = [rep for rep in reps.values() if not retention_of(rep.name)]
-    if bucket != ARCHIVES and prefixed:  # R9: retention prefixes belong to the vault
-        largest = max(prefixed, key=lambda f: f.files)
-        if strip_prefix(largest.name) in MEDIA | LIBRARY:
-            bare = RETENTION_PREFIX.sub("", largest.name.strip())
-            target = plain[0].trimmed if plain else f"{bucket}/{bare}"
-            rep_target = dict.fromkeys(rep_target, target)
-        else:
-            vault = {f"{ARCHIVES}/{rep.name.strip()}" for rep in prefixed}
-            for key, rep in reps.items():
-                if retention_of(rep.name):
-                    rep_target[key] = f"{ARCHIVES}/{rep.name.strip()}"  # each prefix kept
-                else:
-                    rep_target[key] = next(iter(vault)) if len(vault) == 1 else INBOX
-    elif bucket == ARCHIVES and (prefixed or stem in taxonomy):
+    if bucket != ARCHIVES and prefixed and strip_prefix(prefixed[0].name) in MEDIA | LIBRARY:
+        bare = RETENTION_PREFIX.sub("", prefixed[0].name.strip())  # R9: media/library drop it
+        target = plain[0].trimmed if plain else f"{bucket}/{bare}"
+        return {folder.rel: target for folder in group}
+    if prefixed or (bucket == ARCHIVES and stem in taxonomy):  # records: the vault decides
         allowed = taxonomy.get(stem) or {retention_of(rep.name) for rep in prefixed}
-        keepers = [rep.trimmed for rep in prefixed if retention_of(rep.name) in allowed]
+        vault = {key: f"{ARCHIVES}/{rep.name.strip()}" for key, rep in reps.items()}
+        keepers = [
+            vault[name_key(rep.name)] for rep in prefixed if retention_of(rep.name) in allowed
+        ]
         single = None
         if len(allowed) == 1:  # the taxonomy prefix, created when no folder has it yet
             base = RETENTION_PREFIX.sub("", next(iter(reps.values())).name.strip())
             single = keepers[0] if keepers else f"{ARCHIVES}/{next(iter(allowed))}_{base}"
         for key, rep in reps.items():
-            prefix = retention_of(rep.name)
-            if prefix in allowed:
-                continue  # a prefix the taxonomy defines: its own canonical folder
-            if single is not None:
+            if retention_of(rep.name) in allowed:
+                rep_target[key] = vault[key]  # its own vault folder (R9 moves it there)
+            elif single is not None:
                 rep_target[key] = single  # R1 legacy twin, R3 stray prefix
             elif len(allowed) > 1:
                 rep_target[key] = INBOX  # R2: legacy or stray folder of a split stem, doubtful

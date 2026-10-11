@@ -343,3 +343,45 @@ def test_review_is_written_when_the_draft_does_not_load(
     argv += ["--documents", str(documents), "--out", str(out)]
     assert migrate.main(argv) == 1
     assert "the draft does not load: boom" in (out / "review.md").read_text()
+
+
+@pytest.mark.parametrize(
+    ("rels", "taxonomy", "expected"),
+    [
+        (
+            ["3_Resources/5y_mobilite/a.pdf", "3_Resources/mobilite/b.pdf"],
+            {"mobilite": {"5y", "ctr"}},
+            {
+                "3_Resources/5y_mobilite": "4_Archives/5y_mobilite",
+                "3_Resources/mobilite": "0_Inbox",
+            },
+        ),
+        (
+            ["3_Resources/5y_travail/a.pdf"],
+            {"travail": {"10y"}},
+            {"3_Resources/5y_travail": "4_Archives/10y_travail"},
+        ),
+        (
+            [
+                "3_Resources/5y_photos/a.jpg",
+                "3_Resources/5y_photos/b.jpg",
+                "3_Resources/ctr_photos/c.jpg",
+            ],
+            {},
+            {
+                "3_Resources/5y_photos": "3_Resources/photos",
+                "3_Resources/ctr_photos": "3_Resources/photos",
+            },
+        ),
+    ],
+)
+def test_records_outside_archives_follow_the_taxonomy(
+    load_script, tmp_path, rels, taxonomy, expected
+):
+    root = tmp_path / "PARA"
+    for rel in rels:
+        _touch(root, rel)
+    inventory = load_script("para_inventory")
+    mapping = inventory.canonical_map(inventory.scan_folders(root), taxonomy)
+    for rel, target in expected.items():
+        assert mapping[rel] == target
