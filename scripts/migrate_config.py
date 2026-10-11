@@ -45,6 +45,7 @@ TAGS = {
     "3_Resources": "resources",
     "4_Archives": "archives",
 }
+DRAFT_FILES = ("tree.yaml", "rules.yaml", "issuers.yaml", "review.md")
 RETENTIONS = frozenset({"ret", "10y", "5y", "2y", "ctr"})
 RETENTION_FROM_DOCS = {
     "permanent": "permanent",
@@ -80,6 +81,7 @@ def document_folders(
 ) -> dict[str, tuple[str, str | None]]:
     """Canonical folder -> (retention, subkey) taken from documents.json."""
     found: dict[str, tuple[str, str | None]] = {}
+    unknown_noted: set[str] = set()
     for category in documents.get("categories", []):
         for doc in category.get("documents", []):
             pattern = doc.get("para_pattern") or category.get("para_pattern") or ""
@@ -88,7 +90,8 @@ def document_folders(
                 continue
             subkey = "/".join(p for p in SUBKEY_FROM_DOCS if p in pattern) or None
             known = doc.get("retention", "")
-            if known not in RETENTION_FROM_DOCS:
+            if known not in RETENTION_FROM_DOCS and folder not in unknown_noted:
+                unknown_noted.add(folder)
                 notes.append(
                     f"unknown retention '{known}' in documents.json for {folder}; "
                     "proposed permanent"
@@ -149,7 +152,13 @@ def draft_tree(
             notes.append(f"doubtful: {rel} -> {INBOX} (later batch)")
             continue
         if target != rel:
-            notes.append(f"merge: {rel} -> {target}")
+            note = f"merge: {rel} -> {target}"
+            if slug(rel) == slug(target):  # twins: golden samples leaf paths, not folder names
+                note += (
+                    "; rename on disk before building the golden corpus "
+                    "(golden samples leaf paths only)"
+                )
+            notes.append(note)
         if target not in targets:
             targets.append(target)
     leaves: dict[str, dict[str, Any]] = {}
@@ -345,9 +354,11 @@ def main(argv: list[str] | None = None) -> int:
     out = (args.out or config_dir() / "draft").expanduser().resolve()
     if out.is_relative_to(para_root):
         parser.error("--out must be outside the PARA root")
-    if (out / "tree.yaml").exists() and not args.force:
+    existing = [name for name in DRAFT_FILES if (out / name).exists()]
+    if existing and not args.force:
         parser.error(
-            f"{out / 'tree.yaml'} exists and may hold your edits; pass --force to overwrite"
+            f"{', '.join(existing)} already in {out} and may hold your edits; "
+            "pass --force to overwrite"
         )
     legacy_path = args.legacy_tree or default_reference_tree()
     legacy = yaml.safe_load(legacy_path.read_text(encoding="utf-8")) or {}

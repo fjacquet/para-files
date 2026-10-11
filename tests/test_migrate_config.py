@@ -571,3 +571,55 @@ class TestSeederReview:
         migrate = load_script("migrate_config")
         argv = ["--para-root", str(para), "--legacy-tree", str(legacy)]
         assert migrate.main([*argv, "--out", str(tmp_path / "draft")]) == 0
+
+
+@pytest.mark.parametrize("kept", ["rules.yaml", "issuers.yaml", "review.md"])
+def test_main_refuses_without_force_when_any_draft_file_exists(
+    load_script, para, legacy, documents, tmp_path, kept
+):
+    out = tmp_path / "draft"
+    assert _run(load_script, para, legacy, documents, out) == 0
+    (out / "tree.yaml").unlink()
+    (out / kept).write_text("# my edits\n")
+    with pytest.raises(SystemExit):
+        _run(load_script, para, legacy, documents, out)
+    assert (out / kept).read_text() == "# my edits\n"
+
+
+def test_unknown_retention_is_noted_once_per_folder(load_script):
+    migrate = load_script("migrate_config")
+    documents = {
+        "categories": [
+            {
+                "documents": [
+                    _doc("a", "weird", "4_Archives/5y_factures/{issuer}"),
+                    _doc("b", "weird", "4_Archives/5y_factures/{year}"),
+                ]
+            }
+        ]
+    }
+    notes: list[str] = []
+    migrate.document_folders(documents, lambda rel: rel, notes)
+    unknown = [note for note in notes if "unknown retention" in note]
+    assert len(unknown) == 1
+    assert "4_Archives/5y_factures" in unknown[0]
+
+
+def test_merge_into_a_twin_name_asks_for_a_rename_on_disk(load_script):
+    migrate = load_script("migrate_config")
+    folder = migrate.Folder("4_Archives", "5y factures", 1)
+    notes: list[str] = []
+    migrate.draft_tree([folder], lambda rel: "4_Archives/5y_factures", {}, notes)
+    assert (
+        "merge: 4_Archives/5y factures -> 4_Archives/5y_factures; rename on disk before "
+        "building the golden corpus (golden samples leaf paths only)"
+    ) in notes
+
+
+def test_merge_into_an_unrelated_name_gets_no_rename_note(load_script):
+    migrate = load_script("migrate_config")
+    folder = migrate.Folder("2_Areas", "carriere", 1)
+    notes: list[str] = []
+    migrate.draft_tree([folder], lambda rel: "2_Areas/career", {}, notes)
+    assert "merge: 2_Areas/carriere -> 2_Areas/career" in notes
+    assert not any("rename on disk" in note for note in notes)
