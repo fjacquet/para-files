@@ -169,7 +169,7 @@ def _owner_decisions(state_dir: Path, tree: Tree) -> Iterator[dict[str, Any]]:
             continue
         try:
             entries = read_run(state_dir, run_id)
-        except (json.JSONDecodeError, OSError) as exc:
+        except (ValueError, OSError) as exc:
             logger.warning("skipping unreadable journal {}: {}", run_id, exc)
             continue
         for entry in entries:

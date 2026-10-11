@@ -262,3 +262,14 @@ def test_entry_without_src_is_skipped(tmp_path):
     with Journal(tmp_path, "20260101-000000") as journal:
         journal.append({"op": "confirm", "leaf": "archives_10y_banques", "decided_by": "owner"})
     assert owner_examples(tmp_path, tree) == []
+
+
+def test_non_utf8_journal_does_not_crash(tmp_path):
+    tree = make_config().tree
+    directory = journal_dir(tmp_path)
+    directory.mkdir(parents=True, exist_ok=True)
+    good = json.dumps(_owner_move("/r/a.pdf")).encode("utf-8")
+    (directory / "20260101-000000.jsonl").write_bytes(good + b"\n\xff\xfe\n" + good + b"\n")
+    with Journal(tmp_path, "20260102-000000") as journal:
+        journal.append(_owner_move("/r/b.pdf"))
+    assert [e.name for e in owner_examples(tmp_path, tree)] == ["b.pdf"]
