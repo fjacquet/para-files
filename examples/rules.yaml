@@ -2,7 +2,7 @@
 rules:
   - name: phone_invoices
     leaf: telecom_invoices
-    globs: ["*swisscom*.pdf", "*salt*facture*.pdf"]
+    globs: ["*acmetelecom*.pdf", "*acmemobile*facture*.pdf"]
   - name: payslips
     leaf: payslips
     globs: ["*payslip*.pdf", "*salaire*.pdf"]

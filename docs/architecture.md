@@ -84,7 +84,7 @@ Each verdict gets a band from its signal, then the kind of the chosen leaf caps 
 | Rules | green |
 | Book with a verified ISBN | green |
 | Book by heuristic | yellow |
-| Issuer, or model, with confidence below `fallback_red` (model only) | red |
+| Model with confidence below `fallback_red` | red |
 | Issuer or model, confidence at or above its green threshold (default 0.9), and kind calibrated | green |
 | Issuer or model otherwise | yellow |
 | No leaf | red |

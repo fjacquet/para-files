@@ -21,7 +21,7 @@ Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/). No local model serve
 
 ## 2. Choose the PARA root
 
-The PARA root is one folder that holds the buckets `0_Inbox`, `1_Projets`, `2_Areas`, `3_Resources` and `4_Archives`. Create the inbox; `init` creates the rest later.
+The PARA root is one folder that holds the buckets `0_Inbox` and `1_…` to `4_…` (for example `1_Projects`, `2_Areas`, `3_Resources`, `4_Archives`). Create the inbox; `init` later creates the leaf folders your `tree.yaml` names.
 
 ```bash
 mkdir -p ~/PARA/0_Inbox

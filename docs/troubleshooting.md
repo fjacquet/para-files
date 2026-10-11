@@ -90,7 +90,7 @@ The name rule over-flags on purpose. There is no override: a flagged file stays 
 |---|---|---|
 | `nothing to move` | No green file, and no yellow file confirmed | Review yellow files with `--review`, or fix the red ones with `explain` |
 | `skipped ...: changed since the preview` | The file's content changed after the plan | Run `sort` again |
-| `skipped ...: source missing` or `now a symlink` | The file moved or was replaced | Run `sort` again |
+| `skipped ...: source missing` | The file moved or was replaced | Run `sort` again |
 | `skipped ...: already in place` | The file is already in its target folder | Nothing to do; a confirmed one is still recorded |
 | `skipped ...: target outside the PARA root` | A leaf or subfolder resolves outside the root (for example through a symlink) | Fix the leaf path or the folder |
 | `dot-folders are never sorted` | The path is inside a folder that starts with `.` | Sort the folder itself, not a dot-folder |
@@ -123,6 +123,7 @@ Steps not listed were reversed without a message. A run with skipped steps is no
 |---|---|
 | `clean only works inside the PARA root` | The folder given is outside the root |
 | `clean never works inside dot-folders` | The folder is `.git`, `.trash` or similar |
+| `skipped ...: now a symlink` | An empty folder in the plan was replaced by a symlink before `--apply`; it is left alone |
 | `clean` prints a plan and nothing moves | Expected: `clean` previews until you add `--apply` |
 
 ## Still stuck

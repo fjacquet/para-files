@@ -1,11 +1,11 @@
 # Example issuers: patterns found in a filename or text preview -> candidate leaves.
 issuers:
-  swisscom:
-    patterns: [Swisscom]
+  acme_telecom:
+    patterns: [AcmeTelecom]
     leaves: [telecom_invoices]
-  salt:
-    patterns: [Salt Mobile]
+  acme_mobile:
+    patterns: [AcmeMobile]
     leaves: [telecom_invoices]
-  vmware:
-    patterns: [VMware]
+  acme_soft:
+    patterns: [AcmeSoft]
     leaves: [vendor_docs]
