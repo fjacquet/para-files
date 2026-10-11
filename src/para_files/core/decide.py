@@ -19,7 +19,7 @@ from para_files.core.books import BookMatch, Lookup, match_book
 from para_files.core.cache import Cache
 from para_files.core.evidence import Evidence, extract
 from para_files.core.fallback import FallbackChoice, Hint
-from para_files.core.issuers import IssuerMatch, match_issuer
+from para_files.core.issuers import match_issuer
 from para_files.core.rules import match_rule
 from para_files.core.settings import CoreSettings
 from para_files.core.tree import Kind, Leaf, Rule, Tree, TreeConfig
@@ -105,7 +105,7 @@ class _Hints:
     """The non-deciding matches for one file, in cascade order, and the issuer among them."""
 
     seen: tuple[tuple[Hint, float], ...]
-    issuer: IssuerMatch | None
+    issuer: str | None
 
     @property
     def hints(self) -> tuple[Hint, ...]:
@@ -177,7 +177,7 @@ def _hints(evidence: Evidence, ctx: Context, book: BookMatch | None) -> _Hints:
         source = f"issuer {issuer.issuer!r} (pattern {issuer.pattern!r}{agreed})"
         confidence = ISSUER_AGREED if issuer.agreed else ISSUER_ALONE
         seen.append((Hint(source, issuer.leaf_id), confidence))
-    return _Hints(tuple(seen), issuer)
+    return _Hints(tuple(seen), issuer.issuer if issuer else None)
 
 
 def _model_verdict(choice: FallbackChoice, found: _Hints) -> Verdict:
@@ -188,7 +188,7 @@ def _model_verdict(choice: FallbackChoice, found: _Hints) -> Verdict:
         "fallback",
         choice.confidence,
         f"{choice.model}: {ranked}{hints}",
-        issuer=found.issuer.issuer if found.issuer else None,
+        issuer=found.issuer,
         ranked=choice.ranked,
         about=choice.about or None,
     )
@@ -196,17 +196,16 @@ def _model_verdict(choice: FallbackChoice, found: _Hints) -> Verdict:
 
 def _hint_verdict(found: _Hints, why: str) -> Verdict:
     first, confidence = found.seen[0]
-    ranked: list[tuple[str, float]] = []
+    ranked: dict[str, float] = {}
     for hint, value in found.seen:
-        if hint.leaf_id not in {leaf for leaf, _ in ranked}:
-            ranked.append((hint.leaf_id, value))
+        ranked.setdefault(hint.leaf_id, value)
     return Verdict(
         first.leaf_id,
         "hint",
         confidence,
         f"{found.sources()} ({why})",
-        issuer=found.issuer.issuer if found.issuer else None,
-        ranked=tuple(ranked),
+        issuer=found.issuer,
+        ranked=tuple(ranked.items()),
     )
 
 

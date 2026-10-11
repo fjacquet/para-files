@@ -23,14 +23,10 @@ from para_files.core.fallback import (
     parse_reply,
 )
 from para_files.core.tree import Tree
-from tests.core_helpers import make_config, make_settings
+from tests.core_helpers import make_config, make_settings, reply_content
 
 
 KEY = "sk-test-key"
-
-
-def reply_content(content):
-    return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])
 
 
 def reply(choices):

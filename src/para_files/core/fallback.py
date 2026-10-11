@@ -7,9 +7,11 @@ is never sent; secret-named leaves are never listed. Same request as the Stage 1
 
 from __future__ import annotations
 
+import functools
 import json
 import math
 import re
+import unicodedata
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -153,8 +155,10 @@ def evidence_text(evidence: Evidence, hints: Sequence[Hint] = ()) -> str:
     return text
 
 
-def _words(name: str) -> set[str]:
-    return {word.casefold() for word in WORD.findall(Path(name).stem)}
+@functools.cache
+def _words(name: str) -> frozenset[str]:
+    stem = unicodedata.normalize("NFC", Path(name).stem)
+    return frozenset(word.casefold() for word in WORD.findall(stem))
 
 
 def pick_examples(
@@ -252,18 +256,17 @@ def parse_reply(content: str | None, menu: dict[str, str]) -> tuple[Ranked, str]
     if not isinstance(choices, list):
         msg = "reply has no choices list"
         raise FallbackError(msg)
-    ranked: Ranked = []
+    chosen: dict[str, float] = {}
     for item in choices:
         if not isinstance(item, dict):
             continue
         leaf, probability = item.get("leaf"), _probability(item.get("confidence"))
         if not isinstance(leaf, str) or leaf not in menu or probability is None:
             continue
-        if leaf not in {seen for seen, _ in ranked}:
-            ranked.append((leaf, probability))
+        chosen.setdefault(leaf, probability)
     about = data.get("about") if isinstance(data, dict) else None
     text = " ".join(about.split())[:MAX_ABOUT] if isinstance(about, str) else ""
-    return ranked[:MAX_CHOICES], text
+    return list(chosen.items())[:MAX_CHOICES], text
 
 
 class OpenRouterFallback:
@@ -285,13 +288,11 @@ class OpenRouterFallback:
         self._examples = tuple(examples)
 
     def _ask(
-        self, model: str, menu: dict[str, str], evidence: Evidence, hints: Sequence[Hint]
+        self, model: str, menu: dict[str, str], prompt: list[dict[str, str]]
     ) -> tuple[Ranked, str]:
         response = self._complete(
             model=f"{OPENROUTER}{model}",
-            messages=messages(
-                menu, evidence, hints, pick_examples(self._examples, evidence.name, menu)
-            ),
+            messages=prompt,
             api_key=self._key,
             temperature=0,
             max_tokens=MAX_TOKENS,
@@ -320,9 +321,11 @@ class OpenRouterFallback:
         menu = leaf_menu(tree)
         if not menu:
             return None
+        examples = pick_examples(self._examples, evidence.name, menu)
+        prompt = messages(menu, evidence, hints, examples)
         for model in self._models:
             try:
-                ranked, about = self._ask(model, menu, evidence, hints)
+                ranked, about = self._ask(model, menu, prompt)
             except Exception as exc:  # noqa: BLE001 - any provider error moves on to the backup
                 logger.warning("model {} failed on {}: {}", model, evidence.name, exc)
                 continue

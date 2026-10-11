@@ -4,7 +4,6 @@ OCR text do, review answers are journaled, undo restores the tree, the cache sav
 from __future__ import annotations
 
 import json
-from types import SimpleNamespace
 
 from typer.testing import CliRunner
 
@@ -13,7 +12,7 @@ from para_files.core import sort as sort_module
 from para_files.core.fallback import OpenRouterFallback
 from para_files.core.journal import last_run_id, read_run
 from para_files.utils.ocr import OCRResult
-from tests.core_helpers import setup_cli
+from tests.core_helpers import reply_content, setup_cli
 
 
 runner = CliRunner()
@@ -39,7 +38,7 @@ def fake_model(calls):
                 ],
             }
         )
-        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])
+        return reply_content(content)
 
     return complete
 

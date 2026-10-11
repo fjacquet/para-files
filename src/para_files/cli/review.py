@@ -72,7 +72,7 @@ def _typed_leaf(answer: str, config: TreeConfig) -> str | None:
 
 
 def _alternatives(decision: Decision) -> str:
-    others = [f"{n}) {leaf} {p:.2f}" for n, (leaf, p) in enumerate(decision.ranked, 1) if n > 1]
+    others = [f"{n}) {leaf} {p:.2f}" for n, (leaf, p) in enumerate(decision.ranked[1:], 2)]
     return f"  alternatives: {', '.join(others)}" if others else ""
 
 

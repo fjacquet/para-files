@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import yaml
@@ -141,3 +142,8 @@ def setup_cli(base: Path, monkeypatch: Any) -> Path:
 
     monkeypatch.setattr(review_cli, "stdin_is_tty", lambda: True)
     return root
+
+
+def reply_content(content: str | None) -> Any:
+    """A litellm-shaped reply carrying this message content."""
+    return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])
