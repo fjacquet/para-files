@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed (Stage 3)
 
 - **New CLI** on the Stage 2 core, six commands: `sort` (preview by default; `--apply` moves green files; `--apply --review` confirms or corrects yellow ones, each answer journaled as a label), `explain`, `undo`, `clean` (junk, empty folders, `--duplicates`; journaled), `tree` (leaves, settings, calibration progress, `--validate`), `init`. Entry point `para_files.cli.app:app`.
+- `clean` never leaves the PARA root, never enters dot-folders, keeps bucket and leaf folders, and re-checks duplicates before trashing; `sort` refuses dot-folders and keeps bucket and leaf folders; owner confirmations of files already in place count as labels; `init --apply` is journaled.
 
 ### Removed (Stage 3)
 

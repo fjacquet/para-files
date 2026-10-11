@@ -63,7 +63,7 @@ pre-commit run --all-files         # Run manually
 
 | File | Purpose |
 |------|---------|
-| `src/para_files/main.py` | CLI entry point (re-exports; commands live in `cli/`) |
+| `src/para_files/cli/app.py` | CLI entry point (Typer app; commands in `cli/*_cmd.py`) |
 | `src/para_files/cli/` | All CLI commands (scan, move, classify, bookstore, learn, routes, etc.) |
 | `src/para_files/config.py` | Configuration management |
 | `src/para_files/pipeline.py` | 6-signal classification orchestrator |
