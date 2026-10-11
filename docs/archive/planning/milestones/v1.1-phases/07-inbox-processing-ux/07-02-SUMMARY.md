@@ -77,7 +77,7 @@ Each task was committed atomically:
 _Note: TDD RED went directly to GREEN because implementation was already complete from Plan 01._
 
 ## Files Created/Modified
-- `/Users/fjacquet/Projects/para-files/tests/test_inbox_cmd.py` - 15-test TDD suite, 457 lines (well above 120 line minimum)
+- `~/Projects/para-files/tests/test_inbox_cmd.py` - 15-test TDD suite, 457 lines (well above 120 line minimum)
 
 ## Decisions Made
 - Tests verified GREEN immediately — the implementation (inbox_cmd.py from Plan 01) was already correct, so no fixes to implementation were required

@@ -66,19 +66,19 @@ outside the stated bugs.
 </objective>
 
 <execution_context>
-@/Users/fjacquet/.claude/get-shit-done/workflows/execute-plan.md
-@/Users/fjacquet/.claude/get-shit-done/templates/summary.md
+@~/.claude/get-shit-done/workflows/execute-plan.md
+@~/.claude/get-shit-done/templates/summary.md
 </execution_context>
 
 <context>
-@/Users/fjacquet/Projects/para-files/.planning/ROADMAP.md
-@/Users/fjacquet/Projects/para-files/src/para_files/utils/file_utils.py
-@/Users/fjacquet/Projects/para-files/src/para_files/pipeline.py
-@/Users/fjacquet/Projects/para-files/src/para_files/config.py
-@/Users/fjacquet/Projects/para-files/src/para_files/encoders/mlx_encoder.py
-@/Users/fjacquet/Projects/para-files/tests/test_file_utils.py
-@/Users/fjacquet/Projects/para-files/tests/test_config.py
-@/Users/fjacquet/Projects/para-files/tests/test_encoders.py
+@~/Projects/para-files/.planning/ROADMAP.md
+@~/Projects/para-files/src/para_files/utils/file_utils.py
+@~/Projects/para-files/src/para_files/pipeline.py
+@~/Projects/para-files/src/para_files/config.py
+@~/Projects/para-files/src/para_files/encoders/mlx_encoder.py
+@~/Projects/para-files/tests/test_file_utils.py
+@~/Projects/para-files/tests/test_config.py
+@~/Projects/para-files/tests/test_encoders.py
 </context>
 
 <tasks>
