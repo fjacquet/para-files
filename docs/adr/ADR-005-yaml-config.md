@@ -3,7 +3,9 @@
 > Amended: default location is now the config directory (`~/.config/para-files/`, or `$PARA_FILES_CONFIG_DIR`); `config/personal_file_tree.yaml` is the legacy fallback.
 
 **Date**: 2024-01-01
-**Status**: Accepted
+**Status**: Superseded by [ADR-013](ADR-013-redesign-records-first.md)
+
+The reference tree was replaced by `tree.yaml`, `rules.yaml` and `issuers.yaml` with a strict loader (`core/tree.py`).
 **Deciders**: Frédéric Jacquet
 
 ---

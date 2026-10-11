@@ -1,7 +1,9 @@
 # ADR-011: Performance Optimizations — Adaptive Threading, Hash Cache, Centralized Truncation
 
 **Date**: 2026-03-22
-**Status**: Accepted
+**Status**: Superseded by [ADR-013](ADR-013-redesign-records-first.md)
+
+The modules it optimised (old pipeline, mover, semantic classifier) were deleted in Stage 4.
 **Deciders**: Frederic Jacquet
 
 ---

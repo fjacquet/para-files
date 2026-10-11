@@ -71,16 +71,14 @@ pre-commit run --all-files         # Run manually
 | `src/para_files/core/rules.py`, `books.py`, `issuers.py`, `fallback.py` | The four signals |
 | `src/para_files/core/apply.py`, `journal.py`, `undo.py` | Moves, run journal, undo |
 | `src/para_files/core/sort.py`, `clean.py`, `secrets.py`, `cache.py` | Sort entry points, clean, secrets guard, SQLite cache |
-| `src/para_files/config.py` | Config directory (`PARA_FILES_CONFIG_DIR` or `~/.config/para-files`) |
 | `src/para_files/utils/filename_sanitizer.py` | Centralized filename sanitization |
-| `src/para_files/taxonomies/models.py` | Thema/document taxonomy models and path builders |
+| `src/para_files/core/thema.py` | Thema code lookup and library folders (`thema_folders`) |
+| `src/para_files/data/thema_l1l2.json` | Thema folder names (L1/L2), read as package data |
 | `examples/` | Sanitized example `tree.yaml`, `rules.yaml`, `issuers.yaml` |
 | `tests/core_helpers.py` | Generic example tree and settings for the tests |
 | `tests/` | Test suite |
-| `config/thema.json` | Thema v1.6 book classification (9,187 codes) |
-| `config/documents.json` | Document type taxonomy |
 
-The old pipeline modules (`pipeline.py`, `mover.py`, `learner.py`, `reference_tree.py`, `types.py`, `classifiers/` except `book_detector.py`, `encoders/`, `learning/`) remain only until the Stage 4 purge and are not used by the CLI. The core still imports `classifiers/book_detector.py`, `circuit_breaker.py` and `config.py`.
+All modules under `src/para_files/` are reachable from the CLI (`tests/test_reachability.py`).
 
 ## Filename Sanitization
 
@@ -103,13 +101,13 @@ sanitize_path_component("Arts : généralités")  # → "Arts - généralités"
 Books use **hybrid naming**: `{CodeValue}_{ShortName}`
 
 ```python
-from para_files.taxonomies.models import ThemaTaxonomy
+from para_files.core.thema import thema_folders
 
-taxonomy.build_para_path("UB")
-# → "3_Resources/livres/U_Informatique/UB_Programmation"
+thema_folders("UB")
+# → "U_Informatique_et_technologies_de/UB_Themes_generaux"
 ```
 
-**Path format:** `3_Resources/livres/{L1_Code_ShortName}/{L2_Code_ShortName}`
+**Path format:** `3_Resources/livres/{L1_Code_ShortName}/{L2_Code_ShortName}` (the `3_Resources/livres/` part comes from the library leaf in `tree.yaml`)
 
 - Max 2 hierarchy levels after `livres/`
 - Accents removed (é→e, ç→c)

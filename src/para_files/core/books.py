@@ -13,10 +13,10 @@ from dataclasses import dataclass
 
 from para_files.core.cache import Cache
 from para_files.core.evidence import Evidence
+from para_files.core.thema import lookup_thema_code, thema_folders
 from para_files.core.tree import Tree
 from para_files.utils.filename_sanitizer import sanitize_filename
 from para_files.utils.isbn_lookup import BookInfo, is_title_coherent_with_filename, lookup_isbn
-from para_files.utils.thema_lookup import lookup_thema_code, thema_to_para_path
 
 
 # Patterns that indicate book structure
@@ -57,7 +57,6 @@ HEURISTIC_CONFIDENCE = 0.7
 MAX_ISBNS = 3
 MIN_PAGES = 50
 MIN_STRUCTURE = 0.3
-LIBRARY_ROOT = "3_Resources/livres/"
 YEAR = re.compile(r"\d{4}")
 
 
@@ -100,8 +99,7 @@ def thema_segments(info: BookInfo) -> str | None:
     code = lookup_thema_code(info.subjects) if info.subjects else None
     if code is None:
         return None
-    path = thema_to_para_path(code)
-    return path.removeprefix(LIBRARY_ROOT) if path.startswith(LIBRARY_ROOT) else None
+    return thema_folders(code)
 
 
 def suggested_name(info: BookInfo, ext: str) -> str | None:

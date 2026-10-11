@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from para_files.utils.filename_sanitizer import (
     INVALID_FILENAME_CHARS,
-    get_invalid_chars,
-    is_valid_filename,
     sanitize_filename,
     sanitize_path_component,
 )
@@ -139,56 +137,6 @@ class TestSanitizePathComponent:
         result = sanitize_path_component("Éducation française")
         assert "É" in result
         assert "ç" in result
-
-
-class TestIsValidFilename:
-    """Tests for is_valid_filename function."""
-
-    def test_valid_filename(self) -> None:
-        """Valid filename returns True."""
-        assert is_valid_filename("hello_world.txt")
-        assert is_valid_filename("document-2024")
-        assert is_valid_filename("Éducation")
-
-    def test_invalid_with_colon(self) -> None:
-        """Filename with colon is invalid."""
-        assert not is_valid_filename("Hello: World")
-
-    def test_invalid_with_slash(self) -> None:
-        """Filename with slash is invalid."""
-        assert not is_valid_filename("path/file")
-
-    def test_invalid_with_hash(self) -> None:
-        """Filename with hash is invalid."""
-        assert not is_valid_filename("file#1")
-
-    def test_empty_is_invalid(self) -> None:
-        """Empty string is invalid."""
-        assert not is_valid_filename("")
-
-
-class TestGetInvalidChars:
-    """Tests for get_invalid_chars function."""
-
-    def test_no_invalid_chars(self) -> None:
-        """Clean string has no invalid chars."""
-        assert get_invalid_chars("hello_world") == []
-
-    def test_finds_colon(self) -> None:
-        """Finds colon in string."""
-        assert ":" in get_invalid_chars("Hello: World")
-
-    def test_finds_multiple(self) -> None:
-        """Finds multiple invalid chars."""
-        chars = get_invalid_chars("a:b/c#d")
-        assert ":" in chars
-        assert "/" in chars
-        assert "#" in chars
-
-    def test_finds_duplicates(self) -> None:
-        """Finds duplicate invalid chars."""
-        chars = get_invalid_chars("a:b:c")
-        assert chars.count(":") == 2
 
 
 class TestInvalidCharsPattern:

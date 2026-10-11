@@ -1,7 +1,7 @@
 # ADR-012: Records Retention Vault Alongside PARA
 
 **Date**: 2026-10-11
-**Status**: Proposed
+**Status**: Accepted
 **Deciders**: Frédéric Jacquet
 
 ---

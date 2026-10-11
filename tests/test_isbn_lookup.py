@@ -7,7 +7,6 @@ from unittest.mock import MagicMock, patch
 from para_files.utils.isbn_lookup import (
     BookInfo,
     _extract_subjects_from_description,
-    infer_technology_from_subjects,
     isbn_to_isbn13,
     lookup_isbn,
     normalize_isbn,
@@ -95,62 +94,6 @@ class TestIsbnToIsbn13:
         """Test that invalid ISBN returns None."""
         result = isbn_to_isbn13("invalid")
         assert result is None
-
-
-class TestInferTechnologyFromSubjects:
-    """Tests for infer_technology_from_subjects function."""
-
-    def test_python_subject_match(self):
-        """Test inferring Python from subjects."""
-        subjects = ["Python programming", "Computer Science"]
-        known = ["Python", "Java", "JavaScript"]
-        result = infer_technology_from_subjects(subjects, known)
-        assert result == "Python"
-
-    def test_javascript_subject_match(self):
-        """Test inferring JavaScript from subjects."""
-        subjects = ["JavaScript", "Web Development"]
-        known = ["Python", "JavaScript", "Java"]
-        result = infer_technology_from_subjects(subjects, known)
-        assert result == "JavaScript"
-
-    def test_no_match_returns_none(self):
-        """Test no match returns None."""
-        subjects = ["Fiction", "Novel", "Literature"]
-        known = ["Python", "Java", "JavaScript"]
-        result = infer_technology_from_subjects(subjects, known)
-        assert result is None
-
-    def test_empty_subjects(self):
-        """Test empty subjects list."""
-        result = infer_technology_from_subjects([], ["Python", "Java"])
-        assert result is None
-
-    def test_empty_known_technologies(self):
-        """Test empty known technologies."""
-        result = infer_technology_from_subjects(["Python"], [])
-        assert result is None
-
-    def test_case_insensitive(self):
-        """Test case-insensitive matching."""
-        subjects = ["PYTHON PROGRAMMING"]
-        known = ["Python", "Java"]
-        result = infer_technology_from_subjects(subjects, known)
-        assert result == "Python"
-
-    def test_common_mapping_machine_learning(self):
-        """Test common subject mapping for machine learning."""
-        subjects = ["machine learning", "artificial intelligence"]
-        known = ["AI", "Python", "Java"]
-        result = infer_technology_from_subjects(subjects, known)
-        assert result == "AI"
-
-    def test_common_mapping_kubernetes(self):
-        """Test common subject mapping for Kubernetes."""
-        subjects = ["kubernetes"]
-        known = ["Kubernetes", "Docker", "Cloud"]
-        result = infer_technology_from_subjects(subjects, known)
-        assert result == "Kubernetes"
 
 
 class TestBookInfo:
@@ -725,36 +668,3 @@ class TestIsbnToIsbn13ExceptionHandling:
             builtins.__import__ = original_import
             if isbnlib_backup:
                 sys.modules["isbnlib"] = isbnlib_backup
-
-
-class TestInferTechnologyExtended:
-    """Extended tests for infer_technology_from_subjects."""
-
-    def test_subject_to_tech_mapping_cloud(self):
-        """Test cloud computing mapping."""
-        subjects = ["amazon web services", "cloud computing"]
-        known = ["Cloud", "AWS", "Azure"]
-        result = infer_technology_from_subjects(subjects, known)
-        assert result == "Cloud"
-
-    def test_subject_to_tech_mapping_security(self):
-        """Test cybersecurity mapping."""
-        subjects = ["cybersecurity", "network security"]
-        known = ["Security", "Networking"]
-        result = infer_technology_from_subjects(subjects, known)
-        assert result == "Security"
-
-    def test_subject_to_tech_mapping_databases(self):
-        """Test database management mapping."""
-        subjects = ["database management"]
-        known = ["Databases", "NoSQL"]
-        result = infer_technology_from_subjects(subjects, known)
-        assert result == "Databases"
-
-    def test_direct_match_takes_priority(self):
-        """Test that direct match is found before mapping."""
-        subjects = ["Python", "machine learning"]
-        known = ["Python", "AI"]
-        result = infer_technology_from_subjects(subjects, known)
-        # Should find Python first via direct match
-        assert result == "Python"

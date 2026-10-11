@@ -187,7 +187,7 @@ Garder uniquement:
 ```yaml
 version: "2.0"
 config:
-  para_root: "~/OneDrive - Home/PARA"
+  para_root: "~/PARA"
   taxonomy:
     documents_path: "config/documents.json"
     thema_path: "config/thema.json"

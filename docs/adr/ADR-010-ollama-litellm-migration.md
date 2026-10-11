@@ -1,7 +1,7 @@
 # ADR-010: Replace MLX with litellm/Ollama for Embeddings and LLM
 
 **Date**: 2026-03-01
-**Status**: Accepted
+**Status**: Superseded by [ADR-013](ADR-013-redesign-records-first.md)
 **Deciders**: Frederic Jacquet
 **Supersedes**: [ADR-002](ADR-002-apple-silicon-only.md), [ADR-004](ADR-004-mlx-embeddings.md)
 

@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
+from pydantic_core import PydanticUndefined
 
-from para_files.core.settings import load_settings
+from para_files.core.settings import CoreSettings, config_dir_path, load_settings
 from tests.core_helpers import make_para_root
 
 
@@ -79,3 +81,33 @@ def test_defaults(tmp_path, cfg_dir):
     assert settings.fallback_backup_model == "anthropic/claude-sonnet-5.5"
     assert settings.calibration_min == 100
     assert settings.preview_chars == 2000
+
+
+def test_config_dir_follows_the_environment(cfg_dir):
+    assert config_dir_path() == cfg_dir
+
+
+def test_config_dir_defaults_to_home(tmp_path, monkeypatch):
+    monkeypatch.delenv("PARA_FILES_CONFIG_DIR", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    assert config_dir_path() == tmp_path / ".config" / "para-files"
+
+
+def test_env_example_matches_the_settings():
+    """Every NAME=value in .env.example (commented or not) is a real setting with its default."""
+    text = (Path(__file__).parent.parent / ".env.example").read_text(encoding="utf-8")
+    lines = re.findall(r"^#?\s*([A-Z][A-Z0-9_]*)=(\S*)", text, flags=re.MULTILINE)
+    assert lines, "no settings found in .env.example"
+    key_field = CoreSettings.model_fields["openrouter_api_key"]
+    key_names = set(key_field.validation_alias.choices)
+    for name, value in lines:
+        if name in key_names:
+            continue
+        assert name.startswith("PARA_FILES_"), name
+        field = CoreSettings.model_fields.get(name.removeprefix("PARA_FILES_").lower())
+        assert field is not None, name
+        if field.default_factory is not None:
+            assert Path(value).expanduser() == field.default_factory(), name
+        elif field.default is not PydanticUndefined and field.default is not None:
+            default = str(field.default)
+            assert value == (default.lower() if isinstance(field.default, bool) else default), name

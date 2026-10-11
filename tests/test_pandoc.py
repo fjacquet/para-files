@@ -11,7 +11,6 @@ from para_files.utils.pandoc import (
     PANDOC_EXTENSIONS,
     PANDOC_FORMATS,
     PandocResult,
-    extract_metadata,
     extract_text,
     get_pandoc_format,
     is_pandoc_available,
@@ -174,63 +173,6 @@ class TestExtractText:
 
         mock_run.return_value = None
         result = extract_text(test_file)
-        assert result is None
-
-
-class TestExtractMetadata:
-    """Tests for metadata extraction function."""
-
-    def test_pandoc_not_available(self, tmp_path: Path):
-        """Test when pandoc is not installed."""
-        test_file = tmp_path / "test.md"
-        test_file.touch()
-        with patch("para_files.utils.pandoc.is_pandoc_available", return_value=False):
-            result = extract_metadata(test_file)
-            assert result is None
-
-    def test_unsupported_format(self, tmp_path: Path):
-        """Test unsupported file format."""
-        test_file = tmp_path / "test.jpg"
-        test_file.touch()
-        result = extract_metadata(test_file)
-        assert result is None
-
-    def test_file_not_exists(self):
-        """Test non-existent file."""
-        result = extract_metadata(Path("/nonexistent/file.md"))
-        assert result is None
-
-    @patch("subprocess.run")
-    def test_extract_metadata_success(self, mock_run: MagicMock, tmp_path: Path):
-        """Test successful metadata extraction."""
-        # Use .rst (in ALLOWED_EXTENSIONS) rather than .md (excluded, read as text directly)
-        test_file = tmp_path / "document.rst"
-        test_file.write_text("Test document content.")
-
-        mock_run.return_value = MagicMock(
-            returncode=0,
-            stdout="title: My Document\nauthor: John Doe\ndate: 2025-01-15",
-        )
-
-        with patch("para_files.utils.pandoc.is_pandoc_available", return_value=True):
-            result = extract_metadata(test_file)
-
-        assert result is not None
-        assert result["title"] == "My Document"
-        assert result["author"] == "John Doe"
-        assert result["date"] == "2025-01-15"
-
-    @patch("subprocess.run")
-    def test_extract_metadata_no_metadata(self, mock_run: MagicMock, tmp_path: Path):
-        """Test when document has no metadata."""
-        test_file = tmp_path / "plain.rst"
-        test_file.write_text("Just content.")
-
-        mock_run.return_value = MagicMock(returncode=0, stdout="")
-
-        with patch("para_files.utils.pandoc.is_pandoc_available", return_value=True):
-            result = extract_metadata(test_file)
-
         assert result is None
 
 

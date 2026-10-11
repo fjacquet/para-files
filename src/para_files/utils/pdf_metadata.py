@@ -54,21 +54,6 @@ ISBN_PATTERNS = [
 ]
 
 
-def extract_isbn(text: str) -> str | None:
-    """Extract the first valid ISBN from text.
-
-    Uses isbnlib for validation if available, otherwise uses regex patterns.
-
-    Args:
-        text: Text content to search for ISBN.
-
-    Returns:
-        Normalized ISBN (digits only) or None if not found.
-    """
-    isbns = extract_all_isbns(text)
-    return isbns[0] if isbns else None
-
-
 def extract_all_isbns(text: str) -> list[str]:  # noqa: C901
     """Extract all valid unique ISBNs from text.
 
@@ -299,67 +284,3 @@ def extract_pdf_metadata(path: Path, max_pages_for_isbn: int = 20) -> PdfMetadat
                 file_size_mb=file_size_mb,
             )
         return None
-
-
-# Book-related keywords in titles
-BOOK_TITLE_KEYWORDS = [
-    "edition",
-    "guide",
-    "handbook",
-    "manual",
-    "cookbook",
-    "reference",
-    "introduction to",
-    "learning",
-    "mastering",
-    "professional",
-    "practical",
-    "beginning",
-    "advanced",
-    "complete",
-    "definitive",
-    "fundamentals",
-    "essentials",
-    "programming",
-    "for dummies",
-    "in action",
-    "in depth",
-    "head first",
-]
-
-# Creator tools that indicate a book
-BOOK_CREATOR_PATTERNS = [
-    "latex",
-    "tex",
-    "indesign",
-    "acrobat distiller",
-    "calibre",
-    "quarkxpress",
-    "framemaker",
-]
-
-
-def contains_book_keywords(title: str) -> bool:
-    """Check if a title contains book-related keywords.
-
-    Args:
-        title: PDF title to check.
-
-    Returns:
-        True if title contains book-like keywords.
-    """
-    title_lower = title.lower()
-    return any(keyword in title_lower for keyword in BOOK_TITLE_KEYWORDS)
-
-
-def is_book_creator(creator: str) -> bool:
-    """Check if the PDF creator tool suggests this is a book.
-
-    Args:
-        creator: PDF creator field value.
-
-    Returns:
-        True if creator suggests book production.
-    """
-    creator_lower = creator.lower()
-    return any(pattern in creator_lower for pattern in BOOK_CREATOR_PATTERNS)
