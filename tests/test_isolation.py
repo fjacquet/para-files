@@ -7,6 +7,7 @@ import pwd
 from pathlib import Path
 
 from para_files.core.settings import config_dir_path, load_settings
+from tests.core_helpers import make_para_root
 
 
 def _real_home() -> Path:
@@ -28,7 +29,6 @@ def test_no_para_files_variable_or_key_leaks_in() -> None:
 
 def test_a_dotenv_in_the_working_directory_is_never_read(tmp_path: Path) -> None:
     """Only <config dir>/.env is read; a .env in the cwd (tmp_path) is ignored."""
-    root = tmp_path / "PARA"
-    (root / "0_Inbox").mkdir(parents=True)
+    root = make_para_root(tmp_path)
     (tmp_path / ".env").write_text("PARA_FILES_MAX_WORKERS=9\n")
     assert load_settings(para_root=root).max_workers == 4

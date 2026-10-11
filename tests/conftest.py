@@ -20,12 +20,6 @@ macos_only = pytest.mark.skipif(
 )
 
 
-@pytest.fixture
-def project_root() -> Path:
-    """Return the project root directory."""
-    return Path(__file__).parent.parent
-
-
 @pytest.fixture(autouse=True)
 def _sandbox(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, tmp_path_factory: pytest.TempPathFactory
