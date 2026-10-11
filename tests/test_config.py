@@ -280,3 +280,19 @@ config:
         # Should still work with defaults
         assert config.mlx.model_name == DEFAULT_MLX_MODEL
         assert config.mlx.score_threshold == DEFAULT_SCORE_THRESHOLD
+
+
+class TestNonMappingYamlIsIgnored:
+    @pytest.mark.parametrize("content", ["- a\n- b\n", "just a string\n"])
+    def test_non_mapping_document_is_ignored_with_a_warning(self, tmp_path: Path, content: str):
+        from loguru import logger
+
+        yaml_file = tmp_path / "tree.yaml"
+        yaml_file.write_text(content, encoding="utf-8")
+        messages: list[str] = []
+        sink_id = logger.add(lambda message: messages.append(str(message)), level="WARNING")
+        try:
+            assert _load_yaml_config(yaml_file) == {}
+        finally:
+            logger.remove(sink_id)
+        assert any("not a mapping" in message for message in messages)

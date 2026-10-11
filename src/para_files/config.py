@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from loguru import logger
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -86,8 +87,11 @@ def _load_yaml_config(yaml_path: Path | None = None) -> dict[str, Any]:
         if path.exists():
             with path.open() as f:
                 data = yaml.safe_load(f) or {}
-                config_section: dict[str, Any] = data.get("config", {})
-                return config_section
+            if not isinstance(data, dict):
+                logger.warning("Ignoring {}: the document is not a mapping", path)
+                continue
+            config_section: dict[str, Any] = data.get("config", {})
+            return config_section
 
     return {}
 
