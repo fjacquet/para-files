@@ -113,13 +113,14 @@ Read-only inventory of the PARA root (counts only):
 | Old pipeline, signals 1–3 (semantic and LLM off) | 42% | 40% | 0.19 s | 0 |
 | Jev 1.13 (Decisions API) | 28% | 50% | 0.35 s | 0.22 |
 | Claude Haiku 5.5 (reasoning disabled) | 24% | 55% | 1.9 s | 0.69 |
+| gemma4:e4b (local, Ollama) | 17% | 65% | 24.7 s | 0 |
 | nomic-embed-text cosine | 5% | 5% | 0.06 s | 0 |
 
 - No candidate reaches 98% precision at any useful coverage. Even when the old pipeline and Jev agree, 38% of those files are wrong: the labels (today's tree) are the bottleneck, not the model.
 - **With twins merged, by kind (old pipeline):** records 50% → 66% exact and 56% → 75% precision when it decides; knowledge stays at 26–36% for every method. Residual record errors are records pulled into `livres`/`docs` by the book detector and broad rules, retention-class mix-ups (tax filed as invoice), and the extension catch-all.
 - Haiku 5.5 reasons by default and returned empty answers under a 200-token cap until `reasoning: {"enabled": false}` was set.
 - Mistral was dropped by the owner; nomic embeddings are dropped on this evidence.
-- gemma4:e4b (local, Ollama) had not finished the 206 files after more than 40 minutes with the 103-label prompt; it is measured in the authoritative run.
+- gemma4:e4b took 78 minutes for the 206 files, and 50 of them failed with the Ollama server disconnecting. Its top-10% figure covers about 20 files. On this evidence the owner dropped local AI (2026-10-11): no local model in the bake-off or in the new core.
 
 ---
 
@@ -129,7 +130,7 @@ Read-only inventory of the PARA root (counts only):
 
 1. **Trust:** nothing changes on disk without `--apply`; every applied change is journaled and undoable; nothing is ever overwritten or hard-deleted.
 2. **Accuracy:** every destination comes from one closed list of leaves; automatic moves happen only for `record`, `library` (ISBN or vendor match) and `media` leaves, are measured, and are held to ≥ 98% precision. `knowledge` files are suggested, never moved automatically.
-3. **Speed:** one evidence extraction per file; network and model calls cached; Ollama only if the bake-off says it earns its place.
+3. **Speed:** one evidence extraction per file; network and model calls cached; no local model (dropped 2026-10-11, §2).
 4. **Simplicity:** 4 signals instead of 6; 6 commands instead of 18; roughly half of today's 18.8k source lines.
 
 ### Non-Goals
@@ -239,7 +240,7 @@ Glob matching is case-insensitive (removes 28 case-variant duplicates).
 
 #### Settings precedence
 
-`pydantic-settings` sources: **env > `.env` > YAML > defaults**, via `settings_customise_sources`. Fixes today's bug where YAML beats env. The embedding model and Ollama URL become settings (today hardcoded). `MLXConfig` and the `PARA_FILES_MLX_*` prefix are removed.
+`pydantic-settings` sources: **env > `.env` > YAML > defaults**, via `settings_customise_sources`. Fixes today's bug where YAML beats env. `MLXConfig`, the `PARA_FILES_MLX_*` prefix, the hardcoded embedding model and the Ollama URL are removed (no local model).
 
 > The precedence fix and the `.env` correction (`PARA_FILES_PARA_ROOT` currently points at `…/PARA/0_Inbox`) must ship together. Fixing precedence alone would route every file under `0_Inbox/…`.
 
@@ -312,7 +313,7 @@ class Fallback(Protocol):
 
 Implementations are written only for the bake-off winner. Candidates:
 
-- **LLM via litellm** (gemma4:e4b local / Claude Haiku 5.5 with `reasoning: {"enabled": false}`): JSON-schema output with an enum of leaf ids; self-reported confidence.
+- **LLM via litellm** (Claude Haiku 5.5 on OpenRouter, with `reasoning: {"enabled": false}`): JSON-schema output with an enum of leaf ids; self-reported confidence.
 - **Jev via OpenRouter Decisions API** (`POST /api/alpha/decisions`, model pinned to `typesafe/jev-1.13`): one `choice` question whose criteria are the leaves' `describe`; returns a probability per leaf. Several questions about the same file can share one request; files are parallelized as separate requests.
 
 Every cloud request carries `provider: {"zdr": true}`, so it fails rather than reach a provider that retains data.
@@ -447,13 +448,13 @@ Reports per signal, per kind and overall: accuracy, green precision, green cover
 
 | Item | Value |
 |---|---|
-| Candidates | gemma4:e4b (Ollama), Claude Haiku 5.5 (OpenRouter, enum-constrained, reasoning disabled), Jev 1.13 (Decisions API), **no-fallback baseline** (signals 1–3 only). Mistral and nomic-embed-text dropped after the preliminary run. |
+| Candidates | Claude Haiku 5.5 (OpenRouter, enum-constrained, reasoning disabled), Jev 1.13 (Decisions API), **no-fallback baseline** (signals 1–3 only). Mistral, nomic-embed-text and gemma4 (local AI) dropped after the preliminary run. |
 | Input | identical: evidence text (name, 2000-char preview, archive listing) + leaf list with `describe` |
 | Privacy | `provider: {"zdr": true}` on every cloud request; secrets-guarded files never sent |
 | Code | throwaway, read-only on files |
 | Scope | (a) `record`, `library` and `media` files left undecided by signals 1–3; (b) `knowledge` files as suggestions |
-| Winner | (a) highest green coverage at ≥ 98% precision; (b) highest top-3 hit rate. Ties → local > cheaper > faster |
-| Drop rule | if no candidate adds ≥ 5 points of green coverage on (a) over the baseline and none beats the baseline's suggestions on (b), signal 4 and the Ollama dependency are removed |
+| Winner | (a) highest green coverage at ≥ 98% precision; (b) highest top-3 hit rate. Ties → cheaper > faster |
+| Drop rule | if no candidate adds ≥ 5 points of green coverage on (a) over the baseline and none beats the baseline's suggestions on (b), signal 4 is removed |
 
 Runs:
 
@@ -504,8 +505,8 @@ Exit: S3 measured on a real inbox; re-org completed or explicitly paused.
 
 ### Stage 4 — Purge
 
-- Dead code from the audits; dependencies `einops`, `faker`, `bandit`, `semantic-router`, `geopy` (re-check `cryptography` and `pymupdf`).
-- Docs reduced to ~5 pages (README, architecture, configuration, CLI, ADR index) + ADR-013 recording this redesign (ADR-012 already records the records/PARA decision); VISION, PRD and `.planning/` moved to `docs/archive/`.
+- Dead code from the audits; local-AI code (`encoders/ollama_encoder.py`, `classifiers/semantic_classifier.py`, Ollama defaults); dependencies `einops`, `faker`, `bandit`, `semantic-router`, `geopy` (re-check `cryptography` and `pymupdf`).
+- Docs reduced to ~5 pages (README, architecture, configuration, CLI, ADR index) + ADR-013 recording this redesign and the end of local AI (supersedes ADR-010; ADR-012 already records the records/PARA decision); VISION, PRD and `.planning/` moved to `docs/archive/`.
 - Remove `Formula/` and the failing `update-formula` release job, `TODO-routing-fixes.md`, `docs/how-to-better-claude-code.md`; untrack `.serena/` and `.claude/`.
 
 Exit: S6, S7 pass; source ≈ half of 18.8k lines.
@@ -517,7 +518,7 @@ Exit: S6, S7 pass; source ≈ half of 18.8k lines.
 - Version bumps and releases only for product changes; Dependabot merges never cut a release.
 - Each release's CHANGELOG entry records the eval numbers (green precision, green coverage, inbox green share).
 - Specs and plans live in `docs/superpowers/`; the GSD `.planning/` ceremony stops.
-- `uv run pytest` works out of the box (dev dependencies in the default group); CLI tests mock Ollama/network and never read the owner's `.env`.
+- `uv run pytest` works out of the box (dev dependencies in the default group); CLI tests mock the network and never read the owner's `.env`.
 - Tests for deleted code are deleted with it.
 
 ---
@@ -530,7 +531,8 @@ Exit: S6, S7 pass; source ≈ half of 18.8k lines.
 | Golden labels inherit inconsistent historical placement | Owner reviews the mapping; ambiguous folders excluded |
 | Re-org moves many files on a synced volume | Preview first; apply bucket by bucket; journal + `undo`; `.trash` on the same volume |
 | Precedence fix flips `para_root` | Ships together with the `.env` correction (Stage 2) |
-| Cloud fallback sends document text off the machine | `provider: {"zdr": true}` on every request; secrets guard; owner may choose the local candidate; drop rule may remove signal 4 entirely |
+| Cloud fallback sends document text off the machine | `provider: {"zdr": true}` on every request; secrets guard; drop rule may remove signal 4 entirely |
+| No local model: offline or OpenRouter outage silences signal 4 | Signals 1–3 run locally and still decide records, books and media; undecided files stay in place as yellow/red |
 | Twin merge moves thousands of archived files | Plan-only in Stage 1; owner reviews it; applied in Stage 3 through the journal with `undo`, folder by folder |
 | Personal identifiers remain in public git history | Owner decided (2026-10-11): the repo stays public and history is not rewritten; new content is checked for identifiers before each push |
 
@@ -547,7 +549,8 @@ Exit: S6, S7 pass; source ≈ half of 18.8k lines.
 | Moves | Preview default, sequential apply, containment, no-clobber, `.trash`, JSONL journal, `undo` |
 | CLI | `sort`, `explain`, `undo`, `clean`, `tree`, `init` |
 | Learning | Removed; corrections by editing YAML guided by `explain` |
-| Bake-off | Preliminary run done 2026-10-11 (tree, not model, is the bottleneck); authoritative run in Stage 1 with gemma4, Haiku 5.5 and Jev 1.13; Mistral and nomic dropped |
+| Bake-off | Preliminary run done 2026-10-11 (tree, not model, is the bottleneck); authoritative run in Stage 1 with Haiku 5.5 and Jev 1.13; Mistral, nomic and gemma4 dropped |
+| Local AI (2026-10-11) | Dropped: gemma4 17% exact, 78 min for 206 files, 50 server disconnects; Ollama removed in Stage 4 |
 | Mission (2026-10-11) | Records file themselves; everything else is suggested |
 | `4_Archives` (2026-10-11) | Retention vault; legacy twins merged via reviewed, journaled migration |
 | Content kinds (2026-10-11) | `record`, `library`, `media`, `knowledge`; `knowledge` never green |

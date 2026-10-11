@@ -2915,8 +2915,8 @@ Claude-Session: https://claude.ai/code/session_01TnHHvHPS4t1tVuqpTZiEJx"
   - `para_files.core.tree.Tree`, `config_dir`, `load_tree_config` (Task 2);
   - `para_inventory.nfc` (Task 4).
 - Produces: `scripts/bakeoff.py` with:
-  - `CANDIDATES = {"haiku", "jev", "gemma"}`, each mapping to `(ask, workers)`
-  - `ask_haiku`, `ask_jev`, `ask_gemma`, each `(post, key, menu, name, preview) -> (ranked, cost)`, where `ranked` is a list of `(leaf_id, probability)` pairs, at most 3
+  - `CANDIDATES = {"haiku", "jev"}`, each mapping to `(ask, workers)` (no local model: the owner dropped local AI on 2026-10-11)
+  - `ask_haiku`, `ask_jev`, each `(post, key, menu, name, preview) -> (ranked, cost)`, where `ranked` is a list of `(leaf_id, probability)` pairs, at most 3
   - `select_scope(golden, baseline) -> list[dict]`
   - `predict(row, para_root, menu, ask, post, key, preview_of) -> dict`
   - `read_preview(path) -> str`, the default `preview_of`
@@ -3095,10 +3095,8 @@ from para_files.core.secrets import secret_reason
 from para_files.core.tree import Tree, config_dir, load_tree_config
 
 OPENROUTER = "https://openrouter.ai"
-OLLAMA = "http://localhost:11434"
 HAIKU = "anthropic/claude-haiku-5.5"
 JEV = "typesafe/jev-1.13"
-GEMMA = "gemma4:e4b"
 PRIVACY = {"zdr": True, "data_collection": "deny"}
 RETRY_STATUS = frozenset({429, 502, 503, 524, 529})
 SYSTEM = (
@@ -3234,29 +3232,9 @@ def ask_jev(post: Post, key: str, menu: dict[str, str], name: str, preview: str)
     return ranked[:3], float(data.get("usage", {}).get("cost", 0.0) or 0.0)
 
 
-def ask_gemma(post: Post, key: str, menu: dict[str, str], name: str, preview: str) -> tuple[Ranked, float]:
-    """gemma4:e4b on the local Ollama server (nothing leaves the machine)."""
-    del key  # local model, no credentials
-    response = post_with_retry(
-        post,
-        f"{OLLAMA}/api/chat",
-        timeout=900,
-        json={
-            "model": GEMMA,
-            "messages": llm_messages(menu, name, preview),
-            "stream": False,
-            "format": llm_schema(menu),
-            "options": {"temperature": 0, "num_ctx": 16384},
-        },
-    )
-    response.raise_for_status()
-    return parse_choices(response.json()["message"]["content"], menu), 0.0
-
-
 CANDIDATES: dict[str, tuple[Callable[..., tuple[Ranked, float]], int]] = {
     "haiku": (ask_haiku, 6),
     "jev": (ask_jev, 8),
-    "gemma": (ask_gemma, 1),
 }
 
 
@@ -3328,7 +3306,7 @@ def main(argv: list[str] | None = None) -> int:
     cfg_dir = args.config_dir or config_dir()
     para_root = args.para_root.expanduser().resolve()
     key = os.environ.get("OPENROUTER_API_KEY") or dotenv_values(".env").get("PARA_FILES_LLM_API_KEY") or ""
-    if args.candidate != "gemma" and not key:
+    if not key:
         parser.error("set OPENROUTER_API_KEY or PARA_FILES_LLM_API_KEY in .env")
     read = lambda path: [json.loads(line) for line in path.read_text().splitlines() if line]  # noqa: E731
     rows = select_scope(read(cfg_dir / "golden.jsonl"), read(cfg_dir / "pred_baseline.jsonl"))
@@ -3378,7 +3356,7 @@ uv run python scripts/eval.py --pred ~/.config/para-files/pred_baseline.jsonl
 uv run python scripts/eval.py --pred ~/.config/para-files/pred_jev.jsonl --only-predicted
 ```
 
-Cloud candidates (`jev`, `haiku`) need `OPENROUTER_API_KEY` (or `PARA_FILES_LLM_API_KEY` in `.env`). Every request enforces zero data retention, and secret-looking files are never sent. `gemma` runs on the local Ollama server.
+Cloud candidates (`jev`, `haiku`) need `OPENROUTER_API_KEY` (or `PARA_FILES_LLM_API_KEY` in `.env`). Every request enforces zero data retention, and secret-looking files are never sent.
 ````
 
 - [ ] **Step 6: Changelog**
@@ -3386,7 +3364,7 @@ Cloud candidates (`jev`, `haiku`) need `OPENROUTER_API_KEY` (or `PARA_FILES_LLM_
 Under `### Added (Stage 1)` in `CHANGELOG.md`, append:
 
 ```markdown
-- **Bake-off runner** — `scripts/bakeoff.py` runs Jev 1.13, Claude Haiku 5.5 (reasoning off) or local gemma4 over the files the baseline leaves undecided (and over knowledge files as top-3 suggestions). Every cloud request enforces zero data retention, and secret-looking files are never sent.
+- **Bake-off runner** — `scripts/bakeoff.py` runs Jev 1.13 or Claude Haiku 5.5 (reasoning off) over the files the baseline leaves undecided (and over knowledge files as top-3 suggestions). Every cloud request enforces zero data retention, and secret-looking files are never sent.
 ```
 
 - [ ] **Step 7: Commit**
@@ -3464,16 +3442,15 @@ The cloud candidates send each in-scope file's name and first 2000 characters to
 ```bash
 uv run python scripts/bakeoff.py --candidate jev --para-root "$PARA"
 uv run python scripts/bakeoff.py --candidate haiku --para-root "$PARA"
-uv run python scripts/bakeoff.py --candidate gemma --para-root "$PARA"   # local, slow: run in the background
-for c in jev haiku gemma; do uv run python scripts/eval.py --pred ~/.config/para-files/pred_$c.jsonl --only-predicted; done
+for c in jev haiku; do uv run python scripts/eval.py --pred ~/.config/para-files/pred_$c.jsonl --only-predicted; done
 ```
 
 - [ ] **Step 7: Apply the spec's winner and drop rules**
 
 Spec §4.5 defines both rules:
-- **Scope (a), winner:** the highest `max_coverage_at_98` on record/library/media files. Ties go to local, then cheaper, then faster.
+- **Scope (a), winner:** the highest `max_coverage_at_98` on record/library/media files. Ties go to the cheaper, then the faster.
 - **Scope (b), winner:** the highest `top3_hit` on knowledge files.
-- **Drop rule:** if no candidate adds ≥ 5 points of green coverage on (a) over the baseline, and none beats the baseline on (b), signal 4 and the Ollama dependency are removed.
+- **Drop rule:** if no candidate adds ≥ 5 points of green coverage on (a) over the baseline, and none beats the baseline on (b), signal 4 is removed.
 
 Write the decision down with its numbers.
 
