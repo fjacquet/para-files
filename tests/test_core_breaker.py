@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import threading
+
 from para_files.core.breaker import CircuitBreaker
 
 
@@ -26,3 +28,19 @@ def test_an_open_breaker_stays_open():
     breaker.record_failure()
     breaker.record_success()
     assert breaker.is_open
+
+
+def test_concurrent_failures_are_all_counted():
+    breaker = CircuitBreaker(threshold=8000)
+
+    def hammer() -> None:
+        for _ in range(1000):
+            breaker.record_failure()
+
+    threads = [threading.Thread(target=hammer) for _ in range(8)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert breaker.is_open
+    assert breaker._failures == 8000
