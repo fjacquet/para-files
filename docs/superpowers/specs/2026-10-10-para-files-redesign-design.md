@@ -607,6 +607,6 @@ Status: done 2026-10-11 (see decisions log).
 | Special top-level folders (2026-10-11) | Folders outside the five buckets are out of scope |
 | Prefixes outside `4_Archives` (2026-10-11) | Records move to the vault; media drop the prefix |
 | Empty folders (2026-10-11) | Handled later |
-| Stage 4 purge (2026-10-11) | Old pipeline, local AI, Stage 1 scripts, `config/thema.json` and `config/documents.json` deleted; every module reachable from the CLI; source 6517 lines |
+| Stage 4 purge (2026-10-11) | Old pipeline, local AI, Stage 1 scripts, `config/thema.json` and `config/documents.json` deleted; every module reachable from the CLI; source 6168 lines |
 | Package data (2026-10-11) | Only `thema_l1l2.json`; `default_rules.yaml` dropped (rules name personal leaf ids) |
 | Dependencies (2026-10-11) | semantic-router, einops, geopy, faker, bandit, httpx removed; cryptography kept as pypdf's AES backend (as `pypdf[crypto]`) (§5 Stage 4 "re-check `cryptography`") |

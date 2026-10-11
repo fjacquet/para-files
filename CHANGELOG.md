@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed (Stage 4)
 
-- The old pipeline (`pipeline`, `mover`, `learner`, `reference_tree`, `classifiers/`, `encoders/`, `learning/`, `taxonomies/`), local AI (Ollama embeddings and local LLM), `config.py`, `types.py`, the Stage 1 `scripts/`, `config/thema.json` and `config/documents.json`, and ten unused `utils` modules. Every remaining module is reachable from the CLI. (6517 source lines left; 704 tests pass offline, 3 OCR tests skipped, from a clean clone.)
+- The old pipeline (`pipeline`, `mover`, `learner`, `reference_tree`, `classifiers/`, `encoders/`, `learning/`, `taxonomies/`), local AI (Ollama embeddings and local LLM), `config.py`, `types.py`, the Stage 1 `scripts/`, `config/thema.json` and `config/documents.json`, and ten unused `utils` modules. Every remaining module is reachable from the CLI. (6168 source lines left; 645 tests pass offline, 3 OCR tests skipped, from a clean clone.)
 - Dependencies `semantic-router`, `einops`, `geopy`, `faker`, `bandit` and `httpx` (no longer a direct dependency; litellm still brings it).
 - `.serena/` and `.claude/` are no longer tracked; `.planning/` moved to `docs/archive/planning/`. The root `VISION.md` moved to `docs/archive/vision-2026-10.md`, and the owner's home path in the archived planning notes is now `~/`.
 

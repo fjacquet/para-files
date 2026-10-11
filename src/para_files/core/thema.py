@@ -321,7 +321,7 @@ SUBJECT_TO_THEMA: dict[str, str] = {
 
 @cache
 def _folders() -> dict[str, str]:
-    """Thema level-1 and level-2 code -> folder name, e.g. 'UB' -> 'UB_Programmation'."""
+    """Thema level-1 and level-2 code -> folder name, e.g. 'UB' -> 'UB_Themes_generaux'."""
     text = files("para_files").joinpath("data/thema_l1l2.json").read_text(encoding="utf-8")
     table: dict[str, str] = json.loads(text)
     return table
