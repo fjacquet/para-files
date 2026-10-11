@@ -328,6 +328,7 @@ def _folders() -> dict[str, str]:
     return table
 
 
+@cache
 def lookup_subject(subject: str) -> str | None:
     """Thema code for one subject: exact keyword first, then the first partial match."""
     wanted = subject.lower().strip()
