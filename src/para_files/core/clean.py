@@ -89,11 +89,11 @@ def _empty_after_junk(base: Path, keep: frozenset[Path], gone: frozenset[Path]) 
 
 def _keep_order(root: Path) -> Callable[[Path], tuple[bool, bool, str]]:
     """Sort key: the copy to keep sorts first (filed before inbox, plain before copy-named)."""
-    inbox = root / INBOX
+    inbox = root.resolve() / INBOX
 
     def key(path: Path) -> tuple[bool, bool, str]:
         return (
-            path.is_relative_to(inbox),
+            path.resolve().is_relative_to(inbox),
             COPY_SUFFIX.search(path.stem) is not None,
             str(path),
         )
