@@ -70,13 +70,15 @@ def update_documents_json(filepath: Path) -> tuple[dict, list]:
             if new_pattern != original_pattern:
                 # Store the new pattern at document level
                 doc["para_pattern"] = new_pattern
-                updates_made.append({
-                    "sub_id": doc.get("sub_id"),
-                    "name": doc.get("name"),
-                    "retention": retention,
-                    "old": original_pattern,
-                    "new": new_pattern,
-                })
+                updates_made.append(
+                    {
+                        "sub_id": doc.get("sub_id"),
+                        "name": doc.get("name"),
+                        "retention": retention,
+                        "old": original_pattern,
+                        "new": new_pattern,
+                    }
+                )
 
     return data, updates_made
 
