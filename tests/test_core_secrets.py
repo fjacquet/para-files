@@ -130,3 +130,10 @@ def test_long_marker_run_is_not_flagged():
 def test_private_key_header_is_flagged_whatever_the_name():
     text = "-----BEGIN " + "RSA PRIVATE KEY-----\nabc"
     assert secret_reason("Quarterly review.key", text) == "private_key"
+
+
+def test_content_scan_is_bounded_on_adversarial_text():
+    text = "password: https://" + "a:" * 500_000  # 1M characters, no credentials in the URL
+    started = time.perf_counter()
+    assert secret_reason("notes.txt", text) is None
+    assert time.perf_counter() - started < 1.0

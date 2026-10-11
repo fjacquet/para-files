@@ -15,6 +15,9 @@ _NAME = re.compile(
     r"|^\.env(?:\.[\w-]+)*$|\.env$",
     re.IGNORECASE,
 )
+SCAN_LIMIT = 100_000
+"""Characters of file content scanned for secret patterns; a bound on the cost of the regexes."""
+
 _TEXT: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("private_key", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY(?: BLOCK)?-----")),
     ("cloud_access_key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
@@ -31,7 +34,8 @@ _TEXT: tuple[tuple[str, re.Pattern[str]], ...] = (
             r"|mots?[^\S\n]+de[^\S\n]+passe|(?<![a-z])mdp(?![a-z])"
             r"|(?<![a-z])identifiants(?![a-z]))"
             r"[\w.-]{0,60}[\"']?[^\S\n]*"
-            r"[:=][^\S\n]*(?:\r?\n[^\S\n]*)?(?!https?://(?![^\s/]*:[^\s/@]*@))\S{4,}[^\S\n]*$",
+            # The URL lookahead is bounded (255 chars of userinfo): unbounded, it is quadratic.
+            r"[:=][^\S\n]*(?:\r?\n[^\S\n]*)?(?!https?://(?![^\s/]{0,255}:[^\s/@]{0,255}@))\S{4,}[^\S\n]*$",
             re.IGNORECASE | re.MULTILINE,
         ),
     ),
@@ -45,10 +49,12 @@ def secret_reason(name: str, text: str = "") -> str | None:
     password-policy lines (``passwdcfg.minlength: 8``) pass. A content value must sit on the
     same line as its label and must not be a URL, so a bare "Password:" heading or a reset link
     is not a secret. Logins are usernames: ``login`` is a name marker only, never a content one.
+    Only the first ``SCAN_LIMIT`` characters of ``text`` are scanned.
     """
     if _NAME.search(name):
         return "name"
+    head = text[:SCAN_LIMIT]
     for reason, pattern in _TEXT:
-        if pattern.search(text):
+        if pattern.search(head):
             return reason
     return None
