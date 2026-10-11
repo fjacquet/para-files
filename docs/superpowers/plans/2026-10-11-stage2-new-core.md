@@ -6,7 +6,7 @@
 
 **Architecture:** One `extract()` per file builds an immutable `Evidence`. Signals 1–4 (rules, books, issuers, OpenRouter fallback) run in order; the first verdict wins and is cached by content hash and config fingerprint. `finish()` turns a verdict into a `Decision` with a band and a target directory. `apply_ops()` moves files one at a time, journaling every operation, and `undo_run()` replays a journal backwards. Nothing in the old pipeline or CLI changes (Stage 3 wires the CLI).
 
-**Tech Stack:** Python 3.12, pydantic / pydantic-settings, httpx, sqlite3, loguru, pytest.
+**Tech Stack:** Python 3.12, pydantic / pydantic-settings, litellm (OpenRouter), sqlite3, loguru, pytest.
 
 **Spec:** `docs/superpowers/specs/2026-10-10-para-files-redesign-design.md` (§4.1–§4.3, §5 Stage 2; amended 2026-10-11, PR #31).
 
@@ -14,7 +14,8 @@
 
 - Every module starts with `from __future__ import annotations`; logging via `from loguru import logger`; line length 100; the repo's strict ruff config and `mypy src/` (strict) must pass.
 - The repo is PUBLIC: no personal names, paths, issuers or folder names in tracked files. Tests use generic names (`AcmeCard`, `ABC`, `Payslip_…`).
-- No network in tests: OpenRouter calls go through an injected `post`; ISBN lookups through an injected `lookup`.
+- No network in tests: model calls go through an injected `complete` (default `litellm.completion`); ISBN lookups through an injected `lookup`.
+- Model calls always go through litellm (owner rule), never a hand-written HTTP request.
 - Every cloud request carries `provider: {"zdr": true, "data_collection": "deny"}`. A file flagged by the secrets guard is never sent, never looked up, never moved.
 - Old code is not touched, except removing the `isbnlib.cover()` call (Task 6, spec §4.2).
 - Personal data lives in `~/.config/para-files/` (config), `~/.cache/para-files/` (cache), `~/.local/state/para-files/` (journal); never in the repo.
@@ -30,7 +31,6 @@
 
 | Spec says | Plan does | Why |
 |---|---|---|
-| Signal 4 "via litellm" | `httpx` straight to OpenRouter | Same request the bake-off already validated (ZDR, reasoning effort, JSON schema); litellm reads `.env` files on its own |
 | `op` ∈ move, trash, rmdir | adds `mkdir` | Without it, `undo` leaves the folders a run created, and S5 (byte-identical tree) fails |
 | Package `default_rules.yaml`, `thema_l1l2.json` | not in Stage 2 | Default rules need leaf ids the owner defines; the owner's `rules.yaml` already carries the extension rules. Thema slimming belongs to the Stage 4 purge |
 | Settings "env > .env > YAML > defaults" | env > `<config dir>/.env` > defaults (no YAML, no cwd `.env`) | The new tree files hold no settings; a cwd `.env` made results depend on where the command runs |
@@ -1442,31 +1442,29 @@ Claude-Session: https://claude.ai/code/session_01TnHHvHPS4t1tVuqpTZiEJx"
 
 **Interfaces:**
 - Consumes: `Evidence`, `Tree`, `CoreSettings`, `secret_reason`, `OllamaCircuitBreaker` (`para_files.circuit_breaker`; generic despite its name: `is_open`, `record_failure()`, `record_success()`).
-- Produces: `FallbackChoice(leaf_id, confidence, model, ranked)`, `OpenRouterFallback(key, models, *, post=httpx.post, breaker=None)` with `decide(evidence, tree) -> FallbackChoice | None`, `make_fallback(settings, *, post=httpx.post) -> OpenRouterFallback | None`, `leaf_menu(tree) -> dict[str, str]`, constants `OPENROUTER_URL`, `PRIVACY`, `REASONING`.
+- Produces: `FallbackChoice(leaf_id, confidence, model, ranked)`, `OpenRouterFallback(key, models, *, complete=litellm.completion, breaker=None)` with `decide(evidence, tree) -> FallbackChoice | None`, `make_fallback(settings, *, complete=litellm.completion) -> OpenRouterFallback | None`, `leaf_menu(tree) -> dict[str, str]`, constants `OPENROUTER = "openrouter/"`, `PRIVACY`, `REASONING`.
 
 Rules:
-- Same request as the Stage 1 bake-off (`scripts/bakeoff.py` `ask_llm`): `temperature 0`, `max_tokens 4000`, `reasoning {"effort": "low"}`, `provider {"zdr": true, "data_collection": "deny"}`, JSON-schema output whose `leaf` is an enum of leaf ids, up to 3 ranked choices.
+- Called through `litellm.completion` with model `openrouter/<model id>` and the key passed as `api_key`. Same request as the Stage 1 bake-off (`scripts/bakeoff.py` `ask_llm`): `temperature 0`, `max_tokens 4000`, JSON-schema `response_format` whose `leaf` is an enum of leaf ids, up to 3 ranked choices. OpenRouter-only fields go in `extra_body`: `provider {"zdr": true, "data_collection": "deny"}` and `reasoning {"effort": "low"}`. litellm retries transient errors (`num_retries=2`); timeout 120 s.
 - Evidence sent: filename, first 2000 preview characters, first 50 archive entries. Never the path.
 - A secret evidence is never sent (returns None before any call). Secret-named leaves are left out of the menu, and secret-named parts are dropped from `describe` "(contains: …)" lists.
-- Models are tried in order (primary, then backup) on an HTTP error or an unusable reply. When every model fails, the breaker records a failure; when it is open, no call is made.
-- The API key goes only into the `Authorization` header.
+- Models are tried in order (primary, then backup) on any litellm error or an unusable reply. When every model fails, the breaker records a failure; when it is open, no call is made.
+- The API key is passed only as `api_key`, never in the messages.
 
 - [ ] **Step 1: Write the failing tests.** Create `tests/test_core_fallback.py`:
 
 ```python
-"""Signal 4: OpenRouter with ZDR on every request; secrets never sent."""
+"""Signal 4: litellm to OpenRouter with ZDR on every request; secrets never sent."""
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
-
-import httpx
+from types import SimpleNamespace
 
 from para_files.circuit_breaker import OllamaCircuitBreaker
 from para_files.core.evidence import Evidence
 from para_files.core.fallback import (
-    OPENROUTER_URL,
     FallbackChoice,
     OpenRouterFallback,
     leaf_menu,
@@ -1479,18 +1477,23 @@ from tests.core_helpers import make_config, make_settings
 KEY = "sk-test-key"
 
 
-def reply(choices, status=200):
+def reply(choices):
     content = json.dumps({"choices": choices})
-    return httpx.Response(status, json={"choices": [{"message": {"content": content}}]})
+    return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])
 
 
-class FakePost:
-    def __init__(self, *responses):
-        self.responses, self.calls = list(responses), []
+class FakeComplete:
+    """Stands in for litellm.completion: records calls, returns or raises in turn."""
 
-    def __call__(self, url, **kwargs):
-        self.calls.append((url, kwargs))
-        return self.responses.pop(0)
+    def __init__(self, *outcomes):
+        self.outcomes, self.calls = list(outcomes), []
+
+    def __call__(self, **kwargs):
+        self.calls.append(kwargs)
+        outcome = self.outcomes.pop(0)
+        if isinstance(outcome, Exception):
+            raise outcome
+        return outcome
 
 
 def ev(name="scan.pdf", preview="Monthly statement", secret=None, listing=()):
@@ -1508,58 +1511,71 @@ def ev(name="scan.pdf", preview="Monthly statement", secret=None, listing=()):
 
 
 def test_request_carries_zdr_and_low_reasoning():
-    post = FakePost(reply([{"leaf": "archives_10y_banques", "confidence": 0.8}]))
-    choice = OpenRouterFallback(KEY, ["m1", "m2"], post=post).decide(ev(), make_config().tree)
+    complete = FakeComplete(reply([{"leaf": "archives_10y_banques", "confidence": 0.8}]))
+    fallback = OpenRouterFallback(KEY, ["google/m1", "anthropic/m2"], complete=complete)
+    choice = fallback.decide(ev(), make_config().tree)
     assert choice == FallbackChoice(
-        "archives_10y_banques", 0.8, "m1", (("archives_10y_banques", 0.8),)
+        "archives_10y_banques", 0.8, "google/m1", (("archives_10y_banques", 0.8),)
     )
-    url, kwargs = post.calls[0]
-    assert url == OPENROUTER_URL
-    body = kwargs["json"]
-    assert body["provider"] == {"zdr": True, "data_collection": "deny"}
-    assert body["reasoning"] == {"effort": "low"}
-    assert body["model"] == "m1"
-    assert kwargs["headers"] == {"Authorization": f"Bearer {KEY}"}
-    assert KEY not in json.dumps(body)
-    assert "/private/somewhere" not in json.dumps(body)
-    enum = body["response_format"]["json_schema"]["schema"]["properties"]["choices"]["items"]
-    assert set(enum["properties"]["leaf"]["enum"]) == set(make_config().tree.leaves)
+    call = complete.calls[0]
+    assert call["model"] == "openrouter/google/m1"
+    assert call["extra_body"] == {
+        "provider": {"zdr": True, "data_collection": "deny"},
+        "reasoning": {"effort": "low"},
+    }
+    assert call["api_key"] == KEY
+    assert call["temperature"] == 0
+    sent = json.dumps(call["messages"])
+    assert KEY not in sent
+    assert "/private/somewhere" not in sent
+    schema = call["response_format"]["json_schema"]["schema"]
+    leaf = schema["properties"]["choices"]["items"]["properties"]["leaf"]
+    assert set(leaf["enum"]) == set(make_config().tree.leaves)
 
 
 def test_secret_evidence_is_never_sent():
-    post = FakePost()
-    assert (
-        OpenRouterFallback(KEY, ["m1"], post=post).decide(
-            ev(secret="name"),  # noqa: S106
-            make_config().tree,
-        )
-        is None
-    )
-    assert post.calls == []
+    complete = FakeComplete()
+    fallback = OpenRouterFallback(KEY, ["m1"], complete=complete)
+    secret_evidence = ev(secret="name")  # noqa: S106 - a reason, not a password
+    assert fallback.decide(secret_evidence, make_config().tree) is None
+    assert complete.calls == []
 
 
 def test_backup_model_after_an_error():
-    post = FakePost(
-        httpx.Response(500, json={}),
+    complete = FakeComplete(
+        RuntimeError("HTTP 500"),
         reply([{"leaf": "archives_5y_factures", "confidence": 0.6}]),
     )
-    choice = OpenRouterFallback(KEY, ["m1", "m2"], post=post).decide(ev(), make_config().tree)
+    choice = OpenRouterFallback(KEY, ["m1", "m2"], complete=complete).decide(
+        ev(), make_config().tree
+    )
     assert choice.model == "m2"
-    assert [call[1]["json"]["model"] for call in post.calls] == ["m1", "m2"]
+    assert [call["model"] for call in complete.calls] == ["openrouter/m1", "openrouter/m2"]
 
 
 def test_all_models_fail_records_a_breaker_failure():
     breaker = OllamaCircuitBreaker(threshold=1)
-    post = FakePost(httpx.Response(500, json={}), httpx.Response(502, json={}))
-    fallback = OpenRouterFallback(KEY, ["m1", "m2"], post=post, breaker=breaker)
+    complete = FakeComplete(RuntimeError("HTTP 500"), RuntimeError("HTTP 502"))
+    fallback = OpenRouterFallback(KEY, ["m1", "m2"], complete=complete, breaker=breaker)
     assert fallback.decide(ev(), make_config().tree) is None
     assert breaker.is_open
     assert fallback.decide(ev(), make_config().tree) is None
-    assert len(post.calls) == 2
+    assert len(complete.calls) == 2
+
+
+def test_malformed_reply_moves_on():
+    complete = FakeComplete(
+        SimpleNamespace(choices=[]),
+        reply([{"leaf": "resources_docs", "confidence": 0.5}]),
+    )
+    choice = OpenRouterFallback(KEY, ["m1", "m2"], complete=complete).decide(
+        ev(), make_config().tree
+    )
+    assert choice.model == "m2"
 
 
 def test_unknown_or_malformed_choices_are_dropped():
-    post = FakePost(
+    complete = FakeComplete(
         reply(
             [
                 {"leaf": "nope", "confidence": 0.9},
@@ -1570,22 +1586,21 @@ def test_unknown_or_malformed_choices_are_dropped():
             ]
         )
     )
-    choice = OpenRouterFallback(KEY, ["m1"], post=post).decide(ev(), make_config().tree)
+    choice = OpenRouterFallback(KEY, ["m1"], complete=complete).decide(ev(), make_config().tree)
     assert choice == FallbackChoice("resources_docs", 1.0, "m1", (("resources_docs", 1.0),))
 
 
 def test_empty_choices_mean_no_decision():
-    post = FakePost(reply([]))
-    assert OpenRouterFallback(KEY, ["m1"], post=post).decide(ev(), make_config().tree) is None
+    complete = FakeComplete(reply([]))
+    fallback = OpenRouterFallback(KEY, ["m1"], complete=complete)
+    assert fallback.decide(ev(), make_config().tree) is None
 
 
 def test_archive_entries_are_sent():
-    post = FakePost(reply([{"leaf": "resources_docs", "confidence": 0.5}]))
-    OpenRouterFallback(KEY, ["m1"], post=post).decide(
-        ev(listing=("guide/readme.txt",)), make_config().tree
-    )
-    user = post.calls[0][1]["json"]["messages"][1]["content"]
-    assert "guide/readme.txt" in user
+    complete = FakeComplete(reply([{"leaf": "resources_docs", "confidence": 0.5}]))
+    fallback = OpenRouterFallback(KEY, ["m1"], complete=complete)
+    fallback.decide(ev(listing=("guide/readme.txt",)), make_config().tree)
+    assert "guide/readme.txt" in complete.calls[0]["messages"][1]["content"]
 
 
 def test_menu_drops_secret_leaves_and_parts():
@@ -1620,11 +1635,11 @@ def test_make_fallback(tmp_path):
 - [ ] **Step 3: Implement.** Create `src/para_files/core/fallback.py`:
 
 ```python
-"""Signal 4, fuzzy fallback: an OpenRouter model chooses among leaf ids (spec §4.2).
+"""Signal 4, fuzzy fallback: an OpenRouter model, called through litellm, chooses a leaf id.
 
-Every request carries provider.zdr=true and data_collection=deny, so it fails rather than reach
-a provider that keeps data. A secret file is never sent; secret-named leaves are never listed.
-The request is the one the Stage 1 bake-off validated (scripts/bakeoff.py).
+Every request carries OpenRouter's provider.zdr=true and data_collection=deny (sent through
+litellm's extra_body), so it fails rather than reach a provider that keeps data. A secret file
+is never sent; secret-named leaves are never listed. Same request as the Stage 1 bake-off.
 """
 
 from __future__ import annotations
@@ -1637,7 +1652,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import httpx
+import litellm
 from loguru import logger
 
 from para_files.circuit_breaker import OllamaCircuitBreaker
@@ -1647,11 +1662,12 @@ from para_files.core.settings import CoreSettings
 from para_files.core.tree import Tree
 
 
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER = "openrouter/"
 PRIVACY = {"zdr": True, "data_collection": "deny"}
 REASONING = {"effort": "low"}  # Gemini 3.8 Flash and Sonnet 5.5 refuse reasoning off
 MAX_TOKENS = 4000
 TIMEOUT = 120.0
+RETRIES = 2
 PREVIEW_CHARS = 2000
 MAX_LISTED_ENTRIES = 50
 MAX_CHOICES = 3
@@ -1660,7 +1676,7 @@ SYSTEM = (
     "ids from the list for this file, most likely first, each with the probability that it is "
     "the right folder. Reply only with JSON."
 )
-Post = Callable[..., httpx.Response]
+Complete = Callable[..., Any]
 Ranked = list[tuple[str, float]]
 
 
@@ -1711,9 +1727,15 @@ def evidence_text(evidence: Evidence) -> str:
     return text
 
 
-def request_body(model: str, menu: dict[str, str], evidence: Evidence) -> dict[str, Any]:
-    """Chat request: enum-constrained JSON, low reasoning effort, ZDR enforced."""
+def messages(menu: dict[str, str], evidence: Evidence) -> list[dict[str, str]]:
+    """System prompt, then the leaf list and the file evidence."""
     folders = "\n".join(f"- {leaf_id}: {describe}" for leaf_id, describe in menu.items())
+    user = f"Folders:\n{folders}\n\nFile:\n{evidence_text(evidence)}"
+    return [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}]
+
+
+def response_format(menu: dict[str, str]) -> dict[str, Any]:
+    """JSON schema: up to 3 choices, each an enum leaf id with a confidence."""
     choice = {
         "type": "object",
         "additionalProperties": False,
@@ -1732,19 +1754,8 @@ def request_body(model: str, menu: dict[str, str], evidence: Evidence) -> dict[s
         },
     }
     return {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": SYSTEM},
-            {"role": "user", "content": f"Folders:\n{folders}\n\nFile:\n{evidence_text(evidence)}"},
-        ],
-        "temperature": 0,
-        "max_tokens": MAX_TOKENS,
-        "reasoning": REASONING,
-        "provider": PRIVACY,
-        "response_format": {
-            "type": "json_schema",
-            "json_schema": {"name": "filing", "strict": True, "schema": schema},
-        },
+        "type": "json_schema",
+        "json_schema": {"name": "filing", "strict": True, "schema": schema},
     }
 
 
@@ -1783,34 +1794,36 @@ def parse_choices(content: str | None, menu: dict[str, str]) -> Ranked:
 
 
 class OpenRouterFallback:
-    """Signal 4: primary model, then backup; behind a circuit breaker."""
+    """Signal 4: primary model, then backup, through litellm; behind a circuit breaker."""
 
     def __init__(
         self,
         key: str,
         models: Sequence[str],
         *,
-        post: Post = httpx.post,
+        complete: Complete = litellm.completion,
         breaker: OllamaCircuitBreaker | None = None,
     ) -> None:
         self._key = key
         self._models = tuple(models)
-        self._post = post
+        self._complete = complete
         self._breaker = breaker or OllamaCircuitBreaker()
 
     def _ask(self, model: str, menu: dict[str, str], evidence: Evidence) -> Ranked:
-        response = self._post(
-            OPENROUTER_URL,
+        response = self._complete(
+            model=f"{OPENROUTER}{model}",
+            messages=messages(menu, evidence),
+            api_key=self._key,
+            temperature=0,
+            max_tokens=MAX_TOKENS,
+            response_format=response_format(menu),
+            extra_body={"provider": PRIVACY, "reasoning": REASONING},
             timeout=TIMEOUT,
-            headers={"Authorization": f"Bearer {self._key}"},
-            json=request_body(model, menu, evidence),
+            num_retries=RETRIES,
         )
-        if response.is_error:
-            msg = f"HTTP {response.status_code}"
-            raise FallbackError(msg)
         try:
-            content = response.json()["choices"][0]["message"].get("content")
-        except (ValueError, KeyError, IndexError, TypeError, AttributeError) as exc:
+            content = response.choices[0].message.content
+        except (AttributeError, IndexError, TypeError) as exc:
             msg = f"malformed reply: {type(exc).__name__}"
             raise FallbackError(msg) from exc
         return parse_choices(content, menu)
@@ -1825,7 +1838,7 @@ class OpenRouterFallback:
         for model in self._models:
             try:
                 ranked = self._ask(model, menu, evidence)
-            except (httpx.HTTPError, FallbackError) as exc:
+            except Exception as exc:  # noqa: BLE001 - any provider error moves on to the backup
                 logger.warning("fallback {} failed on {}: {}", model, evidence.name, exc)
                 continue
             self._breaker.record_success()
@@ -1837,24 +1850,26 @@ class OpenRouterFallback:
         return None
 
 
-def make_fallback(settings: CoreSettings, *, post: Post = httpx.post) -> OpenRouterFallback | None:
+def make_fallback(
+    settings: CoreSettings, *, complete: Complete = litellm.completion
+) -> OpenRouterFallback | None:
     """The configured fallback, or None when it is off or no key is set."""
     if not settings.fallback_enabled or settings.openrouter_api_key is None:
         return None
     return OpenRouterFallback(
         settings.openrouter_api_key.get_secret_value(),
         (settings.fallback_model, settings.fallback_backup_model),
-        post=post,
+        complete=complete,
     )
 ```
 
-- [ ] **Step 4: Run, expect pass.** `uv run pytest tests/test_core_fallback.py -q` → 9 passed.
+- [ ] **Step 4: Run, expect pass.** `uv run pytest tests/test_core_fallback.py -q` → 10 passed.
 
 - [ ] **Step 5: Gate and commit.**
 
 ```bash
 git add src/para_files/core/fallback.py tests/test_core_fallback.py
-git commit -m "feat(core): signal 4, OpenRouter fallback with ZDR on every request" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+git commit -m "feat(core): signal 4, OpenRouter fallback through litellm with ZDR on every request" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01TnHHvHPS4t1tVuqpTZiEJx"
 ```
 
@@ -3485,7 +3500,7 @@ Notes for the implementer:
 
     - **New core (`para_files.core`)**, alongside the old pipeline (the CLI still uses the old one until Stage 3):
       - one `extract()` per file, with the secrets guard first (names, folders below the PARA root, archive entries, content);
-      - four signals on leaf ids: case-insensitive rules, books by ISBN (lookups cached; the unused cover lookup is gone), issuers (patterns of 3 characters or fewer match whole words only) and an OpenRouter fallback (Gemini 3.8 Flash, then Sonnet 5.5, zero data retention on every request);
+      - four signals on leaf ids: case-insensitive rules, books by ISBN (lookups cached; the unused cover lookup is gone), issuers (patterns of 3 characters or fewer match whole words only) and an OpenRouter fallback through litellm (Gemini 3.8 Flash, then Sonnet 5.5, zero data retention on every request);
       - bands with kind caps, and a calibration cap: issuers and the fallback stay yellow until a kind has 100 owner-confirmed decisions;
       - an SQLite cache of verdicts keyed by content hash and config fingerprint;
       - sequential apply: contained, never overwriting, `.trash` for identical files, emptied folders removed, every step journaled (`mkdir`, `move`, `trash`, `rmdir`) with `proposed_leaf` and `decided_by`;
@@ -3493,10 +3508,9 @@ Notes for the implementer:
     - **Core settings**: env > `<config dir>/.env` > defaults. A `PARA_FILES_PARA_ROOT` that points at a bucket (such as `…/0_Inbox`) is refused with a message naming the variable.
     ```
 
-  - Spec, three edits:
-    1. §4.2 Signals: replace `**LLM via litellm**, Gemini 3.8 Flash on OpenRouter` with `**LLM via httpx to OpenRouter** (the request the Stage 1 bake-off validated), Gemini 3.8 Flash`.
-    2. §4.3 Journal: replace ``op` ∈ `move`, `trash`, `rmdir`.`` with ``op` ∈ `mkdir`, `move`, `trash`, `rmdir` (`mkdir` lets `undo` remove the folders a run created).`.
-    3. §4.1 Config files: after the line ``- `thema_l1l2.json` — …``, add the line `Both package files are deferred to Stage 4: the owner's rules.yaml already carries the extension rules, and the Thema slimming is part of the purge.`
+  - Spec, two edits:
+    1. §4.3 Journal: replace ``op` ∈ `move`, `trash`, `rmdir`.`` with ``op` ∈ `mkdir`, `move`, `trash`, `rmdir` (`mkdir` lets `undo` remove the folders a run created).`.
+    2. §4.1 Config files: after the line ``- `thema_l1l2.json` — …``, add the line `Both package files are deferred to Stage 4: the owner's rules.yaml already carries the extension rules, and the Thema slimming is part of the purge.`
 
 - [ ] **Step 6: Full gate.** Run all four gate commands. Then the controller scans the branch diff (`git diff main`) for personal identifiers (owner name, real issuers, PARA paths) before any push; the pattern list lives outside the repo.
 
