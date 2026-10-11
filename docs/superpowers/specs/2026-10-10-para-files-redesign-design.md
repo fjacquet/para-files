@@ -350,7 +350,7 @@ class Fallback(Protocol):
 
 One implementation, chosen by owner preference without an authoritative bake-off (2026-10-11): **LLM via litellm**, Gemini 3.8 Flash on OpenRouter (Claude Sonnet 5.5 as the configured fallback model), with `reasoning: {"effort": "low"}`; JSON-schema output with an enum of leaf ids; self-reported confidence. Jev 1.13 is not implemented.
 
-Every cloud request carries `provider: {"zdr": true}`, so it fails rather than reach a provider that retains data.
+Every cloud request carries `provider: {"zdr": true, "data_collection": "deny"}`, so it fails rather than reach a provider that retains data.
 
 #### Decision
 
@@ -384,7 +384,7 @@ There is no `6_unclassified` bucket and no extension catch-all. A re-org never p
 - `KeyboardInterrupt` propagates: the run aborts and the current file is untouched.
 - SQLite cache at `~/.cache/para-files/cache.sqlite`:
   - ISBN lookups keyed by ISBN.
-  - Decisions keyed by `(sha256, config_fingerprint)`, where the fingerprint hashes `tree.yaml`, `rules.yaml`, `issuers.yaml` and the fallback model id. A preview followed by `--apply` pays for model calls once.
+  - Decisions keyed by `(sha256, config_fingerprint)`, where the fingerprint hashes `tree.yaml`, `rules.yaml`, `issuers.yaml`, the primary and backup model ids, the prompt version and the preview size (owner examples are deliberately not part of it). A preview followed by `--apply` pays for model calls once.
 - The unused `isbnlib.cover()` network call is removed.
 
 #### Removed from the pipeline
@@ -492,7 +492,7 @@ Reads predictions against labels (Stage 1: a JSONL file; from Stage 3: the journ
 |---|---|
 | Candidates | In the owner's order of preference: Gemini 3.8 Flash, Claude Sonnet 5.5 (both OpenRouter, enum-constrained, reasoning effort low), Jev 1.13 (Decisions API); plus the **no-fallback baseline** (signals 1–3 only). Mistral, nomic-embed-text, gemma4 (local AI) and Haiku 5.5 dropped after the preliminary run. |
 | Input | identical: evidence text (name, 2000-char preview, archive listing) + leaf list with `describe` |
-| Privacy | `provider: {"zdr": true}` on every cloud request; secrets-guarded files never sent |
+| Privacy | `provider: {"zdr": true, "data_collection": "deny"}` on every cloud request; secrets-guarded files never sent |
 | Code | throwaway, read-only on files |
 | Scope | (a) `record`, `library` and `media` files left undecided by the ISBN and pinned-rule steps; (b) `knowledge` files as suggestions |
 | Winner | (a) highest green coverage at ≥ 98% precision; (b) highest top-3 hit rate. Ties → owner preference: Gemini 3.8 Flash > Sonnet 5.5 > Jev 1.13 |
@@ -580,7 +580,7 @@ Status: done 2026-10-11 (see decisions log).
 | Few confirmed decisions per kind for a long time | Green stays limited to pinned rules and ISBN books until a kind has ≥ 100; the owner sees everything else |
 | Re-org moves many files on a synced volume | Preview first; apply batch by batch; journal + `undo`; `.trash` on the same volume |
 | Precedence fix flips `para_root` | Ships together with the `.env` correction (Stage 2) |
-| Cloud fallback sends document text off the machine | `provider: {"zdr": true}` on every request; secrets guard; the owner can turn the model off |
+| Cloud fallback sends document text off the machine | `provider: {"zdr": true, "data_collection": "deny"}` on every request; secrets guard; the owner can turn the model off |
 | No local model: offline or OpenRouter outage silences the model | The ISBN and pinned-rule steps run locally and still decide books and pinned records; hints become yellow suggestions and undecided files stay in place as yellow/red |
 | Reorganization moves thousands of archived files | Batches on demand, one complete folder at a time, quick wins first; preview; journal + `undo`; doubtful files go back to `0_Inbox` |
 | Personal identifiers remain in public git history | Owner decided (2026-10-11): the repo stays public and history is not rewritten; new content is checked for identifiers before each push |

@@ -56,11 +56,11 @@ def _choice(ask: Ask, prompt: str, config: TreeConfig) -> str:
     """The owner's answer; "?" lists the leaves and asks again. Raises Stop at end of input."""
     try:
         answer = ask(prompt).strip()
+        while answer == "?":
+            _list_leaves(config)
+            answer = ask(prompt).strip()
     except typer.Abort as exc:
         raise Stop from exc
-    while answer == "?":
-        _list_leaves(config)
-        answer = ask(prompt).strip()
     return answer
 
 
@@ -106,8 +106,9 @@ def _show(decision: Decision, root: Path) -> None:
     typer.echo(
         f"    {relative(decision.path, root)}  [{decision.signal} {decision.confidence:.2f}]{about}"
     )
-    if alternatives := _alternatives(decision):
-        typer.echo(f"  {alternatives}")
+    if len(decision.ranked) > 1:
+        others = ", ".join(f"{leaf} {p:.2f}" for leaf, p in decision.ranked[1:])
+        typer.echo(f"      also: {others}")
 
 
 def _each(group: list[Decision], context: tuple[TreeConfig, Path, Ask], ops: list[Op]) -> None:

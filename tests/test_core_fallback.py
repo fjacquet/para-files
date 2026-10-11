@@ -407,3 +407,14 @@ def test_examples_with_real_secret_check_and_secret_proposals_stay_out_of_the_pr
     assert "passwords.txt" not in user
     assert "no_such_leaf" not in user
     assert '- "acmecard_invoice.pdf" -> archives_10y_banques\n' in user
+
+
+def test_parse_reply_strips_terminal_control_characters_from_about():
+    menu = leaf_menu(make_config().tree)
+    content = (
+        '{"about": "\\u001b[31mred\\u0007 text", '
+        '"choices": [{"leaf": "archives_10y_banques", "confidence": 0.8}]}'
+    )
+    _, about = parse_reply(content, menu)
+    assert "\x1b" not in about
+    assert "\x07" not in about

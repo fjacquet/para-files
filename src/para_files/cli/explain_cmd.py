@@ -16,7 +16,7 @@ from para_files.core.evidence import Evidence, extract
 PREVIEW_SHOWN = 160
 EDIT_HINTS = {
     "rules": "edit or unpin this rule in rules.yaml",
-    "books": "the ISBN decided; pin a rule in rules.yaml to override it",
+    "books": "a verified ISBN decides before any rule; the Thema subject picks the library folder",
     "fallback": "the model chose; pin a rule, or improve the leaf's describe/keywords in tree.yaml",
     "hint": "a rule or issuer suggested this; pin the rule if it is always right, or fix it",
     "none": "add a rule (rules.yaml) or an issuer (issuers.yaml), or describe the leaf better",

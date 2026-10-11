@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `sort --apply --review` refuses to start without a terminal instead of moving the green files and stopping at the first question.
 - A file sent to another folder in `--review` keeps its year (and issuer, when it fits) subfolder instead of landing in the folder root.
+- A model answer saved while the book lookup was offline (or the photo had no date) no longer overrides a verified ISBN or a pinned rule on the next run; `explain` now shows the saved model answer that `sort` would use.
+- The model's one-line description is stripped of control characters, so a crafted document cannot send escape sequences to your terminal.
+- Ctrl-C or end of input right after `?` in `--review` keeps the answers you already confirmed instead of aborting the whole sort.
 
 ## [2.0] - 2026-10-11
 

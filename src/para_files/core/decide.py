@@ -236,7 +236,15 @@ def choose(
     if fallback is None:
         why = "model off"
         steps.append(Step("model", None, "off (no key, or PARA_FILES_FALLBACK_ENABLED=false)"))
-    elif not ask_model:
+        return (_hint_verdict(found, why) if found.seen else NO_VERDICT), steps
+    # Rules and issuers read the filename, so the name is part of the cache key.
+    key = f"{ctx.fingerprint}:{evidence.name}"
+    cached = ctx.cache.get_verdict(evidence.sha256, key)
+    if cached is not None:
+        verdict = _from_cache(cached)
+        steps.append(Step("model", verdict, None))
+        return verdict, steps
+    if not ask_model:
         why = "model not asked"
         steps.append(Step("model", None, "not asked (use --ask-model)"))
     else:
@@ -247,6 +255,7 @@ def choose(
         model = _model_verdict(choice, found) if choice is not None else None
         steps.append(Step("model", model, None if model else "no answer"))
         if model is not None:
+            ctx.cache.put_verdict(evidence.sha256, key, asdict(model))
             return model, steps
     return (_hint_verdict(found, why) if found.seen else NO_VERDICT), steps
 
@@ -321,17 +330,7 @@ def _from_cache(data: dict[str, Any]) -> Verdict:
 def _verdict(evidence: Evidence, ctx: Context) -> Verdict:
     if evidence.secret is not None:
         return Verdict(None, "secret", 0.0, f"secret ({evidence.secret}): never sent, never moved")
-    # Rules and issuers read the filename, so the name is part of the cache key.
-    key = f"{ctx.fingerprint}:{evidence.name}"
-    # Only a run with the model on may reuse a model verdict; with it off, the cascade
-    # decides from pins, ISBNs and hints alone.
-    cached = ctx.cache.get_verdict(evidence.sha256, key) if ctx.fallback is not None else None
-    if cached is not None:
-        return _from_cache(cached)
-    verdict, _ = choose(evidence, ctx)
-    if verdict.signal == "fallback":
-        ctx.cache.put_verdict(evidence.sha256, key, asdict(verdict))
-    return verdict
+    return choose(evidence, ctx)[0]
 
 
 def decision_for(evidence: Evidence, verdict: Verdict, ctx: Context) -> Decision:

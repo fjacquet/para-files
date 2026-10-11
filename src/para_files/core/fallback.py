@@ -265,7 +265,8 @@ def parse_reply(content: str | None, menu: dict[str, str]) -> tuple[Ranked, str]
             continue
         chosen.setdefault(leaf, probability)
     about = data.get("about") if isinstance(data, dict) else None
-    text = " ".join(about.split())[:MAX_ABOUT] if isinstance(about, str) else ""
+    collapsed = " ".join(about.split()) if isinstance(about, str) else ""
+    text = "".join(ch for ch in collapsed if ch.isprintable())[:MAX_ABOUT]
     return list(chosen.items())[:MAX_CHOICES], text
 
 

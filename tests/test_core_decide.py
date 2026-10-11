@@ -417,3 +417,34 @@ def test_fill_subkey_needs_every_placeholder():
     assert decide.fill_subkey(leaf, (("{year}", "2026"), ("{issuer}", None))) == (
         "4_Archives/10y_banques"
     )
+
+
+def test_cached_model_verdict_does_not_beat_a_verified_isbn(tmp_path):
+    fake = FakeFallback()
+    ctx = make_ctx(tmp_path, fallback=fake)
+    path = inbox_file(ctx, "Handbook.pdf")
+    evidence = Evidence(
+        path=path,
+        name=path.name,
+        ext=".pdf",
+        size=1,
+        mtime=0.0,
+        sha256="1" * 64,
+        isbns=("9780000000002",),
+    )
+    assert decide._verdict(evidence, ctx).signal == "fallback"
+    info = BookInfo(isbn_13="9780000000002", title="Payslip Handbook", authors=["A. Writer"])
+    ctx.lookup = lambda _isbn: info
+    assert decide._verdict(evidence, ctx).signal == "books"
+
+
+def test_choose_without_asking_returns_the_cached_model_verdict(tmp_path):
+    fake = FakeFallback()
+    ctx = make_ctx(tmp_path, fallback=fake)
+    path = inbox_file(ctx, "scan_0001.txt")
+    assert classify(path, ctx).signal == "fallback"
+    evidence = decide.extract(path, root=ctx.settings.para_root, preview_chars=100)
+    verdict, steps = decide.choose(evidence, ctx, ask_model=False)
+    assert verdict.signal == "fallback"
+    assert steps[-1].name == "model"
+    assert len(fake.calls) == 1
