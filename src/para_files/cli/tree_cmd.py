@@ -16,6 +16,7 @@ from para_files.core.tree import TreeConfig, validation_warnings
 
 def _print_leaves(config: TreeConfig) -> None:
     rules = Counter(rule.leaf for rule in config.rules.rules)
+    pinned = Counter(rule.leaf for rule in config.rules.rules if rule.pin)
     issuers = Counter(
         leaf_id for issuer in config.issuers.issuers.values() for leaf_id in issuer.leaves
     )
@@ -23,7 +24,7 @@ def _print_leaves(config: TreeConfig) -> None:
     for leaf_id, leaf in sorted(config.tree.leaves.items(), key=lambda item: item[1].path):
         typer.echo(
             f"  {leaf.path:<40} {leaf_id:<32} {leaf.kind:<9} {leaf.retention or '-':<9} "
-            f"rules {rules[leaf_id]:<3} issuers {issuers[leaf_id]}"
+            f"rules {rules[leaf_id]:<3} pinned {pinned[leaf_id]:<3} issuers {issuers[leaf_id]}"
         )
 
 

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `pin: true` / `pin: exif` on rules (`rules.yaml`); `tree` shows pinned counts.
+
 ### Changed
 
 - Logs are quiet by default (warnings only, on stderr); `--verbose` shows debug lines.

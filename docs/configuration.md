@@ -105,9 +105,11 @@ rules:
   - name: payslips
     leaf: payslips
     globs: ["*payslip*.pdf", "*salary statement*"]
+    pin: true
   - name: photos
     leaf: photos
     globs: ["*.jpg", "*.heic"]
+    pin: exif
 ```
 
 | Field | Rule |
@@ -115,8 +117,19 @@ rules:
 | `name` | Required, unique across rules |
 | `leaf` | Required, an existing leaf id |
 | `globs` | Required, at least one. Matched against the filename only, case-insensitively, after Unicode NFC normalization |
+| `pin` | Optional, default `false`. `true` or `exif` (see below) |
 
 The first rule in file order whose glob matches wins. A rule on a `library` leaf without an ISBN stays yellow (see [architecture](architecture.md#bands-and-caps)).
+
+### Pinning
+
+| `pin` | Effect |
+|---|---|
+| `false` (default) | A hint for the model. The file is yellow and the model still decides the leaf |
+| `true` | Decides alone: green, without asking the model. Knowledge and library leaves are capped at yellow (see [architecture](architecture.md#bands-and-caps)) |
+| `exif` | Decides alone only when the file has an EXIF date (camera photos). Otherwise it behaves like `false` |
+
+`para-files tree` shows how many rules are pinned per leaf.
 
 ## issuers.yaml
 
@@ -164,3 +177,5 @@ Cross-file errors are reported together, separated by `;`.
 | A leaf no rule or issuer points to (knowledge leaves are exempt) | Add a rule or an issuer, or remove the leaf |
 | Two leaves share a path | Give one of them a different path |
 | A retention prefix such as `10y_` outside a `4_Archives` record | Move the leaf under `4_Archives`, or drop the prefix |
+| A pinned rule (`pin: true`) on a knowledge leaf | Unpin it: knowledge is never green, so the pin only skips the model |
+| A pinned (`pin: true`) glob that matches by extension only, such as `*.pdf`, on a non-media leaf | Narrow the glob to a name, or unpin the rule |

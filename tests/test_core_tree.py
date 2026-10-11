@@ -261,3 +261,49 @@ class TestNoEmptyItems:
         _write(tmp_path, leaves, rules=rules, issuers=issuers)
         with pytest.raises(TreeError, match=re.escape(str(tmp_path / file_name))):
             load_tree_config(tmp_path)
+
+
+def test_rule_pin_values():
+    from para_files.core.tree import RulesFile
+
+    rules = RulesFile.model_validate(
+        {
+            "rules": [
+                {"name": "a", "leaf": "x", "globs": ["*a*"]},
+                {"name": "b", "leaf": "x", "globs": ["*b*"], "pin": True},
+                {"name": "c", "leaf": "x", "globs": ["*.jpg"], "pin": "exif"},
+            ]
+        }
+    )
+    assert [rule.pin for rule in rules.rules] == [False, True, "exif"]
+
+
+def test_rule_pin_rejects_other_values():
+    from pydantic import ValidationError
+
+    from para_files.core.tree import RulesFile
+
+    with pytest.raises(ValidationError):
+        RulesFile.model_validate(
+            {"rules": [{"name": "a", "leaf": "x", "globs": ["*a*"], "pin": "maybe"}]}
+        )
+
+
+def test_pin_warnings():
+    from para_files.core.tree import RulesFile, TreeConfig, validation_warnings
+    from tests.core_helpers import make_config
+
+    base = make_config()
+    rules = RulesFile.model_validate(
+        {
+            "rules": [
+                {"name": "notes", "leaf": "resources_it", "globs": ["*notes*"], "pin": True},
+                {"name": "pdfs", "leaf": "resources_docs", "globs": ["*.pdf"], "pin": True},
+                {"name": "shots", "leaf": "archives_photos", "globs": ["*.jpg"], "pin": "exif"},
+            ]
+        }
+    )
+    warnings = validation_warnings(TreeConfig(tree=base.tree, rules=rules, issuers=base.issuers))
+    assert any("'notes'" in w and "knowledge" in w for w in warnings)
+    assert any("'pdfs'" in w and "extension" in w for w in warnings)
+    assert not any("'shots'" in w and "pinned" in w for w in warnings)

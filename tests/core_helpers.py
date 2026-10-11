@@ -62,8 +62,14 @@ RULES: list[dict[str, Any]] = [
         "name": "payslips",
         "leaf": "archives_10y_travail",
         "globs": ["*payslip*", "*compte de salaire*"],
+        "pin": True,
     },
-    {"name": "photos", "leaf": "archives_photos", "globs": ["*.jpg", "*.heic"]},
+    {
+        "name": "photos",
+        "leaf": "archives_photos",
+        "globs": ["*.jpg", "*.heic"],
+        "pin": "exif",
+    },
     {"name": "whitepapers", "leaf": "resources_docs", "globs": ["*_whitepaper*"]},
     {"name": "it_notes", "leaf": "resources_it", "globs": ["*.md"]},
 ]
