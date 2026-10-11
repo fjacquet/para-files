@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Secrets guard** — `para_files.core.secrets.secret_reason()` flags credential, key, recovery-phrase and similar files by name or content; Stage 1 tools never sample or send such files.
 - **Config migration seeder** — `scripts/migrate_config.py` drafts `tree.yaml`, `rules.yaml` and `issuers.yaml` from the current PARA tree, the legacy routing rules and `config/documents.json`. It folds legacy twins, name variants, stray retention prefixes and synonym folders (retention prefixes defined by the taxonomy never merge), marks doubtful folders for a later return to `0_Inbox`, proposes a kind and retention per leaf, keeps the legacy pattern-and-extension semantics, and lists recurring inbox families as issuer candidates in `review.md`. Read-only on the PARA root.
 - **Golden corpus builder** — `scripts/build_golden.py` samples up to 10 files per leaf (5 per knowledge leaf) from the approved tree into `~/.config/para-files/golden.jsonl`, never crossing into nested leaves and never sampling secret-looking or hidden files.
+- **Evaluation script** — `scripts/eval.py` scores a predictions file against the golden corpus. It reports, overall, per kind and per signal: accuracy, green precision and coverage, yellow/red share, top-3 hit rate, best coverage at ≥ 98% precision, latency and cost per 1000 files.
 
 ### Changed (Stage 1)
 
