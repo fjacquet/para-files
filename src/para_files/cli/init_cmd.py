@@ -15,23 +15,6 @@ from para_files.core.settings import BUCKET_NAME, INBOX, load_path_settings
 from para_files.core.tree import TreeError, load_tree_config
 
 
-def _root(given: Path | None) -> Path:
-    if given is not None:
-        return given.expanduser()
-    para_root = load_path_settings().para_root
-    if para_root is None:
-        fail(
-            "no usable PARA root in the settings; pass it: "
-            f"para-files init /path/to/PARA ({ROOT_HINT})"
-        )
-    return para_root
-
-
-def _state_dir() -> Path:
-    """Where the journal goes: the settings' state dir."""
-    return load_path_settings().state_dir
-
-
 @app.command("init")
 def init_command(
     root: Annotated[
@@ -40,7 +23,13 @@ def init_command(
     apply_: Annotated[bool, typer.Option("--apply", help="Create the missing folders.")] = False,
 ) -> None:
     """List the folders tree.yaml expects that do not exist yet; create them with --apply."""
-    base = _root(root)
+    settings = load_path_settings()
+    base = root.expanduser() if root is not None else settings.para_root
+    if base is None:
+        fail(
+            "no usable PARA root in the settings; pass it: "
+            f"para-files init /path/to/PARA ({ROOT_HINT})"
+        )
     if BUCKET_NAME.match(base.name):
         fail(f"{base} is a bucket; pass the folder that holds the buckets")
     if not base.parent.is_dir():
@@ -59,7 +48,7 @@ def init_command(
             typer.echo(f"  missing  {path.relative_to(base).as_posix()}")
         typer.echo(f"{len(missing)} folders missing; add --apply to create them")
         return
-    state_dir = _state_dir()
+    state_dir = settings.state_dir
     run_id = new_run_id(state_dir)
     with Journal(state_dir, run_id) as journal:
         for path in missing:
