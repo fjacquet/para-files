@@ -56,7 +56,7 @@ Accepting a group counts every file in it as a confirmed decision.
 
 `--review` needs a real terminal; through a pipe or an assistant's shell it stops with an error before classifying anything.
 
-Every answer is journaled as a confirmed decision. `para-files tree` shows how many each kind has; at 100, issuers and the model may start moving files on their own.
+Every answer is journaled as a confirmed decision. `para-files tree` shows how many each kind has; at 100, the model may start moving files on its own (at confidence 0.9 or more).
 
 ## Secrets
 

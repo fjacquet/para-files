@@ -118,7 +118,7 @@ rules:
 | `globs` | Required, at least one. Matched against the filename only, case-insensitively, after Unicode NFC normalization |
 | `pin` | Optional, default `false`. `true` or `exif` (see below) |
 
-The first rule in file order whose glob matches wins. A pinned rule on a `library` leaf stays yellow, because library is green only with an ISBN or an issuer match (see [architecture](architecture.md#bands-and-caps)).
+Only pinned rules decide: the first pinned rule in file order whose glob matches decides, even when an earlier unpinned rule also matches. Unpinned rules are hints: the first unpinned match is given to the model, and without a model answer it is a yellow suggestion. A pinned rule on a `library` leaf stays yellow, because library is green only with an ISBN or an issuer match (see [architecture](architecture.md#bands-and-caps)).
 
 ### Pinning
 

@@ -10,7 +10,7 @@ ADRs document significant architectural choices — what was decided, why, and w
 |-----|-------|--------|
 | [ADR-001](ADR-001-para-method.md) | Use PARA Method for File Organization | Accepted (amended by ADR-012) |
 | [ADR-002](ADR-002-apple-silicon-only.md) | Apple Silicon (macOS) Only Platform | Superseded by ADR-010 |
-| [ADR-003](ADR-003-cascading-pipeline.md) | Cascading Classification Pipeline (First-Match Wins) | Accepted |
+| [ADR-003](ADR-003-cascading-pipeline.md) | Cascading Classification Pipeline (First-Match Wins) | Accepted (amended by ADR-014) |
 | [ADR-004](ADR-004-mlx-embeddings.md) | MLX Embeddings with nomic-embed-text-v1.5 | Superseded by ADR-010 |
 | [ADR-005](ADR-005-yaml-config.md) | YAML Reference Tree for Routing Configuration | Superseded by ADR-013 |
 | [ADR-006](ADR-006-pydantic-validation.md) | Pydantic for Data Validation and Settings | Accepted |

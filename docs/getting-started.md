@@ -121,7 +121,7 @@ The run is journaled and prints its run id.
 uv run para-files sort --apply --review
 ```
 
-For each yellow file, press Enter to accept, `s` to skip, `q` to stop, `?` to list the leaves, or type a leaf id to correct it. Each answer is recorded as your decision. Those decisions are what let issuer and model matches turn green later (see [architecture](architecture.md#bands-and-caps)).
+Yellow files are asked folder by folder. For a group of files proposed for the same leaf, press Enter to accept the whole group, `o` to go through it one file at a time, `s` to skip it, `q` to stop, `?` to list the leaves, or type a leaf id to send the group elsewhere. A single file is asked on its own: Enter accepts, `2` or `3` pick an alternative, `s` skips. Each confirmed file is recorded as your decision. Those decisions are what let model matches turn green once their kind is calibrated (see [architecture](architecture.md#bands-and-caps)). Hints never turn green.
 
 ## 8. Undo
 

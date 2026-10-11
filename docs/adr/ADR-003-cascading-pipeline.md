@@ -1,7 +1,7 @@
 # ADR-003: Cascading Classification Pipeline (First-Match Wins)
 
 **Date**: 2024-01-01
-**Status**: Accepted
+**Status**: Accepted (amended by [ADR-014](ADR-014-model-first.md))
 **Deciders**: Frédéric Jacquet
 
 ---

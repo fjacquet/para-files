@@ -2264,7 +2264,7 @@ git commit -F <msgfile>   # "feat(model): learn from the owner's past decisions 
 
 ## Context
 
-The first real inbox run (153 files) showed that filename rules dominated: 111 files were decided by a filename glob at confidence 1.0, the model saw only 14 leftovers, and 85 of 122 suggestions went to a catch-all folder. A rule such as `*[Ii][Ss][Ee]*` matched "Viseca" and filed a card invoice as Cisco documentation. An evaluation of the 320 rules (5,313 globs) against the existing tree found 67 reliable rules (specific banks, statement types, publishers, photos) and 23 below 50% agreement (topic words and short fragments).
+The first real inbox run (153 files) showed that filename rules dominated: 111 files were decided by a filename glob at confidence 1.0, the model saw only 14 leftovers, and 85 of 122 suggestions went to a catch-all folder. A rule such as `*[Ii][Ss][Ee]*` matched the letters "ise" inside a card issuer's name and filed a card invoice as vendor documentation. An evaluation of the 320 rules (5,313 globs) against the existing tree found 67 reliable rules (specific banks, statement types, publishers, photos) and 23 below 50% agreement (topic words and short fragments).
 
 ## Decision
 
@@ -2318,7 +2318,7 @@ git commit -F <msgfile>   # "docs: ADR-014 model first; spec, README, CLAUDE.md,
    - It reads `rules_eval.csv`, re-matches journal owner decisions against `rules.yaml`, and counts inbox hits per rule.
    - It writes `rules_triage.md` with these sections:
      - **PIN** (about 33 rules: specific records, videos, isos/programmes; photos as `pin: exif`);
-     - **PIN AFTER GLOB CLEANUP** (bcv_avis, ubs, netapp/vmware documentation…);
+     - **PIN AFTER GLOB CLEANUP** (a bank's notices, a second bank, vendor documentation…);
      - **NEAR** (90–95%; the owner decides);
      - **FIX** (bad short globs: `*ise*`, `*ale*`, `*plu*`, the topic-word ebooks globs);
      - **UNUSED** (45 dead rules).

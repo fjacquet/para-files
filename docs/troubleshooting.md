@@ -65,7 +65,7 @@ uv run para-files explain ~/PARA/0_Inbox/some-file.pdf
 | `decision: red, no leaf` and no signal matched | No rule, issuer or ISBN applies | Add a rule in `rules.yaml` or an issuer in `issuers.yaml` for files like this |
 | `secret (...)` | The file looks secret; it is never sent or moved | Keep it local. If the name is a false positive (for example `Secretariat`), rename the file |
 | `model` with a low probability, `decision: red` | The model was unsure (below `PARA_FILES_FALLBACK_RED`, 0.3) | Add a pinned rule or an issuer so the decision is deterministic |
-| `model  off (no key, or PARA_FILES_FALLBACK_ENABLED=false)` or `model  not asked (use --ask-model)` | `explain` does not call the model unless asked, or the model is off | Use `explain --ask-model`, which sends the name and preview to OpenRouter; for "off", set the key |
+| `model  off (no key, or PARA_FILES_FALLBACK_ENABLED=false)` or `model  not asked (use --ask-model)` | `explain` does not call the model unless asked, or the model is off | Use `explain --ask-model`, which sends the file name, type, metadata, text preview, hints and examples of past decisions to OpenRouter, with zero data retention and never for a secret file; for "off", set the key |
 
 A file can also be red because it cannot be read (the plan shows `cannot read`). Check its permissions.
 

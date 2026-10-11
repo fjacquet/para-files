@@ -337,13 +337,15 @@ flowchart TD
 
 The cascade stops at the first step that decides: a verified ISBN book, a pinned rule, or the model. Unpinned rules, heuristic books and issuer matches are hints given to the model; when the model is off or silent, the first hint is shown as a yellow suggestion and never moves a file alone. Only model verdicts are cached. The deterministic steps are local except the ISBN lookup (cached).
 
-Keyword-only matches (keywords present, no issuer) no longer decide on their own: they are left to signal 4, which receives each leaf's `describe` and `keywords` as choice criteria.
+Keyword-only matches (keywords present, no issuer) no longer decide on their own: they are left to the model, which receives each leaf's `describe` and `keywords` as choice criteria.
 
-Signal 4 interface:
+Model interface:
 
 ```python
 class Fallback(Protocol):
-    def decide(self, evidence: Evidence, leaves: Sequence[Leaf]) -> tuple[str, float] | None: ...
+    def decide(
+        self, evidence: Evidence, tree: Tree, hints: Sequence[Hint] = ()
+    ) -> FallbackChoice | None: ...
 ```
 
 One implementation, chosen by owner preference without an authoritative bake-off (2026-10-11): **LLM via litellm**, Gemini 3.8 Flash on OpenRouter (Claude Sonnet 5.5 as the configured fallback model), with `reasoning: {"effort": "low"}`; JSON-schema output with an enum of leaf ids; self-reported confidence. Jev 1.13 is not implemented.
@@ -441,7 +443,7 @@ Nothing is ever hard-deleted or overwritten.
 
 Before any signal runs, `extract` checks the filename and the text preview against secret patterns (private-key headers, cloud access keys, credential/password/token/recovery-phrase markers with a value). A match makes the decision red with reason `secret`:
 
-- the file is never passed to signal 4 or to any other network call, and its preview is not cached;
+- the file is never passed to the model or to any other network call, and its preview is not cached;
 - it is never moved, renamed or trashed by `sort` or `clean`;
 - `sort` lists it under a "secrets" heading so the owner can move it to a password manager; `explain` shows which pattern matched.
 
@@ -476,7 +478,7 @@ The owner does not trust current placement in PARA as ground truth, so files alr
 - Reorganization batches (§5) go through the same review and add labels too.
 - Green-applied files (`decided_by: auto`) are not labels; an `undo` of one counts as a miss for its signal.
 - Labels stay in the journal under `~/.local/state/para-files/` (personal paths stay out of the repo).
-- The repo holds a small sanitized fixture set for CI regression of signals 1–3.
+- The repo holds a small sanitized fixture set for CI regression of the ISBN and pinned-rule steps.
 
 The Stage 1 `scripts/build_golden.py` stays in the repo, unused.
 
@@ -492,9 +494,9 @@ Reads predictions against labels (Stage 1: a JSONL file; from Stage 3: the journ
 | Input | identical: evidence text (name, 2000-char preview, archive listing) + leaf list with `describe` |
 | Privacy | `provider: {"zdr": true}` on every cloud request; secrets-guarded files never sent |
 | Code | throwaway, read-only on files |
-| Scope | (a) `record`, `library` and `media` files left undecided by signals 1–3; (b) `knowledge` files as suggestions |
+| Scope | (a) `record`, `library` and `media` files left undecided by the ISBN and pinned-rule steps; (b) `knowledge` files as suggestions |
 | Winner | (a) highest green coverage at ≥ 98% precision; (b) highest top-3 hit rate. Ties → owner preference: Gemini 3.8 Flash > Sonnet 5.5 > Jev 1.13 |
-| Drop rule | if no candidate adds ≥ 5 points of green coverage on (a) over the baseline and none beats the baseline's suggestions on (b), signal 4 is removed |
+| Drop rule | if no candidate adds ≥ 5 points of green coverage on (a) over the baseline and none beats the baseline's suggestions on (b), the model is dropped |
 
 Runs:
 
@@ -574,12 +576,12 @@ Status: done 2026-10-11 (see decisions log).
 
 | Risk | Mitigation |
 |---|---|
-| Signal 4 chosen without a bake-off | Capped at yellow until calibrated; every move it proposes is confirmed by the owner first; `Fallback` protocol allows a swap |
-| Few confirmed decisions per kind for a long time | Green stays limited to rules and ISBN books until a kind has ≥ 100; the owner sees everything else |
+| Model chosen without a bake-off | Capped at yellow until calibrated; every move it proposes is confirmed by the owner first; `Fallback` protocol allows a swap |
+| Few confirmed decisions per kind for a long time | Green stays limited to pinned rules and ISBN books until a kind has ≥ 100; the owner sees everything else |
 | Re-org moves many files on a synced volume | Preview first; apply batch by batch; journal + `undo`; `.trash` on the same volume |
 | Precedence fix flips `para_root` | Ships together with the `.env` correction (Stage 2) |
-| Cloud fallback sends document text off the machine | `provider: {"zdr": true}` on every request; secrets guard; the owner can turn signal 4 off |
-| No local model: offline or OpenRouter outage silences signal 4 | Signals 1–3 run locally and still decide records, books and media; undecided files stay in place as yellow/red |
+| Cloud fallback sends document text off the machine | `provider: {"zdr": true}` on every request; secrets guard; the owner can turn the model off |
+| No local model: offline or OpenRouter outage silences the model | The ISBN and pinned-rule steps run locally and still decide books and pinned records; hints become yellow suggestions and undecided files stay in place as yellow/red |
 | Reorganization moves thousands of archived files | Batches on demand, one complete folder at a time, quick wins first; preview; journal + `undo`; doubtful files go back to `0_Inbox` |
 | Personal identifiers remain in public git history | Owner decided (2026-10-11): the repo stays public and history is not rewritten; new content is checked for identifiers before each push |
 
@@ -597,7 +599,7 @@ Status: done 2026-10-11 (see decisions log).
 | CLI | `sort`, `explain`, `undo`, `clean`, `tree`, `init` |
 | Learning | Removed; corrections by editing YAML guided by `explain` |
 | Bake-off | Preliminary run done 2026-10-11 (tree, not model, is the bottleneck); authoritative run dropped 2026-10-11 with the golden corpus; signal 4 = Gemini 3.8 Flash, Sonnet 5.5 as fallback (owner preference); Mistral, nomic, gemma4 and Haiku 5.5 dropped; GPT-6 Luna excluded (owner does not trust it) |
-| Ground truth (2026-10-11) | No golden corpus: current placement is not trusted. Labels are the owner's confirmations and corrections during progressive `sort --review` of the inbox and of reorganization batches; issuers and signal 4 stay yellow until a kind has ≥ 100 of them |
+| Ground truth (2026-10-11) | No golden corpus: current placement is not trusted. Labels are the owner's confirmations and corrections during progressive `sort --review` of the inbox and of reorganization batches; the model stays yellow until a kind has ≥ 100 of them, and issuer matches are always hints |
 | Stage 1 tree (2026-10-11) | 89 leaves approved (projects kept; unprefixed `4_Archives` folders kept as permanent records; record-like `3_Resources` folders and small knowledge folders left out) |
 | Local AI (2026-10-11) | Dropped: gemma4 17% exact, 78 min for 206 files, 50 server disconnects; Ollama removed in Stage 4 |
 | Mission (2026-10-11) | Records file themselves; everything else is suggested |

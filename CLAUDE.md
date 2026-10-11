@@ -68,7 +68,7 @@ pre-commit run --all-files         # Run manually
 | `src/para_files/core/tree.py` | Strict loader and validator for `tree.yaml`, `rules.yaml`, `issuers.yaml` |
 | `src/para_files/core/evidence.py` | Reads each file once: hash, name, preview, ISBNs, EXIF date, archive listing |
 | `src/para_files/core/decide.py` | Cascade, bands, caps, target folder, calibration |
-| `src/para_files/core/rules.py`, `books.py`, `issuers.py`, `fallback.py` | The four signals |
+| `src/para_files/core/rules.py`, `books.py`, `issuers.py`, `fallback.py` | Rule, book, issuer and model matches (hints and verdicts) |
 | `src/para_files/core/apply.py`, `journal.py`, `undo.py` | Moves, run journal, undo |
 | `src/para_files/core/sort.py`, `clean.py`, `secrets.py`, `cache.py` | Sort entry points, clean, secrets guard, SQLite cache |
 | `src/para_files/utils/filename_sanitizer.py` | Centralized filename sanitization |

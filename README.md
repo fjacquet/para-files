@@ -9,7 +9,7 @@
 para-files files documents into a [PARA](https://fortelabs.com/blog/para/) tree (Projects, Areas, Resources, Archives):
 
 - **Pinned rules and books with a verified ISBN** file themselves: the green files move on `sort --apply`. Books go to the library, placed by ISBN and its Thema subject.
-- **Everything else** is read by the model (when an OpenRouter key is set), which suggests a folder. Yellow files wait for your confirmation, red files stay where they are. Unpinned rules and issuer matches are only hints to the model.
+- **Everything else** is read by the model (when an OpenRouter key is set), which suggests a folder. Yellow files wait for your confirmation, red files stay where they are. Unpinned rules and issuer matches are only hints to the model (without a key they are yellow suggestions).
 
 Nothing moves until you ask. Every run is journaled, and `undo` reverses it step by step.
 

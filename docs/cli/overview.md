@@ -36,7 +36,7 @@ Settings come from the environment, then `~/.config/para-files/.env`, then defau
 | `PARA_FILES_MAX_WORKERS` | `4` | Parallel classifiers |
 | `PARA_FILES_FALLBACK_ENABLED` | `true` | Ask the model for every file that no verified ISBN or pinned rule decides |
 | `OPENROUTER_API_KEY` | (none) | Key for the model; without it the model is never asked |
-| `PARA_FILES_CALIBRATION_MIN` | `100` | Confirmed decisions per kind before issuers and the model may go green |
+| `PARA_FILES_CALIBRATION_MIN` | `100` | Confirmed decisions per kind before model matches may go green |
 
 ## Bands
 

@@ -9,7 +9,7 @@
 
 ## Context
 
-The first real inbox run (153 files) showed that filename rules dominated: 111 files were decided by a filename glob at confidence 1.0, the model saw only 14 leftovers, and 85 of 122 suggestions went to a catch-all folder. A rule such as `*[Ii][Ss][Ee]*` matched "Viseca" and filed a card invoice as Cisco documentation. An evaluation of the 320 rules (5,313 globs) against the existing tree found 67 reliable rules (specific banks, statement types, publishers, photos) and 23 below 50% agreement (topic words and short fragments).
+The first real inbox run (153 files) showed that filename rules dominated: 111 files were decided by a filename glob at confidence 1.0, the model saw only 14 leftovers, and 85 of 122 suggestions went to a catch-all folder. A rule such as `*[Ii][Ss][Ee]*` matched the letters "ise" inside a card issuer's name and filed a card invoice as vendor documentation. An evaluation of the 320 rules (5,313 globs) against the existing tree found 67 reliable rules (specific banks, statement types, publishers, photos) and 23 below 50% agreement (topic words and short fragments).
 
 ## Decision
 
