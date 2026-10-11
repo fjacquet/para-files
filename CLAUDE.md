@@ -117,15 +117,15 @@ thema_folders("UB")
 
 ### Classification Cascade (core)
 
-Each file goes through the signals in order; the first verdict wins. Secret files are checked first and never reach a signal.
+The cascade stops at the first step that decides. Secret files are checked first and never reach a step.
 
 1. **Secrets guard** - name, folder, archive entry or content match: red, never sent or moved
-2. **Rules** (confidence 1.0) - filename globs from `rules.yaml`
-3. **Books** (1.0 with a verified ISBN, 0.7 heuristic) - ISBN lookup, Thema subject for the library folder
-4. **Issuers** (0.95 with a leaf keyword, 0.8 alone) - patterns from `issuers.yaml`
-5. **Model fallback** - OpenRouter ranks up to three leaves through litellm; primary then backup model
+2. **Verified ISBN book** (1.0) - ISBN lookup, Thema subject for the library folder; green
+3. **Pinned rule** (1.0) - `rules.yaml` glob with `pin: true`, or `pin: exif` on a file with an EXIF date; green (library leaves stay yellow)
+4. **Model** - OpenRouter ranks up to three leaves through litellm, primary then backup model; it reads every other non-secret file, with the rule, heuristic-book and issuer matches as hints and up to 10 past owner decisions as examples
+5. **Hint** - when the model is off or silent, the first hint (rule, heuristic book or issuer), always yellow
 
-No verdict means red (stays in place). Bands: rules are green; books are green with an ISBN; issuers and the model are yellow until a kind has `PARA_FILES_CALIBRATION_MIN` confirmed decisions, then green at 0.9 or more. Caps: knowledge is never green; library is green only with an ISBN or an issuer, so library rules stay yellow. `sort --apply` moves green files, `--review` confirms yellow ones; `apply` is sequential, never overwrites, and journals each operation before it happens. `undo` replays the journal backwards.
+No leaf means red (stays in place). Bands: a model verdict is green only if its kind has `PARA_FILES_CALIBRATION_MIN` confirmed decisions and its confidence is at least `PARA_FILES_FALLBACK_GREEN` (0.9); below `PARA_FILES_FALLBACK_RED` (0.3) it is red; otherwise yellow. Hints are always yellow. Caps: knowledge is never green; library is green only with an ISBN or a fitting issuer. Only model verdicts are cached, and the cache is not read with the model off. `sort --apply` moves green files; `--review` confirms yellow ones, folder by folder. `apply` is sequential, never overwrites, and journals each operation before it happens. `undo` replays the journal backwards.
 
 See [docs/architecture.md](docs/architecture.md) for the diagrams.
 

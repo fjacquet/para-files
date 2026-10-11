@@ -59,14 +59,17 @@ leaves:
     describe: "Personal notes and reference text"
 ```
 
-`rules.yaml` sends files by filename:
+`rules.yaml` sends files by filename. `pin: true` makes the rule decide alone (green, without the model); without `pin`, a match is only a hint to the model:
 
 ```yaml
 rules:
   - name: payslips
     leaf: payslips
     globs: ["*payslip*"]
+    pin: true
 ```
+
+Without an OpenRouter key (see the optional model below), every unpinned match is only a yellow suggestion.
 
 `issuers.yaml` names the issuers that appear inside documents:
 
@@ -131,7 +134,7 @@ Undo checks every step and leaves alone anything that changed since the run. See
 
 ## Optional: the cloud model
 
-Rules, books and issuers decide most files without any network call. For the rest, the tool can ask a model through [OpenRouter](https://openrouter.ai/). To enable it, add a key to `~/.config/para-files/.env`:
+Pinned rules and books with a verified ISBN decide without any network call. Every other file can be read by a model through [OpenRouter](https://openrouter.ai/), which also weighs the rule and issuer matches as hints. To enable it, add a key to `~/.config/para-files/.env`:
 
 ```bash
 OPENROUTER_API_KEY=sk-or-...

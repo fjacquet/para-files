@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- ADR-014 (amends ADR-013) records model first; the spec, README, CLAUDE.md and the guides describe the new cascade, bands and hints.
 - `--review` goes folder by folder: accept, skip or retarget a whole group, or go through it one by one; `2`/`3` pick the model's alternatives.
 - The plan groups yellow files by proposed folder and says how many were decided by hints only; JSON adds `ranked`, `about` and `summary.by_signal`.
 - **Model first.** Every non-secret file is read by the model unless a verified ISBN or a pinned rule decides. Unpinned rules and issuers are hints in the prompt; with no key (or the model off) the first hint is shown as a yellow suggestion and never moves alone. **Breaking:** unpinned rules no longer move files with `--apply`; pin the rules you trust. `PARA_FILES_ISSUERS_GREEN` is gone.

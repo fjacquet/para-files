@@ -20,7 +20,8 @@ ADRs document significant architectural choices — what was decided, why, and w
 | [ADR-010](ADR-010-ollama-litellm-migration.md) | Replace MLX with litellm/Ollama | Superseded by ADR-013 |
 | [ADR-011](ADR-011-performance-optimizations.md) | Performance Optimizations | Superseded by ADR-013 |
 | [ADR-012](ADR-012-records-and-para.md) | Records Retention Vault Alongside PARA | Accepted |
-| [ADR-013](ADR-013-redesign-records-first.md) | Records-First Redesign; Local AI Removed | Accepted |
+| [ADR-013](ADR-013-redesign-records-first.md) | Records-First Redesign; Local AI Removed | Accepted (amended by ADR-014) |
+| [ADR-014](ADR-014-model-first.md) | Model First; Pinned Rules Decide, Other Rules Are Hints | Accepted |
 
 ## ADR Status Definitions
 

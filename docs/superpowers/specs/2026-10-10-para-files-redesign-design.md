@@ -295,16 +295,18 @@ Classification is pure: no renames, no file writes, no geocoding.
 ```mermaid
 flowchart TD
     F[File path] --> E[extract: Evidence]
-    E --> R{1. Rules}
-    R -- match --> D[Decision]
-    R -- no --> B{2. Books}
-    B -- match --> D
-    B -- no --> I{3. Issuers}
-    I -- match --> D
-    I -- no --> Z{4. Fuzzy fallback}
-    Z -- leaf + probability --> D
-    Z -- none --> D0[Decision: red, no leaf]
-    D --> BAND{Band by confidence}
+    E --> SG{0. Secrets guard}
+    SG -- secret --> DS[Decision: red, never sent or moved]
+    SG -- no --> B{1. Verified ISBN book}
+    B -- yes --> D[Decision]
+    B -- no --> R{2. Pinned rule}
+    R -- pin: true or pin: exif with EXIF date --> D
+    R -- no --> M{3. Model, with hints and past decisions}
+    M -- leaf + probability --> D
+    M -- off or silent --> H{4. First hint}
+    H -- hint --> D
+    H -- none --> D0[Decision: red, no leaf]
+    D --> BAND{Band}
     BAND -- green --> P[Plan: move]
     BAND -- yellow --> Q[Plan: review]
     BAND -- red --> S[Plan: stay in place]
@@ -328,12 +330,12 @@ flowchart TD
 
 | # | Signal | Decides from | Confidence |
 |---|---|---|---|
-| 1 | Rules | user globs, then package default extension rules | 1.0 (owner-asserted) |
-| 2 | Books | ISBN + coherent lookup (title/author match); ebook publisher/subject heuristics move here | 1.0 with ISBN; otherwise book-score, capped at yellow (the preliminary bake-off showed records pulled into `livres` without ISBN) |
-| 3 | Issuers | issuer pattern in `name` or `text_preview`; leaf chosen among the issuer's `leaves` by keyword agreement | high when issuer and keyword agree; medium otherwise |
-| 4 | Fuzzy fallback | Gemini 3.8 Flash (Sonnet 5.5 as fallback model), choosing only among leaf ids | model confidence, calibrated on confirmed decisions |
+| 1 | Books | ISBN + coherent lookup (title/author match); ebook publisher/subject heuristics are hints | 1.0 with ISBN (decides); otherwise book-score, a hint, always yellow (the preliminary bake-off showed records pulled into `livres` without ISBN) |
+| 2 | Pinned rules | user globs with `pin: true`, or `pin: exif` on a file with an EXIF date (model first: unpinned globs are hints) | 1.0 (owner-asserted) |
+| 3 | Model | Gemini 3.8 Flash (Sonnet 5.5 as fallback model), choosing only among leaf ids, given the hints and up to 10 of the owner's past decisions | model confidence, green only when calibrated (see Bands) |
+| hint | Issuers | issuer pattern in `name` or `text_preview`; leaf chosen among the issuer's `leaves` by keyword agreement | hint: 0.95 when issuer and keyword agree, else 0.8 |
 
-First signal returning a decision wins. Signals 1–3 are deterministic and local except the ISBN lookup (cached).
+The cascade stops at the first step that decides: a verified ISBN book, a pinned rule, or the model. Unpinned rules, heuristic books and issuer matches are hints given to the model; when the model is off or silent, the first hint is shown as a yellow suggestion and never moves a file alone. Only model verdicts are cached. The deterministic steps are local except the ISBN lookup (cached).
 
 Keyword-only matches (keywords present, no issuer) no longer decide on their own: they are left to signal 4, which receives each leaf's `describe` and `keywords` as choice criteria.
 
@@ -360,13 +362,17 @@ Every cloud request carries `provider: {"zdr": true}`, so it fails rather than r
 
 #### Bands
 
-Per-signal thresholds in settings. Until a kind has ≥ 100 owner-confirmed decisions, only rules (signal 1) and books with an ISBN (signal 2) can be green; issuers and signal 4 are capped at yellow. Thresholds are then set from the confirmed decisions (`scripts/eval.py`, precision-vs-coverage curve) so green precision stays ≥ 98%.
+- pinned rule → green; ISBN book → green;
+- model → green only if its kind has `PARA_FILES_CALIBRATION_MIN` (100) owner-confirmed decisions and confidence is at least `PARA_FILES_FALLBACK_GREEN` (0.9); below `PARA_FILES_FALLBACK_RED` (0.3) → red; otherwise yellow;
+- hint → always yellow; no leaf → red.
+
+Knowledge is never green; library is green only with an ISBN or a fitting issuer. Thresholds live in settings.
 
 - **green** → moved on `--apply`
 - **yellow** → listed for review; moved only after confirmation (`sort --review`)
 - **red** → the file stays where it is
 
-The kind caps of §4.1 apply after the thresholds, so a `knowledge` decision is at most yellow.
+The kind caps of §4.1 apply after the bands, so a `knowledge` decision is at most yellow.
 
 There is no `6_unclassified` bucket and no extension catch-all. A re-org never pulls a curated file out of its folder.
 
@@ -598,6 +604,7 @@ Status: done 2026-10-11 (see decisions log).
 | `4_Archives` (2026-10-11) | Retention vault; legacy twins merged via reviewed, journaled migration |
 | Content kinds (2026-10-11) | `record`, `library`, `media`, `knowledge`; `knowledge` never green |
 | Secrets (2026-10-11) | Secret-flagged files are never sent off-machine and never moved |
+| Model first (2026-10-11) | The model reads every non-secret file (text incl. OCR, metadata, type) with rule/issuer matches as hints; only verified ISBN books and pinned rules (pin: true / pin: exif) decide alone; hints never green; grouped review; past owner decisions as examples; owner accepted sending ~2000 chars per file to OpenRouter with ZDR (ADR-014) |
 | In-place rename (2026-10-11) | `sort` renames a file in place when only its name differs from the target (books get their canonical name); §4.4 wording follows the code (M-6) |
 | Undo as a miss (2026-10-11) | An undone green auto-move is not yet counted as a miss; deferred until issuers or the model can go green (≥ 100 confirmations per kind), then counted in the `tree` statistics (M-7) |
 | Repo visibility (2026-10-11) | Stays public; history not rewritten |

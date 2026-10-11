@@ -31,7 +31,7 @@ Every setting is `PARA_FILES_` plus the upper-case field name, except the API ke
 | `PARA_FILES_PARA_ROOT` | none (required) | The folder that holds `0_Inbox` to `4_Archives`. It must contain `0_Inbox` and must not be a bucket itself |
 | `PARA_FILES_PREVIEW_CHARS` | `2000` (100 to 10000) | Characters of text read per file for the signals and the model |
 | `PARA_FILES_MAX_WORKERS` | `4` (1 to 16) | Parallel classifiers; `sort --workers` overrides it |
-| `PARA_FILES_FALLBACK_ENABLED` | `true` | Ask the model when rules, books and issuers decide nothing |
+| `PARA_FILES_FALLBACK_ENABLED` | `true` | Ask the model for every file that no verified ISBN or pinned rule decides |
 | `PARA_FILES_FALLBACK_MODEL` | `google/gemini-3.8-flash` | First OpenRouter model asked |
 | `PARA_FILES_FALLBACK_BACKUP_MODEL` | `anthropic/claude-sonnet-5.5` | Asked when the first model fails |
 | `OPENROUTER_API_KEY` | none | OpenRouter key. Also accepted as `PARA_FILES_OPENROUTER_API_KEY` or `PARA_FILES_LLM_API_KEY`. Without a key the model is never asked |
@@ -118,7 +118,7 @@ rules:
 | `globs` | Required, at least one. Matched against the filename only, case-insensitively, after Unicode NFC normalization |
 | `pin` | Optional, default `false`. `true` or `exif` (see below) |
 
-The first rule in file order whose glob matches wins. A rule on a `library` leaf without an ISBN stays yellow (see [architecture](architecture.md#bands-and-caps)).
+The first rule in file order whose glob matches wins. A pinned rule on a `library` leaf stays yellow, because library is green only with an ISBN or an issuer match (see [architecture](architecture.md#bands-and-caps)).
 
 ### Pinning
 
