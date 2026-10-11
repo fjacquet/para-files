@@ -2,10 +2,11 @@
 
 Writes <config dir>/golden.jsonl with lines {"path": <relative to PARA root>, "leaf": id,
 "kind": kind}. Secret-looking and hidden files are never sampled. Delete lines for ambiguous
-files before running the baseline.
+files before running the baseline. An existing golden.jsonl is not overwritten unless --force is
+passed, since it may hold those edits.
 
 Usage:
-    uv run python scripts/build_golden.py --para-root "$PARA"
+    uv run python scripts/build_golden.py --para-root "$PARA" [--force]
 """
 
 from __future__ import annotations
@@ -28,7 +29,8 @@ WALK_CAP = 2000
 
 
 def leaf_files(root: Path, excluded: set[str], rng: random.Random) -> list[Path]:
-    """Candidate files under root, skipping hidden, secret-named and other leaves' folders.
+    """Candidate files under root, skipping hidden, secret-named, symlinked and special files
+    and other leaves' folders.
 
     The walk stops after the folder in which WALK_CAP candidates are reached.
     """
@@ -44,7 +46,10 @@ def leaf_files(root: Path, excluded: set[str], rng: random.Random) -> list[Path]
         found += [
             here / name
             for name in sorted(filenames)
-            if not name.startswith((".", "~$")) and secret_reason(name) is None
+            if not name.startswith((".", "~$"))
+            and secret_reason(name) is None
+            and (here / name).is_file()
+            and not (here / name).is_symlink()
         ]
         if len(found) >= WALK_CAP:
             break
@@ -62,6 +67,11 @@ def build_golden(
     for leaf_id, leaf in config.tree.leaves.items():
         excluded = {nfc(str(path)) for other, path in leaf_dirs.items() if other != leaf_id}
         files = leaf_files(leaf_dirs[leaf_id], excluded, rng)
+        if len(files) >= WALK_CAP:
+            notes.append(
+                f"leaf {leaf_id}: walk stopped at {WALK_CAP} files; "
+                f"the sample covers part of {leaf.path}"
+            )
         if not files:
             notes.append(f"leaf {leaf_id}: no files under {leaf.path}")
             continue
@@ -82,12 +92,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--knowledge-per-leaf", type=int, default=5)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--out", type=Path, default=None)
+    parser.add_argument("--force", action="store_true", help="overwrite an existing golden.jsonl")
     args = parser.parse_args(argv)
     para_root = args.para_root.expanduser().resolve()
+    if not para_root.is_dir():
+        parser.error(f"--para-root is not a directory: {para_root}")
     cfg_dir = args.config_dir or config_dir()
     out = (args.out or cfg_dir / "golden.jsonl").expanduser().resolve()
     if out.is_relative_to(para_root):
         parser.error("--out must be outside the PARA root")
+    if out.exists() and not args.force:
+        parser.error(f"{out} exists and may hold your edits; pass --force to overwrite")
     rows, notes = build_golden(
         para_root,
         load_tree_config(cfg_dir),
@@ -95,6 +110,8 @@ def main(argv: list[str] | None = None) -> int:
         knowledge_per_leaf=args.knowledge_per_leaf,
         seed=args.seed,
     )
+    if not rows:
+        parser.error("no files sampled; nothing written")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), "utf-8")
     for kind, count in sorted(Counter(row["kind"] for row in rows).items()):

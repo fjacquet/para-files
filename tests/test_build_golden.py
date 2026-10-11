@@ -113,3 +113,55 @@ def test_main_writes_jsonl_and_leaves_para_untouched(load_script, para, config, 
     assert rows
     assert set(rows[0]) == {"path", "leaf", "kind"}
     assert snapshot(para) == before
+
+
+def test_symlinked_file_pointing_outside_the_leaf_is_not_sampled(load_script, tmp_path):
+    golden = load_script("build_golden")
+    root = tmp_path / "PARA" / "2_Areas" / "carriere"
+    _touch(root, "cv0.pdf")
+    outside = tmp_path / "outside.pdf"
+    outside.write_text("x")
+    (root / "link.pdf").symlink_to(outside)
+    files = golden.leaf_files(root, set(), random.Random(1))  # noqa: S311 - sampling
+    assert [path.name for path in files] == ["cv0.pdf"]
+
+
+def test_main_rejects_missing_para_root_and_writes_nothing(load_script, config, tmp_path):
+    golden = load_script("build_golden")
+    out = tmp_path / "golden.jsonl"
+    argv = ["--para-root", str(tmp_path / "missing"), "--config-dir", str(tmp_path / "cfg")]
+    argv += ["--out", str(out)]
+    with pytest.raises(SystemExit):
+        golden.main(argv)
+    assert not out.exists()
+
+
+def test_main_refuses_to_overwrite_without_force(load_script, para, config, tmp_path):
+    golden = load_script("build_golden")
+    cfg_dir = tmp_path / "cfg"
+    out = tmp_path / "golden.jsonl"
+    out.write_text("my edits\n")
+    argv = ["--para-root", str(para), "--config-dir", str(cfg_dir), "--out", str(out)]
+    with pytest.raises(SystemExit):
+        golden.main(argv)
+    assert out.read_text() == "my edits\n"
+    assert golden.main([*argv, "--force"]) == 0
+    assert [json.loads(line) for line in out.read_text().splitlines()]
+
+
+def test_main_refuses_to_write_when_nothing_is_sampled(load_script, config, tmp_path):
+    golden = load_script("build_golden")
+    empty = tmp_path / "EMPTY"
+    empty.mkdir()
+    out = tmp_path / "golden.jsonl"
+    argv = ["--para-root", str(empty), "--config-dir", str(tmp_path / "cfg"), "--out", str(out)]
+    with pytest.raises(SystemExit):
+        golden.main(argv)
+    assert not out.exists()
+
+
+def test_capped_walk_is_reported_in_notes(load_script, para, config, monkeypatch):
+    golden = load_script("build_golden")
+    monkeypatch.setattr(golden, "WALK_CAP", 5)
+    _rows, notes = _build(golden, para, config)
+    assert any("walk stopped at 5 files" in note for note in notes)
