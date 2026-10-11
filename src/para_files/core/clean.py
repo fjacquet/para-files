@@ -8,13 +8,12 @@ from __future__ import annotations
 
 import os
 import re
-import shutil
 from collections import defaultdict
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from para_files.core.apply import TRASH, free_path, make_dirs
+from para_files.core.apply import trash_file
 from para_files.core.evidence import extract, sha256_of
 from para_files.core.journal import Journal
 from para_files.core.secrets import secret_reason
@@ -215,24 +214,15 @@ def apply_clean(plan: CleanPlan, *, root: Path, journal: Journal) -> CleanReport
         if src.is_symlink() or not src.is_file():
             report.skipped.append((src, "source missing"))
             continue
-        relative = src.resolve().relative_to(base)
-        dst = free_path(base / TRASH / journal.run_id / relative)
-        make_dirs(dst.parent, journal)
-        journal.append(
-            {
-                "op": "trash",
-                "src": str(src),
-                "dst": str(dst),
-                "sha256": sha256_of(src),
-                "size": src.stat().st_size,
-                "leaf": None,
-                "proposed_leaf": None,
-                "decided_by": "auto",
-                "signal": "clean",
-                "confidence": 1.0,
-            }
-        )
-        shutil.move(src, dst)
+        entry = {
+            "sha256": sha256_of(src),
+            "leaf": None,
+            "proposed_leaf": None,
+            "decided_by": "auto",
+            "signal": "clean",
+            "confidence": 1.0,
+        }
+        dst = trash_file(src, base, journal, entry)
         report.trashed.append((src, dst))
     for directory in plan.empty_dirs:
         if not _inside(directory, base):

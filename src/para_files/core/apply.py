@@ -6,6 +6,7 @@ import shutil
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from para_files.core.decide import Decision
 from para_files.core.evidence import sha256_of
@@ -66,6 +67,23 @@ def make_dirs(directory: Path, journal: Journal) -> None:
         path.mkdir()
 
 
+def trash_file(src: Path, root: Path, journal: Journal, entry: dict[str, Any]) -> Path:
+    """Move src to <root>/.trash/<run id>/<its path below root>, journaled; return the new path.
+
+    root must be resolved. A src outside root keeps only its file name. entry holds the journal
+    fields beyond op, src, dst and size.
+    """
+    resolved = src.resolve()
+    relative = resolved.relative_to(root) if resolved.is_relative_to(root) else Path(src.name)
+    dst = free_path(root / TRASH / journal.run_id / relative)
+    make_dirs(dst.parent, journal)
+    journal.append(
+        {"op": "trash", "src": str(src), "dst": str(dst), "size": src.stat().st_size, **entry}
+    )
+    shutil.move(src, dst)
+    return dst
+
+
 class _Applier:
     def __init__(self, config: TreeConfig, para_root: Path, journal: Journal) -> None:
         self.config = config
@@ -85,23 +103,26 @@ class _Applier:
             return sanitize_filename(suggested, preserve_extension=True)
         return op.decision.path.name
 
-    def makedirs(self, directory: Path) -> None:
-        make_dirs(directory, self.journal)
+    @staticmethod
+    def fields(op: Op) -> dict[str, Any]:
+        decision = op.decision
+        return {
+            "sha256": decision.sha256,
+            "leaf": op.leaf_id,
+            "proposed_leaf": decision.leaf_id,
+            "decided_by": op.decided_by,
+            "signal": decision.signal,
+            "confidence": decision.confidence,
+        }
 
     def record(self, name: str, op: Op, src: Path, dst: Path) -> None:
-        decision = op.decision
         self.journal.append(
             {
                 "op": name,
                 "src": str(src),
                 "dst": str(dst),
-                "sha256": decision.sha256,
                 "size": src.stat().st_size,
-                "leaf": op.leaf_id,
-                "proposed_leaf": decision.leaf_id,
-                "decided_by": op.decided_by,
-                "signal": decision.signal,
-                "confidence": decision.confidence,
+                **self.fields(op),
             }
         )
 
@@ -152,17 +173,13 @@ class _Applier:
         if not self.contained(dst, target):
             self.report.skipped.append((src, "target outside the PARA root"))
             return
-        self.makedirs(target)
+        make_dirs(target, self.journal)
         self.record("move", op, src, dst)
         shutil.move(src, dst)
         self.report.moved.append((src, dst))
 
     def trash(self, op: Op, src: Path) -> None:
-        relative = src.resolve().relative_to(self.root) if self.inside(src) else Path(src.name)
-        dst = free_path(self.root / TRASH / self.journal.run_id / relative)
-        self.makedirs(dst.parent)
-        self.record("trash", op, src, dst)
-        shutil.move(src, dst)
+        dst = trash_file(src, self.root, self.journal, self.fields(op))
         self.report.trashed.append((src, dst))
 
     def remove_emptied(self, roots: Sequence[Path], keep: frozenset[Path]) -> None:
