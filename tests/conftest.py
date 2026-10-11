@@ -70,11 +70,11 @@ def _sanitized_reference_tree(
 SCRIPTS_DIR = Path(__file__).parent.parent / "scripts"
 
 
-@pytest.fixture
-def load_script() -> Iterator[Callable[[str], ModuleType]]:
+@contextlib.contextmanager
+def script_loader() -> Iterator[Callable[[str], ModuleType]]:
     """Import a module from scripts/ by name (scripts/ is not a package).
 
-    Each load gets a unique module name. On teardown the sys.path entry and every module that
+    Each load gets a unique module name. On exit the sys.path entry and every module that
     came from scripts/ are removed, so no test sees another test's script.
     """
     added_path = str(SCRIPTS_DIR) not in sys.path
@@ -92,15 +92,23 @@ def load_script() -> Iterator[Callable[[str], ModuleType]]:
         spec.loader.exec_module(module)
         return module
 
-    yield _load
+    try:
+        yield _load
+    finally:
+        for key in set(sys.modules) - before:
+            file = getattr(sys.modules[key], "__file__", None) or ""
+            if file.startswith(str(SCRIPTS_DIR)):
+                del sys.modules[key]
+        if added_path:
+            with contextlib.suppress(ValueError):
+                sys.path.remove(str(SCRIPTS_DIR))
 
-    for key in set(sys.modules) - before:
-        file = getattr(sys.modules[key], "__file__", None) or ""
-        if file.startswith(str(SCRIPTS_DIR)):
-            del sys.modules[key]
-    if added_path:
-        with contextlib.suppress(ValueError):
-            sys.path.remove(str(SCRIPTS_DIR))
+
+@pytest.fixture
+def load_script() -> Iterator[Callable[[str], ModuleType]]:
+    """Fixture form of script_loader: the scripts it loaded are removed at teardown."""
+    with script_loader() as load:
+        yield load
 
 
 def _snapshot(root: Path) -> dict[str, tuple[int, int]]:

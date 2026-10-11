@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from conftest import script_loader
 from para_files.config import load_config
 
 
@@ -51,21 +52,18 @@ def test_dotenv_files_are_ignored(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
 
 
 SCRIPTS_DIR = Path(__file__).parent.parent / "scripts"
-_LOADED_BY_FIRST_TEST: list[str] = []
 
 
-def test_load_script_registers_the_module_under_a_unique_name(load_script) -> None:
-    """A script module gets its own name, so two loads never share a sys.modules entry."""
-    module = load_script("para_inventory")
-    _LOADED_BY_FIRST_TEST.append(module.__name__)
-
-    assert module.__name__ != "para_inventory"
-    assert module.__name__ in sys.modules
-
-
-def test_load_script_leaves_no_module_or_path_behind() -> None:
-    """Runs after the test above: its finalizer removed the module and the sys.path entry."""
-    for name in _LOADED_BY_FIRST_TEST:
-        assert name not in sys.modules
-    assert "para_inventory" not in sys.modules
-    assert str(SCRIPTS_DIR) not in sys.path
+def test_script_loader_leaves_no_module_or_path_behind() -> None:
+    """Cleanup is checked inside one test, so it does not depend on test order."""
+    modules_before = set(sys.modules)
+    path_before = list(sys.path)
+    with script_loader() as load:
+        module = load("para_inventory")
+        assert module.__name__ in sys.modules
+        assert str(SCRIPTS_DIR) in sys.path
+    assert module.__name__ not in sys.modules
+    assert not [
+        name for name in sys.modules if name not in modules_before and name.startswith("scripts_")
+    ]
+    assert sys.path == path_before
