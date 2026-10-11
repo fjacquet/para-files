@@ -206,3 +206,25 @@ def test_interrupt_after_the_move_returns_is_undoable(tmp_path, monkeypatch):
     monkeypatch.setattr(apply_mod.shutil, "move", real_move)
     undo_run(state, "r1")
     assert tree_state(root) == before
+
+
+def test_owner_confirmation_restores_nothing(tmp_path):
+    root, state = setup(tmp_path)
+    folder = root / "4_Archives" / "10y_travail" / "2025"
+    folder.mkdir(parents=True, exist_ok=True)
+    src = folder / "Payslip_2025.txt"
+    src.write_text("payslip")
+    before = tree_state(root)
+    with Journal(state, "r1") as journal:
+        report = apply_ops(
+            [op_for(src, decided_by="owner")],
+            config=make_config(),
+            para_root=root,
+            journal=journal,
+            roots=[root / "0_Inbox"],
+        )
+    assert report.skipped == [(src, "already in place")]
+    undo = undo_run(state, "r1")
+    assert undo.restored == []
+    assert undo.skipped == []
+    assert tree_state(root) == before

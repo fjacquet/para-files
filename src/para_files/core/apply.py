@@ -139,6 +139,8 @@ class _Applier:
             and name == src.name
         ):
             reason = "already in place"
+            if op.decided_by == "owner":
+                self.record("confirm", op, src, src)
         if reason is not None or target is None:
             self.report.skipped.append((src, reason or "no target"))
             return

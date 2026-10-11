@@ -156,7 +156,11 @@ def confirmation_stats(state_dir: Path, tree: Tree) -> dict[str, tuple[int, int]
             continue
         for entry in read_run(state_dir, run_id):
             leaf = tree.leaves.get(str(entry.get("leaf")))
-            if entry.get("op") == "move" and entry.get("decided_by") == "owner" and leaf:
+            if (
+                entry.get("op") in {"move", "confirm"}
+                and entry.get("decided_by") == "owner"
+                and leaf
+            ):
                 counts = stats.setdefault(leaf.kind, [0, 0])
                 counts[0] += 1
                 counts[1] += entry.get("proposed_leaf") == entry.get("leaf")

@@ -123,3 +123,16 @@ def test_missing_path_is_an_error(tmp_path, monkeypatch):
     result = runner.invoke(app, ["sort", str(tmp_path / "nowhere")])
     assert result.exit_code == 2
     assert "no such file or folder" in result.output
+
+
+def test_review_confirmation_of_a_file_in_place_counts(tmp_path, monkeypatch):
+    root = setup_cli(tmp_path, monkeypatch)
+    notes = put(root, "3_Resources/IT/a_notes.md", "# a")
+    result = runner.invoke(
+        app, ["sort", str(root / "3_Resources" / "IT"), "--apply", "--review"], input="\n"
+    )
+    assert result.exit_code == 0, result.output
+    assert notes.exists()
+    tree = runner.invoke(app, ["tree"])
+    assert tree.exit_code == 0, tree.output
+    assert "knowledge     1 confirmed" in tree.output

@@ -220,3 +220,34 @@ def test_dangling_symlink_at_destination_is_not_overwritten(tmp_path):
     assert not link.exists()
     assert (target / "Payslip_2025 (2).txt").read_text() == "payslip"
     assert report.moved == [(src, target / "Payslip_2025 (2).txt")]
+
+
+def test_owner_confirmation_in_place_is_journaled(tmp_path):
+    root, state = setup(tmp_path)
+    folder = root / "4_Archives" / "10y_travail" / "2025"
+    folder.mkdir(parents=True)
+    src = folder / "Payslip_2025.txt"
+    src.write_text("payslip")
+    report, entries = run(root, state, [Op(decision(src), "archives_10y_travail", "owner")])
+    assert report.skipped == [(src, "already in place")]
+    assert [e["op"] for e in entries] == ["confirm"]
+    confirm = entries[0]
+    assert (confirm["src"], confirm["dst"]) == (str(src), str(src))
+    assert (confirm["leaf"], confirm["proposed_leaf"], confirm["decided_by"]) == (
+        "archives_10y_travail",
+        "archives_10y_travail",
+        "owner",
+    )
+    assert confirm["sha256"] == sha256_of(src)
+    assert confirm["size"] == len("payslip")
+
+
+def test_auto_in_place_is_not_journaled(tmp_path):
+    root, state = setup(tmp_path)
+    folder = root / "4_Archives" / "10y_travail" / "2025"
+    folder.mkdir(parents=True)
+    src = folder / "Payslip_2025.txt"
+    src.write_text("payslip")
+    report, entries = run(root, state, [Op(decision(src), "archives_10y_travail", "auto")])
+    assert report.skipped == [(src, "already in place")]
+    assert entries == []

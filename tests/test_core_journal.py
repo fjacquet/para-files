@@ -130,3 +130,11 @@ def test_append_cannot_override_run_id(tmp_path):
     with Journal(tmp_path, "r1") as journal:
         journal.append({"run_id": "other", "op": "x"})
     assert read_run(tmp_path, "r1") == [{"run_id": "r1", "op": "x"}]
+
+
+def test_owner_confirmations_count_as_labels(tmp_path):
+    tree = make_config().tree
+    with Journal(tmp_path, "r1") as journal:
+        journal.append({"op": "confirm", "leaf": "resources_it", "decided_by": "owner"})
+        journal.append({"op": "confirm", "leaf": "resources_it", "decided_by": "auto"})
+    assert confirmed_counts(tmp_path, tree) == {"knowledge": 1}
