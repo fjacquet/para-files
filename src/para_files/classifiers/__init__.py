@@ -13,19 +13,13 @@ First match wins. Default to 0_Inbox if no match.
 
 from __future__ import annotations
 
-import importlib
-from typing import Any
-
-
-_EXPORTS = {
-    "BaseClassifier": "base",
-    "BookDetector": "book_detector",
-    "ExtensionRouterClassifier": "extension_router",
-    "LLMClassifier": "llm_classifier",
-    "RulesEngineClassifier": "rules_engine",
-    "SemanticClassifier": "semantic_classifier",
-    "TaxonomyClassifier": "taxonomy_classifier",
-}
+from para_files.classifiers.base import BaseClassifier
+from para_files.classifiers.book_detector import BookDetector
+from para_files.classifiers.extension_router import ExtensionRouterClassifier
+from para_files.classifiers.llm_classifier import LLMClassifier
+from para_files.classifiers.rules_engine import RulesEngineClassifier
+from para_files.classifiers.semantic_classifier import SemanticClassifier
+from para_files.classifiers.taxonomy_classifier import TaxonomyClassifier
 
 
 __all__ = [
@@ -37,11 +31,3 @@ __all__ = [
     "SemanticClassifier",
     "TaxonomyClassifier",
 ]
-
-
-def __getattr__(name: str) -> Any:  # noqa: ANN401 - any exported class
-    """Import a classifier on first use, so importing one submodule stays light."""
-    if name not in _EXPORTS:
-        msg = f"module {__name__!r} has no attribute {name!r}"
-        raise AttributeError(msg)
-    return getattr(importlib.import_module(f"{__name__}.{_EXPORTS[name]}"), name)
