@@ -67,7 +67,7 @@ All routing, issuers, semantic routes, and global config live in one file. This:
 ## Consequences
 
 - `personal_file_tree.yaml` is the required configuration artifact for a useful installation.
-- A default/example file ships at `config/personal_file_tree.yaml` in the repository.
+- The default file is `~/.config/para-files/personal_file_tree.yaml` (or `$PARA_FILES_CONFIG_DIR`). `config/personal_file_tree.yaml` is an untracked fallback, and sanitized examples ship in `examples/`.
 - The `ReferenceTree` class is responsible for loading and validating the file.
 - YAML anchors/aliases are supported (PyYAML `safe_load` resolves them).
 - No hot-reloading — changes require restarting `para-files`.

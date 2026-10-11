@@ -131,7 +131,6 @@ Key reclassifications:
 | DFi Service | `*DFi*Service*`, `*zimbra*` | Materiels/Informatique/{YYYY} |
 | Corsica Ferries | `*Corsica*Ferries*` | voyages/Corsica-Ferries/{YYYY} |
 | American Airlines | `*American*Airlines*` | voyages/American-Airlines/{YYYY} |
-| `<property>` | `*<property>*` | immobilier/`<property>`/{YYYY} |
 | `<property>` | `*<property>*`, `*CRG*DU*AU*` | immobilier/`<property>`/{YYYY} |
 | Editions Diamond | `*Diamond*`, `*Linux*Magazine*` | loisirs/magazines/{YYYY} |
 | Ninja Kitchen | `*Ninja*`, `*SharkNinja*` | Materiels/Maison/Cuisine/{YYYY} |
