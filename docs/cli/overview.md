@@ -40,4 +40,4 @@ Settings come from the environment, then `~/.config/para-files/.env`, then defau
 - **yellow**: moved only after you confirm it in `sort --apply --review`.
 - **red**: stays where it is.
 
-Until a kind of document (record, library, media, knowledge) has 100 decisions you confirmed, only rules and books with an ISBN can be green. Knowledge files are never green.
+Rules and books with an ISBN can be green from the start. Issuers and the model stay yellow until that kind of document (record, library, media, knowledge) has 100 decisions you confirmed. Knowledge files are never green; library files are green only with an ISBN or an issuer match.

@@ -32,7 +32,7 @@ uv run mypy src/                   # Type check
 # Testing
 uv run pytest                      # Run all tests
 uv run pytest -v                   # Verbose output
-uv run pytest tests/test_main.py   # Single test file
+uv run pytest tests/test_cli_sort.py  # Single test file
 uv run pytest -k "test_version"    # Run tests matching pattern
 uv run pytest --cov                # With coverage report
 
