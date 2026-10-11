@@ -49,6 +49,8 @@ def secret_reason(name: str, text: str = "") -> str | None:
     password-policy lines (``passwdcfg.minlength: 8``) pass. A content value must sit on the
     same line as its label and must not be a URL, so a bare "Password:" heading or a reset link
     is not a secret. Logins are usernames: ``login`` is a name marker only, never a content one.
+    The name rule deliberately over-flags substrings (e.g. "Secretariat", "Logins"): the safe
+    direction, since a flagged file stays local.
     Only the first ``SCAN_LIMIT`` characters of ``text`` are scanned.
     """
     if _NAME.search(name):
