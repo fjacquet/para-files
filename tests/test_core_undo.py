@@ -183,7 +183,9 @@ def test_folder_not_empty_is_kept(tmp_path):
     newcomer = folder / "new.txt"
     newcomer.write_text("added after the run")
     report = undo_run(state, RUN)
-    assert (str(folder), "folder not empty") in report.skipped
+    assert folder in report.kept_dirs
+    assert report.skipped == []
+    assert is_undone(state, RUN)
     assert folder.is_dir()
     assert newcomer.read_text() == "added after the run"
     assert src.exists()
@@ -259,3 +261,37 @@ def test_run_id_must_look_like_a_run_id(tmp_path):
     with pytest.raises(UndoError, match="not a run id"):
         undo_run(state, "../x")
     assert not is_undone(state, RUN)
+
+
+def test_retry_after_a_blocked_file_reports_nothing_missing(tmp_path):
+    root, state = setup(tmp_path)
+    before = tree_state(root)
+    inbox = root / "0_Inbox"
+    first_src = inbox / "batch" / "sub" / "Payslip_2025.txt"
+    second_src = inbox / "loose.txt"
+    apply_all(root, state, [op_for(first_src), op_for(second_src)])
+    second_src.write_text("a new file took the old name")
+    first = undo_run(state)
+    assert [reason for _, reason in first.skipped] == ["source path taken"]
+    assert not is_undone(state, RUN)
+    second_src.unlink()
+    second = undo_run(state)
+    assert second.skipped == []
+    assert second.restored == [second_src]
+    assert is_undone(state, RUN)
+    assert tree_state(root) == before
+
+
+def test_folder_holding_a_later_runs_file_is_kept_not_blocking(tmp_path):
+    root, state = setup(tmp_path)
+    src = root / "0_Inbox" / "loose.txt"
+    apply_all(root, state, [op_for(src, leaf="archives_5y_factures", decided_by="owner")])
+    folder = root / "4_Archives" / "5y_factures"
+    later = folder / "later.txt"
+    later.write_text("filed by a later run")
+    report = undo_run(state, RUN)
+    assert report.skipped == []
+    assert folder in report.kept_dirs
+    assert is_undone(state, RUN)
+    assert later.exists()
+    assert src.read_text() == "loose"

@@ -105,7 +105,7 @@ The name rule over-flags on purpose. There is no override: a flagged file stays 
 left alone <path>: missing
 left alone <path>: changed since the run
 left alone <path>: source path taken
-left alone <path>: folder not empty
+kept       <folder>: folder not empty
 ```
 
 | Reason | Meaning |
@@ -113,9 +113,9 @@ left alone <path>: folder not empty
 | `missing` | The file is no longer where the run left it |
 | `changed since the run` | Its content differs from the journal, so it is not put back |
 | `source path taken` | Something new is at the original location; nothing is overwritten |
-| `folder not empty` | A folder the run created now holds other files |
+| `folder not empty` | A folder the run created now holds other files; it is kept and does not stop the run from being marked undone |
 
-Steps not listed were reversed without a message. A run with skipped steps is not marked undone, so `undo` still targets it; fix the cause, then run `para-files undo <run id>` again. Journals are in `PARA_FILES_STATE_DIR/journal/`.
+Steps not listed were reversed without a message. A file already back at its original place with the recorded content counts as restored, so running `undo` again after a partial run is safe. A run with a skipped file is not marked undone, so `undo` still targets it; fix the cause, then run `para-files undo <run id>` again. Journals are in `PARA_FILES_STATE_DIR/journal/`.
 
 ## Clean
 

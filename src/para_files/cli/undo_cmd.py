@@ -29,3 +29,5 @@ def undo_command(
     )
     for path, reason in report.skipped:
         typer.echo(f"  left alone {path}: {reason}")
+    for folder in report.kept_dirs:
+        typer.echo(f"  kept       {folder}: folder not empty")

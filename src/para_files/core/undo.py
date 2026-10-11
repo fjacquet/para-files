@@ -30,7 +30,13 @@ class UndoReport:
     restored: list[Path] = field(default_factory=list)
     recreated: list[Path] = field(default_factory=list)
     removed_dirs: list[Path] = field(default_factory=list)
+    kept_dirs: list[Path] = field(default_factory=list)
     skipped: list[tuple[str, str]] = field(default_factory=list)
+
+
+def _already_restored(dst: Path, src: Path, sha256: str) -> bool:
+    """dst is gone and src is a regular file with the recorded content (a retried undo)."""
+    return not dst.exists() and src.is_file() and not src.is_symlink() and sha256_of(src) == sha256
 
 
 def _blocked(dst: Path, src: Path, sha256: str) -> str | None:
@@ -53,9 +59,11 @@ def _undo_entry(entry: dict[str, Any], report: UndoReport) -> None:
             dst.rmdir()
             report.removed_dirs.append(dst)
         elif dst.exists():
-            report.skipped.append((str(dst), "folder not empty"))
+            report.kept_dirs.append(dst)
     elif op in {"move", "trash"}:
         src = Path(entry["src"])
+        if _already_restored(dst, src, entry["sha256"]):
+            return
         reason = _blocked(dst, src, entry["sha256"])
         if reason is not None:
             report.skipped.append((str(dst), reason))
