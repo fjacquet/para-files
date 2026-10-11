@@ -297,3 +297,66 @@ def test_knowledge_rows_are_suggestions_only(load_script):
     assert report["overall"]["max_coverage_at_98"] == pytest.approx(1.0)
     assert report["signals"]["rules"]["curve"] == [pytest.approx((0.9, 1.0, 1.0))]
     assert report["signals"]["fallback"]["curve"] == []
+
+
+def test_drop_rule_combines_baseline_green_with_candidate_threshold(load_script):
+    golden = [
+        {"path": "a.pdf", "leaf": "inv", "kind": "record"},
+        {"path": "b.pdf", "leaf": "inv", "kind": "record"},
+        {"path": "c.pdf", "leaf": "books", "kind": "library"},
+        {"path": "k.md", "leaf": "notes", "kind": "knowledge"},
+    ]
+    baseline = [
+        {"path": "a.pdf", "leaf": "inv", "band": "green", "signal": "rules", "confidence": 0.9},
+        {"path": "b.pdf", "leaf": None, "band": "red", "signal": "rules", "confidence": 0.0},
+        {"path": "c.pdf", "leaf": None, "band": "red", "signal": "rules", "confidence": 0.0},
+    ]
+    candidate = [
+        {"path": "b.pdf", "leaf": "inv", "confidence": 0.9, "band": "green", "signal": "llm"},
+        {"path": "c.pdf", "leaf": "books", "confidence": 0.8, "band": "green", "signal": "llm"},
+    ]
+    report = load_script("eval").evaluate(golden, candidate, baseline)
+    drop = report["drop_rule"]
+    assert drop["baseline_green_coverage"] == pytest.approx(1 / 3)
+    assert drop["candidate_threshold"] == pytest.approx(0.8)
+    assert drop["combined_green_coverage"] == pytest.approx(1.0)
+    assert drop["gain_over_baseline"] == pytest.approx((1.0 - 1 / 3) * 100)
+
+
+def test_no_drop_rule_without_a_baseline(load_script):
+    golden = [{"path": "a.pdf", "leaf": "inv", "kind": "record"}]
+    report = load_script("eval").evaluate(golden, [])
+    assert "drop_rule" not in report
+
+
+def test_only_predicted_prints_subset_n_and_warns(load_script, tmp_path: Path, capsys):
+    module = load_script("eval")
+    golden, preds = tmp_path / "golden.jsonl", tmp_path / "preds.jsonl"
+    golden.write_text("".join(json.dumps(row) + "\n" for row in GOLDEN))
+    preds.write_text("".join(json.dumps(row) + "\n" for row in PREDS))
+    module.main(["--golden", str(golden), "--pred", str(preds), "--only-predicted"])
+    err = capsys.readouterr().err
+    assert "3 of 4" in err
+    assert "warning" in err.lower()
+
+
+def test_only_predicted_with_full_coverage_has_no_warning(load_script, tmp_path: Path, capsys):
+    module = load_script("eval")
+    golden, preds = tmp_path / "golden.jsonl", tmp_path / "preds.jsonl"
+    golden.write_text("".join(json.dumps(row) + "\n" for row in GOLDEN[:2]))
+    preds.write_text("".join(json.dumps(row) + "\n" for row in PREDS[:2]))
+    module.main(["--golden", str(golden), "--pred", str(preds), "--only-predicted"])
+    err = capsys.readouterr().err
+    assert "2 of 2" in err
+    assert "warning" not in err.lower()
+
+
+def test_main_renders_drop_rule_with_baseline(load_script, tmp_path: Path, capsys):
+    module = load_script("eval")
+    golden, preds, base = tmp_path / "g.jsonl", tmp_path / "p.jsonl", tmp_path / "b.jsonl"
+    golden.write_text(json.dumps(GOLDEN[0]) + "\n")
+    preds.write_text(json.dumps(PREDS[0]) + "\n")
+    base.write_text(json.dumps({**PREDS[0], "band": "red", "leaf": None}) + "\n")
+    argv = ["--golden", str(golden), "--pred", str(preds), "--baseline", str(base)]
+    assert module.main(argv) == 0
+    assert "drop rule: combined green coverage 100.0%" in capsys.readouterr().out

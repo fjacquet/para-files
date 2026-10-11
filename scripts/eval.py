@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -105,14 +106,8 @@ def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def evaluate(golden: list[dict[str, Any]], preds: list[dict[str, Any]]) -> dict[str, Any]:
-    """Join predictions to golden rows by NFC path and compute all metrics.
-
-    Per-signal metrics are relative to that signal's own rows (used to set its band threshold);
-    each signal block also reports top-3 over its own rows. Knowledge is scored as suggestions
-    only: its kind block reports top-3 alone and the precision curves leave knowledge rows out. The first prediction for a path
-    wins; later ones are counted as duplicates, and predictions with no golden row as unmatched.
-    """
+def _first_by_path(preds: list[dict[str, Any]]) -> tuple[dict[str, dict[str, Any]], int]:
+    """Predictions keyed by NFC path (first wins) and the number of later duplicates."""
     by_path: dict[str, dict[str, Any]] = {}
     duplicates = 0
     for pred in preds:
@@ -120,6 +115,63 @@ def evaluate(golden: list[dict[str, Any]], preds: list[dict[str, Any]]) -> dict[
             duplicates += 1
         else:
             by_path[key(pred["path"])] = pred
+    return by_path, duplicates
+
+
+def drop_rule(
+    rows: list[dict[str, Any]], baseline: dict[str, dict[str, Any]]
+) -> dict[str, float | None]:
+    """Green coverage of the record, library and media rows, baseline and candidate combined.
+
+    A candidate covers a row when it decides it at confidence >= its 98%-precision threshold:
+    the lowest confidence of the curve point that reaches the target with the most coverage.
+    gain_over_baseline is in percentage points.
+    """
+    scored = [r for r in rows if r["gold"]["kind"] != "knowledge"]
+    if not scored:
+        return {
+            "baseline_green_coverage": None,
+            "candidate_threshold": None,
+            "combined_green_coverage": None,
+            "gain_over_baseline": None,
+        }
+    reaching = [point for point in curve(scored) if point[1] >= TARGET_PRECISION]
+    threshold = reaching[-1][0] if reaching else None
+
+    def base_green(row: dict[str, Any]) -> bool:
+        return baseline.get(key(row["gold"]["path"]), {}).get("band") == "green"
+
+    def covered(row: dict[str, Any]) -> bool:
+        pred = row["pred"]
+        return (
+            threshold is not None
+            and bool(pred.get("leaf"))
+            and _number(pred.get("confidence")) >= threshold
+        )
+
+    baseline_share = sum(base_green(r) for r in scored) / len(scored)
+    combined = sum(base_green(r) or covered(r) for r in scored) / len(scored)
+    return {
+        "baseline_green_coverage": baseline_share,
+        "candidate_threshold": threshold,
+        "combined_green_coverage": combined,
+        "gain_over_baseline": (combined - baseline_share) * 100,
+    }
+
+
+def evaluate(
+    golden: list[dict[str, Any]],
+    preds: list[dict[str, Any]],
+    baseline: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Join predictions to golden rows by NFC path and compute all metrics.
+
+    Per-signal metrics are relative to that signal's own rows (used to set its band threshold);
+    each signal block also reports top-3 over its own rows. Knowledge is scored as suggestions
+    only: its kind block reports top-3 alone and the precision curves leave knowledge rows out. The first prediction for a path
+    wins; later ones are counted as duplicates, and predictions with no golden row as unmatched.
+    """
+    by_path, duplicates = _first_by_path(preds)
     golden_keys = {key(g["path"]) for g in golden}
     rows = [{"gold": g, "pred": by_path.get(key(g["path"]), {"band": "red"})} for g in golden]
     report: dict[str, Any] = {"overall": summarize(rows), "kinds": {}, "signals": {}}
@@ -134,6 +186,8 @@ def evaluate(golden: list[dict[str, Any]], preds: list[dict[str, Any]]) -> dict[
     report["missing_predictions"] = sum(1 for r in rows if "path" not in r["pred"])
     report["duplicate_predictions"] = duplicates
     report["unmatched_predictions"] = sum(1 for k in by_path if k not in golden_keys)
+    if baseline is not None:
+        report["drop_rule"] = drop_rule(rows, _first_by_path(baseline)[0])
     return report
 
 
@@ -162,6 +216,13 @@ def render(report: dict[str, Any]) -> str:
     lines.append(f"\nmissing predictions: {report['missing_predictions']}")
     lines.append(f"duplicate predictions: {report['duplicate_predictions']}")
     lines.append(f"unmatched predictions: {report['unmatched_predictions']}")
+    drop = report.get("drop_rule")
+    if drop and drop["combined_green_coverage"] is not None:
+        lines.append(
+            f"drop rule: combined green coverage {drop['combined_green_coverage']:.1%} "
+            f"(baseline {drop['baseline_green_coverage']:.1%}, "
+            f"gain {drop['gain_over_baseline']:+.1f} points)"
+        )
     return "\n".join(lines)
 
 
@@ -170,15 +231,24 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Score predictions against the golden corpus.")
     parser.add_argument("--golden", type=Path, default=None)
     parser.add_argument("--pred", type=Path, required=True)
+    parser.add_argument("--baseline", type=Path, default=None, help="pred_baseline.jsonl")
     parser.add_argument("--only-predicted", action="store_true")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
     golden = read_jsonl(args.golden or config_dir() / "golden.jsonl")
     preds = read_jsonl(args.pred)
+    baseline = read_jsonl(args.baseline) if args.baseline else None
+    total = len(golden)
     if args.only_predicted:
         predicted = {key(p["path"]) for p in preds}
         golden = [g for g in golden if key(g["path"]) in predicted]
-    report = evaluate(golden, preds)
+        print(f"comparable subset: n={len(golden)} of {total} golden rows", file=sys.stderr)
+        if len(golden) != total:
+            print(
+                "warning: scores on this subset are not comparable with the full corpus",
+                file=sys.stderr,
+            )
+    report = evaluate(golden, preds, baseline)
     print(json.dumps(report, indent=2) if args.json else render(report))
     return 0
 
