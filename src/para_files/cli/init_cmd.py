@@ -6,34 +6,30 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
-from pydantic import ValidationError
 
 from para_files.cli.app import app
 from para_files.cli.common import ROOT_HINT, fail
 from para_files.core.apply import make_dirs
 from para_files.core.journal import Journal, new_run_id
-from para_files.core.settings import BUCKET_NAME, INBOX, load_settings
+from para_files.core.settings import BUCKET_NAME, INBOX, load_path_settings
 from para_files.core.tree import TreeError, load_tree_config
 
 
 def _root(given: Path | None) -> Path:
     if given is not None:
         return given.expanduser()
-    try:
-        return load_settings().para_root
-    except ValidationError:
+    para_root = load_path_settings().para_root
+    if para_root is None:
         fail(
             "no usable PARA root in the settings; pass it: "
             f"para-files init /path/to/PARA ({ROOT_HINT})"
         )
+    return para_root
 
 
 def _state_dir() -> Path:
-    """Where the journal goes: the settings' state dir, or the default when no root is usable."""
-    try:
-        return load_settings().state_dir
-    except ValidationError:
-        return Path.home() / ".local" / "state" / "para-files"
+    """Where the journal goes: the settings' state dir."""
+    return load_path_settings().state_dir
 
 
 @app.command("init")

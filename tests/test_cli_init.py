@@ -72,3 +72,19 @@ def test_root_under_missing_parent_is_refused(tmp_path, monkeypatch):
     assert result.exit_code == 2, result.output
     assert "parent folder does not exist" in result.output
     assert not (tmp_path / "nowhere").exists()
+
+
+def test_fresh_root_from_the_environment(tmp_path, monkeypatch):
+    setup_cli(tmp_path, monkeypatch)
+    fresh = tmp_path / "NewPARA"
+    state = tmp_path / "init-state"
+    monkeypatch.setenv("PARA_FILES_PARA_ROOT", str(fresh))
+    monkeypatch.setenv("PARA_FILES_STATE_DIR", str(state))
+    created = runner.invoke(app, ["init", "--apply"])
+    assert created.exit_code == 0, created.output
+    assert (fresh / "0_Inbox").is_dir()
+    assert list((state / "journal").glob("*.jsonl"))
+    run_id = created.output.split("para-files undo ")[1].split()[0]
+    undone = runner.invoke(app, ["undo", run_id])
+    assert undone.exit_code == 0, undone.output
+    assert not (fresh / "3_Resources" / "livres").exists()

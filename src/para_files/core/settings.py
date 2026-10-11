@@ -25,15 +25,36 @@ def _home(*parts: str) -> Path:
     return Path.home().joinpath(*parts)
 
 
+_MODEL_CONFIG = SettingsConfigDict(
+    env_prefix="PARA_FILES_",
+    env_file_encoding="utf-8",
+    extra="ignore",
+    populate_by_name=True,
+)
+
+
+def _state_dir_field() -> Any:  # noqa: ANN401 - a pydantic Field, shared by two settings classes
+    return Field(default_factory=lambda: _home(".local", "state", "para-files"))
+
+
+class PathSettings(BaseSettings):
+    """The two paths ``init`` needs before the PARA root has an inbox: no root check."""
+
+    model_config = _MODEL_CONFIG
+
+    para_root: Path | None = None
+    state_dir: Path = _state_dir_field()
+
+    @field_validator("para_root", "state_dir")
+    @classmethod
+    def _expand(cls, value: Path | None) -> Path | None:
+        return None if value is None else value.expanduser()
+
+
 class CoreSettings(BaseSettings):
     """Effective settings for sort, explain, undo and clean."""
 
-    model_config = SettingsConfigDict(
-        env_prefix="PARA_FILES_",
-        env_file_encoding="utf-8",
-        extra="ignore",
-        populate_by_name=True,
-    )
+    model_config = _MODEL_CONFIG
 
     para_root: Path
     preview_chars: int = Field(default=2000, ge=100, le=10_000)
@@ -52,7 +73,7 @@ class CoreSettings(BaseSettings):
     fallback_green: float = Field(default=0.9, ge=0.0, le=1.0)
     fallback_red: float = Field(default=0.3, ge=0.0, le=1.0)
     cache_path: Path = Field(default_factory=lambda: _home(".cache", "para-files", "cache.sqlite"))
-    state_dir: Path = Field(default_factory=lambda: _home(".local", "state", "para-files"))
+    state_dir: Path = _state_dir_field()
 
     @field_validator("para_root", "cache_path", "state_dir")
     @classmethod
@@ -77,3 +98,8 @@ class CoreSettings(BaseSettings):
 def load_settings(**overrides: Any) -> CoreSettings:  # noqa: ANN401 - keyword overrides of any field
     """Settings from the environment, then ``<config dir>/.env``; overrides win over both."""
     return CoreSettings(_env_file=config_dir_path() / ".env", **overrides)  # type: ignore[call-arg]
+
+
+def load_path_settings() -> PathSettings:
+    """The root and state dir from the environment, then ``<config dir>/.env``."""
+    return PathSettings(_env_file=config_dir_path() / ".env")  # type: ignore[call-arg]
