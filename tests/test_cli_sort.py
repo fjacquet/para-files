@@ -50,7 +50,7 @@ def test_review_accept_and_correct(tmp_path, monkeypatch):
     root = setup_cli(tmp_path, monkeypatch)
     put(root, "0_Inbox/a_notes.md", "# a")
     put(root, "0_Inbox/b_notes.md", "# b")
-    result = runner.invoke(app, ["sort", "--apply", "--review"], input="\narchives_5y\n")
+    result = runner.invoke(app, ["sort", "--apply", "--review"], input="o\n\narchives_5y\n")
     assert result.exit_code == 0, result.output
     assert (root / "3_Resources/IT/a_notes.md").exists()
     assert (root / "4_Archives/5y_factures/b_notes.md").exists()
@@ -70,7 +70,7 @@ def test_review_end_of_input_keeps_what_was_confirmed(tmp_path, monkeypatch):
     root = setup_cli(tmp_path, monkeypatch)
     put(root, "0_Inbox/a_notes.md", "# a")
     b = put(root, "0_Inbox/b_notes.md", "# b")
-    result = runner.invoke(app, ["sort", "--apply", "--review"], input="\n")
+    result = runner.invoke(app, ["sort", "--apply", "--review"], input="o\n\n")
     assert result.exit_code == 0, result.output
     assert (root / "3_Resources/IT/a_notes.md").exists()
     assert b.exists()
@@ -80,7 +80,7 @@ def test_review_skip_unknown_and_stop(tmp_path, monkeypatch):
     root = setup_cli(tmp_path, monkeypatch)
     a = put(root, "0_Inbox/a_notes.md", "# a")
     b = put(root, "0_Inbox/b_notes.md", "# b")
-    result = runner.invoke(app, ["sort", "--apply", "--review"], input="nope\ns\nq\n")
+    result = runner.invoke(app, ["sort", "--apply", "--review"], input="o\nnope\ns\nq\n")
     assert result.exit_code == 0, result.output
     assert "unknown or ambiguous leaf: 'nope'" in result.output
     assert a.exists()
@@ -218,3 +218,44 @@ def test_json_has_ranked_about_and_by_signal(tmp_path, monkeypatch):
     assert decision["ranked"] == [["resources_it", 1.0], ["archives_10y_banques", 0.8]]
     assert decision["about"] is None
     assert data["summary"]["by_signal"] == {"hint": 1}
+
+
+def test_review_accepts_a_whole_group(tmp_path, monkeypatch):
+    root = setup_cli(tmp_path, monkeypatch)
+    for name in ("a_notes.md", "b_notes.md", "c_notes.md"):
+        put(root, f"0_Inbox/{name}", "# x")
+    result = runner.invoke(app, ["sort", "--apply", "--review"], input="\n")
+    assert result.exit_code == 0, result.output
+    assert "resources_it -> 3_Resources/IT (3 files)" in result.output
+    for name in ("a_notes.md", "b_notes.md", "c_notes.md"):
+        assert (root / "3_Resources/IT" / name).exists()
+
+
+def test_review_retargets_a_whole_group(tmp_path, monkeypatch):
+    root = setup_cli(tmp_path, monkeypatch)
+    put(root, "0_Inbox/a_notes.md", "# a")
+    put(root, "0_Inbox/b_notes.md", "# b")
+    result = runner.invoke(app, ["sort", "--apply", "--review"], input="archives_5y\n")
+    assert result.exit_code == 0, result.output
+    assert (root / "4_Archives/5y_factures/a_notes.md").exists()
+    assert (root / "4_Archives/5y_factures/b_notes.md").exists()
+
+
+def test_review_one_by_one_then_stop_keeps_what_was_confirmed(tmp_path, monkeypatch):
+    root = setup_cli(tmp_path, monkeypatch)
+    put(root, "0_Inbox/a_notes.md", "# a")
+    b = put(root, "0_Inbox/b_notes.md", "# b")
+    result = runner.invoke(app, ["sort", "--apply", "--review"], input="o\n\nq\n")
+    assert result.exit_code == 0, result.output
+    assert (root / "3_Resources/IT/a_notes.md").exists()
+    assert b.exists()
+
+
+def test_review_picks_a_ranked_alternative(tmp_path, monkeypatch):
+    root = setup_cli(tmp_path, monkeypatch)
+    put(root, "0_Inbox/acme_2026.md", "AcmeCard statement")
+    result = runner.invoke(app, ["sort", "--apply", "--review"], input="2\n")
+    assert result.exit_code == 0, result.output
+    entries = read_run(tmp_path / "state", last_run_id(tmp_path / "state"))
+    moves = [(e["leaf"], e["proposed_leaf"]) for e in entries if e["op"] == "move"]
+    assert moves == [("archives_10y_banques", "resources_it")]

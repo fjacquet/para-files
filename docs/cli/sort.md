@@ -32,13 +32,27 @@ When some files are decided by hints alone (the model is off or did not answer),
 
 ## Review
 
-For each yellow file, `--review` shows the proposed leaf and why, then asks:
+`--review` goes folder by folder: the yellow files proposed for the same leaf form one group, biggest group first. The group header shows the leaf, its folder and the file count.
 
-- **Enter**: accept the proposal;
-- **s**: skip the file (it stays);
+**Groups:**
+
+- **Enter**: accept the whole group;
+- **o**: go through the group one by one;
+- **s**: skip the whole group (its files stay);
 - **q**: stop reviewing (what you confirmed so far is applied);
 - **?**: list the leaves;
-- a **leaf id** (or a unique start of one): file it there instead.
+- a **leaf id** (or a unique start of one): send the whole group there.
+
+**One by one:**
+
+- **Enter**: accept the proposal;
+- **2** / **3**: take the model's alternative (the other leaves it ranked, with their confidence);
+- **s**: skip the file (it stays);
+- **q**: stop reviewing;
+- **?**: list the leaves;
+- a **leaf id**: file it there instead.
+
+Accepting a group counts every file in it as a confirmed decision.
 
 `--review` needs a real terminal; through a pipe or an assistant's shell it stops with an error before classifying anything.
 
