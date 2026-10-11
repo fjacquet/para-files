@@ -44,7 +44,7 @@ class BookInfo:
     cover_url: str | None = None
 
 
-def lookup_isbn(isbn: str, service: str = "default") -> BookInfo | None:  # noqa: C901, PLR0912, PLR0915
+def lookup_isbn(isbn: str, service: str = "default") -> BookInfo | None:  # noqa: C901, PLR0912
     """Look up book information by ISBN using isbnlib.
 
     Tries multiple metadata services for best results.
@@ -142,19 +142,6 @@ def lookup_isbn(isbn: str, service: str = "default") -> BookInfo | None:  # noqa
     except _ISBNLIB_ERRORS as e:
         logger.warning(
             "ISBN description enrichment failed for {}: {} {}",
-            canonical,
-            type(e).__name__,
-            e,
-        )
-
-    # Try to get cover URL (optional enrichment)
-    try:
-        cover = isbnlib.cover(canonical)
-        if cover and "thumbnail" in cover:
-            info.cover_url = cover["thumbnail"]
-    except _ISBNLIB_ERRORS as e:
-        logger.warning(
-            "ISBN cover URL enrichment failed for {}: {} {}",
             canonical,
             type(e).__name__,
             e,
