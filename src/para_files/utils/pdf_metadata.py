@@ -54,21 +54,6 @@ ISBN_PATTERNS = [
 ]
 
 
-def extract_isbn(text: str) -> str | None:
-    """Extract the first valid ISBN from text.
-
-    Uses isbnlib for validation if available, otherwise uses regex patterns.
-
-    Args:
-        text: Text content to search for ISBN.
-
-    Returns:
-        Normalized ISBN (digits only) or None if not found.
-    """
-    isbns = extract_all_isbns(text)
-    return isbns[0] if isbns else None
-
-
 def extract_all_isbns(text: str) -> list[str]:  # noqa: C901
     """Extract all valid unique ISBNs from text.
 

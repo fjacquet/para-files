@@ -10,71 +10,8 @@ from pypdf.errors import PyPdfError
 from para_files.utils.pdf_metadata import (
     PdfMetadata,
     _try_pymupdf_metadata,
-    extract_isbn,
     extract_pdf_metadata,
 )
-
-
-class TestExtractIsbn:
-    """Tests for extract_isbn function."""
-
-    def test_isbn13_valid(self):
-        """Test extracting valid ISBN-13."""
-        # 9780596517748 is Python Cookbook ISBN-13
-        text = "This book has ISBN: 9780596517748"
-        result = extract_isbn(text)
-        assert result is not None
-        assert len(result) == 13
-
-    def test_isbn13_with_dashes(self):
-        """Test extracting ISBN-13 with dashes."""
-        # 978-0-596-51774-8 is valid Python Cookbook ISBN-13
-        text = "ISBN: 978-0-596-51774-8"
-        result = extract_isbn(text)
-        assert result is not None
-        assert len(result) == 13
-
-    def test_isbn13_prefix(self):
-        """Test extracting ISBN with ISBN-13 prefix."""
-        text = "ISBN-13: 978-0-596-51774-8"
-        result = extract_isbn(text)
-        assert result is not None
-        assert len(result) == 13
-
-    def test_isbn10_valid(self):
-        """Test extracting valid ISBN-10."""
-        # 0596517742 is Python Cookbook ISBN-10
-        text = "ISBN-10: 0596517742"
-        result = extract_isbn(text)
-        # Converted to ISBN-13
-        assert result is not None
-        assert len(result) == 13
-
-    def test_no_isbn_returns_none(self):
-        """Test that None is returned when no ISBN present."""
-        text = "This is a regular document without any ISBN."
-        assert extract_isbn(text) is None
-
-    def test_isbn_in_long_text(self):
-        """Test extracting ISBN from longer text."""
-        text = """
-        Python Programming: A Comprehensive Guide
-
-        Copyright 2024 by Publisher Inc.
-        All rights reserved.
-
-        ISBN-13: 978-0-596-51774-8
-
-        First Edition
-
-        Chapter 1: Introduction
-        """
-        result = extract_isbn(text)
-        assert result is not None
-
-    def test_empty_text(self):
-        """Test extraction from empty text."""
-        assert extract_isbn("") is None
 
 
 class TestPdfMetadata:
