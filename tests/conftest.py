@@ -3,6 +3,7 @@
 Every test runs hermetically: HOME and the personal config dir point into tmp_path, the working
 directory is tmp_path, `.env` loading is disabled on every settings class, and the reference tree
 is the sanitized fixture. No test reads the owner's real PARA configuration or volume.
+Tests run with cwd = tmp_path; a test that needs the repo root must chdir itself.
 """
 
 from __future__ import annotations
