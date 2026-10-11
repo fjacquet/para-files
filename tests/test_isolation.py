@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import pwd
+import sys
 from pathlib import Path
 
 import pytest
@@ -47,3 +48,24 @@ def test_dotenv_files_are_ignored(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     monkeypatch.chdir(work_dir)
 
     assert load_config().para_root != Path(leaked)
+
+
+SCRIPTS_DIR = Path(__file__).parent.parent / "scripts"
+_LOADED_BY_FIRST_TEST: list[str] = []
+
+
+def test_load_script_registers_the_module_under_a_unique_name(load_script) -> None:
+    """A script module gets its own name, so two loads never share a sys.modules entry."""
+    module = load_script("para_inventory")
+    _LOADED_BY_FIRST_TEST.append(module.__name__)
+
+    assert module.__name__ != "para_inventory"
+    assert module.__name__ in sys.modules
+
+
+def test_load_script_leaves_no_module_or_path_behind() -> None:
+    """Runs after the test above: its finalizer removed the module and the sys.path entry."""
+    for name in _LOADED_BY_FIRST_TEST:
+        assert name not in sys.modules
+    assert "para_inventory" not in sys.modules
+    assert str(SCRIPTS_DIR) not in sys.path

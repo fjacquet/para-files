@@ -8,11 +8,13 @@ Tests run with cwd = tmp_path; a test that needs the repo root must chdir itself
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
 import os
 import platform
 import sys
-from collections.abc import Callable
+import uuid
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from types import ModuleType
 
@@ -69,21 +71,36 @@ SCRIPTS_DIR = Path(__file__).parent.parent / "scripts"
 
 
 @pytest.fixture
-def load_script() -> Callable[[str], ModuleType]:
-    """Import a module from scripts/ by name (scripts/ is not a package)."""
+def load_script() -> Iterator[Callable[[str], ModuleType]]:
+    """Import a module from scripts/ by name (scripts/ is not a package).
+
+    Each load gets a unique module name. On teardown the sys.path entry and every module that
+    came from scripts/ are removed, so no test sees another test's script.
+    """
+    added_path = str(SCRIPTS_DIR) not in sys.path
+    if added_path:
+        sys.path.insert(0, str(SCRIPTS_DIR))
+    before = set(sys.modules)
 
     def _load(name: str) -> ModuleType:
-        if str(SCRIPTS_DIR) not in sys.path:
-            sys.path.insert(0, str(SCRIPTS_DIR))
-        spec = importlib.util.spec_from_file_location(name, SCRIPTS_DIR / f"{name}.py")
+        unique = f"scripts_{name}_{uuid.uuid4().hex}"
+        spec = importlib.util.spec_from_file_location(unique, SCRIPTS_DIR / f"{name}.py")
         assert spec is not None
         assert spec.loader is not None
         module = importlib.util.module_from_spec(spec)
-        sys.modules[name] = module
+        sys.modules[unique] = module
         spec.loader.exec_module(module)
         return module
 
-    return _load
+    yield _load
+
+    for key in set(sys.modules) - before:
+        file = getattr(sys.modules[key], "__file__", None) or ""
+        if file.startswith(str(SCRIPTS_DIR)):
+            del sys.modules[key]
+    if added_path:
+        with contextlib.suppress(ValueError):
+            sys.path.remove(str(SCRIPTS_DIR))
 
 
 def _snapshot(root: Path) -> dict[str, tuple[int, int]]:
