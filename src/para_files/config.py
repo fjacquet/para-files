@@ -31,7 +31,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 LEGACY_REFERENCE_TREE = Path("config/personal_file_tree.yaml")
 
 
-def _config_dir() -> Path:
+def config_dir_path() -> Path:
     """Personal config directory: $PARA_FILES_CONFIG_DIR if set, else ~/.config/para-files."""
     override = os.environ.get("PARA_FILES_CONFIG_DIR")
     return Path(override).expanduser() if override else Path.home() / ".config" / "para-files"
@@ -39,7 +39,7 @@ def _config_dir() -> Path:
 
 def default_reference_tree() -> Path:
     """Return the personal reference tree if it exists, else the legacy in-repo path."""
-    personal = _config_dir() / "personal_file_tree.yaml"
+    personal = config_dir_path() / "personal_file_tree.yaml"
     return personal if personal.exists() else LEGACY_REFERENCE_TREE
 
 
@@ -58,7 +58,7 @@ DEFAULT_LOG_LEVEL = "INFO"
 
 # Global config file location — searched before local .env so local .env takes precedence.
 # Users who run para-files outside the project directory should place their settings here.
-_HOME_ENV = _config_dir() / ".env"
+_HOME_ENV = config_dir_path() / ".env"
 _ENV_FILES = (str(_HOME_ENV), ".env")
 
 
@@ -76,7 +76,7 @@ def _load_yaml_config(yaml_path: Path | None = None) -> dict[str, Any]:
         paths_to_try.append(yaml_path)
     paths_to_try.extend(
         [
-            _config_dir() / "personal_file_tree.yaml",
+            config_dir_path() / "personal_file_tree.yaml",
             Path.cwd() / "config" / "personal_file_tree.yaml",
             Path.cwd() / "personal_file_tree.yaml",  # Backwards compatibility
         ]

@@ -8,16 +8,21 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Literal, Self
+from typing import Literal, Self, get_args
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
-from para_files.config import _config_dir
+from para_files.config import config_dir_path
 
 
 Kind = Literal["record", "library", "media", "knowledge"]
 Retention = Literal["permanent", "ret", "10y", "5y", "2y", "ctr"]
+RETENTION_PREFIX = re.compile(
+    "^("
+    + "|".join(re.escape(value) for value in get_args(Retention) if value != "permanent")
+    + ")_"
+)
 
 BUCKET_PREFIXES = ("1_", "2_", "3_", "4_")
 ARCHIVES = "4_Archives"
@@ -26,8 +31,7 @@ MAX_SUBKEY_SEGMENTS = 2
 MIN_ARCHIVE_SEGMENTS = 2  # 4_Archives plus the retention folder
 SHORT_LITERALS = 3
 SUBKEY_PLACEHOLDERS = frozenset({"{year}", "{month}", "{issuer}", "{thema}"})
-LEAF_ID = re.compile(r"^[a-z][a-z0-9_]*$")
-RETENTION_PREFIX = re.compile(r"^(\d+y|ret|ctr)_")
+LEAF_ID = re.compile(r"[a-z][a-z0-9_]*")
 GLOB_SYNTAX = re.compile(r"[*?\[\]]")
 
 
@@ -37,7 +41,7 @@ class TreeError(ValueError):
 
 def config_dir() -> Path:
     """Return the personal config directory (shared rule with the settings loader)."""
-    return _config_dir()
+    return config_dir_path()
 
 
 class Leaf(BaseModel):
@@ -70,8 +74,12 @@ class Leaf(BaseModel):
         if value is None:
             return None
         segments = value.split("/")
-        if len(segments) > MAX_SUBKEY_SEGMENTS or not set(segments) <= SUBKEY_PLACEHOLDERS:
-            msg = f"subkey must be at most 2 of {sorted(SUBKEY_PLACEHOLDERS)}: {value!r}"
+        if (
+            len(segments) > MAX_SUBKEY_SEGMENTS
+            or len(set(segments)) != len(segments)
+            or not set(segments) <= SUBKEY_PLACEHOLDERS
+        ):
+            msg = f"subkey must be at most 2 distinct of {sorted(SUBKEY_PLACEHOLDERS)}: {value!r}"
             raise ValueError(msg)
         return value
 
@@ -105,7 +113,7 @@ class Tree(BaseModel):
     @field_validator("leaves")
     @classmethod
     def _check_ids(cls, value: dict[str, Leaf]) -> dict[str, Leaf]:
-        bad = sorted(key for key in value if not LEAF_ID.match(key))
+        bad = sorted(key for key in value if not LEAF_ID.fullmatch(key))
         if bad:
             msg = f"leaf ids must be snake_case: {bad}"
             raise ValueError(msg)
@@ -157,13 +165,33 @@ class TreeConfig(BaseModel):
     issuers: IssuersFile
 
 
-def _read_yaml(path: Path) -> object:
-    with path.open(encoding="utf-8") as handle:
-        try:
-            return yaml.safe_load(handle) or {}
-        except yaml.YAMLError as exc:
-            msg = f"{path}: invalid YAML: {exc}"
-            raise TreeError(msg) from exc
+def _read_yaml(path: Path) -> dict[str, object]:
+    try:
+        with path.open(encoding="utf-8") as handle:
+            data = yaml.safe_load(handle)
+    except FileNotFoundError as exc:
+        msg = f"{path}: file not found"
+        raise TreeError(msg) from exc
+    except UnicodeDecodeError as exc:
+        msg = f"{path}: not valid UTF-8: {exc}"
+        raise TreeError(msg) from exc
+    except yaml.YAMLError as exc:
+        msg = f"{path}: invalid YAML: {exc}"
+        raise TreeError(msg) from exc
+    if data is None:
+        return {}
+    if not isinstance(data, dict):
+        msg = f"{path}: expected a mapping"
+        raise TreeError(msg)
+    return data
+
+
+def _parse[M: BaseModel](model: type[M], path: Path) -> M:
+    try:
+        return model.model_validate(_read_yaml(path))
+    except ValidationError as exc:
+        msg = f"{path}: {exc}"
+        raise TreeError(msg) from exc
 
 
 def _reference_problems(tree: Tree, rules: RulesFile, issuers: IssuersFile) -> list[str]:
@@ -194,18 +222,9 @@ def load_tree_config(directory: Path | None = None) -> TreeConfig:
     base = directory or config_dir()
     rules_path = base / "rules.yaml"
     issuers_path = base / "issuers.yaml"
-    try:
-        tree = Tree.model_validate(_read_yaml(base / "tree.yaml"))
-        rules = (
-            RulesFile.model_validate(_read_yaml(rules_path)) if rules_path.exists() else RulesFile()
-        )
-        issuers = (
-            IssuersFile.model_validate(_read_yaml(issuers_path))
-            if issuers_path.exists()
-            else IssuersFile()
-        )
-    except ValidationError as exc:
-        raise TreeError(str(exc)) from exc
+    tree = _parse(Tree, base / "tree.yaml")
+    rules = _parse(RulesFile, rules_path) if rules_path.exists() else RulesFile()
+    issuers = _parse(IssuersFile, issuers_path) if issuers_path.exists() else IssuersFile()
     problems = _reference_problems(tree, rules, issuers)
     if problems:
         msg = "; ".join(problems)
@@ -238,9 +257,9 @@ def validation_warnings(config: TreeConfig) -> list[str]:
         for leaf_id, leaf in config.tree.leaves.items()
         if leaf_id not in used and leaf.kind != "knowledge"
     ]
-    seen: dict[tuple[str, str | None], str] = {}
+    seen: dict[str, str] = {}
     for leaf_id, leaf in config.tree.leaves.items():
-        first = seen.setdefault((leaf.path, leaf.subkey), leaf_id)
+        first = seen.setdefault(leaf.path, leaf_id)
         if first != leaf_id:
             warnings.append(f"leaves {first!r} and {leaf_id!r} share path {leaf.path!r}")
         parts = leaf.path.split("/")
