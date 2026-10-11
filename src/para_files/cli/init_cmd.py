@@ -10,6 +10,8 @@ from pydantic import ValidationError
 
 from para_files.cli.app import app
 from para_files.cli.common import ROOT_HINT, fail
+from para_files.core.apply import make_dirs
+from para_files.core.journal import Journal, new_run_id
 from para_files.core.settings import BUCKET_NAME, INBOX, load_settings
 from para_files.core.tree import TreeError, load_tree_config
 
@@ -26,6 +28,14 @@ def _root(given: Path | None) -> Path:
         )
 
 
+def _state_dir() -> Path:
+    """Where the journal goes: the settings' state dir, or the default when no root is usable."""
+    try:
+        return load_settings().state_dir
+    except ValidationError:
+        return Path.home() / ".local" / "state" / "para-files"
+
+
 @app.command("init")
 def init_command(
     root: Annotated[
@@ -37,6 +47,8 @@ def init_command(
     base = _root(root)
     if BUCKET_NAME.match(base.name):
         fail(f"{base} is a bucket; pass the folder that holds the buckets")
+    if not base.parent.is_dir():
+        fail(f"parent folder does not exist: {base.parent}")
     try:
         config = load_tree_config()
     except TreeError as exc:
@@ -46,9 +58,17 @@ def init_command(
     if not missing:
         typer.echo(f"{base}: every folder exists")
         return
-    for path in missing:
-        typer.echo(f"  {'created' if apply_ else 'missing'}  {path.relative_to(base).as_posix()}")
-        if apply_:
-            path.mkdir(parents=True, exist_ok=True)
     if not apply_:
+        for path in missing:
+            typer.echo(f"  missing  {path.relative_to(base).as_posix()}")
         typer.echo(f"{len(missing)} folders missing; add --apply to create them")
+        return
+    state_dir = _state_dir()
+    run_id = new_run_id(state_dir)
+    with Journal(state_dir, run_id) as journal:
+        for path in missing:
+            typer.echo(f"  created  {path.relative_to(base).as_posix()}")
+            make_dirs(path, journal)
+        created = journal.path.exists()
+    if created:
+        typer.echo(f"undo with: para-files undo {run_id}")
