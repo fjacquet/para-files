@@ -63,11 +63,15 @@ def test_model_first_end_to_end(tmp_path, monkeypatch, snapshot):
     put(root, "0_Inbox/acme_2026.md", "AcmeCard statement")
     (root / "0_Inbox/scan.png").write_bytes(b"\x89PNG\r\n\x1a\n")
     before = snapshot(root)
+    before_bytes = {
+        str(path.relative_to(root)): path.read_bytes() for path in root.rglob("*") if path.is_file()
+    }
 
     preview = runner.invoke(app, ["sort", "--json"])
     assert preview.exit_code == 0, preview.output
     plan = {d["path"]: d for d in json.loads(preview.output)["decisions"]}
     assert plan["0_Inbox/Payslip_2026-01.txt"]["signal"] == "rules"
+    assert plan["0_Inbox/Payslip_2026-01.txt"]["band"] == "green"
     assert plan["0_Inbox/passwords.txt"]["signal"] == "secret"
     acme = plan["0_Inbox/acme_2026.md"]
     assert (acme["signal"], acme["band"]) == ("fallback", "yellow")
@@ -77,6 +81,7 @@ def test_model_first_end_to_end(tmp_path, monkeypatch, snapshot):
     assert "Payslip_2026-01" not in sent
     assert "hunter22" not in sent
     assert "passwords.txt" not in sent
+    assert "passwords" not in sent  # the stem too; the system prompt and menu do not contain it
     assert "rule 'it_notes'" in sent
     assert "issuer 'acmecard'" in sent
     assert "AcmeCard invoice 2026 scanned" in sent
@@ -92,14 +97,19 @@ def test_model_first_end_to_end(tmp_path, monkeypatch, snapshot):
     assert (root / "4_Archives/10y_travail/2026/Payslip_2026-01.txt").exists()
     assert (root / "4_Archives/10y_banques/acmecard/2026/acme_2026.md").exists()
     assert (root / "0_Inbox/passwords.txt").exists()
+    assert (root / "4_Archives/10y_banques/scan.png").exists()
     entries = read_run(tmp_path / "state", last_run_id(tmp_path / "state"))
     owner = [e for e in entries if e["op"] == "move" and e["decided_by"] == "owner"]
+    assert len(owner) == 2
     assert {e["leaf"] for e in owner} == {"archives_10y_banques"}
+    payslip = [e for e in entries if e["dst"].endswith("Payslip_2026-01.txt")]
+    assert [(e["decided_by"], e["signal"]) for e in payslip] == [("auto", "rules")]
 
     undone = runner.invoke(app, ["undo"])
     assert undone.exit_code == 0, undone.output
     after = snapshot(root)
     assert after.keys() == before.keys()  # no leftover entries
-    # Directory mtimes change when entries leave and come back; every file must be unchanged.
-    files = [name for name in before if (root / name).is_file()]
-    assert {name: after[name] for name in files} == {name: before[name] for name in files}
+    after_bytes = {
+        str(path.relative_to(root)): path.read_bytes() for path in root.rglob("*") if path.is_file()
+    }
+    assert after_bytes == before_bytes
