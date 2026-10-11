@@ -125,6 +125,14 @@ def test_unreadable_file_is_still_predicted(bakeoff, tmp_path: Path):
     assert "(no text)" in post.calls[0]["json"]["messages"][1]["content"]
 
 
+def test_malformed_reply_becomes_error_row(bakeoff, tmp_path: Path):
+    post = FakePost(httpx.Response(200, json=["not", "a", "dict"]))
+    row = {"path": "4_Archives/x/a.pdf", "leaf": "inv", "kind": "record", "scope": "a"}
+    pred = bakeoff.predict(row, tmp_path, MENU, bakeoff.ask_gemini, post, "k", lambda _p: "")
+    assert pred["leaf"] is None
+    assert "error" in pred
+
+
 def test_rate_limit_is_retried(bakeoff, monkeypatch):
     monkeypatch.setattr(bakeoff.time, "sleep", lambda _seconds: None)
     post = FakePost(

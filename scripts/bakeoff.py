@@ -3,8 +3,9 @@
 Scope (a): golden record/library/media files the baseline left non-green.
 Scope (b): golden knowledge files, scored as top-3 suggestions.
 
-Every cloud request carries provider.zdr=true; files flagged by the secrets guard are never sent.
-Predictions are all "yellow": eval.py's curve (max coverage at >= 98% precision) is the verdict.
+Every cloud request carries provider.zdr=true. Predictions are yellow; files flagged by the
+secrets guard are red and never sent. The verdict is eval.py's curve (max coverage at >= 98%
+precision).
 
 Usage:
     uv run python scripts/bakeoff.py --candidate jev --para-root "$PARA"
@@ -252,7 +253,7 @@ def predict(
     error = None
     try:
         ranked, cost = ask(post, key, menu, path.name, preview)
-    except (httpx.HTTPError, KeyError, ValueError, IndexError) as exc:
+    except Exception as exc:  # noqa: BLE001 - one bad reply must not stop the run
         ranked, cost, error = [], 0.0, f"{type(exc).__name__}: {exc}"[:200]
     pred = {
         **base,
