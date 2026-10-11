@@ -29,14 +29,13 @@ dependencies = [
     "pyobjc-framework-quartz>=12.1; sys_platform == 'darwin'",
     "pyobjc-framework-cocoa>=12.1; sys_platform == 'darwin'",
     "typer>=0.21.0",
-    "cryptography>=46.0.3",  # pypdf's AES backend: text of encrypted PDFs
     "isbnlib>=3.10.14",
     "pymupdf>=1.26.7",
     "loguru>=0.7.3",
     "openpyxl>=3.1.5",
     "odfpy>=1.4.1",
     "xlrd>=2.0.2",
-    "pypdf>=6.9.1",
+    "pypdf[crypto]>=6.9.1",
 ]
 
 [project.optional-dependencies]
