@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
+from loguru import logger
+
 from para_files.circuit_breaker import OllamaCircuitBreaker
 from para_files.core.evidence import Evidence
 from para_files.core.fallback import (
@@ -213,3 +215,56 @@ def test_make_fallback(tmp_path):
     assert make_fallback(make_settings(tmp_path, fallback_enabled=True)) is None
     settings = make_settings(tmp_path, fallback_enabled=True, openrouter_api_key=KEY)
     assert isinstance(make_fallback(settings), OpenRouterFallback)
+
+
+def test_leaf_keywords_are_listed_in_the_menu():
+    complete = FakeComplete(reply([{"leaf": "archives_10y_travail", "confidence": 0.9}]))
+    OpenRouterFallback(KEY, ["m1"], complete=complete).decide(ev(), make_config().tree)
+    user = complete.calls[0]["messages"][1]["content"]
+    line = "- archives_10y_travail: Payslips and employment records [keywords: salaire, payslip]"
+    assert line in user
+    assert "- resources_it: IT notes\n" in user
+
+
+def test_secret_named_keyword_is_never_listed():
+    tree = Tree.model_validate(
+        {
+            "leaves": {
+                "resources_docs": {
+                    "kind": "library",
+                    "path": "3_Resources/docs",
+                    "describe": "Vendor documentation",
+                    "keywords": ["manual", "api_key", "password reset"],
+                },
+                "areas_notes": {
+                    "kind": "knowledge",
+                    "path": "2_Areas/notes",
+                    "describe": "Notes",
+                    "keywords": ["token"],
+                },
+            }
+        }
+    )
+    assert leaf_menu(tree) == {
+        "resources_docs": "Vendor documentation [keywords: manual]",
+        "areas_notes": "Notes",
+    }
+    complete = FakeComplete(reply([{"leaf": "resources_docs", "confidence": 0.7}]))
+    OpenRouterFallback(KEY, ["m1"], complete=complete).decide(ev(), tree)
+    sent = json.dumps(complete.calls[0]["messages"])
+    assert "api_key" not in sent
+    assert "password reset" not in sent
+    assert "token" not in sent
+
+
+def test_logged_errors_never_carry_the_key():
+    messages_seen: list[str] = []
+    sink_id = logger.add(lambda message: messages_seen.append(str(message)), level="WARNING")
+    try:
+        complete = FakeComplete(RuntimeError("provider rejected the request"), reply([]))
+        fallback = OpenRouterFallback(KEY, ["m1", "m2"], complete=complete)
+        fallback.decide(ev(), make_config().tree)
+    finally:
+        logger.remove(sink_id)
+    assert any("fallback m1 failed" in text for text in messages_seen)
+    assert all(KEY not in text for text in messages_seen)

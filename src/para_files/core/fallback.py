@@ -70,10 +70,15 @@ def _is_secret_leaf(leaf_id: str, path: str, describe: str) -> bool:
     return any(secret_reason(name) for name in (leaf_id, head, *Path(path).parts))
 
 
+def _keywords_part(keywords: Sequence[str]) -> str:
+    kept = [keyword for keyword in keywords if not secret_reason(keyword)]
+    return f" [keywords: {', '.join(kept)}]" if kept else ""
+
+
 def leaf_menu(tree: Tree) -> dict[str, str]:
-    """Leaf id -> describe, the only choices the model sees; no secret-named leaves."""
+    """Leaf id -> describe and keywords, the only choices the model sees; no secret-named leaves."""
     return {
-        leaf_id: _without_secret_parts(leaf.describe)
+        leaf_id: _without_secret_parts(leaf.describe) + _keywords_part(leaf.keywords)
         for leaf_id, leaf in tree.leaves.items()
         if not _is_secret_leaf(leaf_id, leaf.path, leaf.describe)
     }
