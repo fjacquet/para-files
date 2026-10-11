@@ -24,11 +24,13 @@ from para_inventory import (
     LIBRARY,
     MEDIA,
     Folder,
+    is_member,
     make_canon,
     nfc,
     retention_of,
     retentions_by_stem,
     scan_folders,
+    scan_notes,
     strip_prefix,
 )
 
@@ -38,7 +40,6 @@ from para_files.core.tree import TreeError, config_dir, load_tree_config, valida
 
 BOOKS = frozenset({"livres", "books"})
 TAGS = {
-    "1_Projects": "projects",
     "1_Projets": "projects",
     "2_Areas": "areas",
     "3_Resources": "resources",
@@ -57,6 +58,7 @@ YEAR = re.compile(r"^(19|20)\d{2}$")
 PLACEHOLDER = re.compile(r"\{[^}]+\}")
 SUBKEY_FROM_DOCS = ("{issuer}", "{year}")
 Canon = Callable[[str], str]
+DEFAULT_DOCUMENTS = Path(__file__).resolve().parent.parent / "config" / "documents.json"
 
 
 def slug(text: str) -> str:
@@ -73,7 +75,9 @@ def folder_of(pattern: str) -> str | None:
     return f"{parts[0]}/{parts[1]}"
 
 
-def document_folders(documents: dict[str, Any], canon: Canon) -> dict[str, tuple[str, str | None]]:
+def document_folders(
+    documents: dict[str, Any], canon: Canon, notes: list[str]
+) -> dict[str, tuple[str, str | None]]:
     """Canonical folder -> (retention, subkey) taken from documents.json."""
     found: dict[str, tuple[str, str | None]] = {}
     for category in documents.get("categories", []):
@@ -83,7 +87,13 @@ def document_folders(documents: dict[str, Any], canon: Canon) -> dict[str, tuple
             if folder is None:
                 continue
             subkey = "/".join(p for p in SUBKEY_FROM_DOCS if p in pattern) or None
-            retention = RETENTION_FROM_DOCS.get(doc.get("retention", ""), "permanent")
+            known = doc.get("retention", "")
+            if known not in RETENTION_FROM_DOCS:
+                notes.append(
+                    f"unknown retention '{known}' in documents.json for {folder}; "
+                    "proposed permanent"
+                )
+            retention = RETENTION_FROM_DOCS.get(known, "permanent")
             target = canon(folder)
             if target != INBOX:
                 found.setdefault(target, (retention, subkey))
@@ -104,10 +114,10 @@ def propose_leaf(
     leaf: dict[str, Any] = {"path": rel, "describe": describe}
     prefix = retention_of(folder.name)
     doc_retention, doc_subkey = docs.get(rel, (None, None))
-    if name in MEDIA:
+    if is_member(name, MEDIA):
         leaf.update(kind="media", subkey="{year}")
-    elif name in LIBRARY:
-        leaf.update(kind="library", subkey="{thema}" if name in BOOKS else None)
+    elif is_member(name, LIBRARY):
+        leaf.update(kind="library", subkey="{thema}" if is_member(name, BOOKS) else None)
     elif prefix in RETENTIONS and folder.bucket == "4_Archives":
         leaf.update(kind="record", retention=prefix, subkey=doc_subkey or year_subkey)
     elif prefix is not None or doc_retention is not None or folder.bucket == "4_Archives":
@@ -128,6 +138,11 @@ def draft_tree(
     scanned = {folder.trimmed: folder for folder in folders}
     targets: list[str] = []
     for folder in folders:
+        if folder.name != folder.name.strip():
+            notes.append(
+                f"padded folder name on disk: '{folder.rel}' — rename it to the trimmed name "
+                "before building the golden corpus"
+            )
         rel = folder.trimmed
         target = canon(rel)
         if target == INBOX:
@@ -138,10 +153,17 @@ def draft_tree(
         if target not in targets:
             targets.append(target)
     leaves: dict[str, dict[str, Any]] = {}
-    for target in targets:
+    for index, target in enumerate(targets, start=1):
         bucket, _, name = target.partition("/")
         folder = scanned.get(target) or Folder(bucket, name, 0)
-        base = f"{TAGS.get(bucket, slug(bucket))}_{slug(name)}"
+        if slug(name):
+            base = f"{TAGS.get(bucket, slug(bucket))}_{slug(name)}"
+        else:
+            base = f"leaf_{index}"
+            notes.append(
+                f"folder name {target} has no ASCII letters or digits; leaf id {base}, "
+                "rename the folder to set a readable id"
+            )
         leaf_id, counter = base, 2
         while leaf_id in leaves:
             leaf_id, counter = f"{base}_{counter}", counter + 1
@@ -195,11 +217,6 @@ def draft_rules(
             continue
         if rule.get("action"):
             notes.append(f"rule {name}: action {rule['action']} ignored")
-        issuers += [
-            (i["name"], list(i.get("patterns") or []), leaf) for i in rule.get("issuers") or []
-        ]
-        vendors = [*(rule.get("known_vendors") or []), *(rule.get("known_technologies") or [])]
-        issuers += [(vendor, [vendor], leaf) for vendor in vendors]
         patterns = list(rule.get("patterns") or [])
         globs = combine_globs(patterns, list(rule.get("extensions") or []))
         short = [glob for glob in globs if is_short_substring(glob)]
@@ -209,8 +226,13 @@ def draft_rules(
         if not globs:
             notes.append(f"rule {name}: no usable glob left, dropped")
             continue
-        target = pattern_rules if patterns else extension_rules
-        target.append({"name": name, "leaf": leaf, "globs": globs})
+        issuers += [
+            (i["name"], list(i.get("patterns") or []), leaf) for i in rule.get("issuers") or []
+        ]
+        vendors = [*(rule.get("known_vendors") or []), *(rule.get("known_technologies") or [])]
+        issuers += [(vendor, [vendor], leaf) for vendor in vendors]
+        rule_list = pattern_rules if patterns else extension_rules
+        rule_list.append({"name": name, "leaf": leaf, "globs": globs})
     return pattern_rules + extension_rules, issuers
 
 
@@ -273,6 +295,7 @@ def write_review(
     notes: list[str],
     families: list[tuple[str, int, str]],
     warnings: list[str],
+    scanned: list[str],
 ) -> None:
     """review.md: what the seeder decided and what the owner must decide."""
     kinds = Counter(leaf["kind"] for leaf in leaves.values())
@@ -286,6 +309,10 @@ def write_review(
         "## Notes",
         "",
         *[f"- {note}" for note in notes],
+        "",
+        "## Skipped folders and loose files",
+        "",
+        *[f"- {line}" for line in scanned],
         "",
         "## Recurring inbox families (issuer candidates)",
         "",
@@ -308,13 +335,20 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Draft tree.yaml, rules.yaml and issuers.yaml.")
     parser.add_argument("--para-root", type=Path, required=True)
     parser.add_argument("--legacy-tree", type=Path, default=None)
-    parser.add_argument("--documents", type=Path, default=Path("config/documents.json"))
+    parser.add_argument("--documents", type=Path, default=DEFAULT_DOCUMENTS)
     parser.add_argument("--out", type=Path, default=None)
+    parser.add_argument("--force", action="store_true", help="overwrite an existing draft")
     args = parser.parse_args(argv)
     para_root = args.para_root.expanduser().resolve()
+    if not para_root.is_dir():
+        parser.error(f"--para-root is not a directory: {para_root}")
     out = (args.out or config_dir() / "draft").expanduser().resolve()
     if out.is_relative_to(para_root):
         parser.error("--out must be outside the PARA root")
+    if (out / "tree.yaml").exists() and not args.force:
+        parser.error(
+            f"{out / 'tree.yaml'} exists and may hold your edits; pass --force to overwrite"
+        )
     legacy_path = args.legacy_tree or default_reference_tree()
     legacy = yaml.safe_load(legacy_path.read_text(encoding="utf-8")) or {}
     documents = json.loads(args.documents.read_text(encoding="utf-8"))
@@ -322,7 +356,7 @@ def main(argv: list[str] | None = None) -> int:
     folders = scan_folders(para_root)
     canon = make_canon(folders, retentions_by_stem(documents))
     notes: list[str] = []
-    leaves = draft_tree(folders, canon, document_folders(documents, canon), notes)
+    leaves = draft_tree(folders, canon, document_folders(documents, canon, notes), notes)
     leaf_of = {leaf["path"]: leaf_id for leaf_id, leaf in leaves.items()}
     rules, rule_issuers = draft_rules(legacy.get("routing_rules") or {}, canon, leaf_of, notes)
     issuers = draft_issuers(documents, canon, leaf_of, rule_issuers, notes)
@@ -336,7 +370,9 @@ def main(argv: list[str] | None = None) -> int:
         warnings = validation_warnings(load_tree_config(out))
     except TreeError as exc:  # still write review.md so the owner sees why
         warnings, status = [f"the draft does not load: {exc}"], 1
-    write_review(out, leaves, notes, inbox_families(para_root / "0_Inbox"), warnings)
+    write_review(
+        out, leaves, notes, inbox_families(para_root / "0_Inbox"), warnings, scan_notes(para_root)
+    )
     print(f"{len(leaves)} leaves, {len(rules)} rules, {len(issuers)} issuers -> {out}")
     return status
 

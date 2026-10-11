@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import unicodedata
 from pathlib import Path
 
 import pytest
@@ -220,7 +221,7 @@ class TestDraftTree:
 
     def test_nfd_folder_names_become_nfc_leaves(self, load_script, tmp_path, legacy, documents):
         root = tmp_path / "PARA"
-        _touch(root, "2_Areas/matière/notes.txt")
+        _touch(root, unicodedata.normalize("NFD", "2_Areas/matière/notes.txt"))
         out = tmp_path / "nfd-draft"
         migrate = load_script("migrate_config")
         argv = ["--para-root", str(root), "--legacy-tree", str(legacy)]
@@ -385,3 +386,188 @@ def test_records_outside_archives_follow_the_taxonomy(
     mapping = inventory.canonical_map(inventory.scan_folders(root), taxonomy)
     for rel, target in expected.items():
         assert mapping[rel] == target
+
+
+def _write_documents(tmp_path: Path, name: str, documents: list[dict[str, object]]) -> Path:
+    path = tmp_path / name
+    path.write_text(json.dumps({"categories": [{"id": "A", "name": "A", "documents": documents}]}))
+    return path
+
+
+def _run(load_script, root: Path, legacy: Path, documents: Path, out: Path) -> int:
+    migrate = load_script("migrate_config")
+    argv = ["--para-root", str(root), "--legacy-tree", str(legacy)]
+    argv += ["--documents", str(documents), "--out", str(out)]
+    return migrate.main(argv)
+
+
+class TestInventoryAccentsAndSeparators:
+    @pytest.mark.parametrize(
+        ("folder", "target"),
+        [
+            ("3_Resources/5y_Vidéos", "3_Resources/Vidéos"),
+            ("3_Resources/5y_Médias", "3_Resources/Médias"),
+            ("3_Resources/5y_Livres", "3_Resources/Livres"),
+        ],
+    )
+    def test_accented_media_and_library_names_drop_the_prefix(
+        self, load_script, tmp_path, folder, target
+    ):
+        _touch(tmp_path, f"PARA/{folder}/a.pdf")
+        inventory = load_script("para_inventory")
+        mapping = inventory.canonical_map(inventory.scan_folders(tmp_path / "PARA"))
+        assert mapping[folder] == target
+
+    def test_prefix_accepts_a_dash_or_a_space_as_separator(self, load_script):
+        inventory = load_script("para_inventory")
+        assert inventory.retention_of("5y-factures") == "5y"
+        assert inventory.retention_of("5y factures") == "5y"
+        assert inventory.strip_prefix("5y factures") == "factures"
+        assert inventory.strip_prefix("ctr-factures") == "factures"
+
+    def test_separated_prefix_keeps_its_identity_and_stray_one_is_remapped(
+        self, load_script, tmp_path
+    ):
+        _touch(tmp_path, "PARA/4_Archives/5y factures/a.pdf")
+        _touch(tmp_path, "PARA/4_Archives/5y factures/b.pdf")
+        _touch(tmp_path, "PARA/4_Archives/2y-factures/c.pdf")
+        inventory = load_script("para_inventory")
+        mapping = inventory.canonical_map(
+            inventory.scan_folders(tmp_path / "PARA"), {"facture": {"5y"}}
+        )
+        assert mapping["4_Archives/5y factures"] == "4_Archives/5y factures"
+        assert mapping["4_Archives/2y-factures"] == "4_Archives/5y factures"
+
+
+class TestInventoryRoots:
+    def test_symlinked_bucket_root_is_not_scanned(self, load_script, tmp_path):
+        _touch(tmp_path, "elsewhere/bucket/alpha/a.txt")
+        root = tmp_path / "PARA"
+        root.mkdir()
+        (root / "2_Areas").symlink_to(tmp_path / "elsewhere" / "bucket", target_is_directory=True)
+        inventory = load_script("para_inventory")
+        assert inventory.scan_folders(root) == []
+
+    def test_synonyms_in_different_buckets_are_not_merged(self, load_script, tmp_path):
+        _touch(tmp_path, "PARA/2_Areas/docs/a.pdf")
+        _touch(tmp_path, "PARA/2_Areas/docs/b.pdf")
+        _touch(tmp_path, "PARA/2_Areas/docs/c.pdf")
+        _touch(tmp_path, "PARA/3_Resources/documentation/d.pdf")
+        inventory = load_script("para_inventory")
+        mapping = inventory.canonical_map(inventory.scan_folders(tmp_path / "PARA"))
+        assert mapping["2_Areas/docs"] == "2_Areas/docs"
+        assert mapping["3_Resources/documentation"] == "3_Resources/documentation"
+
+    def test_tie_at_the_count_cap_prefers_the_folder_with_more_entries(self, load_script):
+        inventory = load_script("para_inventory")
+        folders = [
+            inventory.Folder("4_Archives", "5y_factures", inventory.COUNT_CAP, ["a", "b", "c"]),
+            inventory.Folder("4_Archives", "5y-factures", inventory.COUNT_CAP, ["a"]),
+        ]
+        mapping = inventory.canonical_map(folders, {"facture": {"5y"}})
+        assert mapping["4_Archives/5y-factures"] == "4_Archives/5y_factures"
+
+
+class TestSeederReview:
+    def test_main_refuses_to_overwrite_a_draft_without_force(
+        self, load_script, para, legacy, documents, tmp_path
+    ):
+        out = tmp_path / "draft"
+        assert _run(load_script, para, legacy, documents, out) == 0
+        (out / "tree.yaml").write_text("# my edits\n")
+        migrate = load_script("migrate_config")
+        argv = ["--para-root", str(para), "--legacy-tree", str(legacy)]
+        argv += ["--documents", str(documents), "--out", str(out)]
+        with pytest.raises(SystemExit):
+            migrate.main(argv)
+        assert (out / "tree.yaml").read_text() == "# my edits\n"
+        assert migrate.main([*argv, "--force"]) == 0
+        assert (out / "tree.yaml").read_text() != "# my edits\n"
+
+    def test_main_rejects_a_para_root_that_is_not_a_directory(
+        self, load_script, legacy, documents, tmp_path
+    ):
+        out = tmp_path / "draft"
+        with pytest.raises(SystemExit):
+            _run(load_script, tmp_path / "missing", legacy, documents, out)
+        assert not out.exists()
+
+    def test_padded_folder_names_get_a_rename_note(self, load_script, legacy, documents, tmp_path):
+        root = tmp_path / "PARA"
+        _touch(root, "2_Areas/ carriere /cv.pdf")
+        out = tmp_path / "draft"
+        assert _run(load_script, root, legacy, documents, out) == 0
+        review = (out / "review.md").read_text()
+        assert (
+            "padded folder name on disk: '2_Areas/ carriere ' — rename it to the trimmed name "
+            "before building the golden corpus" in review
+        )
+
+    def test_skipped_folders_and_loose_files_are_listed(
+        self, load_script, legacy, documents, tmp_path
+    ):
+        root = tmp_path / "PARA"
+        _touch(root, "2_Areas/carriere/cv.pdf")
+        _touch(root, "2_Areas/_drafts/x.txt")
+        _touch(root, "2_Areas/.cache/y.txt")
+        _touch(root, "2_Areas/readme.txt")
+        out = tmp_path / "draft"
+        assert _run(load_script, root, legacy, documents, out) == 0
+        review = (out / "review.md").read_text()
+        assert "skipped folder: 2_Areas/_drafts (name starts with . or _)" in review
+        assert "skipped folder: 2_Areas/.cache (name starts with . or _)" in review
+        assert "loose files in 2_Areas: 1" in review
+        assert "loose files in 4_Archives: 0" in review
+
+    def test_unknown_retention_gets_a_note_and_is_proposed_permanent(
+        self, load_script, para, legacy, tmp_path
+    ):
+        docs = _write_documents(
+            tmp_path,
+            "odd.json",
+            [_doc("odd", "weird_value", "3_Resources/administratif/identite")],
+        )
+        out = tmp_path / "draft"
+        assert _run(load_script, para, legacy, docs, out) == 0
+        review = (out / "review.md").read_text()
+        assert (
+            "unknown retention 'weird_value' in documents.json for 3_Resources/administratif; "
+            "proposed permanent" in review
+        )
+
+    def test_non_ascii_folder_name_gets_a_numbered_leaf_and_a_note(
+        self, load_script, legacy, documents, tmp_path
+    ):
+        root = tmp_path / "PARA"
+        _touch(root, "2_Areas/仕事/a.txt")
+        out = tmp_path / "draft"
+        assert _run(load_script, root, legacy, documents, out) == 0
+        leaves = load_tree_config(out).tree.leaves
+        assert leaves["leaf_1"].path == "2_Areas/仕事"
+        review = (out / "review.md").read_text()
+        assert "folder name 2_Areas/仕事 has no ASCII letters or digits; leaf id leaf_1" in review
+
+    def test_issuers_of_a_dropped_rule_are_not_collected(
+        self, load_script, para, documents, tmp_path
+    ):
+        legacy = tmp_path / "legacy-ghost.yaml"
+        rules = {
+            "ghost": {
+                "patterns": ["*ab*"],
+                "destination": "2_Areas/carriere",
+                "issuers": [{"name": "Ghost Corp", "patterns": ["Ghostco"]}],
+            }
+        }
+        legacy.write_text(yaml.safe_dump({"routing_rules": rules}))
+        out = tmp_path / "draft"
+        assert _run(load_script, para, legacy, documents, out) == 0
+        issuers = yaml.safe_load((out / "issuers.yaml").read_text())["issuers"]
+        assert "ghost_corp" not in issuers
+
+    def test_documents_default_resolves_from_the_repo_not_the_working_directory(
+        self, load_script, para, legacy, tmp_path, monkeypatch
+    ):
+        monkeypatch.chdir(tmp_path)
+        migrate = load_script("migrate_config")
+        argv = ["--para-root", str(para), "--legacy-tree", str(legacy)]
+        assert migrate.main([*argv, "--out", str(tmp_path / "draft")]) == 0

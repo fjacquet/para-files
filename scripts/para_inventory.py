@@ -21,7 +21,9 @@ from typing import Any
 BUCKETS = ("1_Projets", "2_Areas", "3_Resources", "4_Archives")
 ARCHIVES = "4_Archives"
 INBOX = "0_Inbox"
-RETENTION_PREFIX = re.compile(r"^(\d+y|ret|ctr)_")
+# Same retention words as para_files.core.tree.RETENTION_PREFIX, which takes an underscore only;
+# the seeder also accepts a dash or a space after the prefix (e.g. "5y factures").
+RETENTION_PREFIX = re.compile(r"^(\d+y|ret|ctr)[_\- ]")
 SYNONYMS = (("livres", "books"), ("formation", "formations"), ("docs", "documentation"))
 MEDIA = frozenset({"photos", "videos", "media", "screenshots"})
 LIBRARY = frozenset(
@@ -66,6 +68,11 @@ def name_key(name: str) -> str:
     return re.sub(r"(?<=\w\w)[sx]$", "", text)
 
 
+def is_member(name: str, group: frozenset[str]) -> bool:
+    """Whether name (prefix already removed) is a word of group, compared by variant key."""
+    return name_key(name) in {name_key(word) for word in group}
+
+
 def stem_key(name: str) -> str:
     """name_key without the retention prefix; only used to find twins and stray prefixes."""
     return name_key(RETENTION_PREFIX.sub("", nfc(name).strip()))
@@ -107,7 +114,7 @@ def scan_folders(para_root: Path, buckets: tuple[str, ...] = BUCKETS) -> list[Fo
     folders: list[Folder] = []
     for bucket in buckets:
         base = para_root / bucket
-        if not base.is_dir():
+        if not base.is_dir() or base.is_symlink():
             continue
         for entry in sorted(base.iterdir(), key=lambda path: path.name):
             if entry.is_symlink() or not entry.is_dir() or entry.name.startswith((".", "_")):
@@ -119,6 +126,22 @@ def scan_folders(para_root: Path, buckets: tuple[str, ...] = BUCKETS) -> list[Fo
             )
             folders.append(Folder(bucket, nfc(entry.name), count_files(entry), subfolders))
     return folders
+
+
+def scan_notes(para_root: Path, buckets: tuple[str, ...] = BUCKETS) -> list[str]:
+    """Review lines for what scan_folders leaves out: dot or underscore folders, loose files."""
+    notes: list[str] = []
+    for bucket in buckets:
+        base = para_root / bucket
+        entries = sorted(base.iterdir(), key=lambda path: path.name) if base.is_dir() else []
+        for entry in entries:
+            if entry.is_dir() and entry.name.startswith((".", "_")):
+                notes.append(
+                    f"skipped folder: {bucket}/{nfc(entry.name)} (name starts with . or _)"
+                )
+        loose = sum(1 for entry in entries if entry.is_file() and not entry.name.startswith("."))
+        notes.append(f"loose files in {bucket}: {loose}")
+    return notes
 
 
 def retentions_by_stem(documents: dict[str, Any]) -> dict[str, set[str]]:
@@ -138,13 +161,15 @@ def _group_targets(
 ) -> dict[str, str]:
     """Targets for one (bucket, stem) group of folders."""
     reps: dict[str, Folder] = {}
-    for folder in sorted(group, key=lambda f: (-f.files, f.name)):
+    # ties at COUNT_CAP fall back to the number of subfolders, then to the name
+    for folder in sorted(group, key=lambda f: (-f.files, -len(f.subfolders), f.name)):
         reps.setdefault(name_key(folder.name), folder)  # R4: variants fold into the largest
     rep_target = {key: rep.trimmed for key, rep in reps.items()}
     prefixed = [rep for rep in reps.values() if retention_of(rep.name)]
     plain = [rep for rep in reps.values() if not retention_of(rep.name)]
-    if bucket != ARCHIVES and prefixed and strip_prefix(prefixed[0].name) in MEDIA | LIBRARY:
-        bare = RETENTION_PREFIX.sub("", prefixed[0].name.strip())  # R9: media/library drop it
+    lead = max(prefixed, key=lambda f: f.files) if prefixed else None
+    if bucket != ARCHIVES and lead and is_member(strip_prefix(lead.name), MEDIA | LIBRARY):
+        bare = RETENTION_PREFIX.sub("", lead.name.strip())  # R9: media/library drop it
         target = plain[0].trimmed if plain else f"{bucket}/{bare}"
         return {folder.rel: target for folder in group}
     if prefixed or (bucket == ARCHIVES and stem in taxonomy):  # records: the vault decides
