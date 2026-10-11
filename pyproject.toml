@@ -62,7 +62,7 @@ dev = [
 ]
 
 [project.scripts]
-para-files = "para_files.main:cli"
+para-files = "para_files.cli.app:app"
 
 [project.urls]
 Homepage = "https://github.com/fjacquet/para-files"
@@ -182,11 +182,6 @@ ignore = [
 ]
 "src/para_files/utils/ocr.py" = [
     "ANN401",  # PyObjC objects require Any type annotations
-]
-"src/para_files/main.py" = [
-    "FBT002",   # Boolean default positional arguments are standard for Typer CLI
-    "PLR0913",  # CLI commands naturally have many parameters
-    "PLR0917",  # CLI commands naturally have many positional parameters
 ]
 "src/para_files/cli/**/*.py" = [
     "FBT002",   # Boolean default positional arguments are standard for Typer CLI

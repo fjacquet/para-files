@@ -115,3 +115,20 @@ def write_config(directory: Path) -> Path:
     ):
         (directory / name).write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
     return directory
+
+
+def setup_cli(base: Path, monkeypatch: Any) -> Path:
+    """A PARA root and the small tree in the sandbox config dir, wired through the env.
+
+    Returns the PARA root. The cache and journal live under base, outside the root;
+    the fallback is off.
+    """
+    import os
+
+    root = make_para_root(base)
+    write_config(Path(os.environ["PARA_FILES_CONFIG_DIR"]))
+    monkeypatch.setenv("PARA_FILES_PARA_ROOT", str(root))
+    monkeypatch.setenv("PARA_FILES_CACHE_PATH", str(base / "cache" / "cache.sqlite"))
+    monkeypatch.setenv("PARA_FILES_STATE_DIR", str(base / "state"))
+    monkeypatch.setenv("PARA_FILES_FALLBACK_ENABLED", "false")
+    return root

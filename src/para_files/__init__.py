@@ -8,7 +8,6 @@ and work emails on macOS.
 from __future__ import annotations
 
 from para_files.config import Config
-from para_files.main import cli, main
 from para_files.pipeline import ClassificationPipeline
 from para_files.types import ClassificationResult, ClassificationSource, Confidence
 
@@ -22,6 +21,4 @@ __all__ = [
     "Confidence",
     "Config",
     "__version__",
-    "cli",
-    "main",
 ]
