@@ -21,6 +21,14 @@ INBOX = "0_Inbox"
 BUCKET_NAME = re.compile(r"^[0-4]_")
 
 
+def in_dot_folder(path: Path, root: Path) -> bool:
+    """True when path is inside root and some part below root starts with a dot."""
+    resolved, base = path.resolve(), root.resolve()
+    if not resolved.is_relative_to(base):
+        return False
+    return any(part.startswith(".") for part in resolved.relative_to(base).parts)
+
+
 def _home(*parts: str) -> Path:
     return Path.home().joinpath(*parts)
 

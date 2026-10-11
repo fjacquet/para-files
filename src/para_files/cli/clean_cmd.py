@@ -42,12 +42,11 @@ def clean_command(
     base = (path or root).expanduser()
     if not base.is_dir():
         fail(f"no such folder: {base}")
-    if not base.resolve().is_relative_to(root.resolve()):
-        fail(f"clean only works inside the PARA root ({root})")
-    if any(part.startswith(".") for part in base.resolve().relative_to(root.resolve()).parts):
-        fail(f"clean never works inside dot-folders such as .git or .trash ({base})")
     config = config_or_exit()
-    plan = plan_clean([base], root=root, duplicates=duplicates, keep=kept_folders(root, config))
+    try:
+        plan = plan_clean([base], root=root, duplicates=duplicates, keep=kept_folders(root, config))
+    except ValueError as exc:
+        fail(str(exc))
     _print_plan(plan, root)
     if not apply_:
         typer.echo("preview only; add --apply to move these to .trash")

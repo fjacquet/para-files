@@ -14,16 +14,8 @@ from para_files.cli.common import context_or_exit, fail, settings_or_exit
 from para_files.cli.output import decision_dict, print_plan, print_report, report_dict, summary
 from para_files.cli.review import review_ops
 from para_files.core.decide import Context, Decision
-from para_files.core.settings import INBOX
+from para_files.core.settings import INBOX, in_dot_folder
 from para_files.core.sort import apply, auto_ops, preview
-
-
-def _in_dot_folder(path: Path, root: Path) -> bool:
-    """True when path is inside the PARA root and a folder below the root starts with a dot."""
-    resolved, base = path.resolve(), root.resolve()
-    if not resolved.is_relative_to(base):
-        return False
-    return any(part.startswith(".") for part in resolved.relative_to(base).parts)
 
 
 def _apply(
@@ -54,7 +46,7 @@ def _check_inputs(roots: Sequence[Path], root: Path) -> None:
     for path in roots:
         if not path.exists():
             fail(f"no such file or folder: {path}")
-        if _in_dot_folder(path, root):
+        if in_dot_folder(path, root):
             fail(f"dot-folders are never sorted: {path}")
 
 

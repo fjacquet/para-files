@@ -18,7 +18,7 @@ from para_files.core.apply import TRASH, free_path, make_dirs
 from para_files.core.evidence import extract, sha256_of
 from para_files.core.journal import Journal
 from para_files.core.secrets import secret_reason
-from para_files.core.settings import BUCKET_NAME, INBOX
+from para_files.core.settings import BUCKET_NAME, INBOX, in_dot_folder
 from para_files.core.tree import TreeConfig
 
 
@@ -124,13 +124,11 @@ def _duplicates(files: Sequence[Path], root: Path) -> list[tuple[Path, Path]]:
 
 def _check_base(base: Path, root: Path) -> None:
     """Raise ValueError unless base is inside root and has no dot-folder below root."""
-    resolved_root = root.resolve()
-    resolved = base.resolve()
-    if not resolved.is_relative_to(resolved_root):
-        msg = f"{base} is outside the PARA root ({root})"
+    if not base.resolve().is_relative_to(root.resolve()):
+        msg = f"clean only works inside the PARA root ({root})"
         raise ValueError(msg)
-    if any(part.startswith(".") for part in resolved.relative_to(resolved_root).parts):
-        msg = f"{base} is inside a dot-folder; clean never works there"
+    if in_dot_folder(base, root):
+        msg = f"clean never works inside dot-folders such as .git or .trash ({base})"
         raise ValueError(msg)
 
 
