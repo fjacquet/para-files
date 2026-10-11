@@ -268,3 +268,15 @@ def test_logged_errors_never_carry_the_key():
         logger.remove(sink_id)
     assert any("fallback m1 failed" in text for text in messages_seen)
     assert all(KEY not in text for text in messages_seen)
+
+
+def test_litellm_debug_info_is_suppressed(monkeypatch):
+    import sys
+    import types
+
+    from para_files.core import fallback
+
+    fake = types.SimpleNamespace(suppress_debug_info=False, completion=lambda **_kw: "reply")
+    monkeypatch.setitem(sys.modules, "litellm", fake)
+    assert fallback.litellm_complete(model="m") == "reply"
+    assert fake.suppress_debug_info is True

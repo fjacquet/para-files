@@ -46,6 +46,7 @@ def litellm_complete(**kwargs: Any) -> Any:  # noqa: ANN401 - litellm's keyword 
     """litellm.completion, imported on first use: importing litellm takes seconds."""
     import litellm
 
+    litellm.suppress_debug_info = True  # no "Give Feedback" banners on stdout
     return litellm.completion(**kwargs)
 
 

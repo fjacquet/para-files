@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Logs are quiet by default (warnings only, on stderr); `--verbose` shows debug lines.
+
 ## [2.0] - 2026-10-11
 
 Stages 3 and 4 of the redesign: a new six-command CLI on the new core, and the old pipeline removed.

@@ -22,6 +22,10 @@ flowchart LR
     J --> U[undo]
 ```
 
+## Global options
+
+- `--verbose/-v` shows debug logs on stderr. By default only warnings are shown, so stdout (including `--json`) stays clean.
+
 ## Settings
 
 Settings come from the environment, then `~/.config/para-files/.env`, then defaults. The one you must set is `PARA_FILES_PARA_ROOT`: the folder that holds `0_Inbox` … `4_Archives`. The tree itself lives in `~/.config/para-files/tree.yaml`, `rules.yaml` and `issuers.yaml`.
