@@ -66,6 +66,16 @@ def test_review_accept_and_correct(tmp_path, monkeypatch):
     }
 
 
+def test_review_end_of_input_keeps_what_was_confirmed(tmp_path, monkeypatch):
+    root = setup_cli(tmp_path, monkeypatch)
+    put(root, "0_Inbox/a_notes.md", "# a")
+    b = put(root, "0_Inbox/b_notes.md", "# b")
+    result = runner.invoke(app, ["sort", "--apply", "--review"], input="\n")
+    assert result.exit_code == 0, result.output
+    assert (root / "3_Resources/IT/a_notes.md").exists()
+    assert b.exists()
+
+
 def test_review_skip_unknown_and_stop(tmp_path, monkeypatch):
     root = setup_cli(tmp_path, monkeypatch)
     a = put(root, "0_Inbox/a_notes.md", "# a")
