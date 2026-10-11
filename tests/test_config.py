@@ -219,11 +219,11 @@ class TestYAMLConfig:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
         """core.tree.config_dir and the settings loader resolve the same directory."""
-        from para_files.config import _config_dir
+        from para_files.config import config_dir_path
         from para_files.core.tree import config_dir
 
         monkeypatch.setenv("PARA_FILES_CONFIG_DIR", str(tmp_path))
-        assert config_dir() == _config_dir() == tmp_path
+        assert config_dir() == config_dir_path() == tmp_path
 
     def test_load_yaml_config_from_file(self, tmp_path: Path):
         """Test loading config from a YAML file."""
