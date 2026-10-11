@@ -39,10 +39,10 @@ def test_plan_finds_junk_empty_folders_and_duplicates(tmp_path):
     keep = put(root, "3_Resources/x/report.pdf", "same")
     copy = put(root, "3_Resources/y/report copy.pdf", "same")
     put(root, "3_Resources/y/other.pdf", "different")
-    put(root, ".trash/r1/old.txt")
+    put(root, ".trash/20261011-100000/old.txt")
     plan = plan_clean([root], root=root, duplicates=True)
     assert junk in plan.junk
-    assert root / ".trash/r1/old.txt" not in plan.junk
+    assert root / ".trash/20261011-100000/old.txt" not in plan.junk
     assert plan.duplicates == [(copy, keep)]
     assert plan.empty_dirs[:2] == [root / "2_Areas/a/b", root / "2_Areas/a"]
 
@@ -63,13 +63,13 @@ def test_apply_then_undo_restores_everything(tmp_path):
     (root / "1_Projets" / "empty").mkdir()
     before = tree_state(root)
     plan = plan_clean([root], root=root, duplicates=True)
-    with Journal(tmp_path / "state", "r1") as journal:
+    with Journal(tmp_path / "state", "20261011-100000") as journal:
         report = apply_clean(plan, root=root, journal=journal)
     assert len(report.trashed) == 2
     assert not (root / "2_Areas/a").exists()
     assert not (root / "1_Projets/empty").exists()
-    assert (root / ".trash/r1/3_Resources/y/report copy.pdf").exists()
-    undo_run(tmp_path / "state", "r1")
+    assert (root / ".trash/20261011-100000/3_Resources/y/report copy.pdf").exists()
+    undo_run(tmp_path / "state", "20261011-100000")
     assert tree_state(root) == before
 
 
@@ -92,7 +92,7 @@ def test_apply_skips_planted_outside_source(tmp_path):
     root = make_para_root(tmp_path)
     outside = put(tmp_path, "elsewhere/notes.txt", "keep me")
     plan = CleanPlan(junk=[outside])
-    with Journal(tmp_path / "state", "r1") as journal:
+    with Journal(tmp_path / "state", "20261011-100000") as journal:
         report = apply_clean(plan, root=root, journal=journal)
     assert report.trashed == []
     assert (outside, "outside the PARA root") in report.skipped
@@ -106,7 +106,7 @@ def test_duplicate_changed_after_planning_is_skipped(tmp_path):
     plan = plan_clean([root], root=root, duplicates=True)
     assert plan.duplicates == [(copy, keep)]
     copy.write_text("edited after the preview")
-    with Journal(tmp_path / "state", "r1") as journal:
+    with Journal(tmp_path / "state", "20261011-100000") as journal:
         report = apply_clean(plan, root=root, journal=journal)
     assert report.trashed == []
     assert [reason for _, reason in report.skipped] == ["no longer identical"]
@@ -119,7 +119,7 @@ def test_duplicate_with_missing_original_is_skipped(tmp_path):
     copy = put(root, "3_Resources/y/report copy.pdf", "same")
     plan = plan_clean([root], root=root, duplicates=True)
     keep.unlink()
-    with Journal(tmp_path / "state", "r1") as journal:
+    with Journal(tmp_path / "state", "20261011-100000") as journal:
         report = apply_clean(plan, root=root, journal=journal)
     assert report.trashed == []
     assert [reason for _, reason in report.skipped] == ["original missing"]
