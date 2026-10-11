@@ -5,7 +5,10 @@ Importing this package registers every command on ``para_files.cli.app.app``.
 
 from __future__ import annotations
 
-from para_files.cli import sort_cmd  # noqa: F401 - imported to register the command
+from para_files.cli import (
+    explain_cmd,  # noqa: F401 - imported to register the command
+    sort_cmd,  # noqa: F401 - imported to register the command
+)
 from para_files.cli.app import app
 
 

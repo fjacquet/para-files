@@ -220,10 +220,28 @@ def _verdict(evidence: Evidence, ctx: Context) -> Verdict:
     return verdict
 
 
-def classify(path: Path, ctx: Context) -> Decision:
-    """Extract, decide, band and place one file. Pure: nothing on disk changes."""
-    evidence = extract(path, root=ctx.settings.para_root, preview_chars=ctx.settings.preview_chars)
-    verdict = _verdict(evidence, ctx)
+def signal_verdicts(
+    evidence: Evidence, ctx: Context, *, ask_fallback: bool
+) -> list[tuple[str, Verdict | None, str | None]]:
+    """Every signal's own verdict, for `explain`: (name, verdict, note).
+
+    The fallback is asked only when ask_fallback is set, since it sends the file's
+    name and preview to the cloud. A failing signal gets its error as the note.
+    """
+    rows: list[tuple[str, Verdict | None, str | None]] = []
+    for name, signal in SIGNALS:
+        if name == "fallback" and not ask_fallback:
+            rows.append((name, None, "not asked (use --ask-model)"))
+            continue
+        try:
+            rows.append((name, signal(evidence, ctx), None))
+        except Exception as exc:  # noqa: BLE001 - explain reports the failure instead
+            rows.append((name, None, f"error: {exc}"))
+    return rows
+
+
+def decision_for(evidence: Evidence, verdict: Verdict, ctx: Context) -> Decision:
+    """Band and target for a verdict on this evidence."""
     leaf = ctx.config.tree.leaves.get(verdict.leaf_id) if verdict.leaf_id else None
     if leaf is None:
         return Decision(
@@ -248,3 +266,9 @@ def classify(path: Path, ctx: Context) -> Decision:
         kind=leaf.kind,
         suggested_name=verdict.suggested_name,
     )
+
+
+def classify(path: Path, ctx: Context) -> Decision:
+    """Extract, decide, band and place one file. Pure: nothing on disk changes."""
+    evidence = extract(path, root=ctx.settings.para_root, preview_chars=ctx.settings.preview_chars)
+    return decision_for(evidence, _verdict(evidence, ctx), ctx)
