@@ -37,3 +37,11 @@ def test_bucket_is_refused(tmp_path, monkeypatch):
     result = runner.invoke(app, ["init", str(root / "0_Inbox")])
     assert result.exit_code == 2
     assert "is a bucket" in result.output
+
+
+def test_missing_root_names_the_variable(tmp_path, monkeypatch):
+    setup_cli(tmp_path, monkeypatch)
+    monkeypatch.delenv("PARA_FILES_PARA_ROOT", raising=False)
+    result = runner.invoke(app, ["init"])
+    assert result.exit_code == 2, result.output
+    assert "PARA_FILES_PARA_ROOT" in result.output

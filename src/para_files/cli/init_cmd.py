@@ -9,7 +9,7 @@ import typer
 from pydantic import ValidationError
 
 from para_files.cli.app import app
-from para_files.cli.common import fail
+from para_files.cli.common import ROOT_HINT, fail
 from para_files.core.settings import BUCKET_NAME, INBOX, load_settings
 from para_files.core.tree import TreeError, load_tree_config
 
@@ -20,7 +20,10 @@ def _root(given: Path | None) -> Path:
     try:
         return load_settings().para_root
     except ValidationError:
-        fail("no usable PARA root in the settings; pass it: para-files init /path/to/PARA")
+        fail(
+            "no usable PARA root in the settings; pass it: "
+            f"para-files init /path/to/PARA ({ROOT_HINT})"
+        )
 
 
 @app.command("init")
