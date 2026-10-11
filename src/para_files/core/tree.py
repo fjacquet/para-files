@@ -159,7 +159,11 @@ class TreeConfig(BaseModel):
 
 def _read_yaml(path: Path) -> object:
     with path.open(encoding="utf-8") as handle:
-        return yaml.safe_load(handle) or {}
+        try:
+            return yaml.safe_load(handle) or {}
+        except yaml.YAMLError as exc:
+            msg = f"{path}: invalid YAML: {exc}"
+            raise TreeError(msg) from exc
 
 
 def _reference_problems(tree: Tree, rules: RulesFile, issuers: IssuersFile) -> list[str]:

@@ -72,6 +72,13 @@ class TestLeafRules:
             load_tree_config(tmp_path)
 
 
+class TestYamlSyntax:
+    def test_malformed_yaml_is_a_tree_error_naming_the_file(self, tmp_path):
+        (tmp_path / "tree.yaml").write_text("leaves: [unclosed\n")
+        with pytest.raises(TreeError, match=r"tree\.yaml: invalid YAML"):
+            load_tree_config(tmp_path)
+
+
 class TestReferences:
     def test_rule_with_unknown_leaf_is_rejected(self, tmp_path):
         rules = [{"name": "cv", "leaf": "nope", "globs": ["*cv*"]}]
