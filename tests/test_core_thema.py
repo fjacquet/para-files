@@ -69,3 +69,12 @@ def test_keywords_with_symbols_match_whole():
 
 def test_a_keyword_inside_a_phrase_still_matches():
     assert lookup_thema_code(["Python programming"]) == SUBJECT_TO_THEMA["python"]
+
+
+@pytest.mark.parametrize("subject", ["Systems", "Computer", "go-to-market"])
+def test_a_subject_inside_a_longer_key_does_not_match(subject):
+    assert lookup_thema_code([subject]) not in {"TJF", "UYQM", "UMX"}
+
+
+def test_a_single_letter_subject_matches_only_its_own_key():
+    assert lookup_thema_code(["C"]) == SUBJECT_TO_THEMA.get("c")

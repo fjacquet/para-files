@@ -329,23 +329,19 @@ def _folders() -> dict[str, str]:
 
 @cache
 def _whole(phrase: str) -> re.Pattern[str]:
-    """`phrase` as a whole word or phrase: no letter, digit or underscore right before or after."""
-    return re.compile(rf"(?<!\w){re.escape(phrase)}(?!\w)")
+    """`phrase` as a whole word or phrase: no letter, digit, underscore or hyphen next to it."""
+    return re.compile(rf"(?<![\w-]){re.escape(phrase)}(?![\w-])")
 
 
 @cache
 def lookup_subject(subject: str) -> str | None:
-    """Thema code for one subject: exact keyword first, then the most specific whole-word match."""
+    """Thema code for one subject: exact keyword, else the longest key found in it as a word."""
     wanted = subject.lower().strip()
     if not wanted:
         return None
     if wanted in SUBJECT_TO_THEMA:
         return SUBJECT_TO_THEMA[wanted]
-    matches = [
-        code
-        for key, code in SUBJECT_TO_THEMA.items()
-        if _whole(key).search(wanted) or _whole(wanted).search(key)
-    ]
+    matches = [code for key, code in SUBJECT_TO_THEMA.items() if _whole(key).search(wanted)]
     return max(matches, key=len, default=None)
 
 
