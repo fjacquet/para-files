@@ -136,3 +136,21 @@ def test_review_confirmation_of_a_file_in_place_counts(tmp_path, monkeypatch):
     tree = runner.invoke(app, ["tree"])
     assert tree.exit_code == 0, tree.output
     assert "knowledge     1 confirmed" in tree.output
+
+
+def test_dot_folder_input_is_refused_and_nothing_moves(tmp_path, monkeypatch):
+    root = setup_cli(tmp_path, monkeypatch)
+    trashed = put(root, ".trash/r1/Payslip_2025.txt", "payslip")
+    result = runner.invoke(app, ["sort", str(root / ".trash" / "r1"), "--apply"])
+    assert result.exit_code == 2, result.output
+    assert "dot-folders are never sorted" in result.output
+    assert trashed.exists()
+    assert not (root / "4_Archives").joinpath("10y_travail").exists()
+
+
+def test_folder_outside_the_root_is_previewed(tmp_path, monkeypatch):
+    setup_cli(tmp_path, monkeypatch)
+    outside = tmp_path / "elsewhere"
+    put(outside, "note.txt", "x")
+    result = runner.invoke(app, ["sort", str(outside)])
+    assert result.exit_code == 0, result.output

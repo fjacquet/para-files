@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Annotated
 
@@ -14,6 +15,23 @@ from para_files.cli.output import decision_dict, print_plan, print_report, repor
 from para_files.cli.review import review_ops
 from para_files.core.settings import INBOX
 from para_files.core.sort import apply, auto_ops, preview
+
+
+def _in_dot_folder(path: Path, root: Path) -> bool:
+    """True when path is inside the PARA root and a folder below the root starts with a dot."""
+    resolved, base = path.resolve(), root.resolve()
+    if not resolved.is_relative_to(base):
+        return False
+    return any(part.startswith(".") for part in resolved.relative_to(base).parts)
+
+
+def _check_inputs(roots: Sequence[Path], root: Path) -> None:
+    """Exit unless every path exists and none is a dot-folder inside the PARA root."""
+    for path in roots:
+        if not path.exists():
+            fail(f"no such file or folder: {path}")
+        if _in_dot_folder(path, root):
+            fail(f"dot-folders are never sorted: {path}")
 
 
 @app.command("sort")
@@ -40,10 +58,8 @@ def sort_command(
     settings = settings_or_exit(**({"max_workers": workers} if workers else {}))
     ctx = context_or_exit(settings)
     roots = [path.expanduser() for path in paths] if paths else [settings.para_root / INBOX]
-    for path in roots:
-        if not path.exists():
-            fail(f"no such file or folder: {path}")
     root = settings.para_root
+    _check_inputs(roots, root)
     decisions = preview(roots, ctx)
     if not as_json:
         print_plan(decisions, root)
