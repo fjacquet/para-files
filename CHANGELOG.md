@@ -92,6 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`classify` exit code**: exits 1 when any file failed to classify (in JSON, human and parallel output alike), so scripts can detect partial failure; per-file error output is unchanged.
 - **PDF classification pipeline bypass**: PDFs (and other document formats) were all routing to `0_Inbox (80% extension_router)` instead of being classified. Three compounding bugs fixed:
   - **ExtensionRouter catch-all blocked LLM** (`extension_router.py`): Added `PASSTHROUGH_EXTENSIONS` frozenset for document formats (`.pdf`, `.docx`, `.xlsx`, `.epub`, etc.) — these now return `None` so downstream classifiers (Semantic/LLM) can handle them instead of being swallowed by the catch-all
   - **SemanticClassifier MIN_CONTENT_LENGTH too high** (`semantic_classifier.py`): Lowered from 50 to 10 — filename fallback content (`"Filename: file.pdf"` ≈ 30 chars) was being rejected
