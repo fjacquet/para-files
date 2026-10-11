@@ -209,12 +209,14 @@ def band_for(verdict: Verdict, kind: Kind, ctx: Context) -> Band:
 def _verdict(evidence: Evidence, ctx: Context) -> Verdict:
     if evidence.secret is not None:
         return Verdict(None, "secret", 0.0, f"secret ({evidence.secret}): never sent, never moved")
-    cached = ctx.cache.get_verdict(evidence.sha256, ctx.fingerprint)
+    # Rules and issuers read the filename, so the name is part of the cache key.
+    key = f"{ctx.fingerprint}:{evidence.name}"
+    cached = ctx.cache.get_verdict(evidence.sha256, key)
     if cached is not None:
         return Verdict(**cached)
     verdict = run_signals(evidence, ctx)
     if verdict.leaf_id is not None:
-        ctx.cache.put_verdict(evidence.sha256, ctx.fingerprint, asdict(verdict))
+        ctx.cache.put_verdict(evidence.sha256, key, asdict(verdict))
     return verdict
 
 

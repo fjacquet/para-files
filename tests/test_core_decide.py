@@ -164,3 +164,13 @@ def test_target_from_exif_date():
     )
     verdict = Verdict("archives_photos", "rules", 1.0, "rule")
     assert target_dir(leaf, evidence, verdict) == "4_Archives/photos/2024/05"
+
+
+def test_same_bytes_under_another_name_do_not_share_a_verdict(tmp_path):
+    fallback = FakeFallback(confidence=0.95)
+    ctx = make_ctx(tmp_path, fallback=fallback)
+    payslip = inbox_file(ctx, "Payslip_2025.txt", "same")
+    random_file = inbox_file(ctx, "random.txt", "same")
+    assert classify(payslip, ctx).signal == "rules"
+    assert classify(random_file, ctx).signal == "fallback"
+    assert fallback.calls == ["random.txt"]
