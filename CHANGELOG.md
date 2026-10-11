@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The model sees up to 10 of your past decisions for similar file names (names only), so your corrections teach it.
 - `pin: true` / `pin: exif` on rules (`rules.yaml`); `tree` shows pinned counts.
 
 ### Changed

@@ -160,6 +160,12 @@ A run is marked undone (`<run id>.undone`) only when nothing was left alone. A r
 
 So a `sort` preview followed by `sort --apply` reuses the preview's verdicts and does not ask the model again for the same content.
 
+## Learning from your decisions
+
+The model sees up to 10 of your past owner decisions for file names similar to the one it is filing (shared name words first, then the newest). Each example is a file name, the folder you chose and, when it differed, the folder the tool had proposed. Names and folders only, never content. Names flagged as secret, and folders not on the model's menu, are never sent.
+
+Examples are not part of the cache key, so cached verdicts are reused until `tree.yaml`, `rules.yaml`, `issuers.yaml`, the models or the prompt version change.
+
 ## Clean
 
 `clean` is separate from the cascade. It trashes junk files (`.DS_Store`, `Thumbs.db`, `desktop.ini`, Office lock files, AppleDouble files), removes folders left empty, and with `--duplicates` trashes identical copies, keeping one original. It is journaled like `sort`, and it never follows symlinks or enters dot-folders. See [CLI overview](cli/overview.md).

@@ -138,3 +138,66 @@ def test_owner_confirmations_count_as_labels(tmp_path):
         journal.append({"op": "confirm", "leaf": "resources_it", "decided_by": "owner"})
         journal.append({"op": "confirm", "leaf": "resources_it", "decided_by": "auto"})
     assert confirmed_counts(tmp_path, tree) == {"knowledge": 1}
+
+
+def test_owner_examples_newest_first_one_per_file(tmp_path):
+    from para_files.core.journal import Journal, owner_examples
+
+    state = tmp_path / "state"
+
+    def run(run_id, entries):
+        with Journal(state, run_id) as journal:
+            for entry in entries:
+                journal.append(entry)
+
+    run(
+        "20260101-000000",
+        [
+            {
+                "op": "move",
+                "src": "/r/0_Inbox/a.pdf",
+                "dst": "/r/x/a.pdf",
+                "sha256": "a",
+                "leaf": "archives_5y_factures",
+                "proposed_leaf": "resources_docs",
+                "decided_by": "owner",
+            },
+            {
+                "op": "move",
+                "src": "/r/0_Inbox/auto.pdf",
+                "dst": "/r/x/auto.pdf",
+                "sha256": "z",
+                "leaf": "archives_5y_factures",
+                "proposed_leaf": "archives_5y_factures",
+                "decided_by": "auto",
+            },
+        ],
+    )
+    run(
+        "20260102-000000",
+        [
+            {
+                "op": "move",
+                "src": "/r/0_Inbox/b.pdf",
+                "dst": "/r/y/b.pdf",
+                "sha256": "b",
+                "leaf": "archives_10y_banques",
+                "proposed_leaf": "archives_10y_banques",
+                "decided_by": "owner",
+            },
+            {
+                "op": "move",
+                "src": "/r/0_Inbox/a.pdf",
+                "dst": "/r/z/a.pdf",
+                "sha256": "a",
+                "leaf": "archives_10y_banques",
+                "proposed_leaf": "archives_5y_factures",
+                "decided_by": "owner",
+            },
+        ],
+    )
+    examples = owner_examples(state, make_config().tree)
+    assert [(e.name, e.leaf_id, e.proposed) for e in examples] == [
+        ("a.pdf", "archives_10y_banques", "archives_5y_factures"),
+        ("b.pdf", "archives_10y_banques", "archives_10y_banques"),
+    ]

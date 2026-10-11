@@ -370,3 +370,44 @@ def test_decide_sends_hints_and_returns_about():
     assert seen["extra_body"]["provider"] == {"zdr": True, "data_collection": "deny"}
     schema = seen["response_format"]["json_schema"]["schema"]
     assert schema["required"] == ["about", "choices"]
+
+
+def test_examples_are_picked_by_shared_words_and_never_secret(monkeypatch):
+    from para_files.core.fallback import pick_examples
+    from para_files.core.journal import Example
+
+    monkeypatch.setattr(
+        fallback, "secret_reason", lambda name, text="": "name" if "SECRET" in name else None
+    )
+    menu = leaf_menu(make_config().tree)
+    examples = [
+        Example("holiday_photo.jpg", "archives_photos", None),
+        Example("acmecard_statement_2025.pdf", "archives_10y_banques", "resources_docs"),
+        Example("SECRET_acmecard.pdf", "archives_10y_banques", None),
+        Example("acmecard_gone.pdf", "no_such_leaf", None),
+    ]
+    picked = pick_examples(examples, "acmecard_statement_2026.pdf", menu, limit=2)
+    assert [e.name for e in picked] == ["acmecard_statement_2025.pdf", "holiday_photo.jpg"]
+    user = messages(menu, ev(name="acmecard_statement_2026.pdf"), (), picked)[1]["content"]
+    assert (
+        '"acmecard_statement_2025.pdf" -> archives_10y_banques '
+        "(tool had proposed resources_docs)" in user
+    )
+    assert "SECRET" not in user
+
+
+def test_examples_with_real_secret_check_and_secret_proposals_stay_out_of_the_prompt():
+    from para_files.core.fallback import pick_examples
+    from para_files.core.journal import Example
+
+    menu = leaf_menu(make_config().tree)
+    examples = [
+        Example("passwords.txt", "archives_10y_banques", None),
+        Example("acmecard_invoice.pdf", "archives_10y_banques", "no_such_leaf"),
+    ]
+    picked = pick_examples(examples, "acmecard_bill.pdf", menu)
+    assert [e.name for e in picked] == ["acmecard_invoice.pdf"]
+    user = messages(menu, ev(name="acmecard_bill.pdf"), (), picked)[1]["content"]
+    assert "passwords.txt" not in user
+    assert "no_such_leaf" not in user
+    assert '- "acmecard_invoice.pdf" -> archives_10y_banques\n' in user

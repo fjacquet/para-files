@@ -19,6 +19,7 @@ from loguru import logger
 
 from para_files.core.breaker import CircuitBreaker
 from para_files.core.evidence import Evidence
+from para_files.core.journal import Example
 from para_files.core.secrets import secret_reason
 from para_files.core.settings import CoreSettings
 from para_files.core.tree import Tree
@@ -34,13 +35,16 @@ MAX_LISTED_ENTRIES = 50
 MAX_CHOICES = 3
 MAX_ISBNS = 3
 MAX_ABOUT = 80
+MAX_EXAMPLES = 10
+WORD = re.compile(r"[^\W\d_]{3,}")
 # Bump on any change to SYSTEM, messages() or response_format(): it is part of the cache key.
-PROMPT_VERSION = "2"
+PROMPT_VERSION = "3"
 META_FIELDS = (("title", "Title"), ("author", "Author"), ("subject", "Subject"))
 SYSTEM = (
     "You file documents into a person's PARA folder tree. Read the content first: the file "
     "name can be misleading. Hints come from the owner's filename rules and issuer patterns; "
     "they are often right but can be wrong, so follow a hint only when the content agrees. "
+    "Past decisions show where the owner filed similar files; they are reliable. "
     "Under 4_Archives, a prefix such as 10y_, 5y_, 2y_, ctr_ or ret_ means records kept for "
     "that retention period; 3_Resources holds reference material, 2_Areas ongoing "
     "responsibilities, 1_Projects active projects. Rank the three most likely folder ids from "
@@ -149,13 +153,54 @@ def evidence_text(evidence: Evidence, hints: Sequence[Hint] = ()) -> str:
     return text
 
 
+def _words(name: str) -> set[str]:
+    return {word.casefold() for word in WORD.findall(Path(name).stem)}
+
+
+def pick_examples(
+    examples: Sequence[Example], name: str, menu: dict[str, str], limit: int = MAX_EXAMPLES
+) -> list[Example]:
+    """Past owner decisions most like this file (shared name words, then recency); none secret.
+
+    A proposal that is not on the menu (a secret or unknown leaf) is dropped, never shown.
+    """
+    words = _words(name)
+    usable = [
+        (index, example)
+        for index, example in enumerate(examples)
+        if example.leaf_id in menu and secret_reason(example.name) is None
+    ]
+    usable.sort(key=lambda item: (-len(words & _words(item[1].name)), item[0]))
+    return [
+        Example(
+            example.name,
+            example.leaf_id,
+            example.proposed if example.proposed in menu else None,
+        )
+        for _, example in usable[:limit]
+    ]
+
+
+def _example_line(example: Example) -> str:
+    corrected = example.proposed is not None and example.proposed != example.leaf_id
+    note = f" (tool had proposed {example.proposed})" if corrected else ""
+    return f'- "{example.name}" -> {example.leaf_id}{note}'
+
+
 def messages(
-    menu: dict[str, str], evidence: Evidence, hints: Sequence[Hint] = ()
+    menu: dict[str, str],
+    evidence: Evidence,
+    hints: Sequence[Hint] = (),
+    examples: Sequence[Example] = (),
 ) -> list[dict[str, str]]:
-    """System prompt, then the folder list (stable, so providers can cache it), then the file."""
+    """System prompt, the folder list (stable, so providers can cache it), the owner's past
+    decisions for similar files, then the file."""
     folders = "\n".join(f"- {leaf_id}: {describe}" for leaf_id, describe in menu.items())
-    file_part = evidence_text(evidence, visible_hints(hints, menu))
-    user = f"Folders:\n{folders}\n\nFile:\n{file_part}"
+    user = f"Folders:\n{folders}"
+    if examples:
+        shown = "\n".join(_example_line(example) for example in examples)
+        user += f"\n\nPast decisions by the owner for similar files:\n{shown}"
+    user += f"\n\nFile:\n{evidence_text(evidence, visible_hints(hints, menu))}"
     return [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}]
 
 
@@ -231,18 +276,22 @@ class OpenRouterFallback:
         *,
         complete: Complete = litellm_complete,
         breaker: CircuitBreaker | None = None,
+        examples: Sequence[Example] = (),
     ) -> None:
         self._key = key
         self._models = tuple(models)
         self._complete = complete
         self._breaker = breaker or CircuitBreaker()
+        self._examples = tuple(examples)
 
     def _ask(
         self, model: str, menu: dict[str, str], evidence: Evidence, hints: Sequence[Hint]
     ) -> tuple[Ranked, str]:
         response = self._complete(
             model=f"{OPENROUTER}{model}",
-            messages=messages(menu, evidence, hints),
+            messages=messages(
+                menu, evidence, hints, pick_examples(self._examples, evidence.name, menu)
+            ),
             api_key=self._key,
             temperature=0,
             max_tokens=MAX_TOKENS,
@@ -285,7 +334,10 @@ class OpenRouterFallback:
 
 
 def make_fallback(
-    settings: CoreSettings, *, complete: Complete = litellm_complete
+    settings: CoreSettings,
+    *,
+    complete: Complete = litellm_complete,
+    examples: Sequence[Example] = (),
 ) -> OpenRouterFallback | None:
     """The configured fallback, or None when it is off or no key is set."""
     if not settings.fallback_enabled or settings.openrouter_api_key is None:
@@ -294,4 +346,5 @@ def make_fallback(
         settings.openrouter_api_key.get_secret_value(),
         (settings.fallback_model, settings.fallback_backup_model),
         complete=complete,
+        examples=examples,
     )
