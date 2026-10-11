@@ -17,7 +17,6 @@ from para_files.core.tree import config_dir
 
 
 TARGET_PRECISION = 0.98
-CURVE_POINTS = 20
 PCT = (
     "accuracy",
     "green_precision",
@@ -42,6 +41,11 @@ def key(path: str) -> str:
 
 def _quantile(values: list[float], q: float) -> float:
     return values[min(len(values) - 1, int(q * len(values)))]
+
+
+def _candidates(pred: dict[str, Any]) -> list[str]:
+    """Top-3 leaf ids of a prediction, or its leaf alone when it lists no top-3."""
+    return pred.get("top3") or ([pred["leaf"]] if pred.get("leaf") else [])
 
 
 def curve(rows: list[dict[str, Any]], n: int) -> list[tuple[float, float, float]]:
@@ -73,8 +77,9 @@ def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
         return {"n": 0}
     green = [r for r in rows if r["pred"].get("band") == "green"]
     green_ok = sum(r["pred"].get("leaf") == r["gold"]["leaf"] for r in green)
-    with_top3 = [r for r in rows if r["pred"].get("top3")]
-    secs = sorted(float(r["pred"].get("secs", 0.0)) for r in rows)
+    predicted = [r for r in rows if "path" in r["pred"]]
+    secs = sorted(float(r["pred"]["secs"]) for r in predicted if r["pred"].get("secs") is not None)
+    cost = sum(float(r["pred"].get("cost", 0.0) or 0.0) for r in predicted)
     return {
         "n": n,
         "accuracy": sum(r["pred"].get("leaf") == r["gold"]["leaf"] for r in rows) / n,
@@ -82,20 +87,20 @@ def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "green_coverage": len(green) / n,
         "yellow_share": sum(r["pred"].get("band") == "yellow" for r in rows) / n,
         "red_share": sum(r["pred"].get("band", "red") == "red" for r in rows) / n,
-        "top3_hit": (
-            sum(r["gold"]["leaf"] in r["pred"]["top3"] for r in with_top3) / len(with_top3)
-            if with_top3
-            else None
-        ),
+        "top3_hit": sum(r["gold"]["leaf"] in _candidates(r["pred"]) for r in rows) / n,
         "max_coverage_at_98": max_coverage(curve(rows, n)),
-        "p50_secs": _quantile(secs, 0.5),
-        "p95_secs": _quantile(secs, 0.95),
-        "cost_per_1000": sum(float(r["pred"].get("cost", 0.0) or 0.0) for r in rows) / n * 1000,
+        "p50_secs": _quantile(secs, 0.5) if secs else None,
+        "p95_secs": _quantile(secs, 0.95) if secs else None,
+        "cost_per_1000": cost / len(predicted) * 1000 if predicted else None,
     }
 
 
 def evaluate(golden: list[dict[str, Any]], preds: list[dict[str, Any]]) -> dict[str, Any]:
-    """Join predictions to golden rows by NFC path and compute all metrics."""
+    """Join predictions to golden rows by NFC path and compute all metrics.
+
+    Per-signal metrics are relative to that signal's own rows (used to set its band threshold);
+    top-3 candidates are compared on the overall and per-kind rows.
+    """
     by_path = {key(p["path"]): p for p in preds}
     rows = [{"gold": g, "pred": by_path.get(key(g["path"]), {"band": "red"})} for g in golden]
     report: dict[str, Any] = {"overall": summarize(rows), "kinds": {}, "signals": {}}
@@ -103,10 +108,7 @@ def evaluate(golden: list[dict[str, Any]], preds: list[dict[str, Any]]) -> dict[
         report["kinds"][kind] = summarize([r for r in rows if r["gold"]["kind"] == kind])
     for signal in sorted({r["pred"]["signal"] for r in rows if r["pred"].get("signal")}):
         subset = [r for r in rows if r["pred"].get("signal") == signal]
-        report["signals"][signal] = {
-            **summarize(subset),
-            "curve": curve(subset, len(subset))[:CURVE_POINTS],
-        }
+        report["signals"][signal] = {**summarize(subset), "curve": curve(subset, len(subset))}
     report["missing_predictions"] = sum(1 for r in rows if "path" not in r["pred"])
     return report
 

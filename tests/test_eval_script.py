@@ -59,11 +59,11 @@ def test_overall_metrics(report):
     assert overall["green_coverage"] == pytest.approx(0.5)
     assert overall["yellow_share"] == pytest.approx(0.25)
     assert overall["red_share"] == pytest.approx(0.25)
-    assert overall["top3_hit"] == pytest.approx(1.0)
+    assert overall["top3_hit"] == pytest.approx(0.5)
     assert overall["max_coverage_at_98"] == pytest.approx(0.25)
     assert overall["p50_secs"] == pytest.approx(0.3)
     assert overall["p95_secs"] == pytest.approx(1.0)
-    assert overall["cost_per_1000"] == pytest.approx(0.5)
+    assert overall["cost_per_1000"] == pytest.approx(0.002 / 3 * 1000)
     assert report["missing_predictions"] == 1
 
 
@@ -98,3 +98,81 @@ def test_main_renders_markdown_and_filters_to_predicted(load_script, tmp_path: P
     assert "| record |" in output
     assert module.main(["--golden", str(golden), "--pred", str(preds), "--json"]) == 0
     assert json.loads(capsys.readouterr().out)["overall"]["n"] == 4
+
+
+def test_latency_ignores_unpredicted_files(load_script):
+    golden = [
+        {"path": "a.pdf", "leaf": "inv", "kind": "record"},
+        {"path": "b.pdf", "leaf": "inv", "kind": "record"},
+        {"path": "c.pdf", "leaf": "books", "kind": "library"},
+    ]
+    preds = [
+        {
+            "path": "a.pdf",
+            "leaf": "inv",
+            "confidence": 0.9,
+            "band": "green",
+            "signal": "rules",
+            "secs": 2.0,
+            "cost": 0.0,
+        },
+    ]
+    overall = load_script("eval").evaluate(golden, preds)["overall"]
+    assert overall["p50_secs"] == pytest.approx(2.0)
+    assert overall["p95_secs"] == pytest.approx(2.0)
+
+
+def test_top3_counts_unanswered_files(load_script):
+    golden = [
+        {"path": "k1.pdf", "leaf": "notes", "kind": "knowledge"},
+        {"path": "k2.pdf", "leaf": "notes", "kind": "knowledge"},
+    ]
+    preds = [
+        {
+            "path": "k1.pdf",
+            "leaf": "misc",
+            "confidence": 0.4,
+            "band": "yellow",
+            "signal": "fallback",
+            "top3": ["misc", "notes"],
+            "secs": 1.0,
+            "cost": 0.0,
+        },
+    ]
+    report = load_script("eval").evaluate(golden, preds)
+    assert report["kinds"]["knowledge"]["top3_hit"] == pytest.approx(0.5)
+
+
+def test_top3_falls_back_to_predicted_leaf(load_script):
+    golden = [{"path": "k1.pdf", "leaf": "notes", "kind": "knowledge"}]
+    preds = [
+        {
+            "path": "k1.pdf",
+            "leaf": "notes",
+            "confidence": 0.9,
+            "band": "green",
+            "signal": "rules",
+            "secs": 0.1,
+            "cost": 0.0,
+        },
+    ]
+    report = load_script("eval").evaluate(golden, preds)
+    assert report["kinds"]["knowledge"]["top3_hit"] == pytest.approx(1.0)
+
+
+def test_curve_is_not_truncated(load_script):
+    golden = [{"path": f"f{i}.pdf", "leaf": "inv", "kind": "record"} for i in range(25)]
+    preds = [
+        {
+            "path": f"f{i}.pdf",
+            "leaf": "inv",
+            "confidence": 1.0 - i / 100,
+            "band": "green",
+            "signal": "rules",
+            "secs": 0.1,
+            "cost": 0.0,
+        }
+        for i in range(25)
+    ]
+    report = load_script("eval").evaluate(golden, preds)
+    assert len(report["signals"]["rules"]["curve"]) == 25
