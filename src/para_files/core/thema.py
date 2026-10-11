@@ -332,6 +332,8 @@ def _folders() -> dict[str, str]:
 def lookup_subject(subject: str) -> str | None:
     """Thema code for one subject: exact keyword first, then the first partial match."""
     wanted = subject.lower().strip()
+    if not wanted:
+        return None
     if wanted in SUBJECT_TO_THEMA:
         return SUBJECT_TO_THEMA[wanted]
     for key, code in SUBJECT_TO_THEMA.items():

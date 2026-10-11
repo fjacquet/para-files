@@ -44,3 +44,8 @@ def test_medieval_history_files_under_history():
     table = _folders()
     assert lookup_thema_code(["medieval history"]) == "NH"
     assert thema_to_para_path("NH") == f"3_Resources/livres/{table['N']}/{table['NH']}"
+
+
+def test_a_blank_subject_gives_none():
+    assert lookup_thema_code([""]) is None
+    assert lookup_thema_code(["  "]) is None
