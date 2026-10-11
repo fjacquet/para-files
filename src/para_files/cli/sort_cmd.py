@@ -13,6 +13,7 @@ from para_files.cli.app import app
 from para_files.cli.common import context_or_exit, fail, settings_or_exit
 from para_files.cli.output import decision_dict, print_plan, print_report, report_dict, summary
 from para_files.cli.review import review_ops
+from para_files.core.decide import Context, Decision
 from para_files.core.settings import INBOX
 from para_files.core.sort import apply, auto_ops, preview
 
@@ -23,6 +24,29 @@ def _in_dot_folder(path: Path, root: Path) -> bool:
     if not resolved.is_relative_to(base):
         return False
     return any(part.startswith(".") for part in resolved.relative_to(base).parts)
+
+
+def _apply(
+    decisions: Sequence[Decision],
+    ctx: Context,
+    roots: Sequence[Path],
+    *,
+    review: bool,
+    as_json: bool,
+) -> dict[str, object] | None:
+    """Move the green files (and the reviewed ones); None when there is nothing to move."""
+    root = ctx.settings.para_root
+    ops = auto_ops(decisions)
+    if review:
+        ops += review_ops(decisions, ctx.config, root)
+    if not ops:
+        if not as_json:
+            typer.echo("nothing to move")
+        return None
+    run_id, report = apply(ops, ctx, roots)
+    if not as_json:
+        print_report(run_id, report, root)
+    return report_dict(run_id, report, root)
 
 
 def _check_inputs(roots: Sequence[Path], root: Path) -> None:
@@ -68,12 +92,8 @@ def sort_command(
         "summary": summary(decisions),
     }
     if apply_:
-        ops = auto_ops(decisions)
-        if review:
-            ops += review_ops(decisions, ctx.config, root)
-        run_id, report = apply(ops, ctx, roots)
-        output["applied"] = report_dict(run_id, report, root)
-        if not as_json:
-            print_report(run_id, report, root)
+        applied = _apply(decisions, ctx, roots, review=review, as_json=as_json)
+        if applied is not None:
+            output["applied"] = applied
     if as_json:
         typer.echo(json.dumps(output, ensure_ascii=False, indent=2))

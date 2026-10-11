@@ -165,3 +165,20 @@ def test_sorting_a_bucket_keeps_its_leaf_folders(tmp_path, monkeypatch):
     assert (root / "4_Archives/10y_travail/2025/Payslip_2025.txt").exists()
     assert (root / "3_Resources/IT").is_dir()
     assert (root / "3_Resources").is_dir()
+
+
+def test_apply_with_nothing_to_move_journals_nothing(tmp_path, monkeypatch):
+    root = setup_cli(tmp_path, monkeypatch)
+    result = runner.invoke(app, ["sort", "--apply"])
+    assert result.exit_code == 0, result.output
+    assert "nothing to move" in result.output
+    assert "undo with" not in result.output
+    assert not (tmp_path / "state" / "journal").exists()
+    assert root.is_dir()
+
+
+def test_json_apply_with_nothing_to_move_omits_applied(tmp_path, monkeypatch):
+    setup_cli(tmp_path, monkeypatch)
+    result = runner.invoke(app, ["sort", "--apply", "--json"])
+    assert result.exit_code == 0, result.output
+    assert "applied" not in json.loads(result.output)
