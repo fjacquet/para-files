@@ -477,9 +477,9 @@ def _extract_pdf_with_pymupdf(file_path: Path, max_chars: int) -> str:
     encoding). pymupdf's parser is more permissive than pypdf's.
     """
     try:
-        import fitz  # pymupdf
+        import pymupdf
 
-        doc = fitz.open(str(file_path))
+        doc = pymupdf.open(str(file_path))
         text_parts = []
         chars_read = 0
         for page in doc:
@@ -558,7 +558,7 @@ def _ocr_pdf_first_page(file_path: Path, max_chars: int) -> str:
     import tempfile
 
     try:
-        import fitz  # pymupdf
+        import pymupdf
 
         from para_files.utils.ocr import extract_text as ocr_extract
     except ImportError as e:
@@ -567,13 +567,13 @@ def _ocr_pdf_first_page(file_path: Path, max_chars: int) -> str:
 
     try:
         # Open PDF and render first page to image
-        doc = fitz.open(file_path)
+        doc = pymupdf.open(file_path)
         if len(doc) == 0:
             return ""
 
         page = doc[0]
         # Render at 2x resolution for better OCR
-        mat = fitz.Matrix(2.0, 2.0)
+        mat = pymupdf.Matrix(2.0, 2.0)
         pix = page.get_pixmap(matrix=mat)
 
         # Convert to PNG bytes for Vision OCR

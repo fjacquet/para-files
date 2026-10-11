@@ -235,8 +235,13 @@ show_column_numbers = true
 pretty = true
 
 [[tool.mypy.overrides]]
-module = ["pypdf", "pypdf.*", "semantic_router.*", "litellm.*", "transformers.*", "Vision", "Cocoa", "Quartz", "fitz", "odf.*", "xlrd.*", "openpyxl.*"]
+module = ["pypdf", "pypdf.*", "semantic_router.*", "litellm.*", "transformers.*", "Vision", "Cocoa", "Quartz", "odf.*", "xlrd.*", "openpyxl.*"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# pymupdf ships partial, untyped stubs; treat it as Any like the old `fitz` import
+module = ["pymupdf", "pymupdf.*"]
+follow_imports = "skip"
 
 [[tool.mypy.overrides]]
 module = ["tests.*"]
