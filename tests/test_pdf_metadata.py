@@ -435,7 +435,7 @@ class TestExtractPdfMetadata:
 class TestPymupdfFallback:
     """Tests for pymupdf (fitz) metadata fallback."""
 
-    @patch("para_files.utils.pdf_metadata.fitz", create=True)
+    @patch("para_files.utils.pdf_metadata.pymupdf", create=True)
     def test_pymupdf_extracts_metadata(self, mock_fitz_module: MagicMock, tmp_path: Path):
         """Test pymupdf fallback extracts title and author."""
         pdf_file = tmp_path / "test.pdf"
@@ -471,15 +471,15 @@ class TestPymupdfFallback:
         pdf_file = tmp_path / "test.pdf"
         pdf_file.write_bytes(b"%PDF-1.4")
 
-        fitz_backup = sys.modules.get("fitz")
+        fitz_backup = sys.modules.get("pymupdf")
         original_import = builtins.__import__
 
         try:
-            if "fitz" in sys.modules:
-                del sys.modules["fitz"]
+            if "pymupdf" in sys.modules:
+                del sys.modules["pymupdf"]
 
             def mock_import(name, *args, **kwargs):
-                if name == "fitz":
+                if name == "pymupdf":
                     msg = "fitz"
                     raise ImportError(msg)
                 return original_import(name, *args, **kwargs)
@@ -490,7 +490,7 @@ class TestPymupdfFallback:
         finally:
             builtins.__import__ = original_import
             if fitz_backup:
-                sys.modules["fitz"] = fitz_backup
+                sys.modules["pymupdf"] = fitz_backup
 
     def test_pymupdf_returns_none_when_no_useful_metadata(self, tmp_path: Path):
         """Test pymupdf returns None when metadata is all empty."""
@@ -518,3 +518,21 @@ class TestPymupdfFallback:
         # With fitz installed: may return metadata if fitz can read the file
         # Either way, no crash
         assert result is None or isinstance(result, PdfMetadata)
+
+
+def test_pymupdf_import_prints_nothing_to_stdout(tmp_path: Path):
+    """The PDF fallback must not print to stdout: `sort --json` output has to stay valid JSON."""
+    import subprocess
+    import sys
+
+    pdf_file = tmp_path / "test.pdf"
+    pdf_file.write_bytes(b"%PDF-1.4")
+    code = (
+        "from pathlib import Path\n"
+        "from para_files.utils.pdf_metadata import _try_pymupdf_metadata\n"
+        f"_try_pymupdf_metadata(Path({str(pdf_file)!r}), [], 0.1)\n"
+    )
+    result = subprocess.run(  # noqa: S603 - runs this interpreter on a fixed snippet
+        [sys.executable, "-c", code], capture_output=True, text=True, check=True
+    )
+    assert result.stdout == ""

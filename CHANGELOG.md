@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `sort --json` output is valid JSON again: the PDF and MOBI readers import `pymupdf` instead of the deprecated `fitz`, which printed a warning to stdout.
+- Spec §4.4: a file is moved or renamed only when its target path differs (books are renamed in place); an undone green move is not yet counted as a miss (decisions log).
+
 ### Changed (Stage 3)
 
 - **New CLI** on the Stage 2 core, six commands: `sort` (preview by default; `--apply` moves green files; `--apply --review` confirms or corrects yellow ones, each answer journaled as a label), `explain`, `undo`, `clean` (junk, empty folders, `--duplicates`; journaled), `tree` (leaves, settings, calibration progress, `--validate`), `init`. Entry point `para_files.cli.app:app`.

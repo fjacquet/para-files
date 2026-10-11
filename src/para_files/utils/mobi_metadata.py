@@ -103,9 +103,9 @@ def extract_mobi_metadata(path: Path) -> MobiMetadata | None:
         return None
 
     try:
-        import fitz
+        import pymupdf
     except ImportError:
-        logger.warning("PyMuPDF (fitz) not available for MOBI extraction")
+        logger.warning("PyMuPDF not available for MOBI extraction")
         return None
 
     # Check filename for ISBN first
@@ -118,7 +118,7 @@ def extract_mobi_metadata(path: Path) -> MobiMetadata | None:
 
     try:
         # Open MOBI file with PyMuPDF
-        doc = fitz.open(path)
+        doc = pymupdf.open(path)
 
         # Extract metadata
         metadata = doc.metadata or {}

@@ -140,12 +140,12 @@ def _try_pymupdf_metadata(
         PdfMetadata if pymupdf succeeds, None otherwise.
     """
     try:
-        import fitz
+        import pymupdf
     except ImportError:
         return None
 
     try:
-        doc = fitz.open(str(path))
+        doc = pymupdf.open(str(path))
         meta = doc.metadata or {}
 
         title = meta.get("title") or None

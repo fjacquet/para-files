@@ -166,7 +166,7 @@ class TestExtractMobiMetadata:
 
         mock_fitz = MagicMock()
         mock_fitz.open.return_value = mock_doc
-        with patch.dict("sys.modules", {"fitz": mock_fitz}):
+        with patch.dict("sys.modules", {"pymupdf": mock_fitz}):
             result = extract_mobi_metadata(mobi_file)
 
             assert result is not None
@@ -194,7 +194,7 @@ class TestExtractMobiMetadata:
 
         mock_fitz = MagicMock()
         mock_fitz.open.side_effect = RuntimeError("Cannot open MOBI")
-        with patch.dict("sys.modules", {"fitz": mock_fitz}):
+        with patch.dict("sys.modules", {"pymupdf": mock_fitz}):
             result = extract_mobi_metadata(mobi_file)
 
             assert result is not None
@@ -209,7 +209,7 @@ class TestExtractMobiMetadata:
 
         mock_fitz = MagicMock()
         mock_fitz.open.side_effect = RuntimeError("Cannot open MOBI")
-        with patch.dict("sys.modules", {"fitz": mock_fitz}):
+        with patch.dict("sys.modules", {"pymupdf": mock_fitz}):
             result = extract_mobi_metadata(mobi_file)
             assert result is None
 
@@ -253,7 +253,7 @@ class TestExtractMobiMetadata:
 
         mock_fitz = MagicMock()
         mock_fitz.open.return_value = mock_doc
-        with patch.dict("sys.modules", {"fitz": mock_fitz}):
+        with patch.dict("sys.modules", {"pymupdf": mock_fitz}):
             result = extract_mobi_metadata(mobi_file)
 
             assert result is not None
