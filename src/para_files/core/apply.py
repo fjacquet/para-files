@@ -76,8 +76,8 @@ class _Applier:
             missing.append(current)
             current = current.parent
         for path in reversed(missing):
-            path.mkdir()
             self.journal.append({"op": "mkdir", "dst": str(path)})
+            path.mkdir()
 
     def record(self, name: str, op: Op, src: Path, dst: Path) -> None:
         decision = op.decision
@@ -87,7 +87,7 @@ class _Applier:
                 "src": str(src),
                 "dst": str(dst),
                 "sha256": decision.sha256,
-                "size": dst.stat().st_size,
+                "size": src.stat().st_size,
                 "leaf": op.leaf_id,
                 "proposed_leaf": decision.leaf_id,
                 "decided_by": op.decided_by,
@@ -142,16 +142,16 @@ class _Applier:
             self.report.skipped.append((src, "target outside the PARA root"))
             return
         self.makedirs(target)
-        shutil.move(src, dst)
         self.record("move", op, src, dst)
+        shutil.move(src, dst)
         self.report.moved.append((src, dst))
 
     def trash(self, op: Op, src: Path) -> None:
         relative = src.resolve().relative_to(self.root) if self.inside(src) else Path(src.name)
         dst = free_path(self.root / TRASH / self.journal.run_id / relative)
         self.makedirs(dst.parent)
-        shutil.move(src, dst)
         self.record("trash", op, src, dst)
+        shutil.move(src, dst)
         self.report.trashed.append((src, dst))
 
     def remove_emptied(self, roots: Sequence[Path]) -> None:
@@ -164,8 +164,8 @@ class _Applier:
                 and current.is_dir()
                 and not any(current.iterdir())
             ):
-                current.rmdir()
                 self.journal.append({"op": "rmdir", "dst": str(current)})
+                current.rmdir()
                 self.report.removed_dirs.append(current)
                 current = current.parent
 

@@ -184,3 +184,25 @@ def test_folder_not_empty_is_kept(tmp_path):
     assert folder.is_dir()
     assert newcomer.read_text() == "added after the run"
     assert src.exists()
+
+
+def test_interrupt_after_the_move_returns_is_undoable(tmp_path, monkeypatch):
+    root, state = setup(tmp_path)
+    before = tree_state(root)
+    real_move = apply_mod.shutil.move
+    calls = []
+
+    def move_then_stop(src, dst):
+        calls.append(src)
+        real_move(src, dst)
+        if len(calls) == 2:
+            raise KeyboardInterrupt
+
+    monkeypatch.setattr(apply_mod.shutil, "move", move_then_stop)
+    inbox = root / "0_Inbox"
+    ops = [op_for(inbox / "loose.txt"), op_for(inbox / "batch" / "sub" / "Payslip_2025.txt")]
+    with pytest.raises(KeyboardInterrupt):
+        apply_all(root, state, ops)
+    monkeypatch.setattr(apply_mod.shutil, "move", real_move)
+    undo_run(state, "r1")
+    assert tree_state(root) == before
