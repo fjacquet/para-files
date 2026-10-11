@@ -11,13 +11,41 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from para_files.classifiers.book_detector import score_book_structure
 from para_files.core.cache import Cache
 from para_files.core.evidence import Evidence
 from para_files.core.tree import Tree
 from para_files.utils.filename_sanitizer import sanitize_filename
 from para_files.utils.isbn_lookup import BookInfo, is_title_coherent_with_filename, lookup_isbn
 from para_files.utils.thema_lookup import lookup_thema_code, thema_to_para_path
+
+
+# Patterns that indicate book structure
+BOOK_STRUCTURE_PATTERNS = [
+    re.compile(r"table\s+of\s+contents", re.IGNORECASE),
+    re.compile(r"chapter\s+\d+", re.IGNORECASE),
+    re.compile(r"part\s+[IVX]+", re.IGNORECASE),
+    re.compile(r"ISBN[:\s-]*[\d-]+", re.IGNORECASE),
+    re.compile(r"copyright\s+\d{4}", re.IGNORECASE),
+    re.compile(r"all\s+rights\s+reserved", re.IGNORECASE),
+    re.compile(r"published\s+by", re.IGNORECASE),
+    re.compile(r"first\s+edition", re.IGNORECASE),
+    re.compile(r"\b(preface|foreword|acknowledgments)\b", re.IGNORECASE),
+    re.compile(r"printed\s+in", re.IGNORECASE),
+]
+
+
+def score_book_structure(content: str) -> float:
+    """Score content based on book structure patterns.
+
+    Args:
+        content: Text content to analyze.
+
+    Returns:
+        Score between 0.0 and 1.0 based on pattern matches.
+    """
+    matches = sum(1 for pattern in BOOK_STRUCTURE_PATTERNS if pattern.search(content))
+    # 4+ patterns = max score of 1.0
+    return min(matches / 4, 1.0)
 
 
 Lookup = Callable[[str], BookInfo | None]

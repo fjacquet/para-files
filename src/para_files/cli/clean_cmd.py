@@ -1,240 +1,62 @@
-"""Clean command for para-files CLI.
-
-This module provides the 'clean' command which removes junk files,
-empty directories, and optionally NFO files from a location.
-"""
+"""`para-files clean [PATH] [--duplicates] [--apply]`: clutter and duplicates to .trash."""
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated
 
 import typer
-from loguru import logger
 
 from para_files.cli.app import app
-from para_files.cli.shared import (
-    load_config_or_exit,
-    setup_logging,
-    validate_directory_or_exit,
-)
+from para_files.cli.common import config_or_exit, fail, relative, settings_or_exit
+from para_files.core.clean import CleanPlan, apply_clean, kept_folders, plan_clean
+from para_files.core.journal import Journal, new_run_id
 
 
-def _clean_junk_files(
-    dir_path: Path,
-    results: dict[str, Any],
-    *,
-    recursive: bool,
-    dry_run: bool,
-    output_json: bool,
+def _print_plan(plan: CleanPlan, root: Path) -> None:
+    typer.echo(f"junk files ({len(plan.junk)}):")
+    for path in plan.junk:
+        typer.echo(f"  {relative(path, root)}")
+    if plan.duplicates:
+        typer.echo(f"duplicates ({len(plan.duplicates)}), the first copy is kept:")
+        for copy, kept in plan.duplicates:
+            typer.echo(f"  {relative(copy, root)}  (same as {relative(kept, root)})")
+    typer.echo(f"empty folders ({len(plan.empty_dirs)}):")
+    for path in plan.empty_dirs:
+        typer.echo(f"  {relative(path, root)}")
+
+
+@app.command("clean")
+def clean_command(
+    path: Annotated[
+        Path | None, typer.Argument(help="Folder to clean, inside the PARA root (default: all).")
+    ] = None,
+    duplicates: Annotated[
+        bool, typer.Option("--duplicates", help="Also trash identical copies of a file.")
+    ] = False,
+    apply_: Annotated[bool, typer.Option("--apply", help="Do it (journaled, undoable).")] = False,
 ) -> None:
-    """Clean junk files from directory.
-
-    Removes common system junk files like .DS_Store, Thumbs.db, etc.
-
-    Args:
-        dir_path: Directory to clean.
-        results: Dict to append deleted file paths to.
-        recursive: If True, clean subdirectories.
-        dry_run: If True, simulate without deleting.
-        output_json: If True, suppress console output.
-    """
-    from para_files.utils.cleanup import cleanup_junk, scan_for_junk
-
-    junk_files, junk_dirs = scan_for_junk(dir_path, recursive=recursive)
-
-    if not junk_files and not junk_dirs:
+    """Junk files, empty folders and (optionally) duplicates; preview unless --apply."""
+    settings = settings_or_exit()
+    root = settings.para_root
+    base = (path or root).expanduser()
+    if not base.is_dir():
+        fail(f"no such folder: {base}")
+    config = config_or_exit()
+    try:
+        plan = plan_clean([base], root=root, duplicates=duplicates, keep=kept_folders(root, config))
+    except ValueError as exc:
+        fail(str(exc))
+    _print_plan(plan, root)
+    if not apply_:
+        typer.echo("preview only; add --apply to move these to .trash")
         return
-
-    deleted_files, deleted_dirs = cleanup_junk(dir_path, recursive=recursive, dry_run=dry_run)
-
-    for f in deleted_files:
-        action = "would_delete" if dry_run else "deleted"
-        logger.info("[{}] junk_file: {} ({})", action.upper(), f, f.name)
-        results["deleted_files"].append(str(f))
-
-    for d in deleted_dirs:
-        action = "would_delete" if dry_run else "deleted"
-        logger.info("[{}] junk_dir: {} ({})", action.upper(), d, d.name)
-        results["deleted_dirs"].append(str(d))
-
-    if not output_json:
-        action = "Would delete" if dry_run else "Deleted"
-        if deleted_files:
-            typer.echo(f"  {action} {len(deleted_files)} junk files")
-        if deleted_dirs:
-            typer.echo(f"  {action} {len(deleted_dirs)} junk directories")
-
-
-def _clean_nfo_files(
-    dir_path: Path,
-    results: dict[str, Any],
-    *,
-    recursive: bool,
-    dry_run: bool,
-    output_json: bool,
-) -> None:
-    """Clean .nfo files from directory.
-
-    Removes NFO metadata files, typically used after classification
-    has extracted any useful hints from them.
-
-    Args:
-        dir_path: Directory to clean.
-        results: Dict to append deleted file paths to.
-        recursive: If True, clean subdirectories.
-        dry_run: If True, simulate without deleting.
-        output_json: If True, suppress console output.
-    """
-    nfo_files = list(dir_path.rglob("*.nfo")) if recursive else list(dir_path.glob("*.nfo"))
-    deleted_count = 0
-
-    for nfo_file in nfo_files:
-        if dry_run:
-            logger.info("[WOULD_DELETE] nfo: {} (NFO file cleanup)", nfo_file)
-            deleted_count += 1
-            results["deleted_nfo"].append(str(nfo_file))
-        else:
-            try:
-                nfo_file.unlink()
-                logger.info("[DELETED] nfo: {} (NFO file cleanup)", nfo_file)
-                deleted_count += 1
-                results["deleted_nfo"].append(str(nfo_file))
-            except OSError:
-                logger.exception("Failed to delete NFO {}", nfo_file)
-
-    if deleted_count and not output_json:
-        action = "Would delete" if dry_run else "Deleted"
-        typer.echo(f"  {action} {deleted_count} NFO files")
-
-
-def _clean_empty_directories(
-    dir_path: Path,
-    results: dict[str, Any],
-    *,
-    dry_run: bool,
-    output_json: bool,
-) -> None:
-    """Clean empty directories from path.
-
-    Removes directories that contain no files (recursively checks
-    for truly empty directories).
-
-    Args:
-        dir_path: Directory to check for empty subdirectories.
-        results: Dict to append deleted directory paths to.
-        dry_run: If True, simulate without deleting.
-        output_json: If True, suppress console output.
-    """
-    from para_files.utils.cleanup import cleanup_empty_dirs
-
-    deleted_empty = cleanup_empty_dirs(dir_path, dry_run=dry_run)
-
-    for d in deleted_empty:
-        action = "would_delete" if dry_run else "deleted"
-        logger.info("[{}] empty_dir: {} (Empty directory)", action.upper(), d)
-        results["deleted_dirs"].append(str(d))
-
-    if deleted_empty and not output_json:
-        action = "Would delete" if dry_run else "Deleted"
-        typer.echo(f"  {action} {len(deleted_empty)} empty directories")
-
-
-@app.command()
-def clean(
-    directory: Annotated[Path, typer.Argument(help="Directory to clean")],
-    recursive: Annotated[
-        bool,
-        typer.Option("--recursive", "-R", help="Clean subdirectories recursively"),
-    ] = True,
-    junk: Annotated[
-        bool,
-        typer.Option("--junk", help="Delete Apple/Windows temp files (.DS_Store, Thumbs.db, etc.)"),
-    ] = True,
-    nfo: Annotated[
-        bool,
-        typer.Option("--nfo", help="Delete .nfo files after using them as hints"),
-    ] = False,
-    empty_dirs: Annotated[
-        bool,
-        typer.Option("--empty-dirs", help="Delete empty directories"),
-    ] = True,
-    dry_run: Annotated[
-        bool,
-        typer.Option("--dry-run/--no-dry-run", "-n", help="Preview without deleting"),
-    ] = False,
-    output_json: Annotated[
-        bool, typer.Option("--json", "-j", help="Output results as JSON")
-    ] = False,
-    verbose: Annotated[
-        bool, typer.Option("--verbose", "-v", help="Enable verbose logging")
-    ] = False,
-) -> None:
-    """Clean junk files and empty directories from a location.
-
-    By default, removes Apple/Windows temp files (.DS_Store, Thumbs.db,
-    __MACOSX directories, etc.) and empty directories.
-
-    Use --nfo to also remove .nfo files after classification has
-    extracted hints from them.
-
-    All deletions are logged via loguru (console + file if configured).
-    """
-    config = load_config_or_exit()
-
-    # Setup logging with file output (unless dry-run)
-    para_root = Path(config.para_root).expanduser() if not dry_run else None
-    setup_logging(verbose=verbose, para_root=para_root, config=config.logging)
-
-    dir_path = directory.resolve()
-    validate_directory_or_exit(dir_path)
-
-    results: dict[str, Any] = {
-        "directory": str(dir_path),
-        "dry_run": dry_run,
-        "deleted_files": [],
-        "deleted_dirs": [],
-        "deleted_nfo": [],
-    }
-
-    if not output_json:
-        mode = "[DRY-RUN] " if dry_run else ""
-        typer.echo(f"{mode}Cleaning {dir_path}")
-
-    # Clean junk files
-    if junk:
-        _clean_junk_files(
-            dir_path,
-            results,
-            recursive=recursive,
-            dry_run=dry_run,
-            output_json=output_json,
-        )
-
-    # Clean .nfo files
-    if nfo:
-        _clean_nfo_files(
-            dir_path,
-            results,
-            recursive=recursive,
-            dry_run=dry_run,
-            output_json=output_json,
-        )
-
-    # Clean empty directories
-    if empty_dirs:
-        _clean_empty_directories(dir_path, results, dry_run=dry_run, output_json=output_json)
-
-    # Summary
-    total_deleted = (
-        len(results["deleted_files"]) + len(results["deleted_dirs"]) + len(results["deleted_nfo"])
+    run_id = new_run_id(settings.state_dir)
+    with Journal(settings.state_dir, run_id) as journal:
+        report = apply_clean(plan, root=root, journal=journal)
+    typer.echo(
+        f"run {run_id}: {len(report.trashed)} to .trash, "
+        f"{len(report.removed_dirs)} empty folders removed, {len(report.skipped)} skipped"
     )
-
-    if output_json:
-        typer.echo(json.dumps(results, indent=2))
-    elif total_deleted == 0:
-        typer.echo("  Nothing to clean")
-    else:
-        action = "would be deleted" if dry_run else "deleted"
-        typer.echo(f"\nTotal: {total_deleted} items {action}")
+    if report.trashed or report.removed_dirs:
+        typer.echo(f"undo with: para-files undo {run_id}")

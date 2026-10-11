@@ -1,9 +1,4 @@
-"""Typer application instance for para-files CLI.
-
-This module contains the main Typer application instance that is shared
-across all command modules. Commands register themselves on this app
-instance by importing it and using the @app.command() decorator.
-"""
+"""The para-files Typer app; each ``*_cmd`` module registers one command on it."""
 
 from __future__ import annotations
 
@@ -12,27 +7,29 @@ from typing import Annotated
 import typer
 
 
-# Create the main Typer application
-# All command modules will import this app and register their commands on it
 app = typer.Typer(
     name="para-files",
-    help="Classify files using the PARA method with MLX-powered semantic routing.",
-    add_completion=True,
+    help="File documents into a PARA tree: preview first, apply on request, undo any run.",
+    no_args_is_help=True,
+    add_completion=False,
 )
 
 
-@app.callback(invoke_without_command=True)
-def main_callback(
-    ctx: typer.Context,
-    version: Annotated[bool, typer.Option("--version", "-V", help="Show version and exit")] = False,
-) -> None:
-    """PARA Files - Intelligent file classification with MLX."""
-    if version:
+def _show_version(value: bool) -> None:  # noqa: FBT001 - Typer option callback signature
+    if value:
         from para_files import __version__
 
         typer.echo(f"para-files {__version__}")
         raise typer.Exit
 
-    # If no command is provided, show help
-    if ctx.invoked_subcommand is None:
-        typer.echo(ctx.get_help())
+
+@app.callback()
+def main(
+    version: Annotated[
+        bool,
+        typer.Option(
+            "--version", "-V", callback=_show_version, is_eager=True, help="Show the version."
+        ),
+    ] = False,
+) -> None:
+    """File documents into a PARA tree: preview first, apply on request, undo any run."""

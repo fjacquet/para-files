@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed (Stage 3)
+
+- **New CLI** on the Stage 2 core, six commands: `sort` (preview by default; `--apply` moves green files; `--apply --review` confirms or corrects yellow ones, each answer journaled as a label), `explain`, `undo`, `clean` (junk, empty folders, `--duplicates`; journaled), `tree` (leaves, settings, calibration progress, `--validate`), `init`. Entry point `para_files.cli.app:app`.
+- `clean` never leaves the PARA root, never enters dot-folders, keeps bucket and leaf folders, and re-checks duplicates before trashing; `sort` refuses dot-folders and keeps bucket and leaf folders; owner confirmations of files already in place count as labels; `init --apply` is journaled.
+- Docs rewritten for the new core and CLI (README, getting started, architecture, configuration, troubleshooting, CLAUDE.md); pages about the old pipeline moved to `docs/archive/`.
+- Review fixes: `undo` treats a file already back in place as restored, so a retry after a partial undo finishes the run, and a kept non-empty folder no longer blocks marking it undone; `init` reads `PARA_FILES_PARA_ROOT` and `PARA_FILES_STATE_DIR` before the root has an inbox; `clean --duplicates` keeps the copy outside `0_Inbox` and without a copy suffix, never pairs a file with itself when the given folders overlap, and removes folders that the duplicates leave empty; each confirmed file counts once toward calibration; importing the CLI no longer loads the old pipeline or litellm.
+
+### Removed (Stage 3)
+
+- The old commands (`classify`, `move`, `scan`, `inbox`, `rescan`, `bookstore`, `learn`, `migrate`, `routes`, `issuers`, `add-issuer`, `add-utterance`, `test-route`, `config`, `dedupe`), the `main.py` shim, their tests and docs. The old pipeline modules stay until the Stage 4 purge.
+- The `update-formula` release job and the Homebrew formula: the job failed on every release.
+
 ## [1.9] - 2026-10-11
 
 ### Added (Stage 2)

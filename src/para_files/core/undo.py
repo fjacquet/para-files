@@ -8,7 +8,14 @@ from pathlib import Path
 from typing import Any
 
 from para_files.core.evidence import sha256_of
-from para_files.core.journal import is_undone, journal_dir, last_run_id, mark_undone, read_run
+from para_files.core.journal import (
+    RUN_ID_PATTERN,
+    is_undone,
+    journal_dir,
+    last_run_id,
+    mark_undone,
+    read_run,
+)
 
 
 class UndoError(RuntimeError):
@@ -23,7 +30,13 @@ class UndoReport:
     restored: list[Path] = field(default_factory=list)
     recreated: list[Path] = field(default_factory=list)
     removed_dirs: list[Path] = field(default_factory=list)
+    kept_dirs: list[Path] = field(default_factory=list)
     skipped: list[tuple[str, str]] = field(default_factory=list)
+
+
+def _already_restored(dst: Path, src: Path, sha256: str) -> bool:
+    """dst is gone and src is a regular file with the recorded content (a retried undo)."""
+    return not dst.exists() and src.is_file() and not src.is_symlink() and sha256_of(src) == sha256
 
 
 def _blocked(dst: Path, src: Path, sha256: str) -> str | None:
@@ -46,9 +59,11 @@ def _undo_entry(entry: dict[str, Any], report: UndoReport) -> None:
             dst.rmdir()
             report.removed_dirs.append(dst)
         elif dst.exists():
-            report.skipped.append((str(dst), "folder not empty"))
+            report.kept_dirs.append(dst)
     elif op in {"move", "trash"}:
         src = Path(entry["src"])
+        if _already_restored(dst, src, entry["sha256"]):
+            return
         reason = _blocked(dst, src, entry["sha256"])
         if reason is not None:
             report.skipped.append((str(dst), reason))
@@ -60,6 +75,9 @@ def _undo_entry(entry: dict[str, Any], report: UndoReport) -> None:
 
 def undo_run(state_dir: Path, run_id: str | None = None) -> UndoReport:
     """Undo one run (default: the last one not undone) and mark it undone."""
+    if run_id is not None and RUN_ID_PATTERN.fullmatch(run_id) is None:
+        msg = f"not a run id: {run_id}"
+        raise UndoError(msg)
     target = run_id or last_run_id(state_dir)
     if target is None:
         msg = "no run to undo"
@@ -73,5 +91,6 @@ def undo_run(state_dir: Path, run_id: str | None = None) -> UndoReport:
     report = UndoReport(target)
     for entry in reversed(read_run(state_dir, target)):
         _undo_entry(entry, report)
-    mark_undone(state_dir, target)
+    if not report.skipped:
+        mark_undone(state_dir, target)
     return report

@@ -21,12 +21,20 @@ INBOX = "0_Inbox"
 BUCKET_NAME = re.compile(r"^[0-4]_")
 
 
+def in_dot_folder(path: Path, root: Path) -> bool:
+    """True when path is inside root and some part below root starts with a dot."""
+    resolved, base = path.resolve(), root.resolve()
+    if not resolved.is_relative_to(base):
+        return False
+    return any(part.startswith(".") for part in resolved.relative_to(base).parts)
+
+
 def _home(*parts: str) -> Path:
     return Path.home().joinpath(*parts)
 
 
-class CoreSettings(BaseSettings):
-    """Effective settings for sort, explain, undo and clean."""
+class PathSettings(BaseSettings):
+    """The two paths ``init`` needs before the PARA root has an inbox: no root check."""
 
     model_config = SettingsConfigDict(
         env_prefix="PARA_FILES_",
@@ -35,7 +43,19 @@ class CoreSettings(BaseSettings):
         populate_by_name=True,
     )
 
-    para_root: Path
+    para_root: Path | None = None
+    state_dir: Path = Field(default_factory=lambda: _home(".local", "state", "para-files"))
+
+    @field_validator("para_root", "state_dir")
+    @classmethod
+    def _expand(cls, value: Path | None) -> Path | None:
+        return None if value is None else value.expanduser()
+
+
+class CoreSettings(PathSettings):
+    """Effective settings for sort, explain, undo and clean."""
+
+    para_root: Path  # required here, optional for ``init``
     preview_chars: int = Field(default=2000, ge=100, le=10_000)
     max_workers: int = Field(default=4, ge=1, le=16)
     fallback_enabled: bool = True
@@ -52,11 +72,10 @@ class CoreSettings(BaseSettings):
     fallback_green: float = Field(default=0.9, ge=0.0, le=1.0)
     fallback_red: float = Field(default=0.3, ge=0.0, le=1.0)
     cache_path: Path = Field(default_factory=lambda: _home(".cache", "para-files", "cache.sqlite"))
-    state_dir: Path = Field(default_factory=lambda: _home(".local", "state", "para-files"))
 
-    @field_validator("para_root", "cache_path", "state_dir")
+    @field_validator("cache_path")
     @classmethod
-    def _expand(cls, value: Path) -> Path:
+    def _expand_cache(cls, value: Path) -> Path:
         return value.expanduser()
 
     @field_validator("para_root")
@@ -77,3 +96,8 @@ class CoreSettings(BaseSettings):
 def load_settings(**overrides: Any) -> CoreSettings:  # noqa: ANN401 - keyword overrides of any field
     """Settings from the environment, then ``<config dir>/.env``; overrides win over both."""
     return CoreSettings(_env_file=config_dir_path() / ".env", **overrides)  # type: ignore[call-arg]
+
+
+def load_path_settings() -> PathSettings:
+    """The root and state dir from the environment, then ``<config dir>/.env``."""
+    return PathSettings(_env_file=config_dir_path() / ".env")  # type: ignore[call-arg]
