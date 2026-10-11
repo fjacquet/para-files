@@ -69,8 +69,10 @@ def curve(rows: list[dict[str, Any]]) -> list[tuple[float, float, float]]:
     for index, row in enumerate(ranked, 1):
         correct += row["pred"]["leaf"] == row["gold"]["leaf"]
         confidence = _number(row["pred"].get("confidence"))
-        following = ranked[index]["pred"].get("confidence") if index < len(ranked) else None
-        if following is None or _number(following) != confidence:
+        tied = (
+            index < len(ranked) and _number(ranked[index]["pred"].get("confidence")) == confidence
+        )
+        if not tied:
             points.append((confidence, correct / index, index / n))
     return points
 
@@ -169,7 +171,9 @@ def evaluate(
 
     Per-signal metrics are relative to that signal's own rows (used to set its band threshold);
     each signal block also reports top-3 over its own rows. Knowledge is scored as suggestions
-    only: its kind block reports top-3 alone and the precision curves leave knowledge rows out.
+    only: its kind block reports top-3 alone. The overall accuracy, green_coverage and share
+    figures count knowledge rows, while the precision curves and max_coverage_at_98 (overall and
+    per signal) exclude them.
     The first prediction for a path wins; later ones are counted as duplicates, and predictions
     with no golden row as unmatched.
     """

@@ -253,6 +253,36 @@ def test_tied_confidences_form_one_curve_point(load_script):
     assert report["signals"]["rules"]["curve"] == [pytest.approx((0.7, 0.5, 1.0))]
 
 
+def test_null_confidence_ties_form_one_curve_point(load_script):
+    golden = [{"path": f"{name}.pdf", "leaf": "inv", "kind": "record"} for name in "abcd"]
+    preds = [
+        {
+            "path": f"{name}.pdf",
+            "leaf": leaf,
+            "confidence": None,
+            "band": "green",
+            "signal": "rules",
+        }
+        for name, leaf in zip("abcd", ("inv", "inv", "inv", "other"), strict=True)
+    ]
+    report = load_script("eval").evaluate(golden, preds)
+    assert report["signals"]["rules"]["curve"] == [pytest.approx((0.0, 0.75, 1.0))]
+    assert report["overall"]["max_coverage_at_98"] == 0.0
+
+
+def test_null_and_zero_confidence_tie_form_one_curve_point(load_script):
+    golden = [
+        {"path": "a.pdf", "leaf": "inv", "kind": "record"},
+        {"path": "b.pdf", "leaf": "inv", "kind": "record"},
+    ]
+    preds = [
+        {"path": "a.pdf", "leaf": "inv", "confidence": None, "band": "green", "signal": "rules"},
+        {"path": "b.pdf", "leaf": "other", "confidence": 0.0, "band": "green", "signal": "rules"},
+    ]
+    report = load_script("eval").evaluate(golden, preds)
+    assert report["signals"]["rules"]["curve"] == [pytest.approx((0.0, 0.5, 1.0))]
+
+
 PCT_BUT_TOP3 = (
     "accuracy",
     "green_precision",
