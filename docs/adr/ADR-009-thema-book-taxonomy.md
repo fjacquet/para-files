@@ -27,7 +27,7 @@ Options for subject taxonomy:
 
 ## Decision
 
-Use **Thema v1.6** (9,187 subject codes) as the canonical book classification taxonomy, loaded from `config/thema.json`.
+Use **Thema v1.6** (9,187 subject codes) as the canonical book classification taxonomy. Only its level-1 and level-2 folder names ship (see the amendment below).
 
 ## Rationale
 
@@ -59,17 +59,15 @@ Thema descriptions use accented French characters (standard ISO). Path component
 
 ### Scope
 
-The `thema.json` covers 9,187 codes but the system uses only the top 2 levels (single letter + 2-letter codes) for path construction, giving ~200 practical categories.
+Thema covers 9,187 codes but the system uses only the top 2 levels (single letter + 2-letter codes) for path construction, giving ~200 practical categories.
 
 ## Amendment (2026-10-11)
 
-Only the 234 level-1/level-2 folder names ship, as package data `para_files/data/thema_l1l2.json`, read by `core/thema.py`; subjects match keywords as whole words.
+Only the 234 level-1/level-2 folder names ship, as package data `para_files/data/thema_l1l2.json`, read by `core/thema.py`; subjects match keywords as whole words found inside the subject, and the most specific match wins.
 
 ## Consequences
 
-- `config/thema.json` must be bundled with the package distribution.
-- `ThemaTaxonomy` loads and indexes the JSON at startup.
-- Subject detection uses keyword matching against Thema code descriptions — not ML classification.
-- Books without a detectable Thema subject default to `G` (Reference/General) rather than `U` (Computing).
-- The `bookstore` command lists classified books with their Thema codes for user review.
-- Adding new subject keywords requires editing `book_detector.py`'s keyword mapping, not the Thema JSON itself.
+- `para_files/data/thema_l1l2.json` ships as package data; no Thema JSON is read from `config/`.
+- Subject detection uses keyword matching (`SUBJECT_TO_THEMA` in `core/thema.py`), not ML classification.
+- A book with no matching subject gets no Thema folder.
+- Adding new subject keywords means editing `SUBJECT_TO_THEMA` in `core/thema.py`.
