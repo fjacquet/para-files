@@ -166,6 +166,10 @@ ignore = [
     "DTZ",     # Datetime timezone not required in tests
     "RUF059",  # Unused unpacked variables allowed in tests
 ]
+"scripts/*.py" = [
+    "INP001", # Developer CLI scripts are not a package
+    "T201",   # Developer CLI scripts print their results
+]
 "src/para_files/classifiers/rules_engine.py" = [
     "C901",    # classify() intentionally handles multiple rule types
     "PLR0912", # _create_result() handles multiple placeholder types

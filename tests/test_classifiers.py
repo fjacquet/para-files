@@ -237,3 +237,13 @@ def test_semantic_init_propagates_keyboard_interrupt() -> None:
         classifier = SemanticClassifier(loader=get_taxonomy_loader(), enabled=True)
         with pytest.raises(KeyboardInterrupt):
             classifier._ensure_initialized()
+
+
+def test_taxonomy_retention_prefixes_use_the_core_values():
+    from typing import get_args
+
+    from para_files.classifiers.taxonomy_classifier import TaxonomyClassifier
+    from para_files.core.tree import Retention
+
+    prefixes = set(TaxonomyClassifier.RETENTION_PREFIXES.values()) - {""}
+    assert prefixes == {f"{v}_" for v in get_args(Retention) if v != "permanent"}

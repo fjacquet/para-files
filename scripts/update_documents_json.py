@@ -1,10 +1,10 @@
-#!/usr/bin/env python3
 """Update documents.json to add retention prefixes to para_pattern fields."""
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
+
 
 # Retention prefix mapping (same as in taxonomy_classifier.py)
 # Permanent items have no prefix (they go to 3_Resources)
@@ -17,13 +17,16 @@ RETENTION_PREFIXES = {
     "warranty_2_years": "2y_",
 }
 
+PATTERN_SEGMENTS = 2  # PARA folder and category
+
 
 def add_retention_prefix(pattern: str, retention: str) -> str:
     """Add retention prefix to the category folder in a para_pattern.
 
     Examples:
         4_Archives/fiscalite/{year} + 10_years -> 4_Archives/10y_fiscalite/{year}
-        3_Resources/administratif/identite + permanent -> 3_Resources/administratif/identite (no change)
+        3_Resources/administratif/identite + permanent -> 3_Resources/administratif/identite
+        (no change)
     """
     prefix = RETENTION_PREFIXES.get(retention, "")
     if not prefix:
@@ -32,7 +35,7 @@ def add_retention_prefix(pattern: str, retention: str) -> str:
     # Pattern: PARA_folder/category[/subpath]
     # We want to add prefix to the second component (after PARA folder)
     parts = pattern.split("/")
-    if len(parts) < 2:
+    if len(parts) < PATTERN_SEGMENTS:
         return pattern
 
     # Check if prefix already present
@@ -70,18 +73,20 @@ def update_documents_json(filepath: Path) -> tuple[dict, list]:
             if new_pattern != original_pattern:
                 # Store the new pattern at document level
                 doc["para_pattern"] = new_pattern
-                updates_made.append({
-                    "sub_id": doc.get("sub_id"),
-                    "name": doc.get("name"),
-                    "retention": retention,
-                    "old": original_pattern,
-                    "new": new_pattern,
-                })
+                updates_made.append(
+                    {
+                        "sub_id": doc.get("sub_id"),
+                        "name": doc.get("name"),
+                        "retention": retention,
+                        "old": original_pattern,
+                        "new": new_pattern,
+                    }
+                )
 
     return data, updates_made
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     filepath = Path(__file__).parent.parent / "config" / "documents.json"
 

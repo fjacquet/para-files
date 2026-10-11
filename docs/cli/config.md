@@ -30,7 +30,7 @@ uv run para-files config --show
 
 # Output:
 # PARA_ROOT: /Users/you/Documents/PARA
-# REFERENCE_TREE_PATH: config/personal_file_tree.yaml
+# REFERENCE_TREE_PATH: ~/.config/para-files/personal_file_tree.yaml
 # MLX_MODEL_NAME: mlx-community/nomic-embed-text-v1.5
 # MLX_SCORE_THRESHOLD: 0.75
 # LLM_ENABLED: false
@@ -45,7 +45,7 @@ Show where configuration is coming from:
 uv run para-files config --path
 
 # Output:
-# Reference tree: /Users/you/Projects/para-files/config/personal_file_tree.yaml
+# Reference tree: /Users/you/.config/para-files/personal_file_tree.yaml
 # Environment: .env file / /Users/you/.zshrc
 ```
 

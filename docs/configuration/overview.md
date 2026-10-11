@@ -76,7 +76,7 @@ config:
 ### Core
 
 - **`PARA_ROOT`** - Required. PARA folder location
-- **`REFERENCE_TREE_PATH`** - Path to YAML tree (default: config/personal_file_tree.yaml)
+- **`REFERENCE_TREE_PATH`** - Path to YAML tree (default: `~/.config/para-files/personal_file_tree.yaml`, or `$PARA_FILES_CONFIG_DIR`; legacy fallback `config/personal_file_tree.yaml`)
 - **`VALIDATED_DB_PATH`** - Path to validated mappings JSON
 
 ### MLX Model

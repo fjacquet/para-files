@@ -40,11 +40,12 @@ def config(
     reference tree YAML file, with optional overrides via
     PARA_FILES_* environment variables.
     """
-    from para_files.config import DEFAULT_REFERENCE_TREE
+    from para_files.config import default_reference_tree
 
     if path:
-        typer.echo(f"Reference tree: {DEFAULT_REFERENCE_TREE}")
-        typer.echo(f"  Exists: {DEFAULT_REFERENCE_TREE.exists()}")
+        tree_path = default_reference_tree()
+        typer.echo(f"Reference tree: {tree_path}")
+        typer.echo(f"  Exists: {tree_path.exists()}")
         typer.echo("\nConfig is stored in the 'config:' section of the reference tree YAML.")
         return
 

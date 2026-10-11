@@ -16,8 +16,10 @@ Path to your YAML reference tree file.
 ### Default
 
 ```
-config/personal_file_tree.yaml
+~/.config/para-files/personal_file_tree.yaml
 ```
+
+The personal config directory is `$PARA_FILES_CONFIG_DIR` when that variable is set, else `~/.config/para-files`. The same rule locates the home `.env`. When the personal tree is missing, para-files falls back to the legacy `config/personal_file_tree.yaml` (relative to the working directory).
 
 ### Set Custom Path
 

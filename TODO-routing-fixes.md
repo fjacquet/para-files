@@ -80,7 +80,7 @@ def _matches_extension_and_pattern(self, rule: RoutingRule, metadata: FileMetada
 
 - `credit_agricole` (2x)
 - `vmware_documentation` (3x)
-- `bleu_marine_immobilier` (2x)
+- `<property>_immobilier` (2x)
 - `travaux_maison` (2x)
 
 **Solution:** Remove duplicates, keep most comprehensive version.

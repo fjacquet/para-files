@@ -27,6 +27,7 @@ from para_files.cli.shared import (
     load_config_or_exit,
     setup_logging,
 )
+from para_files.core.tree import RETENTION_PREFIX
 
 
 # Retention types and their target PARA category
@@ -77,10 +78,11 @@ RETENTION_CONFIG: dict[str, _RetentionEntry] = {
     "loisirs": {"retention": "2_years", "prefix": "2y_"},
 }
 
-# Pattern to detect folder with retention prefix (e.g., "10y_fiscalite")
-RETENTION_PREFIX_PATTERN = re.compile(r"^(10y|5y|2y|ret|ctr)_")
+# Pattern to detect folder with retention prefix (e.g., "10y_fiscalite"): the core values
+RETENTION_PREFIX_PATTERN = RETENTION_PREFIX
 
-# Pattern to detect OLD suffix format (e.g., "fiscalite_10y") for migration
+# Pattern to detect OLD suffix format (e.g., "fiscalite_10y") for migration. "perm" is a legacy
+# spelling of permanent, which is not a core Retention value, so this list cannot be the core one.
 RETENTION_SUFFIX_PATTERN = re.compile(r"_(10y|5y|2y|ret|ctr|perm)$")
 
 # Minimum path parts required for valid PARA pattern (e.g., "4_Archives/fiscalite")

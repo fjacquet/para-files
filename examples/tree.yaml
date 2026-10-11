@@ -1,0 +1,40 @@
+# Example canonical tree (spec §4.1). Copy to ~/.config/para-files/tree.yaml and edit.
+leaves:
+  telecom_invoices:
+    kind: record
+    retention: 5y
+    path: 4_Archives/5y_factures/Telephonie
+    subkey: "{issuer}/{year}"
+    describe: Phone, mobile and internet invoices
+    keywords: [facture, invoice, abonnement]
+  payslips:
+    kind: record
+    retention: 10y
+    path: 4_Archives/10y_travail/salaires
+    subkey: "{year}"
+    describe: Payslips and salary statements
+    keywords: [salaire, payslip]
+  identity_papers:
+    kind: record
+    retention: permanent
+    path: 2_Areas/Officiel
+    describe: Civil-status and identity papers kept for life
+  books:
+    kind: library
+    path: 3_Resources/livres
+    subkey: "{thema}"
+    describe: Books and ebooks
+  vendor_docs:
+    kind: library
+    path: 3_Resources/docs
+    subkey: "{issuer}"
+    describe: Vendor documentation, datasheets and white papers
+  photos:
+    kind: media
+    path: 4_Archives/photos
+    subkey: "{year}"
+    describe: Photos
+  career:
+    kind: knowledge
+    path: 2_Areas/carriere
+    describe: Career material - CV, evaluations, applications

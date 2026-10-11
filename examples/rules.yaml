@@ -1,0 +1,14 @@
+# Example rules: filename globs (case-insensitive) -> leaf. First match wins.
+rules:
+  - name: phone_invoices
+    leaf: telecom_invoices
+    globs: ["*swisscom*.pdf", "*salt*facture*.pdf"]
+  - name: payslips
+    leaf: payslips
+    globs: ["*payslip*.pdf", "*salaire*.pdf"]
+  - name: ebooks
+    leaf: books
+    globs: ["*.epub", "*.mobi"]
+  - name: photos
+    leaf: photos
+    globs: ["*.jpg", "*.jpeg", "*.heic"]

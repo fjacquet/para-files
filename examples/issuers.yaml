@@ -1,0 +1,11 @@
+# Example issuers: patterns found in a filename or text preview -> candidate leaves.
+issuers:
+  swisscom:
+    patterns: [Swisscom]
+    leaves: [telecom_invoices]
+  salt:
+    patterns: [Salt Mobile]
+    leaves: [telecom_invoices]
+  vmware:
+    patterns: [VMware]
+    leaves: [vendor_docs]

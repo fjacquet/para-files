@@ -160,6 +160,7 @@ def _classify_files_sequential(
     results: list[dict[str, Any]] = []
     for file_path in expanded_files:
         if not validate_file_exists(file_path):
+            results.append({"source_file": str(file_path), "error": "file not found"})
             continue
 
         try:
@@ -174,8 +175,9 @@ def _classify_files_sequential(
                 )
         except Exception:  # noqa: BLE001
             logger.exception("Failed to classify {}", file_path)
-            if output_json:
-                results.append({"source_file": str(file_path), "error": "classification failed"})
+            results.append({"source_file": str(file_path), "error": "classification failed"})
+            if not output_json:
+                typer.echo(f"\n⚠️ {file_path.name}: classification failed")
     return results
 
 
@@ -255,3 +257,6 @@ def classify(
 
     if output_json:
         typer.echo(json.dumps(results, indent=2))
+
+    if any("error" in result for result in results):
+        raise typer.Exit(code=1)

@@ -11,6 +11,8 @@ Pipeline signals in priority order:
 First match wins. Default to 0_Inbox if no match.
 """
 
+from __future__ import annotations
+
 from para_files.classifiers.base import BaseClassifier
 from para_files.classifiers.book_detector import BookDetector
 from para_files.classifiers.extension_router import ExtensionRouterClassifier

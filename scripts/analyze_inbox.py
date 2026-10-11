@@ -26,7 +26,8 @@ import click
 # Add project root to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from para_files.utils.pandoc import extract_text as pandoc_extract  # noqa: I001
+from para_files.config import default_reference_tree  # noqa: I001
+from para_files.utils.pandoc import extract_text as pandoc_extract
 
 # Maximum number of items to display in reports
 _MAX_DISPLAY_ITEMS = 10
@@ -61,6 +62,39 @@ def extract_text(file_path: Path, max_chars: int = 2000) -> str:
         return f"[Error reading: {e}]"
 
     return f"[Binary file: {ext}]"
+
+
+def _parse_json_array(output: str) -> list[dict[str, Any]]:
+    """The JSON array in the classify output (log lines skipped); [] when none parses."""
+    # Try to find JSON array in output (skip log lines)
+    for raw_line in output.split("\n"):
+        line = raw_line.strip()
+        if line.startswith("[") and line.endswith("]"):
+            try:
+                parsed: list[dict[str, Any]] = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            return parsed
+
+    # Try parsing multi-line JSON, from the first "[" to the last "]"
+    start_idx = output.find("[")
+    end_idx = output.rfind("]")
+    if start_idx != -1 and end_idx != -1:
+        try:
+            parsed = json.loads(output[start_idx : end_idx + 1])
+        except json.JSONDecodeError:
+            pass
+        else:
+            return parsed
+
+    # Last resort: try whole output
+    try:
+        parsed = json.loads(output)
+    except json.JSONDecodeError:
+        click.echo("ERROR: Could not parse JSON output", err=True)
+        click.echo(f"Output preview: {output[:500]}", err=True)
+        return []
+    return parsed
 
 
 def classify_files(
@@ -98,7 +132,7 @@ def classify_files(
     click.echo(f"Running: {' '.join(cmd)}", err=True)
 
     try:
-        result = subprocess.run(
+        result = subprocess.run(  # noqa: S603 - fixed argv, no shell
             cmd,
             check=False,
             capture_output=True,
@@ -115,42 +149,7 @@ def classify_files(
         if result.stderr:
             click.echo(f"STDERR: {result.stderr[:500]}", err=True)
 
-    # Parse JSON output - find the JSON array in the output
-    output = result.stdout.strip()
-
-    result_list: list[dict[str, Any]] = []
-
-    # Try to find JSON array in output (skip log lines)
-    for raw_line in output.split("\n"):
-        line = raw_line.strip()
-        if line.startswith("[") and line.endswith("]"):
-            try:
-                result_list = json.loads(line)
-                return result_list
-            except json.JSONDecodeError:
-                continue
-
-    # Try parsing multi-line JSON
-    try:
-        # Find start of JSON array
-        start_idx = output.find("[")
-        end_idx = output.rfind("]")
-        if start_idx != -1 and end_idx != -1:
-            json_str = output[start_idx : end_idx + 1]
-            result_list = json.loads(json_str)
-            return result_list
-    except json.JSONDecodeError:
-        pass
-
-    # Last resort: try whole output
-    try:
-        result_list = json.loads(output)
-        return result_list
-    except json.JSONDecodeError:
-        click.echo("ERROR: Could not parse JSON output", err=True)
-        click.echo(f"Output preview: {output[:500]}", err=True)
-
-    return result_list
+    return _parse_json_array(result.stdout.strip())
 
 
 def analyze_unclassified(results: list[dict[str, Any]]) -> dict[str, Any]:
@@ -272,6 +271,38 @@ def suggest_route_config(ext: str) -> str:
     destination: '3_Resources/other/{ext.lstrip(".")}'"""
 
 
+def _print_unclassified(analysis: dict[str, Any]) -> None:
+    """Print the suggested-route section for unclassified files."""
+    click.echo()
+    click.echo("-" * 80)
+    click.echo("UNCLASSIFIED FILES - SUGGESTED NEW ROUTES")
+    click.echo("-" * 80)
+
+    for group in analysis["unclassified_by_extension"]:
+        click.echo(f"\n### Extension: {group['extension']} ({group['count']} files)")
+        click.echo()
+
+        click.echo("Files:")
+        for f in group["files"][:_MAX_DISPLAY_ITEMS]:
+            click.echo(f"  - {f}")
+        if len(group["files"]) > _MAX_DISPLAY_ITEMS:
+            click.echo(f"  ... and {len(group['files']) - _MAX_DISPLAY_ITEMS} more")
+
+        if group["samples"]:
+            click.echo()
+            click.echo("Content samples:")
+            for sample in group["samples"][:3]:
+                click.echo(f"\n  [{sample['file']}]")
+                preview = sample["content_preview"].replace("\n", " ")[:200]
+                click.echo(f"  {preview}...")
+
+        click.echo()
+        click.echo("Suggested route configuration:")
+        suggestion = suggest_route_config(group["extension"])
+        for line in suggestion.split("\n"):
+            click.echo(f"  {line}")
+
+
 def print_report(analysis: dict[str, Any]) -> None:
     """Print human-readable analysis report.
 
@@ -313,35 +344,7 @@ def print_report(analysis: dict[str, Any]) -> None:
     for route, count in list(analysis["classified_by_route"].items())[:15]:
         click.echo(f"  {count:4d}  {route}")
 
-    # Unclassified suggestions
-    click.echo()
-    click.echo("-" * 80)
-    click.echo("UNCLASSIFIED FILES - SUGGESTED NEW ROUTES")
-    click.echo("-" * 80)
-
-    for group in analysis["unclassified_by_extension"]:
-        click.echo(f"\n### Extension: {group['extension']} ({group['count']} files)")
-        click.echo()
-
-        click.echo("Files:")
-        for f in group["files"][:_MAX_DISPLAY_ITEMS]:
-            click.echo(f"  - {f}")
-        if len(group["files"]) > _MAX_DISPLAY_ITEMS:
-            click.echo(f"  ... and {len(group['files']) - _MAX_DISPLAY_ITEMS} more")
-
-        if group["samples"]:
-            click.echo()
-            click.echo("Content samples:")
-            for sample in group["samples"][:3]:
-                click.echo(f"\n  [{sample['file']}]")
-                preview = sample["content_preview"].replace("\n", " ")[:200]
-                click.echo(f"  {preview}...")
-
-        click.echo()
-        click.echo("Suggested route configuration:")
-        suggestion = suggest_route_config(group["extension"])
-        for line in suggestion.split("\n"):
-            click.echo(f"  {line}")
+    _print_unclassified(analysis)
 
 
 @click.command()
@@ -356,7 +359,7 @@ def print_report(analysis: dict[str, Any]) -> None:
     "--config",
     "-c",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
-    default=Path(__file__).parent.parent / "config/personal_file_tree.yaml",
+    default=default_reference_tree(),
     help="Path to YAML config file",
 )
 @click.option(

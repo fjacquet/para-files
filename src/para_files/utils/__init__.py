@@ -1,5 +1,7 @@
 """Utility functions for para-files."""
 
+from __future__ import annotations
+
 from para_files.utils.cleanup import (
     JUNK_DIRECTORIES,
     JUNK_PATTERNS,

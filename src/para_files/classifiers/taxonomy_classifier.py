@@ -94,7 +94,9 @@ class TaxonomyClassifier(BaseClassifier):
     FUZZY_MATCH_THRESHOLD = 0.85  # Minimum similarity ratio for fuzzy matches
     FUZZY_CONFIDENCE_MULTIPLIER = 0.95  # Confidence penalty for fuzzy matches
 
-    # Retention prefix mapping for folder names (no prefix for permanent items)
+    # Retention prefix mapping for folder names (no prefix for permanent items). The prefixes
+    # are the core Retention values (para_files.core.tree.Retention, checked in the tests); the
+    # keys are taxonomy retention names, which have no core equivalent.
     RETENTION_PREFIXES: ClassVar[dict[str, str]] = {
         "permanent": "",  # No prefix - goes to 3_Resources
         "retirement": "ret_",

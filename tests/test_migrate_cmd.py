@@ -631,3 +631,15 @@ class TestMigrateCommandMerge:
         assert result.exit_code == 0
         call_kwargs = mock_run.call_args[1]
         assert call_kwargs["merge"] is True
+
+
+def test_prefix_pattern_reuses_the_core_retention_values():
+    from typing import get_args
+
+    from para_files.cli import migrate_cmd
+    from para_files.core.tree import Retention
+
+    for value in get_args(Retention):
+        if value != "permanent":
+            assert migrate_cmd.RETENTION_PREFIX_PATTERN.match(f"{value}_fiscalite")
+    assert migrate_cmd.RETENTION_PREFIX_PATTERN.match("permanent_x") is None

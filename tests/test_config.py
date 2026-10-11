@@ -12,12 +12,13 @@ from para_files.config import (
     DEFAULT_LLM_CONFIDENCE_THRESHOLD,
     DEFAULT_LLM_MODEL,
     DEFAULT_MLX_MODEL,
-    DEFAULT_REFERENCE_TREE,
     DEFAULT_SCORE_THRESHOLD,
+    LEGACY_REFERENCE_TREE,
     Config,
     LLMConfig,
     MLXConfig,
     _load_yaml_config,
+    default_reference_tree,
     load_config,
 )
 
@@ -118,11 +119,12 @@ class TestOCRRenameConfig:
 class TestConfig:
     """Tests for Config."""
 
-    def test_minimal_config(self, tmp_path: Path):
+    def test_minimal_config(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         """Test config with only required field."""
-        config = Config(para_root=tmp_path)
+        monkeypatch.delenv("PARA_FILES_REFERENCE_TREE_PATH", raising=False)
+        config = Config(_env_file=None, para_root=tmp_path)
         assert config.para_root == tmp_path
-        assert config.reference_tree_path == Path("config/personal_file_tree.yaml")
+        assert config.reference_tree_path == LEGACY_REFERENCE_TREE  # sandbox has no personal tree
         assert config.validated_db_path is None
 
     def test_full_config(self, tmp_path: Path):
@@ -202,9 +204,26 @@ class TestLoadConfig:
 class TestYAMLConfig:
     """Tests for YAML configuration loading from reference tree."""
 
-    def test_default_reference_tree_path(self):
-        """Test default reference tree path."""
-        assert Path("config/personal_file_tree.yaml") == DEFAULT_REFERENCE_TREE
+    def test_default_reference_tree_prefers_personal_copy(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        """Use the personal copy in $PARA_FILES_CONFIG_DIR when it exists, else the legacy path."""
+        config_dir = tmp_path / "personal"
+        monkeypatch.setenv("PARA_FILES_CONFIG_DIR", str(config_dir))
+        assert default_reference_tree() == LEGACY_REFERENCE_TREE
+        config_dir.mkdir()
+        (config_dir / "personal_file_tree.yaml").write_text("routing_rules: {}\n")
+        assert default_reference_tree() == config_dir / "personal_file_tree.yaml"
+
+    def test_config_dir_is_shared_by_tree_and_settings(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        """core.tree.config_dir and the settings loader resolve the same directory."""
+        from para_files.config import config_dir_path
+        from para_files.core.tree import config_dir
+
+        monkeypatch.setenv("PARA_FILES_CONFIG_DIR", str(tmp_path))
+        assert config_dir() == config_dir_path() == tmp_path
 
     def test_load_yaml_config_from_file(self, tmp_path: Path):
         """Test loading config from a YAML file."""
@@ -227,11 +246,8 @@ config:
     def test_load_yaml_config_missing_file(self, tmp_path: Path, monkeypatch):
         """Test loading config when YAML file doesn't exist."""
         fake_path = tmp_path / "nonexistent.yaml"
-        # Change to tmp_path so cwd fallback also fails
-        monkeypatch.chdir(tmp_path)
-        with patch("para_files.config.DEFAULT_REFERENCE_TREE", fake_path):
-            config_dict = _load_yaml_config(fake_path)
-            assert config_dict == {}
+        monkeypatch.chdir(tmp_path)  # cwd fallback also fails
+        assert _load_yaml_config(fake_path) == {}
 
     def test_load_yaml_config_no_config_section(self, tmp_path: Path):
         """Test loading config from YAML without config section."""
@@ -260,8 +276,43 @@ config:
     def test_config_defaults_without_yaml(self, tmp_path: Path):
         """Test that config loads with defaults when no YAML exists."""
         fake_path = tmp_path / "nonexistent.yaml"
-        with patch("para_files.config.DEFAULT_REFERENCE_TREE", fake_path):
-            config = load_config(reference_tree_path=fake_path)
-            # Should still work with defaults
-            assert config.mlx.model_name == DEFAULT_MLX_MODEL
-            assert config.mlx.score_threshold == DEFAULT_SCORE_THRESHOLD
+        config = load_config(reference_tree_path=fake_path)
+        # Should still work with defaults
+        assert config.mlx.model_name == DEFAULT_MLX_MODEL
+        assert config.mlx.score_threshold == DEFAULT_SCORE_THRESHOLD
+
+
+class TestNonMappingYamlIsIgnored:
+    @pytest.mark.parametrize("content", ["- a\n- b\n", "just a string\n"])
+    def test_non_mapping_document_is_ignored_with_a_warning(self, tmp_path: Path, content: str):
+        from loguru import logger
+
+        yaml_file = tmp_path / "tree.yaml"
+        yaml_file.write_text(content, encoding="utf-8")
+        messages: list[str] = []
+        sink_id = logger.add(lambda message: messages.append(str(message)), level="WARNING")
+        try:
+            assert _load_yaml_config(yaml_file) == {}
+        finally:
+            logger.remove(sink_id)
+        assert any("not a mapping" in message for message in messages)
+
+
+def test_explicit_non_mapping_yaml_stops_the_fall_through(tmp_path: Path, monkeypatch):
+    from loguru import logger
+
+    explicit = tmp_path / "explicit.yaml"
+    explicit.write_text("- a\n- b\n", encoding="utf-8")
+    cfg = tmp_path / "cfg"
+    cfg.mkdir()
+    (cfg / "personal_file_tree.yaml").write_text(
+        "config:\n  para_root: ~/FromDefault\n", encoding="utf-8"
+    )
+    monkeypatch.setenv("PARA_FILES_CONFIG_DIR", str(cfg))
+    messages: list[str] = []
+    sink_id = logger.add(lambda message: messages.append(str(message)), level="WARNING")
+    try:
+        assert _load_yaml_config(explicit) == {}
+    finally:
+        logger.remove(sink_id)
+    assert any("not a mapping" in message for message in messages)

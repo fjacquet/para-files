@@ -174,3 +174,6 @@ all-files.txt
 # ============================================================================
 settings.local.json
 *.local.json
+
+# Personal reference tree (lives in ~/.config/para-files/)
+config/personal_file_tree.yaml
