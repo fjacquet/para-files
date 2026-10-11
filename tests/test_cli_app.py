@@ -25,6 +25,12 @@ def test_no_arguments_shows_help():
     assert "Usage" in result.output
 
 
+def test_missing_para_root_is_a_readable_error():
+    result = runner.invoke(app, ["tree"])
+    assert result.exit_code == 2
+    assert "PARA_FILES_PARA_ROOT" in result.output
+
+
 def test_entry_point_targets_the_new_app():
     pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
     scripts = tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"]["scripts"]

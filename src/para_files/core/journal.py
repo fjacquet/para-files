@@ -8,7 +8,6 @@ from __future__ import annotations
 import json
 import os
 import re
-from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal, Self, TextIO
@@ -146,14 +145,24 @@ def last_run_id(state_dir: Path) -> str | None:
     return live[-1] if live else None
 
 
-def confirmed_counts(state_dir: Path, tree: Tree) -> dict[str, int]:
-    """Owner-decided moves per leaf kind, over every run not undone."""
-    counts: Counter[str] = Counter()
+def confirmation_stats(state_dir: Path, tree: Tree) -> dict[str, tuple[int, int]]:
+    """Per leaf kind: (owner-decided moves, how many the tool had proposed right).
+
+    Counts every run not undone. The second number feeds S2 (spec §3).
+    """
+    stats: dict[str, list[int]] = {}
     for run_id in run_ids(state_dir):
         if is_undone(state_dir, run_id):
             continue
         for entry in read_run(state_dir, run_id):
             leaf = tree.leaves.get(str(entry.get("leaf")))
             if entry.get("op") == "move" and entry.get("decided_by") == "owner" and leaf:
-                counts[leaf.kind] += 1
-    return dict(counts)
+                counts = stats.setdefault(leaf.kind, [0, 0])
+                counts[0] += 1
+                counts[1] += entry.get("proposed_leaf") == entry.get("leaf")
+    return {kind: (confirmed, right) for kind, (confirmed, right) in stats.items()}
+
+
+def confirmed_counts(state_dir: Path, tree: Tree) -> dict[str, int]:
+    """Owner-decided moves per leaf kind, over every run not undone."""
+    return {kind: confirmed for kind, (confirmed, _) in confirmation_stats(state_dir, tree).items()}
