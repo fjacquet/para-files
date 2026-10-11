@@ -13,10 +13,10 @@ from dataclasses import dataclass
 
 from para_files.core.cache import Cache
 from para_files.core.evidence import Evidence
+from para_files.core.thema import lookup_thema_code, thema_to_para_path
 from para_files.core.tree import Tree
 from para_files.utils.filename_sanitizer import sanitize_filename
 from para_files.utils.isbn_lookup import BookInfo, is_title_coherent_with_filename, lookup_isbn
-from para_files.utils.thema_lookup import lookup_thema_code, thema_to_para_path
 
 
 # Patterns that indicate book structure
