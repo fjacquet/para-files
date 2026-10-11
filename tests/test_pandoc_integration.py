@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from para_files.utils.pandoc import ALLOWED_EXTENSIONS, extract_metadata, extract_text
+from para_files.utils.pandoc import ALLOWED_EXTENSIONS, extract_text
 
 
 class TestPandocBrokenInstall:
@@ -22,12 +22,6 @@ class TestPandocBrokenInstall:
         """Test that extract_text returns None when pandoc is not installed."""
         with patch("para_files.utils.pandoc.is_pandoc_available", return_value=False):
             result = extract_text(Path("/test/doc.docx"))
-        assert result is None
-
-    def test_extract_metadata_no_pandoc(self) -> None:
-        """Test that extract_metadata returns None when pandoc is not installed."""
-        with patch("para_files.utils.pandoc.is_pandoc_available", return_value=False):
-            result = extract_metadata(Path("/test/doc.docx"))
         assert result is None
 
     @patch("para_files.utils.pandoc.shutil.which", return_value=None)
@@ -70,21 +64,6 @@ class TestPandocTimeout:
             ),
         ):
             result = extract_text(test_file)
-        assert result is None
-
-    def test_extract_metadata_timeout(self, tmp_path: Path) -> None:
-        """Test that extract_metadata returns None on subprocess timeout."""
-        test_file = tmp_path / "doc.docx"
-        test_file.touch()
-
-        with (
-            patch("para_files.utils.pandoc.is_pandoc_available", return_value=True),
-            patch(
-                "para_files.utils.pandoc.subprocess.run",
-                side_effect=subprocess.TimeoutExpired("pandoc", 10),
-            ),
-        ):
-            result = extract_metadata(test_file)
         assert result is None
 
 
@@ -147,20 +126,6 @@ class TestPandocNonZeroExit:
         )
 
         result = _run_pandoc_to_plain(test_file, "docx")
-        assert result is None
-
-    @patch("para_files.utils.pandoc.subprocess.run")
-    def test_extract_metadata_nonzero_exit_returns_none(
-        self, mock_run: MagicMock, tmp_path: Path
-    ) -> None:
-        """Test that extract_metadata returns None on pandoc non-zero exit."""
-        test_file = tmp_path / "doc.docx"
-        test_file.touch()
-
-        mock_run.return_value = MagicMock(returncode=2, stderr="error", stdout="")
-
-        with patch("para_files.utils.pandoc.is_pandoc_available", return_value=True):
-            result = extract_metadata(test_file)
         assert result is None
 
 
@@ -230,15 +195,4 @@ class TestPandocWrongEncoding:
         ):
             mock_run.side_effect = UnicodeDecodeError("utf-8", b"\xff\xfe", 0, 1, "invalid")
             result = extract_text(test_file)
-        assert result is None
-
-    def test_extract_metadata_unicode_decode_error(self) -> None:
-        """Test that extract_metadata handles UnicodeDecodeError from pandoc output."""
-        test_file = Path("/test/doc.docx")
-        with (
-            patch("para_files.utils.pandoc.is_pandoc_available", return_value=True),
-            patch("para_files.utils.pandoc.subprocess.run") as mock_run,
-        ):
-            mock_run.side_effect = UnicodeDecodeError("utf-8", b"\xff\xfe", 0, 1, "invalid")
-            result = extract_metadata(test_file)
         assert result is None

@@ -10,10 +10,8 @@ from pypdf.errors import PyPdfError
 from para_files.utils.pdf_metadata import (
     PdfMetadata,
     _try_pymupdf_metadata,
-    contains_book_keywords,
     extract_isbn,
     extract_pdf_metadata,
-    is_book_creator,
 )
 
 
@@ -77,106 +75,6 @@ class TestExtractIsbn:
     def test_empty_text(self):
         """Test extraction from empty text."""
         assert extract_isbn("") is None
-
-
-class TestContainsBookKeywords:
-    """Tests for contains_book_keywords function."""
-
-    def test_edition_keyword(self):
-        """Test detection of 'edition' keyword."""
-        assert contains_book_keywords("Python Programming, 3rd Edition") is True
-
-    def test_guide_keyword(self):
-        """Test detection of 'guide' keyword."""
-        assert contains_book_keywords("The Complete Guide to Python") is True
-
-    def test_handbook_keyword(self):
-        """Test detection of 'handbook' keyword."""
-        assert contains_book_keywords("The Python Handbook") is True
-
-    def test_manual_keyword(self):
-        """Test detection of 'manual' keyword."""
-        assert contains_book_keywords("User Manual for Software") is True
-
-    def test_cookbook_keyword(self):
-        """Test detection of 'cookbook' keyword."""
-        assert contains_book_keywords("Python Cookbook") is True
-
-    def test_introduction_to_keyword(self):
-        """Test detection of 'introduction to' keyword."""
-        assert contains_book_keywords("Introduction to Machine Learning") is True
-
-    def test_learning_keyword(self):
-        """Test detection of 'learning' keyword."""
-        assert contains_book_keywords("Learning Python") is True
-
-    def test_mastering_keyword(self):
-        """Test detection of 'mastering' keyword."""
-        assert contains_book_keywords("Mastering Kubernetes") is True
-
-    def test_for_dummies_keyword(self):
-        """Test detection of 'for dummies' keyword."""
-        assert contains_book_keywords("Python for Dummies") is True
-
-    def test_in_action_keyword(self):
-        """Test detection of 'in action' keyword."""
-        assert contains_book_keywords("Kubernetes in Action") is True
-
-    def test_head_first_keyword(self):
-        """Test detection of 'head first' keyword."""
-        assert contains_book_keywords("Head First Design Patterns") is True
-
-    def test_no_book_keywords(self):
-        """Test text without book keywords."""
-        assert contains_book_keywords("Meeting notes from Q4 planning") is False
-        assert contains_book_keywords("Invoice #12345") is False
-        assert contains_book_keywords("Project Status Report") is False
-
-    def test_case_insensitive(self):
-        """Test case-insensitive keyword detection."""
-        assert contains_book_keywords("PYTHON COOKBOOK") is True
-        assert contains_book_keywords("Introduction To Machine Learning") is True
-
-
-class TestIsBookCreator:
-    """Tests for is_book_creator function."""
-
-    def test_calibre_creator(self):
-        """Test Calibre as book creator."""
-        assert is_book_creator("calibre 5.0") is True
-        assert is_book_creator("calibre (3.48.0)") is True
-
-    def test_adobe_indesign(self):
-        """Test Adobe InDesign as book creator."""
-        assert is_book_creator("Adobe InDesign CC 2024") is True
-
-    def test_latex_creator(self):
-        """Test LaTeX as book creator."""
-        assert is_book_creator("pdfTeX-1.40.21") is True
-        assert is_book_creator("XeTeX") is True
-        assert is_book_creator("LaTeX with hyperref") is True
-
-    def test_acrobat_distiller(self):
-        """Test Acrobat Distiller as book creator."""
-        assert is_book_creator("Acrobat Distiller 11.0") is True
-
-    def test_framemaker(self):
-        """Test FrameMaker as book creator."""
-        assert is_book_creator("Adobe FrameMaker 2020") is True
-
-    def test_quarkxpress(self):
-        """Test QuarkXPress as book creator."""
-        assert is_book_creator("QuarkXPress 2021") is True
-
-    def test_unknown_creator(self):
-        """Test unknown creator."""
-        assert is_book_creator("Random PDF Tool") is False
-        assert is_book_creator("Google Chrome") is False
-        assert is_book_creator("Microsoft Print to PDF") is False
-
-    def test_empty_creator(self):
-        """Test empty string creator."""
-        assert is_book_creator("") is False
 
 
 class TestPdfMetadata:

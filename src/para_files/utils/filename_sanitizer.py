@@ -159,29 +159,3 @@ def sanitize_path_component(
 
     # Strip leading/trailing
     return safe.strip(f" {replacement}")
-
-
-def is_valid_filename(name: str) -> bool:
-    """Check if a string contains any invalid filename characters.
-
-    Args:
-        name: String to check.
-
-    Returns:
-        True if the string is safe for use as a filename.
-    """
-    if not name:
-        return False
-    return not bool(_INVALID_CHARS_PATTERN.search(name))
-
-
-def get_invalid_chars(name: str) -> list[str]:
-    """Get list of invalid characters found in a string.
-
-    Args:
-        name: String to check.
-
-    Returns:
-        List of invalid characters found (may contain duplicates).
-    """
-    return _INVALID_CHARS_PATTERN.findall(name)
