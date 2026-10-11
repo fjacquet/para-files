@@ -1,9 +1,10 @@
 """Baseline: the old pipeline over the golden corpus, written as predictions for eval.py.
 
-The old pipeline runs with the semantic classifier and the LLM off, so it uses books, rules,
-taxonomy and the extension router. OCR rename is off and patched out. Each file is classified
-through a symlink in a temporary folder, so its PARA location cannot leak into the decision.
-Read-only on PARA.
+Only signals 1-3 run: the book detector, the rules engine and the taxonomy classifier. The
+semantic classifier and the LLM are off, the extension router is dropped (a file the three
+signals do not decide stays undecided, red), and OCR rename is off and patched out. Each file
+is classified through a symlink in a temporary folder, so its PARA location cannot leak into
+the decision. Read-only on PARA.
 
 Usage:
     uv run python scripts/run_baseline.py --para-root "$PARA"
@@ -43,17 +44,22 @@ def leaf_for_category(category: str, tree: Tree, canon: Callable[[str], str]) ->
 
 
 def old_pipeline_classifier() -> Classify:
-    """The old pipeline with semantic, LLM and OCR rename disabled."""
+    """The old pipeline restricted to signals 1-3: book detector, rules engine, taxonomy."""
     os.environ.update(
         PARA_FILES_MLX_SEMANTIC_ENABLED="false",
         PARA_FILES_LLM_ENABLED="false",
         PARA_FILES_OCR_RENAME__ENABLED="false",
     )
+    from para_files.classifiers.extension_router import ExtensionRouterClassifier
     from para_files.config import load_config
     from para_files.pipeline import ClassificationPipeline
 
     pipeline = ClassificationPipeline(load_config())
     pipeline._maybe_rename_generic_pdf = lambda path: path  # never rename during a measurement
+    pipeline._ensure_initialized()
+    pipeline._classifiers = [
+        c for c in pipeline._classifiers if not isinstance(c, ExtensionRouterClassifier)
+    ]  # signals 1-3 only: book detector, rules, taxonomy
 
     def classify(path: Path) -> tuple[str, float, str]:
         result = pipeline.classify_file(path)
@@ -75,10 +81,10 @@ def run_baseline(
     for index, row in enumerate(golden):
         source = para_root / row["path"]
         link = workdir / str(index) / source.name
-        link.parent.mkdir(parents=True, exist_ok=True)
-        link.symlink_to(source)
         start = time.monotonic()
         try:
+            link.parent.mkdir(parents=True, exist_ok=True)
+            link.symlink_to(source)
             category, confidence, signal = classify(link)
             leaf = leaf_for_category(category, tree, canon)
         except Exception as exc:  # noqa: BLE001 - one unreadable file must not stop the run

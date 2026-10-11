@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 
+from para_files.classifiers.extension_router import ExtensionRouterClassifier
+from para_files.config import Config, ExtensionRoutingConfig, LLMConfig, LoggingConfig, MLXConfig
 from para_files.core.tree import Tree
 
 
@@ -89,3 +91,86 @@ def test_run_baseline_maps_errors_to_red_and_never_exposes_para_paths(
     assert by_name["c.pdf"]["band"] == "red"
     assert all(not path.is_relative_to(para) for path in seen)
     assert snapshot(para) == before
+
+
+def test_old_pipeline_runs_signals_one_to_three_only(load_script, monkeypatch):
+    baseline = load_script("run_baseline")
+    for name in (
+        "PARA_FILES_MLX_SEMANTIC_ENABLED",
+        "PARA_FILES_LLM_ENABLED",
+        "PARA_FILES_OCR_RENAME__ENABLED",
+    ):
+        monkeypatch.setenv(name, "true")  # the function must switch these off
+    built: list[object] = []
+
+    class FakePipeline:
+        def __init__(self, config: Config) -> None:
+            self.config = config
+            self._classifiers = ["book", object.__new__(ExtensionRouterClassifier), "rules"]
+            built.append(self)
+
+        def _ensure_initialized(self) -> None:
+            return None
+
+    def env_only_config() -> Config:
+        # Built from os.environ alone: the real load_config would read the owner's personal
+        # tree and .env files.
+        return Config(
+            _env_file=None,
+            mlx=MLXConfig(_env_file=None),
+            llm=LLMConfig(_env_file=None),
+            logging=LoggingConfig(_env_file=None),
+            extension_routing=ExtensionRoutingConfig(_env_file=None),
+        )
+
+    monkeypatch.setattr("para_files.config.load_config", env_only_config)
+    monkeypatch.setattr("para_files.pipeline.ClassificationPipeline", FakePipeline)
+
+    baseline.old_pipeline_classifier()
+
+    (pipeline,) = built
+    assert pipeline.config.mlx.semantic_enabled is False
+    assert pipeline.config.llm.enabled is False
+    assert pipeline.config.ocr_rename.enabled is False
+    assert not any(isinstance(c, ExtensionRouterClassifier) for c in pipeline._classifiers)
+    assert pipeline._classifiers == ["book", "rules"]
+
+
+def test_out_inside_para_root_is_refused(load_script, tmp_path):
+    baseline = load_script("run_baseline")
+    para = tmp_path / "PARA"
+    para.mkdir()
+    # The config dir has no golden.jsonl: the refusal must come before the corpus is read.
+    with pytest.raises(SystemExit) as refused:
+        baseline.main(
+            [
+                "--para-root",
+                str(para),
+                "--config-dir",
+                str(tmp_path / "cfg"),
+                "--out",
+                str(para / "x.jsonl"),
+            ]
+        )
+    assert refused.value.code == 2
+
+
+def test_link_failure_becomes_red_row(load_script, tmp_path):
+    baseline = load_script("run_baseline")
+    para = tmp_path / "PARA"
+    source = para / "4_Archives/5y_factures/a.pdf"
+    source.parent.mkdir(parents=True)
+    source.write_text("x")
+    workdir = tmp_path / "work"
+    workdir.mkdir()
+    (workdir / "0").write_text("not a folder")  # the link folder of row 0 cannot be created
+    golden = [{"path": "4_Archives/5y_factures/a.pdf", "leaf": "invoices", "kind": "record"}]
+
+    def classify(path: Path) -> tuple[str, float, str]:
+        msg = "classify must not run when the link cannot be made"
+        raise AssertionError(msg)
+
+    preds = baseline.run_baseline(para, golden, TREE, canon, classify, workdir)
+    assert preds[0]["band"] == "red"
+    assert preds[0]["signal"] == "error"
+    assert preds[0]["leaf"] is None
