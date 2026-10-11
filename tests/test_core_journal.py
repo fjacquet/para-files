@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import os
 from datetime import datetime
 
 import pytest
@@ -66,3 +68,50 @@ def test_confirmed_counts(tmp_path):
         journal.append({"op": "move", "leaf": "archives_10y_travail", "decided_by": "owner"})
     mark_undone(tmp_path, "r2")
     assert confirmed_counts(tmp_path, tree) == {"record": 1, "knowledge": 1}
+
+
+def test_construction_fsyncs_journal_directory_once(tmp_path, monkeypatch):
+    calls: list[int] = []
+    real_fsync = os.fsync
+
+    def recording_fsync(fd: int) -> None:
+        calls.append(fd)
+        real_fsync(fd)
+
+    monkeypatch.setattr(os, "fsync", recording_fsync)
+    journal = Journal(tmp_path, "r1")
+    assert len(calls) == 1
+    journal.close()
+
+
+def test_read_run_ignores_torn_final_line(tmp_path):
+    journal = Journal(tmp_path, "r1")
+    journal.append({"op": "move", "src": "a"})
+    journal.close()
+    with journal.path.open("a", encoding="utf-8") as handle:
+        handle.write('{"op": "mo')
+    assert read_run(tmp_path, "r1") == [{"run_id": "r1", "op": "move", "src": "a"}]
+
+
+def test_read_run_raises_on_malformed_middle_line(tmp_path):
+    journal = Journal(tmp_path, "r1")
+    journal.append({"op": "move", "src": "a"})
+    journal.close()
+    with journal.path.open("a", encoding="utf-8") as handle:
+        handle.write('{"op": "mo\n{"run_id": "r1", "op": "move"}\n')
+    with pytest.raises(json.JSONDecodeError):
+        read_run(tmp_path, "r1")
+
+
+def test_run_ids_sort_suffixes_numerically(tmp_path):
+    base = "20261011-213000"
+    for run_id in (base, f"{base}-2", f"{base}-10"):
+        Journal(tmp_path, run_id).close()
+    assert run_ids(tmp_path) == [base, f"{base}-2", f"{base}-10"]
+    assert last_run_id(tmp_path) == f"{base}-10"
+
+
+def test_append_cannot_override_run_id(tmp_path):
+    with Journal(tmp_path, "r1") as journal:
+        journal.append({"run_id": "other", "op": "x"})
+    assert read_run(tmp_path, "r1") == [{"run_id": "r1", "op": "x"}]
