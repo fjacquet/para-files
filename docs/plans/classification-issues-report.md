@@ -131,7 +131,7 @@ Key reclassifications:
 | DFi Service | `*DFi*Service*`, `*zimbra*` | Materiels/Informatique/{YYYY} |
 | Corsica Ferries | `*Corsica*Ferries*` | voyages/Corsica-Ferries/{YYYY} |
 | American Airlines | `*American*Airlines*` | voyages/American-Airlines/{YYYY} |
-| Tryba | `*Tryba*` | immobilier/Tryba/{YYYY} |
+| `<property>` | `*<property>*` | immobilier/`<property>`/{YYYY} |
 | `<property>` | `*<property>*`, `*CRG*DU*AU*` | immobilier/`<property>`/{YYYY} |
 | Editions Diamond | `*Diamond*`, `*Linux*Magazine*` | loisirs/magazines/{YYYY} |
 | Ninja Kitchen | `*Ninja*`, `*SharkNinja*` | Materiels/Maison/Cuisine/{YYYY} |
@@ -169,4 +169,4 @@ Key reclassifications:
 
 - `16c0dcc` - Initial route additions (CFF, Mobility, Pacifica, Orion, Eau, AVS, CAF, Kuoni)
 - `00b86ef` - File moves and corrections
-- `559934c` - Additional routes (5àSec, DFi, Corsica, American Airlines, Tryba, `<property>`, Diamond, Ninja)
+- `559934c` - Additional routes (5àSec, DFi, Corsica, American Airlines, `<property>`, Diamond, Ninja)
