@@ -16,6 +16,7 @@ from para_files.utils.filename_sanitizer import sanitize_filename
 
 TRASH = ".trash"
 MAX_SUFFIX = 1000
+INVALID_NAMES = frozenset({"", ".", ".."})
 
 
 @dataclass(frozen=True)
@@ -58,6 +59,15 @@ class _Applier:
 
     def inside(self, path: Path) -> bool:
         return path.resolve().is_relative_to(self.root)
+
+    def contained(self, dst: Path, target: Path) -> bool:
+        return dst.parent.resolve() == target.resolve() and self.inside(dst)
+
+    def name(self, op: Op) -> str:
+        suggested = op.decision.suggested_name
+        if suggested:
+            return sanitize_filename(suggested, preserve_extension=True)
+        return op.decision.path.name
 
     def makedirs(self, directory: Path) -> None:
         missing: list[Path] = []
@@ -110,8 +120,9 @@ class _Applier:
         target = self.target(op) if reason is None else None
         if target is not None and not self.inside(target):
             reason = "target outside the PARA root"
-        suggested = op.decision.suggested_name
-        name = sanitize_filename(suggested, preserve_extension=True) if suggested else src.name
+        name = self.name(op)
+        if reason is None and name.strip() in INVALID_NAMES:
+            reason = "invalid file name"
         if (
             target is not None
             and reason is None
@@ -126,8 +137,11 @@ class _Applier:
         if dst.is_file() and sha256_of(dst) == op.decision.sha256:
             self.trash(op, src)
             return
-        self.makedirs(target)
         dst = free_path(dst)
+        if not self.contained(dst, target):
+            self.report.skipped.append((src, "target outside the PARA root"))
+            return
+        self.makedirs(target)
         shutil.move(src, dst)
         self.record("move", op, src, dst)
         self.report.moved.append((src, dst))

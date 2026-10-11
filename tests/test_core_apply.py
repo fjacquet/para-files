@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from para_files.core import apply as apply_mod
 from para_files.core.apply import Op, apply_ops
 from para_files.core.decide import Decision
@@ -190,3 +192,16 @@ def test_nothing_is_deleted(tmp_path):
 
 def test_trash_folder_name(tmp_path):
     assert apply_mod.TRASH == ".trash"
+
+
+@pytest.mark.parametrize("name", [".", "..", "   "])
+def test_invalid_suggested_name_is_skipped(tmp_path, name):
+    root, state = setup(tmp_path)
+    src = inbox(root, "scan.pdf")
+    before = sorted(p.relative_to(root) for p in root.rglob("*"))
+    op = Op(decision(src, suggested_name=name), "archives_10y_travail", "auto")
+    report, _ = run(root, state, [op])
+    assert report.skipped == [(src, "invalid file name")]
+    assert src.exists()
+    assert sorted(p.relative_to(root) for p in root.rglob("*")) == before
+    assert {p.name for p in tmp_path.iterdir()} <= {"PARA", "cache", "state"}
