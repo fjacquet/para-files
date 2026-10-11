@@ -220,3 +220,22 @@ class TestReadContentPreviewDispatch:
         result = read_content_preview(path, max_chars=2000)
         assert result != f"Filename: {path.name}"
         assert "invoice_2024.pdf" in result or "Archive manifest" in result
+
+
+def test_aes_encrypted_pdf_with_empty_user_password_is_read(tmp_path):
+    """pypdf needs `cryptography` for AES; bank statements are often encrypted this way."""
+    import pymupdf
+
+    from para_files.utils.file_utils import read_content_preview
+
+    pdf = tmp_path / "statement.pdf"
+    doc = pymupdf.open()
+    doc.new_page().insert_text((72, 72), "Statement of account AcmeBank balance 1234.56")
+    doc.save(
+        pdf,
+        encryption=pymupdf.PDF_ENCRYPT_AES_256,
+        owner_pw="owner",
+        user_pw="",
+        permissions=pymupdf.PDF_PERM_PRINT,
+    )
+    assert "AcmeBank" in read_content_preview(pdf)
