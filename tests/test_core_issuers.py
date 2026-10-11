@@ -5,6 +5,7 @@ from __future__ import annotations
 import unicodedata
 
 from para_files.core.issuers import IssuerMatch, found, match_issuer
+from para_files.core.tree import IssuersFile, RulesFile, Tree, TreeConfig
 from tests.core_helpers import make_config
 
 
@@ -47,10 +48,55 @@ def test_longest_pattern_wins():
     assert match.pattern == "acmecard.example"
 
 
-def test_nfd_text_matches():
-    config = make_config()
-    name = unicodedata.normalize("NFD", "AcmeCard relevé facture.pdf")
-    assert match_issuer(name, "", config).issuer == "acmecard"
+def _accent_config() -> TreeConfig:
+    """One accented issuer pattern; the banks leaf has an accented keyword."""
+    return TreeConfig(
+        tree=Tree.model_validate(
+            {
+                "leaves": {
+                    "archives_10y_banques": {
+                        "kind": "record",
+                        "retention": "10y",
+                        "path": "4_Archives/10y_banques",
+                        "describe": "Statements",
+                        "keywords": ["relevé"],
+                    },
+                    "archives_5y_factures": {
+                        "kind": "record",
+                        "retention": "5y",
+                        "path": "4_Archives/5y_factures",
+                        "describe": "Invoices",
+                        "keywords": ["facture"],
+                    },
+                }
+            }
+        ),
+        rules=RulesFile(),
+        issuers=IssuersFile.model_validate(
+            {
+                "issuers": {
+                    "societe": {
+                        "patterns": ["Société Générique"],
+                        "leaves": ["archives_10y_banques", "archives_5y_factures"],
+                    }
+                }
+            }
+        ),
+    )
+
+
+def test_nfd_filename_matches_nfc_pattern():
+    name = unicodedata.normalize("NFD", "Société Générique relevé.pdf")
+    match = match_issuer(name, "", _accent_config())
+    assert match is not None
+    assert match.issuer == "societe"
+    assert match.pattern == "Société Générique"
+
+
+def test_nfd_keyword_counts_toward_agreement():
+    name = unicodedata.normalize("NFD", "relevé.pdf")
+    match = match_issuer(name, "Société Générique", _accent_config())
+    assert match == IssuerMatch("societe", "Société Générique", "archives_10y_banques", agreed=True)
 
 
 def test_no_issuer():
