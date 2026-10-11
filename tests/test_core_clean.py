@@ -168,3 +168,17 @@ def test_copy_suffix_is_trashed_and_the_plain_name_kept(tmp_path):
     copy = put(root, "2_Areas/x/a (2).pdf", "same")
     plan = plan_clean([root], root=root, duplicates=True)
     assert plan.duplicates == [(copy, plain)]
+
+
+def test_overlapping_inputs_never_pair_a_file_with_itself(tmp_path):
+    root = make_para_root(tmp_path)
+    put(root, "2_Areas/A/B/x.pdf", "same")
+    put(root, "2_Areas/A/y.pdf", "same")
+    put(root, "2_Areas/A/B/.DS_Store")
+    area = root / "2_Areas" / "A"
+    plan = plan_clean([area, area / "B"], root=root, duplicates=True)
+    assert len(plan.duplicates) == 1
+    copy, kept = plan.duplicates[0]
+    assert copy != kept
+    assert len(plan.junk) == 1
+    assert len(plan.empty_dirs) == len(set(plan.empty_dirs))

@@ -130,6 +130,14 @@ def _check_base(base: Path, root: Path) -> None:
         raise ValueError(msg)
 
 
+def _unique(paths: Sequence[Path]) -> list[Path]:
+    """Drop repeats by resolved path (inputs may overlap), keeping the first, in order."""
+    first: dict[Path, Path] = {}
+    for path in paths:
+        first.setdefault(path.resolve(), path)
+    return list(first.values())
+
+
 def plan_clean(
     paths: Sequence[Path],
     *,
@@ -159,8 +167,10 @@ def plan_clean(
                 elif not name.startswith("."):
                     files.append(path)
         plan.empty_dirs += _empty_after_junk(base, kept)
+    plan.junk = _unique(plan.junk)
+    plan.empty_dirs = _unique(plan.empty_dirs)
     if duplicates:
-        plan.duplicates = _duplicates(files, root)
+        plan.duplicates = _duplicates(_unique(files), root)
     return plan
 
 
