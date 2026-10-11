@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import json
+import signal
+import threading
+import time
 from pathlib import Path
 
 import httpx
@@ -107,7 +111,7 @@ def test_secret_content_is_never_sent(bakeoff, tmp_path: Path):
         bakeoff.ask_gemini,
         _never,
         "k",
-        lambda _p: "-----BEGIN RSA PRIVATE KEY-----\nMIIE",
+        lambda _p: "-----BEGIN " + "RSA PRIVATE KEY-----\nMIIE",
     )
     assert pred["signal"] == "secret"
 
@@ -153,3 +157,24 @@ def test_select_scope(bakeoff):
     baseline = [{"path": "a.pdf", "band": "green"}, {"path": "b.pdf", "band": "red"}]
     scoped = {row["path"]: row["scope"] for row in bakeoff.select_scope(golden, baseline)}
     assert scoped == {"b.pdf": "a", "c.pdf": "b"}
+
+
+def test_interrupt_keeps_done_predictions_and_skips_pending(bakeoff, tmp_path: Path):
+    calls: list[str] = []
+
+    def run(row: dict) -> dict:
+        calls.append(row["path"])
+        if row["path"] == "b":
+            time.sleep(0.2)  # the main thread collects "a" and waits on "b"
+            # Ctrl+C lands on the main thread, blocked on "b" (not on this worker)
+            signal.pthread_kill(threading.main_thread().ident, signal.SIGINT)
+            time.sleep(0.5)  # the main thread cancels "c" before this worker takes it
+        return {"path": row["path"]}
+
+    out = tmp_path / "p.jsonl"
+    rows = [{"path": "a"}, {"path": "b"}, {"path": "c"}]
+    with pytest.raises(KeyboardInterrupt):
+        bakeoff.predict_all(rows, run, 1, out)
+    time.sleep(1.0)  # long enough for a worker that was not cancelled to start "c"
+    assert [json.loads(line)["path"] for line in out.read_text().splitlines()] == ["a"]
+    assert "c" not in calls

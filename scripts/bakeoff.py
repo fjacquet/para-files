@@ -269,6 +269,33 @@ def predict(
     return pred
 
 
+def predict_all(
+    rows: list[dict[str, Any]],
+    run: Callable[[dict[str, Any]], dict[str, Any]],
+    workers: int,
+    out: Path,
+) -> list[dict[str, Any]]:
+    """Predict rows in order; on Ctrl+C cancel pending calls, keep what is done, re-raise."""
+    preds: list[dict[str, Any]] = []
+    pool = ThreadPoolExecutor(workers)
+    futures = [pool.submit(run, row) for row in rows]
+    try:
+        for future in futures:
+            preds.append(future.result())
+    except KeyboardInterrupt:
+        pool.shutdown(wait=False, cancel_futures=True)
+        _write_preds(out, preds)
+        print(f"interrupted: kept {len(preds)} of {len(rows)} predictions -> {out}")
+        raise
+    pool.shutdown()
+    _write_preds(out, preds)
+    return preds
+
+
+def _write_preds(out: Path, preds: list[dict[str, Any]]) -> None:
+    out.write_text("".join(json.dumps(p, ensure_ascii=False) + "\n" for p in preds), "utf-8")
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run one candidate over the bake-off scope and write its predictions; return 0."""
     parser = argparse.ArgumentParser(description="Run one signal-4 candidate.")
@@ -291,14 +318,13 @@ def main(argv: list[str] | None = None) -> int:
     rows = rows[: args.limit]
     menu = leaf_menu(load_tree_config(cfg_dir).tree)
     ask, workers = CANDIDATES[args.candidate]
-    with ThreadPoolExecutor(workers) as pool:
-        preds = list(
-            pool.map(
-                lambda r: predict(r, para_root, menu, ask, httpx.post, key, read_preview), rows
-            )
-        )
     out = cfg_dir / f"pred_{args.candidate}.jsonl"
-    out.write_text("".join(json.dumps(p, ensure_ascii=False) + "\n" for p in preds), "utf-8")
+    preds = predict_all(
+        rows,
+        lambda r: predict(r, para_root, menu, ask, httpx.post, key, read_preview),
+        workers,
+        out,
+    )
     errors = sum(1 for p in preds if "error" in p)
     secrets = sum(1 for p in preds if p["signal"] == "secret")
     print(

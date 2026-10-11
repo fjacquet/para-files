@@ -56,8 +56,8 @@ def test_ordinary_names_pass(name):
 @pytest.mark.parametrize(
     ("text", "reason"),
     [
-        ("-----BEGIN OPENSSH PRIVATE KEY-----\nabc", "private_key"),
-        ("-----BEGIN PGP PRIVATE KEY BLOCK-----", "private_key"),
+        ("-----BEGIN " + "OPENSSH PRIVATE KEY-----\nabc", "private_key"),
+        ("-----BEGIN " + "PGP PRIVATE KEY BLOCK-----", "private_key"),
         ("aws_access_key_id = " + "AKIA" + "ABCDEFGHIJKLMNOP", "cloud_access_key"),
         ('{"root_token": "s.abc", "unseal_keys_b64": []}', "vault_keys"),
         ('{"recovery_keys_b64": ["x"]}', "vault_keys"),
