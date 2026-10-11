@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
+from pydantic_core import PydanticUndefined
 
-from para_files.core.settings import load_settings
+from para_files.core.settings import CoreSettings, load_settings
 from tests.core_helpers import make_para_root
 
 
@@ -110,19 +112,21 @@ def test_settings_read_the_env_file_in_the_config_dir(tmp_path, monkeypatch):
     assert settings.max_workers == 7
 
 
-def test_env_example_names_only_real_settings():
-    """Every NAME= in .env.example (commented or not) is a real CoreSettings field."""
-    import re
-
-    from para_files.core.settings import CoreSettings
-
-    repo = Path(__file__).parent.parent
-    text = (repo / ".env.example").read_text(encoding="utf-8")
-    names = re.findall(r"^#?\s*([A-Z][A-Z0-9_]*)=", text, flags=re.MULTILINE)
-    assert names, "no settings found in .env.example"
-    fields = set(CoreSettings.model_fields)
-    for name in names:
-        if name == "OPENROUTER_API_KEY":
+def test_env_example_matches_the_settings():
+    """Every NAME=value in .env.example (commented or not) is a real setting with its default."""
+    text = (Path(__file__).parent.parent / ".env.example").read_text(encoding="utf-8")
+    lines = re.findall(r"^#?\s*([A-Z][A-Z0-9_]*)=(\S*)", text, flags=re.MULTILINE)
+    assert lines, "no settings found in .env.example"
+    key_field = CoreSettings.model_fields["openrouter_api_key"]
+    key_names = set(key_field.validation_alias.choices)
+    for name, value in lines:
+        if name in key_names:
             continue
         assert name.startswith("PARA_FILES_"), name
-        assert name.removeprefix("PARA_FILES_").lower() in fields, name
+        field = CoreSettings.model_fields.get(name.removeprefix("PARA_FILES_").lower())
+        assert field is not None, name
+        if field.default_factory is not None:
+            assert Path(value).expanduser() == field.default_factory(), name
+        elif field.default is not PydanticUndefined and field.default is not None:
+            default = str(field.default)
+            assert value == (default.lower() if isinstance(field.default, bool) else default), name
