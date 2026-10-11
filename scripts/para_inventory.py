@@ -148,13 +148,21 @@ def _group_targets(
         if strip_prefix(largest.name) in MEDIA | LIBRARY:
             bare = RETENTION_PREFIX.sub("", largest.name.strip())
             target = plain[0].trimmed if plain else f"{bucket}/{bare}"
+            rep_target = dict.fromkeys(rep_target, target)
         else:
-            target = f"{ARCHIVES}/{largest.name.strip()}"
-        rep_target = dict.fromkeys(rep_target, target)
+            vault = {f"{ARCHIVES}/{rep.name.strip()}" for rep in prefixed}
+            for key, rep in reps.items():
+                if retention_of(rep.name):
+                    rep_target[key] = f"{ARCHIVES}/{rep.name.strip()}"  # each prefix kept
+                else:
+                    rep_target[key] = next(iter(vault)) if len(vault) == 1 else INBOX
     elif bucket == ARCHIVES and (prefixed or stem in taxonomy):
         allowed = taxonomy.get(stem) or {retention_of(rep.name) for rep in prefixed}
         keepers = [rep.trimmed for rep in prefixed if retention_of(rep.name) in allowed]
-        single = keepers[0] if len(allowed) == 1 and len(keepers) == 1 else None
+        single = None
+        if len(allowed) == 1:  # the taxonomy prefix, created when no folder has it yet
+            base = RETENTION_PREFIX.sub("", next(iter(reps.values())).name.strip())
+            single = keepers[0] if keepers else f"{ARCHIVES}/{next(iter(allowed))}_{base}"
         for key, rep in reps.items():
             prefix = retention_of(rep.name)
             if prefix in allowed:

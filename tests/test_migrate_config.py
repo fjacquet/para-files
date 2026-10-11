@@ -280,3 +280,66 @@ class TestReadOnly:
         argv += ["--documents", str(documents), "--out", str(para / "draft")]
         with pytest.raises(SystemExit):
             migrate.main(argv)
+
+
+class TestTargetsWithoutFolders:
+    def _draft(self, load_script, tmp_path, documents, legacy, rels):
+        root = tmp_path / "PARA"
+        for rel in rels:
+            _touch(root, rel)
+        out = tmp_path / "draft-small"
+        migrate = load_script("migrate_config")
+        argv = ["--para-root", str(root), "--legacy-tree", str(legacy)]
+        argv += ["--documents", str(documents), "--out", str(out)]
+        assert migrate.main(argv) == 0
+        return load_tree_config(out).tree.leaves
+
+    def test_stray_prefix_alone_gets_the_taxonomy_leaf(
+        self, load_script, tmp_path, documents, legacy
+    ):
+        leaves = self._draft(
+            load_script, tmp_path, documents, legacy, ["4_Archives/5y_travail/r.pdf"]
+        )
+        assert "archives_5y_travail" not in leaves
+        assert leaves["archives_10y_travail"].retention == "10y"
+
+    def test_prefixed_folders_outside_archives_alone_get_leaves(
+        self, load_script, tmp_path, documents, legacy
+    ):
+        rels = ["3_Resources/5y_screenshots/s.png", "3_Resources/ret_prevoyance/avs.pdf"]
+        leaves = self._draft(load_script, tmp_path, documents, legacy, rels)
+        assert leaves["resources_screenshots"].kind == "media"
+        assert leaves["archives_ret_prevoyance"].retention == "ret"
+
+
+def test_distinct_prefixes_outside_archives_keep_their_identity(load_script, tmp_path):
+    root = tmp_path / "PARA"
+    for rel in [
+        "3_Resources/5y_mobilite/a.pdf",
+        "3_Resources/5y_mobilite/b.pdf",
+        "3_Resources/ctr_mobilite/c.pdf",
+        "3_Resources/mobilite/d.pdf",
+    ]:
+        _touch(root, rel)
+    inventory = load_script("para_inventory")
+    mapping = inventory.canonical_map(inventory.scan_folders(root))
+    assert mapping["3_Resources/5y_mobilite"] == "4_Archives/5y_mobilite"
+    assert mapping["3_Resources/ctr_mobilite"] == "4_Archives/ctr_mobilite"
+    assert mapping["3_Resources/mobilite"] == "0_Inbox"
+
+
+def test_review_is_written_when_the_draft_does_not_load(
+    load_script, para, legacy, documents, tmp_path, monkeypatch
+):
+    migrate = load_script("migrate_config")
+
+    def refuse(_path):
+        msg = "boom"
+        raise migrate.TreeError(msg)
+
+    monkeypatch.setattr(migrate, "load_tree_config", refuse)
+    out = tmp_path / "bad-draft"
+    argv = ["--para-root", str(para), "--legacy-tree", str(legacy)]
+    argv += ["--documents", str(documents), "--out", str(out)]
+    assert migrate.main(argv) == 1
+    assert "the draft does not load: boom" in (out / "review.md").read_text()

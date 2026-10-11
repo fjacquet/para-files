@@ -33,7 +33,7 @@ from para_inventory import (
 )
 
 from para_files.config import default_reference_tree
-from para_files.core.tree import config_dir, load_tree_config, validation_warnings
+from para_files.core.tree import TreeError, config_dir, load_tree_config, validation_warnings
 
 
 BOOKS = frozenset({"livres", "books"})
@@ -124,8 +124,9 @@ def propose_leaf(
 def draft_tree(
     folders: list[Folder], canon: Canon, docs: dict[str, tuple[str, str | None]], notes: list[str]
 ) -> dict[str, dict[str, Any]]:
-    """One proposed leaf per canonical folder; merged and doubtful folders are noted only."""
-    leaves: dict[str, dict[str, Any]] = {}
+    """One proposed leaf per canonical target (created when no folder has it yet)."""
+    scanned = {folder.trimmed: folder for folder in folders}
+    targets: list[str] = []
     for folder in folders:
         rel = folder.trimmed
         target = canon(rel)
@@ -134,8 +135,13 @@ def draft_tree(
             continue
         if target != rel:
             notes.append(f"merge: {rel} -> {target}")
-            continue
-        base = f"{TAGS.get(folder.bucket, slug(folder.bucket))}_{slug(folder.name)}"
+        if target not in targets:
+            targets.append(target)
+    leaves: dict[str, dict[str, Any]] = {}
+    for target in targets:
+        bucket, _, name = target.partition("/")
+        folder = scanned.get(target) or Folder(bucket, name, 0)
+        base = f"{TAGS.get(bucket, slug(bucket))}_{slug(name)}"
         leaf_id, counter = base, 2
         while leaf_id in leaves:
             leaf_id, counter = f"{base}_{counter}", counter + 1
@@ -325,10 +331,14 @@ def main(argv: list[str] | None = None) -> int:
     _dump(out / "tree.yaml", {"leaves": leaves})
     _dump(out / "rules.yaml", {"rules": rules})
     _dump(out / "issuers.yaml", {"issuers": issuers})
-    warnings = validation_warnings(load_tree_config(out))
+    status = 0
+    try:
+        warnings = validation_warnings(load_tree_config(out))
+    except TreeError as exc:  # still write review.md so the owner sees why
+        warnings, status = [f"the draft does not load: {exc}"], 1
     write_review(out, leaves, notes, inbox_families(para_root / "0_Inbox"), warnings)
     print(f"{len(leaves)} leaves, {len(rules)} rules, {len(issuers)} issuers -> {out}")
-    return 0
+    return status
 
 
 if __name__ == "__main__":
