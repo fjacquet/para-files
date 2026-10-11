@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The plan groups yellow files by proposed folder and says how many were decided by hints only; JSON adds `ranked`, `about` and `summary.by_signal`.
 - **Model first.** Every non-secret file is read by the model unless a verified ISBN or a pinned rule decides. Unpinned rules and issuers are hints in the prompt; with no key (or the model off) the first hint is shown as a yellow suggestion and never moves alone. **Breaking:** unpinned rules no longer move files with `--apply`; pin the rules you trust. `PARA_FILES_ISSUERS_GREEN` is gone.
 - Logs are quiet by default (warnings only, on stderr); `--verbose` shows debug lines.
 - The model's prompt carries the file type, page count, title/author/subject, ISBNs, EXIF date, the whole preview (including OCR text), each folder's path, and the rule and issuer matches as hints; it also answers a short 'about'. Cached verdicts are keyed by prompt version, both models and preview size.

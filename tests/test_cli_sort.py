@@ -194,3 +194,27 @@ def test_review_refuses_without_a_terminal(tmp_path, monkeypatch):
     assert result.exit_code != 0
     assert "needs a terminal" in result.output
     assert note.exists()
+
+
+def test_plan_groups_yellow_files_by_folder_and_counts_hints(tmp_path, monkeypatch):
+    root = setup_cli(tmp_path, monkeypatch)
+    put(root, "0_Inbox/a_notes.md", "# a")
+    put(root, "0_Inbox/b_notes.md", "# b")
+    put(root, "0_Inbox/statement.txt", "AcmeCard statement")
+    result = runner.invoke(app, ["sort"])
+    assert result.exit_code == 0, result.output
+    assert "  resources_it (2)" in result.output
+    assert "  archives_10y_banques (1)" in result.output
+    assert "3 files decided by hints only (model off or did not answer)" in result.output
+
+
+def test_json_has_ranked_about_and_by_signal(tmp_path, monkeypatch):
+    root = setup_cli(tmp_path, monkeypatch)
+    put(root, "0_Inbox/a_notes.md", "AcmeCard # a")
+    result = runner.invoke(app, ["sort", "--json"])
+    assert result.exit_code == 0, result.output
+    data = json.loads(result.output)
+    decision = data["decisions"][0]
+    assert decision["ranked"] == [["resources_it", 1.0], ["archives_10y_banques", 0.8]]
+    assert decision["about"] is None
+    assert data["summary"]["by_signal"] == {"hint": 1}

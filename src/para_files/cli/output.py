@@ -21,6 +21,16 @@ SECTIONS = (
 )
 
 
+def group_by_leaf(decisions: Sequence[Decision]) -> list[tuple[str, list[Decision]]]:
+    """Yellow decisions with a leaf, by leaf: biggest group first, then by leaf id."""
+    groups: dict[str, list[Decision]] = {}
+    for decision in decisions:
+        if decision.band == "yellow" and decision.leaf_id:
+            groups.setdefault(decision.leaf_id, []).append(decision)
+    ordered = [(leaf, sorted(group, key=lambda d: str(d.path))) for leaf, group in groups.items()]
+    return sorted(ordered, key=lambda item: (-len(item[1]), item[0]))
+
+
 def decision_dict(decision: Decision, root: Path) -> dict[str, Any]:
     """One decision as JSON."""
     return {
@@ -33,6 +43,8 @@ def decision_dict(decision: Decision, root: Path) -> dict[str, Any]:
         "confidence": round(decision.confidence, 3),
         "why": decision.evidence_summary,
         "rename": decision.suggested_name,
+        "ranked": [[leaf, round(p, 3)] for leaf, p in decision.ranked],
+        "about": decision.about,
     }
 
 
@@ -47,6 +59,7 @@ def summary(decisions: Sequence[Decision]) -> dict[str, Any]:
         "red": bands["red"],
         "secrets": sum(decision.signal == "secret" for decision in decisions),
         "by_kind": dict(sorted(kinds.items())),
+        "by_signal": dict(sorted(Counter(d.signal for d in decisions).items())),
     }
 
 
@@ -55,25 +68,36 @@ def _line(decision: Decision, root: Path) -> str:
     if decision.leaf_id is None:
         return f"  {name}  ({decision.evidence_summary})"
     rename = f" as {decision.suggested_name!r}" if decision.suggested_name else ""
+    about = f"  — {decision.about}" if decision.about else ""
     return (
         f"  {name}  ->  {decision.target_dir}{rename}  "
-        f"[{decision.signal} {decision.confidence:.2f}]"
+        f"[{decision.signal} {decision.confidence:.2f}]{about}"
     )
 
 
 def print_plan(decisions: Sequence[Decision], root: Path) -> None:
-    """Band-grouped plan; secrets get their own heading."""
+    """Band-grouped plan (yellow by folder); secrets get their own heading."""
     secrets = [d for d in decisions if d.signal == "secret"]
     for band, label in SECTIONS:
         shown = [d for d in decisions if d.band == band and d.signal != "secret"]
-        if shown:
-            typer.echo(f"{band.upper()} ({len(shown)}): {label}")
+        if not shown:
+            continue
+        typer.echo(f"{band.upper()} ({len(shown)}): {label}")
+        if band == "yellow":
+            for leaf_id, group in group_by_leaf(shown):
+                typer.echo(f"  {leaf_id} ({len(group)})")
+                for decision in group:
+                    typer.echo("  " + _line(decision, root))
+        else:
             for decision in shown:
                 typer.echo(_line(decision, root))
     if secrets:
         typer.echo(f"SECRETS ({len(secrets)}): never sent, never moved; keep them in a vault")
         for decision in secrets:
             typer.echo(f"  {relative(decision.path, root)}")
+    hinted = sum(d.signal == "hint" for d in decisions)
+    if hinted:
+        typer.echo(f"{hinted} files decided by hints only (model off or did not answer)")
     counts = summary(decisions)
     typer.echo(
         f"{counts['files']} files: {counts['green']} green, {counts['yellow']} yellow, "
