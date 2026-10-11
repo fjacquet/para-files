@@ -73,3 +73,28 @@ def test_confirmation_stats(tmp_path):
         )
         journal.append({"op": "move", "leaf": "resources_it", "decided_by": "auto"})
     assert confirmation_stats(tmp_path, make_config().tree) == {"knowledge": (1, 1)}
+
+
+def _owner_entry(op, sha256="abc", leaf="resources_it", proposed="resources_it"):
+    return {
+        "op": op,
+        "sha256": sha256,
+        "leaf": leaf,
+        "proposed_leaf": proposed,
+        "decided_by": "owner",
+    }
+
+
+def test_the_same_confirmation_in_three_runs_counts_once(tmp_path):
+    for run_id in ("20261011-100001", "20261011-100002", "20261011-100003"):
+        with Journal(tmp_path, run_id) as journal:
+            journal.append(_owner_entry("confirm"))
+    assert confirmation_stats(tmp_path, make_config().tree) == {"knowledge": (1, 1)}
+
+
+def test_a_move_then_a_later_confirm_of_the_same_file_counts_once(tmp_path):
+    with Journal(tmp_path, "20261011-100001") as journal:
+        journal.append(_owner_entry("move", proposed="resources_docs"))
+    with Journal(tmp_path, "20261011-100002") as journal:
+        journal.append(_owner_entry("confirm"))
+    assert confirmation_stats(tmp_path, make_config().tree) == {"knowledge": (1, 0)}

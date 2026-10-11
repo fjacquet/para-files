@@ -148,9 +148,11 @@ def last_run_id(state_dir: Path) -> str | None:
 def confirmation_stats(state_dir: Path, tree: Tree) -> dict[str, tuple[int, int]]:
     """Per leaf kind: (owner-decided moves, how many the tool had proposed right).
 
-    Counts every run not undone. The second number feeds S2 (spec §3).
+    Counts every run not undone, each (content, leaf) once: the first entry seen wins.
+    The second number feeds S2 (spec §3).
     """
     stats: dict[str, list[int]] = {}
+    seen: set[tuple[str, str]] = set()
     for run_id in run_ids(state_dir):
         if is_undone(state_dir, run_id):
             continue
@@ -161,6 +163,11 @@ def confirmation_stats(state_dir: Path, tree: Tree) -> dict[str, tuple[int, int]
                 and entry.get("decided_by") == "owner"
                 and leaf
             ):
+                if entry.get("sha256"):
+                    key = (str(entry["sha256"]), str(entry["leaf"]))
+                    if key in seen:
+                        continue
+                    seen.add(key)
                 counts = stats.setdefault(leaf.kind, [0, 0])
                 counts[0] += 1
                 counts[1] += entry.get("proposed_leaf") == entry.get("leaf")
