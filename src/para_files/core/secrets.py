@@ -27,7 +27,7 @@ _TEXT: tuple[tuple[str, re.Pattern[str]], ...] = (
             r"^[^\S\n]*(?:[\w.'-]+[^\S\n]+){0,3}?[\"']?[\w.-]*"
             r"(?:password|passwd|pwd|secret|token|api[_-]?key"
             r"|mots?[^\S\n]+de[^\S\n]+passe|mdp|identifiants)"
-            r"[\w.-]*[\"']?[^\S\n]*[:=]\s*\S{4,}",
+            r"[\w.-]{0,30}[\"']?[^\S\n]*[:=]\s*\S{4,}",
             re.IGNORECASE | re.MULTILINE,
         ),
     ),

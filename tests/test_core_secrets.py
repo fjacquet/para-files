@@ -94,3 +94,7 @@ def test_settings_without_values_pass(text):
 
 def test_long_blank_text_is_not_flagged():
     assert secret_reason("notes.txt", "\n" * 50_000) is None
+
+
+def test_long_marker_run_is_not_flagged():
+    assert secret_reason("notes.txt", "password" * 8000) is None
