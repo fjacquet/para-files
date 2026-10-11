@@ -5,13 +5,10 @@ from __future__ import annotations
 import subprocess
 import zipfile
 from collections.abc import Callable
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from loguru import logger
-
-from para_files.types import FileMetadata
 
 
 if TYPE_CHECKING:
@@ -120,79 +117,6 @@ MEDIA_ONLY_EXTENSIONS = frozenset(
         ".ogg",
     }
 )
-
-
-def extract_file_metadata(file_path: Path, *, extract_exif: bool = True) -> FileMetadata:
-    """Extract metadata from a file.
-
-    Args:
-        file_path: Path to the file.
-        extract_exif: Whether to extract EXIF data (requires exiftool).
-
-    Returns:
-        FileMetadata with filename, extension, size, dates, and optional EXIF/PDF.
-    """
-    stat = file_path.stat()
-
-    # Get modification time as datetime
-    modified_at = datetime.fromtimestamp(stat.st_mtime, tz=UTC)
-
-    # Get creation time if available (macOS)
-    created_at = None
-    if hasattr(stat, "st_birthtime"):
-        created_at = datetime.fromtimestamp(stat.st_birthtime, tz=UTC)
-
-    # Extract EXIF data if requested
-    exif_date = None
-    exif_gps_lat = None
-    exif_gps_lon = None
-    exif_camera = None
-
-    if extract_exif:
-        from para_files.utils.exiftool import extract_exif as get_exif
-
-        exif = get_exif(file_path)
-        if exif:
-            exif_date = exif.best_date
-            if exif.gps:
-                exif_gps_lat = exif.gps.latitude
-                exif_gps_lon = exif.gps.longitude
-            if exif.make and exif.model:
-                exif_camera = f"{exif.make} {exif.model}"
-            elif exif.make:
-                exif_camera = exif.make
-            elif exif.model:
-                exif_camera = exif.model
-
-    # Extract PDF metadata for PDF files
-    pdf_title = None
-    pdf_author = None
-    pdf_subject = None
-
-    if file_path.suffix.lower() == ".pdf":
-        from para_files.utils.pdf_metadata import extract_pdf_metadata
-
-        pdf_meta = extract_pdf_metadata(file_path, max_pages_for_isbn=0)  # Skip ISBN scan
-        if pdf_meta:
-            pdf_title = pdf_meta.title
-            pdf_author = pdf_meta.author
-            pdf_subject = pdf_meta.subject
-
-    return FileMetadata(
-        path=file_path,
-        filename=file_path.name,
-        extension=file_path.suffix.lower(),
-        size_bytes=stat.st_size,
-        modified_at=modified_at,
-        created_at=created_at,
-        exif_date=exif_date,
-        exif_gps_lat=exif_gps_lat,
-        exif_gps_lon=exif_gps_lon,
-        exif_camera=exif_camera,
-        pdf_title=pdf_title,
-        pdf_author=pdf_author,
-        pdf_subject=pdf_subject,
-    )
 
 
 def read_content_preview(

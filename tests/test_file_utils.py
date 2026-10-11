@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -14,38 +13,8 @@ from para_files.utils.file_utils import (
     _read_pdf_file,
     _read_text_file,
     _should_try_ocr,
-    extract_file_metadata,
     read_content_preview,
 )
-
-
-class TestExtensionNormalization:
-    """Tests for extension case normalization in FileMetadata."""
-
-    def test_extension_stored_lowercase(self, tmp_path: Path):
-        """FileMetadata.extension is always lowercase regardless of filename case."""
-        f = tmp_path / "document.PDF"
-        f.write_bytes(b"%PDF-1.4 fake")
-        meta = extract_file_metadata(f, extract_exif=False)
-        assert meta.extension == ".pdf"
-
-    def test_extension_lowercase_epub(self, tmp_path: Path):
-        f = tmp_path / "book.EPUB"
-        f.write_bytes(b"PK fake epub")
-        meta = extract_file_metadata(f, extract_exif=False)
-        assert meta.extension == ".epub"
-
-    def test_extension_lowercase_chm(self, tmp_path: Path):
-        f = tmp_path / "manual.CHM"
-        f.write_bytes(b"ITSF fake chm")
-        meta = extract_file_metadata(f, extract_exif=False)
-        assert meta.extension == ".chm"
-
-    def test_mixed_case_extension(self, tmp_path: Path):
-        f = tmp_path / "file.TxT"
-        f.write_text("hello")
-        meta = extract_file_metadata(f, extract_exif=False)
-        assert meta.extension == ".txt"
 
 
 class TestTextExtensions:
@@ -60,107 +29,6 @@ class TestTextExtensions:
     def test_is_frozenset(self):
         """Test that TEXT_EXTENSIONS is immutable."""
         assert isinstance(TEXT_EXTENSIONS, frozenset)
-
-
-class TestExtractFileMetadata:
-    """Tests for extract_file_metadata function."""
-
-    def test_basic_metadata(self, tmp_path: Path):
-        """Test extracting basic file metadata."""
-        test_file = tmp_path / "test.txt"
-        test_file.write_text("Hello, world!")
-
-        metadata = extract_file_metadata(test_file, extract_exif=False)
-
-        assert metadata.filename == "test.txt"
-        assert metadata.extension == ".txt"
-        assert metadata.size_bytes == 13
-        assert metadata.modified_at is not None
-        assert metadata.path == test_file
-
-    def test_metadata_without_exif(self, tmp_path: Path):
-        """Test metadata extraction with EXIF disabled."""
-        test_file = tmp_path / "image.jpg"
-        test_file.write_bytes(b"\xff\xd8\xff\xe0")  # Minimal JPEG header
-
-        metadata = extract_file_metadata(test_file, extract_exif=False)
-
-        assert metadata.exif_date is None
-        assert metadata.exif_gps_lat is None
-        assert metadata.exif_gps_lon is None
-        assert metadata.exif_camera is None
-
-    @patch("para_files.utils.exiftool.extract_exif")
-    def test_metadata_with_exif_data(self, mock_exif: MagicMock, tmp_path: Path):
-        """Test metadata extraction with EXIF data."""
-        test_file = tmp_path / "photo.jpg"
-        test_file.write_bytes(b"\xff\xd8\xff\xe0")
-
-        # Mock EXIF result
-        mock_gps = MagicMock()
-        mock_gps.latitude = 45.5
-        mock_gps.longitude = -73.5
-
-        mock_exif_result = MagicMock()
-        mock_exif_result.best_date = datetime(2024, 6, 15, 10, 30, tzinfo=UTC)
-        mock_exif_result.gps = mock_gps
-        mock_exif_result.make = "Canon"
-        mock_exif_result.model = "EOS R5"
-        mock_exif.return_value = mock_exif_result
-
-        metadata = extract_file_metadata(test_file, extract_exif=True)
-
-        assert metadata.exif_date == datetime(2024, 6, 15, 10, 30, tzinfo=UTC)
-        assert metadata.exif_gps_lat == 45.5
-        assert metadata.exif_gps_lon == -73.5
-        assert metadata.exif_camera == "Canon EOS R5"
-
-    @patch("para_files.utils.exiftool.extract_exif")
-    def test_metadata_with_make_only(self, mock_exif: MagicMock, tmp_path: Path):
-        """Test camera info with only make."""
-        test_file = tmp_path / "photo.jpg"
-        test_file.write_bytes(b"\xff\xd8\xff\xe0")
-
-        mock_exif_result = MagicMock()
-        mock_exif_result.best_date = None
-        mock_exif_result.gps = None
-        mock_exif_result.make = "Sony"
-        mock_exif_result.model = None
-        mock_exif.return_value = mock_exif_result
-
-        metadata = extract_file_metadata(test_file, extract_exif=True)
-
-        assert metadata.exif_camera == "Sony"
-
-    @patch("para_files.utils.exiftool.extract_exif")
-    def test_metadata_with_model_only(self, mock_exif: MagicMock, tmp_path: Path):
-        """Test camera info with only model."""
-        test_file = tmp_path / "photo.jpg"
-        test_file.write_bytes(b"\xff\xd8\xff\xe0")
-
-        mock_exif_result = MagicMock()
-        mock_exif_result.best_date = None
-        mock_exif_result.gps = None
-        mock_exif_result.make = None
-        mock_exif_result.model = "iPhone 15"
-        mock_exif.return_value = mock_exif_result
-
-        metadata = extract_file_metadata(test_file, extract_exif=True)
-
-        assert metadata.exif_camera == "iPhone 15"
-
-    @patch("para_files.utils.exiftool.extract_exif")
-    def test_metadata_with_no_exif_result(self, mock_exif: MagicMock, tmp_path: Path):
-        """Test metadata when EXIF extraction returns None."""
-        test_file = tmp_path / "photo.jpg"
-        test_file.write_bytes(b"\xff\xd8\xff\xe0")
-
-        mock_exif.return_value = None
-
-        metadata = extract_file_metadata(test_file, extract_exif=True)
-
-        assert metadata.exif_date is None
-        assert metadata.exif_camera is None
 
 
 class TestReadTextFile:
