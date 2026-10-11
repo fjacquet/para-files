@@ -54,6 +54,18 @@ def free_path(path: Path) -> Path:
     raise FileExistsError(msg)
 
 
+def make_dirs(directory: Path, journal: Journal) -> None:
+    """Create directory and its missing parents, journaling each mkdir before it happens."""
+    missing: list[Path] = []
+    current = directory
+    while not current.exists():
+        missing.append(current)
+        current = current.parent
+    for path in reversed(missing):
+        journal.append({"op": "mkdir", "dst": str(path)})
+        path.mkdir()
+
+
 class _Applier:
     def __init__(self, config: TreeConfig, para_root: Path, journal: Journal) -> None:
         self.config = config
@@ -74,14 +86,7 @@ class _Applier:
         return op.decision.path.name
 
     def makedirs(self, directory: Path) -> None:
-        missing: list[Path] = []
-        current = directory
-        while not current.exists():
-            missing.append(current)
-            current = current.parent
-        for path in reversed(missing):
-            self.journal.append({"op": "mkdir", "dst": str(path)})
-            path.mkdir()
+        make_dirs(directory, self.journal)
 
     def record(self, name: str, op: Op, src: Path, dst: Path) -> None:
         decision = op.decision
