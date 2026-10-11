@@ -390,3 +390,12 @@ def test_main_renders_drop_rule_with_baseline(load_script, tmp_path: Path, capsy
     argv = ["--golden", str(golden), "--pred", str(preds), "--baseline", str(base)]
     assert module.main(argv) == 0
     assert "drop rule: combined green coverage 100.0%" in capsys.readouterr().out
+
+
+def test_read_jsonl_keeps_unicode_line_separators_inside_strings(load_script, tmp_path: Path):
+    path = tmp_path / "rows.jsonl"
+    separator = "a\u2028b.pdf"  # U+2028 inside a JSON string value
+    row = json.dumps({"path": separator}, ensure_ascii=False)
+    path.write_bytes(f"{row}\r\n{row}\n".encode())
+    rows = load_script("para_inventory").read_jsonl(path)
+    assert [r["path"] for r in rows] == [separator, separator]

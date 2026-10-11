@@ -50,9 +50,8 @@ COUNT_CAP = 5000
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
     """Rows of a UTF-8 JSONL file; blank or whitespace-only lines are skipped."""
-    return [
-        json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
-    ]
+    lines = path.read_text(encoding="utf-8").split("\n")
+    return [json.loads(line.removesuffix("\r")) for line in lines if line.strip()]
 
 
 def nfc(text: str) -> str:
