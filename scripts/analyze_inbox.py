@@ -26,7 +26,8 @@ import click
 # Add project root to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from para_files.utils.pandoc import extract_text as pandoc_extract  # noqa: I001
+from para_files.config import default_reference_tree  # noqa: I001
+from para_files.utils.pandoc import extract_text as pandoc_extract
 
 # Maximum number of items to display in reports
 _MAX_DISPLAY_ITEMS = 10
@@ -356,7 +357,7 @@ def print_report(analysis: dict[str, Any]) -> None:
     "--config",
     "-c",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
-    default=Path(__file__).parent.parent / "config/personal_file_tree.yaml",
+    default=default_reference_tree(),
     help="Path to YAML config file",
 )
 @click.option(
