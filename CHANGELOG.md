@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7] - 2026-10-11
+
 ### Added (Stage 1)
 
 - **Canonical tree loader** — `para_files.core.tree` loads `tree.yaml`, `rules.yaml` and `issuers.yaml` from `~/.config/para-files/` strictly (unknown keys, unknown leaves, duplicate issuer patterns and retention/path mismatches are errors) and reports review warnings. Sanitized examples in `examples/`.
