@@ -17,13 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed (Stage 4)
 
-- The old pipeline (`pipeline`, `mover`, `learner`, `reference_tree`, `classifiers/`, `encoders/`, `learning/`, `taxonomies/`), local AI (Ollama embeddings and local LLM), `config.py`, `types.py`, the Stage 1 `scripts/`, `config/thema.json` and `config/documents.json`, and ten unused `utils` modules. Every remaining module is reachable from the CLI. (6517 source lines left; 704 tests pass offline from a clean clone.)
-- Dependencies `semantic-router`, `einops`, `geopy`, `faker`, `bandit` and `httpx` (still installed through litellm).
+- The old pipeline (`pipeline`, `mover`, `learner`, `reference_tree`, `classifiers/`, `encoders/`, `learning/`, `taxonomies/`), local AI (Ollama embeddings and local LLM), `config.py`, `types.py`, the Stage 1 `scripts/`, `config/thema.json` and `config/documents.json`, and ten unused `utils` modules. Every remaining module is reachable from the CLI. (6517 source lines left; 704 tests pass offline, 3 OCR tests skipped, from a clean clone.)
+- Dependencies `semantic-router`, `einops`, `geopy`, `faker`, `bandit` and `httpx` (no longer a direct dependency; litellm still brings it).
 - `.serena/` and `.claude/` are no longer tracked; `.planning/` moved to `docs/archive/planning/`. The root `VISION.md` moved to `docs/archive/vision-2026-10.md`, and the owner's home path in the archived planning notes is now `~/`.
 
 ### Changed (Stage 4)
 
-- Thema folder names ship as package data (`para_files/data/thema_l1l2.json`, 234 codes), so books get their folders when para-files is installed from a wheel.
+- Thema folder names ship as package data (`para_files/data/thema_l1l2.json`, 234 codes), so books get their folders when para-files is installed from a wheel. A Thema code's folders come from its first one and two characters, so a code missing from the table still gets its level-1/level-2 folders.
 - ADR-013 records the redesign and the end of local AI (supersedes ADR-010).
 
 ### Changed (Stage 3)

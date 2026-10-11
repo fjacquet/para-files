@@ -1,4 +1,4 @@
-"""File utility functions for metadata extraction and content reading."""
+"""File content readers: text previews for the core (PDF, Office, archives, images via OCR)."""
 
 from __future__ import annotations
 

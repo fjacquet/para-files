@@ -212,7 +212,6 @@ SOCIAL_SCIENCE_SUBJECT_MAP: dict[str, str] = {
     "political theory": "JPA",
     "théorie politique": "JPA",
     "political thought": "JPA",
-    "political philosophy": "QDTS",
     "government": "JP",
     "gouvernement": "JP",
     "political tradition": "JPA",
@@ -353,7 +352,10 @@ def lookup_thema_code(subjects: list[str]) -> str | None:
 
 
 def thema_to_para_path(code: str) -> str:
-    """Library path for a Thema code, e.g. '3_Resources/livres/U_Informatique/UB_Programmation'."""
+    """Library path for a Thema code.
+
+    E.g. 'UB' -> '3_Resources/livres/U_Informatique_et_technologies_de/UB_Themes_generaux'.
+    """
     table = _folders()
     names = [table[prefix] for prefix in dict.fromkeys((code[:1], code[:2])) if prefix in table]
     return "/".join([LIBRARY, *names])

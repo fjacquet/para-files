@@ -1,12 +1,12 @@
 [project]
 name = "para-files"
 version = "1.9"
-description = "Intelligent file classification using semantic routing with PARA method"
+description = "File documents into a PARA tree: rules, issuers, ISBN books and an optional cloud model, with preview, journal and undo"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "Frédéric Jacquet", email = "fred.jacquet@gmail.com" }]
 requires-python = ">=3.12"
-keywords = ["ollama", "classification", "para", "semantic-routing", "litellm"]
+keywords = ["classification", "para", "litellm"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: MacOS X",

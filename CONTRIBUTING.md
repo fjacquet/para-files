@@ -4,7 +4,7 @@ Thank you for your interest in contributing to para-files!
 
 ## Requirements
 
-- macOS with Apple Silicon (M1/M2/M3/M4)
+- macOS with Apple Silicon (M1/M2/M3/M4) for the OCR features; the rest runs on any platform
 - Python 3.12+
 - [uv](https://docs.astral.sh/uv/) package manager
 
@@ -69,7 +69,7 @@ Follow conventional commits:
 feat: add new classification signal
 fix: correct path resolution for archives
 docs: update installation instructions
-test: add tests for semantic router
+test: add tests for the issuers signal
 refactor: simplify pipeline initialization
 ```
 
@@ -108,8 +108,8 @@ Update when:
 
 Update `docs/architecture.md` when:
 
-- Adding new classifiers or signals
-- Changing the pipeline flow
+- Adding new classification signals
+- Changing the cascade order
 - Modifying major components
 
 ### Code Documentation
@@ -120,13 +120,12 @@ Update `docs/architecture.md` when:
 
 ## Architecture Guidelines
 
-When adding new classifiers:
+When adding a new classification signal:
 
-1. Inherit from `BaseClassifier`
-2. Implement `classify()` method
-3. Define `source`, `name`, and `default_confidence` properties
-4. Add to pipeline in `ClassificationPipeline.__init__`
-5. Write comprehensive tests
+1. Add a module under `src/para_files/core/` that returns a verdict with a confidence
+2. Wire it into the cascade in `src/para_files/core/decide.py`
+3. Document it in `docs/architecture.md`
+4. Write comprehensive tests
 
 ## Questions?
 

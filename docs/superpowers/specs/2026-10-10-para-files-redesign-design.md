@@ -148,7 +148,7 @@ Read-only inventory of the PARA root (counts only):
 
 | # | Criterion | How verified |
 |---|---|---|
-| S1 | Green precision ≥ 98% on owner-confirmed decisions, per kind, once a kind has ≥ 100 of them | `para-files tree` (confirmation statistics from the journal) |
+| S1 | Green precision ≥ 98% on owner-confirmed decisions, per kind, once a kind has ≥ 100 of them | `para-files tree` for confirmed counts; misses (undone green moves) are counted once M-7 lands |
 | S2 | Share of confirmed inbox files the tool proposed correctly, reported per release (no threshold) | `para-files tree` (confirmation statistics from the journal) |
 | S3 | Records: green coverage ≥ 80% of the inbox's recurring records (issuer families) on a real `0_Inbox` run | `sort --json` summary |
 | S3b | Knowledge: top-3 suggestion hit rate measured on confirmed decisions and reported (no threshold) | `para-files tree` (confirmation statistics from the journal) |
@@ -609,4 +609,4 @@ Status: done 2026-10-11 (see decisions log).
 | Empty folders (2026-10-11) | Handled later |
 | Stage 4 purge (2026-10-11) | Old pipeline, local AI, Stage 1 scripts, `config/thema.json` and `config/documents.json` deleted; every module reachable from the CLI; source 6517 lines |
 | Package data (2026-10-11) | Only `thema_l1l2.json`; `default_rules.yaml` dropped (rules name personal leaf ids) |
-| Dependencies (2026-10-11) | semantic-router, einops, geopy, faker, bandit, httpx removed; cryptography kept as pypdf's AES backend (§5 Stage 4 "re-check cryptography") |
+| Dependencies (2026-10-11) | semantic-router, einops, geopy, faker, bandit, httpx removed; cryptography kept as pypdf's AES backend (§5 Stage 4 "re-check `cryptography`") |
