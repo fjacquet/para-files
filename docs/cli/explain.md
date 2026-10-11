@@ -18,7 +18,7 @@ to change it: a rule or issuer suggested this; pin the rule if it is always righ
 
 A hint is always yellow: it moves nothing with `sort --apply` until you confirm it with `--review`.
 
-The model is asked only with `--ask-model`, since that sends the file name, type, metadata, the start of its text, the hints and examples of past decisions to the model (with zero data retention, and never for a secret file). `explain` does not use the verdict cache, so its decision line can therefore differ from what `sort` did for a file that `sort` routed through the model. For a secret file, only the reason it was flagged is shown.
+When `sort` already asked the model about this file, `explain` shows that cached answer without asking again, so its decision matches `sort`. Otherwise the model is asked only with `--ask-model`, since that sends the file name, type, metadata, the start of its text, the hints and examples of past decisions to the model (with zero data retention, and never for a secret file). For a secret file, only the reason it was flagged is shown.
 
 ```bash
 para-files explain 0_Inbox/scan_0001.pdf
