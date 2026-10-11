@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Golden corpus builder** — `scripts/build_golden.py` samples up to 10 files per leaf (5 per knowledge leaf) from the approved tree into `~/.config/para-files/golden.jsonl`, never crossing into nested leaves and never sampling secret-looking or hidden files.
 - **Evaluation script** — `scripts/eval.py` scores a predictions file against the golden corpus. It reports, overall, per kind and per signal: accuracy, green precision and coverage, yellow/red share, top-3 hit rate, best coverage at ≥ 98% precision, latency and cost per 1000 files.
 - **Baseline runner** — `scripts/run_baseline.py` runs the old pipeline (semantic and LLM off, no OCR rename) over the golden corpus through symlinks and maps its categories onto the new leaves, so `eval.py` can score it.
+- **Bake-off runner** — `scripts/bakeoff.py` runs Gemini 3.8 Flash, Claude Sonnet 5.5 (both at low reasoning effort) or Jev 1.13 over the files the baseline leaves undecided (and over knowledge files as top-3 suggestions). Every cloud request enforces zero data retention, and secret-looking files are never sent.
 
 ### Changed (Stage 1)
 
