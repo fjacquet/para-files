@@ -174,3 +174,48 @@ def test_link_failure_becomes_red_row(load_script, tmp_path):
     assert preds[0]["band"] == "red"
     assert preds[0]["signal"] == "error"
     assert preds[0]["leaf"] is None
+
+
+def test_old_pipeline_switches_geocoding_off(load_script, monkeypatch):
+    from para_files.classifiers import rules_engine
+    from para_files.utils import geolocation
+
+    baseline = load_script("run_baseline")
+    fetched: list[tuple[float, float]] = []
+    monkeypatch.setattr(
+        geolocation, "_fetch_from_nominatim", lambda lat, lon: fetched.append((lat, lon))
+    )  # any network lookup would be recorded here; none may happen
+    monkeypatch.setattr(rules_engine, "reverse_geocode", rules_engine.reverse_geocode)  # undone
+
+    class FakePipeline:
+        def __init__(self, config: object) -> None:
+            self._classifiers: list[object] = []
+
+        def _ensure_initialized(self) -> None:
+            return None
+
+    monkeypatch.setattr("para_files.config.load_config", lambda: None)
+    monkeypatch.setattr("para_files.pipeline.ClassificationPipeline", FakePipeline)
+    baseline.old_pipeline_classifier()
+    assert rules_engine.reverse_geocode(46.5197, 6.6323) is None
+    assert fetched == []
+
+
+def test_old_pipeline_disables_generic_pdf_rename(load_script, monkeypatch):
+    baseline = load_script("run_baseline")
+    built: list[object] = []
+
+    class FakePipeline:
+        def __init__(self, config: object) -> None:
+            self._classifiers: list[object] = []
+            built.append(self)
+
+        def _ensure_initialized(self) -> None:
+            return None
+
+    monkeypatch.setattr("para_files.config.load_config", lambda: None)
+    monkeypatch.setattr("para_files.pipeline.ClassificationPipeline", FakePipeline)
+    baseline.old_pipeline_classifier()
+    (pipeline,) = built
+    sentinel = object()
+    assert pipeline._maybe_rename_generic_pdf(sentinel) is sentinel

@@ -520,6 +520,24 @@ class TestCreateResult:
         assert "unknown" in result.category
 
 
+class TestGeocoderOffLocation:
+    """With the geocoder returning None (geocoding off), a location placeholder stays unresolved."""
+
+    @patch("para_files.classifiers.rules_engine.reverse_geocode", return_value=None)
+    def test_location_placeholder_is_cleaned_not_filled(self, mock_geocode: MagicMock) -> None:
+        classifier = RulesEngineClassifier({})
+        rule = RoutingRule(destination="1_Projects/photos/{location}")
+        metadata = make_metadata(
+            path=Path("/test/image.jpg"),
+            filename="image.jpg",
+            extension=".jpg",
+            exif_gps_lat=46.5197,
+            exif_gps_lon=6.6323,
+        )
+        assert classifier._create_result("photos", rule, metadata) is None
+        mock_geocode.assert_called_once_with(46.5197, 6.6323)
+
+
 class TestCleanUnreplacedLocation:
     """Test clean_unreplaced_placeholders for location placeholders.
 

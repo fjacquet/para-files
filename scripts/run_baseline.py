@@ -50,10 +50,14 @@ def old_pipeline_classifier() -> Classify:
         PARA_FILES_LLM_ENABLED="false",
         PARA_FILES_OCR_RENAME__ENABLED="false",
     )
+    from para_files.classifiers import rules_engine
     from para_files.classifiers.extension_router import ExtensionRouterClassifier
     from para_files.config import load_config
     from para_files.pipeline import ClassificationPipeline
 
+    # Geocoding off: the rules engine calls this name, so GPS placeholders stay unresolved
+    # and no Nominatim lookup can run during the measurement.
+    rules_engine.reverse_geocode = lambda _latitude, _longitude: None
     pipeline = ClassificationPipeline(load_config())
     pipeline._maybe_rename_generic_pdf = lambda path: path  # never rename during a measurement
     pipeline._ensure_initialized()
