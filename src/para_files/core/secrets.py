@@ -9,13 +9,14 @@ _NAME = re.compile(
     r"credential|passw|secret|token|api[_-]?key|login"
     r"|recovery[_ -]?(?:phrase|code|key)|seed[_ -]?phrase"
     r"|licen[cs]e[_ -]?(?:key|string|code)"
-    r"|id_rsa|id_ed25519|\.(?:pem|key|p12|pfx|kdbx)$",
+    r"|mots?[_ -]?de[_ -]?passe|(?<![a-z])mdp(?![a-z])|identifiants"
+    r"|id_(?:rsa|dsa|ecdsa|ed25519)|^\.netrc$|\.(?:pem|key|p12|pfx|kdbx|env)$",
     re.IGNORECASE,
 )
 _TEXT: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("private_key", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")),
+    ("private_key", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY(?: BLOCK)?-----")),
     ("cloud_access_key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
-    ("vault_keys", re.compile(r'"(?:root_token|unseal_keys(?:_b64|_hex)?)"\s*:')),
+    ("vault_keys", re.compile(r'"(?:root_token|(?:unseal|recovery)_keys(?:_b64|_hex)?)"\s*:')),
     (
         "recovery_phrase",
         re.compile(r"\b(?:recovery|seed|mnemonic)\s+(?:phrase|words?)\b", re.IGNORECASE),
@@ -23,8 +24,9 @@ _TEXT: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         "credential_value",
         re.compile(
-            r"^\s*[\w.-]*(?:password|passwd|pwd|secret|token|api[_-]?key|mot de passe)"
-            r"\s*[:=]\s*\S{4,}",
+            r"^[^\S\n]*(?:[\w.'-]+[^\S\n]+){0,3}?[\"']?[\w.-]*"
+            r"(?:password|passwd|pwd|secret|token|api[_-]?key|mot[^\S\n]+de[^\S\n]+passe)"
+            r"[\"']?[^\S\n]*[:=]\s*\S{4,}",
             re.IGNORECASE | re.MULTILINE,
         ),
     ),
