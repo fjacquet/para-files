@@ -22,9 +22,21 @@ def test_case_insensitive():
     assert match_rule("REPORT.PDF", RULES) == RuleMatch("pdfs", "*.pdf", "docs")
 
 
+ACCENTED_RULES = (Rule(name="salaire", leaf="travail", globs=("*décompte de salaire*",)),)
+
+
 def test_nfd_name_matches_nfc_glob():
     name = unicodedata.normalize("NFD", "2025.11 - Décompte de salaire.pdf")
-    assert match_rule(name, RULES).rule == "payslips"
+    assert match_rule(name, ACCENTED_RULES) == RuleMatch(
+        "salaire", "*décompte de salaire*", "travail"
+    )
+
+
+def test_nfc_name_matches_nfd_glob():
+    glob = unicodedata.normalize("NFD", "*décompte de salaire*")
+    rules = (Rule(name="salaire", leaf="travail", globs=(glob,)),)
+    name = unicodedata.normalize("NFC", "2025.11 - Décompte de salaire.pdf")
+    assert match_rule(name, rules) == RuleMatch("salaire", glob, "travail")
 
 
 def test_no_match():
