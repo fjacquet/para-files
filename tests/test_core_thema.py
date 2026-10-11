@@ -68,5 +68,4 @@ def test_keywords_with_symbols_match_whole():
 
 
 def test_a_keyword_inside_a_phrase_still_matches():
-    # "programming" comes before "python" in the map, so the first whole-word key wins.
-    assert lookup_thema_code(["Python programming"]) == SUBJECT_TO_THEMA["programming"]
+    assert lookup_thema_code(["Python programming"]) == SUBJECT_TO_THEMA["python"]

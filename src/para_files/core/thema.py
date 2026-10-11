@@ -335,16 +335,18 @@ def _whole(phrase: str) -> re.Pattern[str]:
 
 @cache
 def lookup_subject(subject: str) -> str | None:
-    """Thema code for one subject: exact keyword first, then the first whole-word match."""
+    """Thema code for one subject: exact keyword first, then the most specific whole-word match."""
     wanted = subject.lower().strip()
     if not wanted:
         return None
     if wanted in SUBJECT_TO_THEMA:
         return SUBJECT_TO_THEMA[wanted]
-    for key, code in SUBJECT_TO_THEMA.items():
-        if _whole(key).search(wanted) or _whole(wanted).search(key):
-            return code
-    return None
+    matches = [
+        code
+        for key, code in SUBJECT_TO_THEMA.items()
+        if _whole(key).search(wanted) or _whole(wanted).search(key)
+    ]
+    return max(matches, key=len, default=None)
 
 
 def lookup_thema_code(subjects: list[str]) -> str | None:
