@@ -13,7 +13,7 @@ from typing import Annotated, Literal, Self, get_args
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
-from para_files.config import config_dir_path
+from para_files.core.settings import config_dir_path
 
 
 Kind = Literal["record", "library", "media", "knowledge"]

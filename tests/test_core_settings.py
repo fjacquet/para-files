@@ -79,3 +79,33 @@ def test_defaults(tmp_path, cfg_dir):
     assert settings.fallback_backup_model == "anthropic/claude-sonnet-5.5"
     assert settings.calibration_min == 100
     assert settings.preview_chars == 2000
+
+
+def test_config_dir_follows_the_environment(tmp_path, monkeypatch):
+    from para_files.core.settings import config_dir_path
+    from para_files.core.tree import config_dir
+
+    monkeypatch.setenv("PARA_FILES_CONFIG_DIR", str(tmp_path / "cfg"))
+    assert config_dir_path() == tmp_path / "cfg" == config_dir()
+
+
+def test_config_dir_defaults_to_home(tmp_path, monkeypatch):
+    from para_files.core.settings import config_dir_path
+
+    monkeypatch.delenv("PARA_FILES_CONFIG_DIR", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    assert config_dir_path() == tmp_path / ".config" / "para-files"
+
+
+def test_settings_read_the_env_file_in_the_config_dir(tmp_path, monkeypatch):
+    from para_files.core.settings import load_settings
+
+    root = tmp_path / "PARA"
+    (root / "0_Inbox").mkdir(parents=True)
+    cfg = tmp_path / "cfg"
+    cfg.mkdir()
+    (cfg / ".env").write_text(f"PARA_FILES_PARA_ROOT={root}\nPARA_FILES_MAX_WORKERS=7\n")
+    monkeypatch.setenv("PARA_FILES_CONFIG_DIR", str(cfg))
+    settings = load_settings()
+    assert settings.para_root == root
+    assert settings.max_workers == 7

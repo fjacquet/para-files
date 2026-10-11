@@ -7,14 +7,13 @@ depend on where a command runs.
 
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 from typing import Any
 
 from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-from para_files.config import config_dir_path
 
 
 INBOX = "0_Inbox"
@@ -31,6 +30,12 @@ def in_dot_folder(path: Path, root: Path) -> bool:
 
 def _home(*parts: str) -> Path:
     return Path.home().joinpath(*parts)
+
+
+def config_dir_path() -> Path:
+    """Personal config directory: $PARA_FILES_CONFIG_DIR if set, else ~/.config/para-files."""
+    override = os.environ.get("PARA_FILES_CONFIG_DIR")
+    return Path(override).expanduser() if override else Path.home() / ".config" / "para-files"
 
 
 class PathSettings(BaseSettings):

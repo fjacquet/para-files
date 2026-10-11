@@ -17,7 +17,7 @@ from typing import Any
 
 from loguru import logger
 
-from para_files.circuit_breaker import OllamaCircuitBreaker
+from para_files.core.breaker import CircuitBreaker
 from para_files.core.evidence import Evidence
 from para_files.core.secrets import secret_reason
 from para_files.core.settings import CoreSettings
@@ -176,12 +176,12 @@ class OpenRouterFallback:
         models: Sequence[str],
         *,
         complete: Complete = litellm_complete,
-        breaker: OllamaCircuitBreaker | None = None,
+        breaker: CircuitBreaker | None = None,
     ) -> None:
         self._key = key
         self._models = tuple(models)
         self._complete = complete
-        self._breaker = breaker or OllamaCircuitBreaker()
+        self._breaker = breaker or CircuitBreaker()
 
     def _ask(self, model: str, menu: dict[str, str], evidence: Evidence) -> Ranked:
         response = self._complete(

@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 from loguru import logger
 
-from para_files.circuit_breaker import OllamaCircuitBreaker
+from para_files.core.breaker import CircuitBreaker
 from para_files.core.evidence import Evidence
 from para_files.core.fallback import (
     FallbackChoice,
@@ -100,7 +100,7 @@ def test_backup_model_after_an_error():
 
 
 def test_all_models_fail_records_a_breaker_failure():
-    breaker = OllamaCircuitBreaker(threshold=1)
+    breaker = CircuitBreaker(threshold=1)
     complete = FakeComplete(RuntimeError("HTTP 500"), RuntimeError("HTTP 502"))
     fallback = OpenRouterFallback(KEY, ["m1", "m2"], complete=complete, breaker=breaker)
     assert fallback.decide(ev(), make_config().tree) is None
@@ -149,7 +149,7 @@ def test_empty_reply_from_primary_moves_on_to_backup():
 
 
 def test_empty_replies_from_all_models_give_none_and_a_breaker_failure():
-    breaker = OllamaCircuitBreaker(threshold=1)
+    breaker = CircuitBreaker(threshold=1)
     complete = FakeComplete(reply([]), reply([]))
     fallback = OpenRouterFallback(KEY, ["m1", "m2"], complete=complete, breaker=breaker)
     assert fallback.decide(ev(), make_config().tree) is None

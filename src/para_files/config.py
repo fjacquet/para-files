@@ -18,7 +18,6 @@ Example config section in YAML:
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any
 
@@ -27,15 +26,11 @@ from loguru import logger
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from para_files.core.settings import config_dir_path
+
 
 # Default reference tree location
 LEGACY_REFERENCE_TREE = Path("config/personal_file_tree.yaml")
-
-
-def config_dir_path() -> Path:
-    """Personal config directory: $PARA_FILES_CONFIG_DIR if set, else ~/.config/para-files."""
-    override = os.environ.get("PARA_FILES_CONFIG_DIR")
-    return Path(override).expanduser() if override else Path.home() / ".config" / "para-files"
 
 
 def default_reference_tree() -> Path:
