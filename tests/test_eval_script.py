@@ -60,7 +60,7 @@ def test_overall_metrics(report):
     assert overall["yellow_share"] == pytest.approx(0.25)
     assert overall["red_share"] == pytest.approx(0.25)
     assert overall["top3_hit"] == pytest.approx(0.5)
-    assert overall["max_coverage_at_98"] == pytest.approx(0.25)
+    assert overall["max_coverage_at_98"] == pytest.approx(1 / 3)  # record/library/media only
     assert overall["p50_secs"] == pytest.approx(0.3)
     assert overall["p95_secs"] == pytest.approx(1.0)
     assert overall["cost_per_1000"] == pytest.approx(0.002 / 3 * 1000)
@@ -69,7 +69,7 @@ def test_overall_metrics(report):
 
 def test_nfd_golden_path_joins_nfc_prediction(report):
     assert report["kinds"]["knowledge"]["top3_hit"] == pytest.approx(1.0)
-    assert report["kinds"]["knowledge"]["yellow_share"] == pytest.approx(1.0)
+    assert report["kinds"]["knowledge"]["yellow_share"] is None  # suggestions only
 
 
 def test_per_kind_metrics(report):
@@ -251,3 +251,49 @@ def test_tied_confidences_form_one_curve_point(load_script):
     ]
     report = load_script("eval").evaluate(golden, preds)
     assert report["signals"]["rules"]["curve"] == [pytest.approx((0.7, 0.5, 1.0))]
+
+
+PCT_BUT_TOP3 = (
+    "accuracy",
+    "green_precision",
+    "green_coverage",
+    "yellow_share",
+    "red_share",
+    "max_coverage_at_98",
+)
+
+
+def test_knowledge_rows_are_suggestions_only(load_script):
+    golden = [
+        {"path": "a.pdf", "leaf": "inv", "kind": "record"},
+        {"path": "k.md", "leaf": "notes", "kind": "knowledge"},
+    ]
+    preds = [
+        {
+            "path": "a.pdf",
+            "leaf": "inv",
+            "confidence": 0.9,
+            "band": "green",
+            "signal": "rules",
+            "secs": 0.1,
+            "cost": 0.0,
+        },
+        {
+            "path": "k.md",
+            "leaf": "notes",
+            "confidence": 0.95,
+            "band": "yellow",
+            "signal": "fallback",
+            "top3": ["notes"],
+            "secs": 0.1,
+            "cost": 0.0,
+        },
+    ]
+    report = load_script("eval").evaluate(golden, preds)
+    knowledge = report["kinds"]["knowledge"]
+    assert knowledge["top3_hit"] == pytest.approx(1.0)
+    assert all(knowledge[column] is None for column in PCT_BUT_TOP3)
+    # The knowledge row sits outside the curve: only the record decides coverage.
+    assert report["overall"]["max_coverage_at_98"] == pytest.approx(1.0)
+    assert report["signals"]["rules"]["curve"] == [pytest.approx((0.9, 1.0, 1.0))]
+    assert report["signals"]["fallback"]["curve"] == []

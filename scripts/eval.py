@@ -52,9 +52,15 @@ def _candidates(pred: dict[str, Any]) -> list[str]:
     return pred.get("top3") or ([pred["leaf"]] if pred.get("leaf") else [])
 
 
-def curve(rows: list[dict[str, Any]], n: int) -> list[tuple[float, float, float]]:
-    """(threshold, precision, coverage of n) at each distinct confidence of decided rows."""
-    decided = [r for r in rows if r["pred"].get("leaf")]
+def curve(rows: list[dict[str, Any]]) -> list[tuple[float, float, float]]:
+    """(threshold, precision, coverage) at each distinct confidence of decided rows.
+
+    Knowledge rows are left out: they are suggestions only (top-3), never decided. Coverage is
+    relative to the record, library and media rows of the given set.
+    """
+    scored = [r for r in rows if r["gold"]["kind"] != "knowledge"]
+    n = len(scored)
+    decided = [r for r in scored if r["pred"].get("leaf")]
     ranked = sorted(decided, key=lambda r: -_number(r["pred"].get("confidence")))
     points: list[tuple[float, float, float]] = []
     correct = 0
@@ -92,7 +98,7 @@ def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "yellow_share": sum(r["pred"].get("band") == "yellow" for r in rows) / n,
         "red_share": sum(r["pred"].get("band", "red") == "red" for r in rows) / n,
         "top3_hit": sum(r["gold"]["leaf"] in _candidates(r["pred"]) for r in rows) / n,
-        "max_coverage_at_98": max_coverage(curve(rows, n)),
+        "max_coverage_at_98": max_coverage(curve(rows)),
         "p50_secs": _quantile(secs, 0.5) if secs else None,
         "p95_secs": _quantile(secs, 0.95) if secs else None,
         "cost_per_1000": cost / len(predicted) * 1000 if predicted else None,
@@ -103,7 +109,8 @@ def evaluate(golden: list[dict[str, Any]], preds: list[dict[str, Any]]) -> dict[
     """Join predictions to golden rows by NFC path and compute all metrics.
 
     Per-signal metrics are relative to that signal's own rows (used to set its band threshold);
-    each signal block also reports top-3 over its own rows. The first prediction for a path
+    each signal block also reports top-3 over its own rows. Knowledge is scored as suggestions
+    only: its kind block reports top-3 alone and the precision curves leave knowledge rows out. The first prediction for a path
     wins; later ones are counted as duplicates, and predictions with no golden row as unmatched.
     """
     by_path: dict[str, dict[str, Any]] = {}
@@ -117,10 +124,13 @@ def evaluate(golden: list[dict[str, Any]], preds: list[dict[str, Any]]) -> dict[
     rows = [{"gold": g, "pred": by_path.get(key(g["path"]), {"band": "red"})} for g in golden]
     report: dict[str, Any] = {"overall": summarize(rows), "kinds": {}, "signals": {}}
     for kind in sorted({g["kind"] for g in golden}):
-        report["kinds"][kind] = summarize([r for r in rows if r["gold"]["kind"] == kind])
+        stats = summarize([r for r in rows if r["gold"]["kind"] == kind])
+        if kind == "knowledge":  # suggestions only: top-3 is the one figure reported
+            stats = {**stats, **{column: None for column in PCT if column != "top3_hit"}}
+        report["kinds"][kind] = stats
     for signal in sorted({r["pred"]["signal"] for r in rows if r["pred"].get("signal")}):
         subset = [r for r in rows if r["pred"].get("signal") == signal]
-        report["signals"][signal] = {**summarize(subset), "curve": curve(subset, len(subset))}
+        report["signals"][signal] = {**summarize(subset), "curve": curve(subset)}
     report["missing_predictions"] = sum(1 for r in rows if "path" not in r["pred"])
     report["duplicate_predictions"] = duplicates
     report["unmatched_predictions"] = sum(1 for k in by_path if k not in golden_keys)
