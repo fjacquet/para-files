@@ -373,3 +373,37 @@ def test_secret_is_never_sent(tmp_path):
     d = classify(inbox_file(ctx, "notes.txt", "vpn\npassword: hunter22\n"), ctx)
     assert (d.signal, d.band) == ("secret", "red")
     assert model.hints == []
+
+
+def test_model_off_never_serves_a_cached_model_verdict(tmp_path):
+    model = FakeFallback(confidence=0.95)
+    ctx = make_ctx(tmp_path, fallback=model, confirmed={"record": 100})
+    path = inbox_file(ctx, "random.txt", "same")
+    assert classify(path, ctx).signal == "fallback"
+    off = make_ctx(tmp_path, confirmed={"record": 100})
+    d = classify(path, off)
+    assert (d.signal, d.band) == ("none", "red")
+    assert model.calls == ["random.txt"]
+
+
+def test_calibrated_library_model_verdict_with_a_fitting_issuer_is_green(tmp_path):
+    tree = Tree.model_validate(
+        {
+            "leaves": {
+                "resources_vendor": {
+                    "kind": "library",
+                    "path": "3_Resources/docs",
+                    "describe": "Vendor documentation",
+                    "keywords": ["manual"],
+                }
+            }
+        }
+    )
+    issuers = IssuersFile.model_validate(
+        {"issuers": {"acmecorp": {"patterns": ["AcmeCorp"], "leaves": ["resources_vendor"]}}}
+    )
+    model = HintedFallback(leaf="resources_vendor", confidence=0.95)
+    ctx = make_ctx(tmp_path, fallback=model, confirmed={"library": 100})
+    ctx.config = TreeConfig(tree=tree, rules=RulesFile(), issuers=issuers)
+    d = classify(inbox_file(ctx, "AcmeCorp guide.txt", "AcmeCorp manual"), ctx)
+    assert (d.leaf_id, d.signal, d.band) == ("resources_vendor", "fallback", "green")

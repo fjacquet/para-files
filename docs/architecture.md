@@ -156,6 +156,7 @@ A run is marked undone (`<run id>.undone`) only when nothing was left alone. A r
 
 - **ISBN lookups:** only successful lookups are stored, so a network failure is retried next time.
 - **Model verdicts:** keyed by the file's content hash and a configuration fingerprint. The fingerprint hashes `tree.yaml`, `rules.yaml`, `issuers.yaml` (missing counts as empty) and the primary model id. Editing any of them, or changing the model, starts verdicts afresh. The filename is part of the key, since rules and issuers read it.
+- **Reuse:** a cached model verdict is served only when the model is on; with the model off, the cascade decides afresh.
 
 So a `sort` preview followed by `sort --apply` reuses the preview's verdicts and does not ask the model again for the same content.
 

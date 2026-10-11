@@ -1,4 +1,4 @@
-"""`para-files explain FILE`: the evidence, every signal's verdict, and what to edit."""
+"""`para-files explain FILE`: the evidence, the cascade steps, the decision and what to edit."""
 
 from __future__ import annotations
 

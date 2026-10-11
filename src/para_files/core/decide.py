@@ -317,7 +317,9 @@ def _verdict(evidence: Evidence, ctx: Context) -> Verdict:
         return Verdict(None, "secret", 0.0, f"secret ({evidence.secret}): never sent, never moved")
     # Rules and issuers read the filename, so the name is part of the cache key.
     key = f"{ctx.fingerprint}:{evidence.name}"
-    cached = ctx.cache.get_verdict(evidence.sha256, key)
+    # Only a run with the model on may reuse a model verdict; with it off, the cascade
+    # decides from pins, ISBNs and hints alone.
+    cached = ctx.cache.get_verdict(evidence.sha256, key) if ctx.fallback is not None else None
     if cached is not None:
         return _from_cache(cached)
     verdict, _ = choose(evidence, ctx)
