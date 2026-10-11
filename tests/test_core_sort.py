@@ -144,3 +144,9 @@ def test_auto_ops_ignores_yellow_red_and_leafless():
 
     ops = auto_ops([d("green", "a"), d("yellow", "b"), d("red", "c"), d("green", None)])
     assert [(op.leaf_id, op.decided_by) for op in ops] == [("a", "auto")]
+
+
+def test_empty_apply_leaves_no_journal_file(tmp_path):
+    root, ctx, _ = build(tmp_path)
+    apply([], ctx, [root / "0_Inbox"])
+    assert list(ctx.settings.state_dir.rglob("*.jsonl")) == []

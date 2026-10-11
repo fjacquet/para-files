@@ -50,7 +50,8 @@ def run(root, state, ops, roots=None):
             journal=journal,
             roots=roots or [root / "0_Inbox"],
         )
-    return report, read_run(state, "r1")
+    journal_file = state / "journal" / "r1.jsonl"
+    return report, read_run(state, "r1") if journal_file.exists() else []
 
 
 def test_move_is_journaled(tmp_path):

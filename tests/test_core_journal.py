@@ -24,10 +24,15 @@ from tests.core_helpers import make_config
 NOW = datetime(2026, 10, 11, 21, 30, 0)
 
 
+def _run_with_entry(state_dir, run_id):
+    with Journal(state_dir, run_id) as journal:
+        journal.append({"op": "move"})
+
+
 def test_run_id_format_and_uniqueness(tmp_path):
     first = new_run_id(tmp_path, NOW)
     assert first == "20261011-213000"
-    Journal(tmp_path, first).close()
+    _run_with_entry(tmp_path, first)
     second = new_run_id(tmp_path, NOW)
     assert second == "20261011-213000-2"
 
@@ -40,7 +45,7 @@ def test_append_is_readable_immediately(tmp_path):
 
 
 def test_journal_file_is_never_reused(tmp_path):
-    Journal(tmp_path, "r1").close()
+    _run_with_entry(tmp_path, "r1")
     with pytest.raises(FileExistsError):
         Journal(tmp_path, "r1")
 
@@ -48,7 +53,7 @@ def test_journal_file_is_never_reused(tmp_path):
 def test_last_run_skips_undone(tmp_path):
     assert last_run_id(tmp_path) is None
     for run_id in ("20261011-100000", "20261011-110000"):
-        Journal(tmp_path, run_id).close()
+        _run_with_entry(tmp_path, run_id)
     assert run_ids(tmp_path) == ["20261011-100000", "20261011-110000"]
     assert last_run_id(tmp_path) == "20261011-110000"
     mark_undone(tmp_path, "20261011-110000")
@@ -70,7 +75,7 @@ def test_confirmed_counts(tmp_path):
     assert confirmed_counts(tmp_path, tree) == {"record": 1, "knowledge": 1}
 
 
-def test_construction_fsyncs_journal_directory_once(tmp_path, monkeypatch):
+def test_first_append_fsyncs_the_directory_and_the_line(tmp_path, monkeypatch):
     calls: list[int] = []
     real_fsync = os.fsync
 
@@ -80,8 +85,18 @@ def test_construction_fsyncs_journal_directory_once(tmp_path, monkeypatch):
 
     monkeypatch.setattr(os, "fsync", recording_fsync)
     journal = Journal(tmp_path, "r1")
-    assert len(calls) == 1
+    assert calls == []
+    journal.append({"op": "move"})
+    assert len(calls) == 2
     journal.close()
+
+
+def test_journal_without_entries_leaves_no_file(tmp_path):
+    journal = Journal(tmp_path, "r1")
+    journal.close()
+    assert not journal.path.exists()
+    assert run_ids(tmp_path) == []
+    assert last_run_id(tmp_path) is None
 
 
 def test_read_run_ignores_torn_final_line(tmp_path):
@@ -106,7 +121,7 @@ def test_read_run_raises_on_malformed_middle_line(tmp_path):
 def test_run_ids_sort_suffixes_numerically(tmp_path):
     base = "20261011-213000"
     for run_id in (base, f"{base}-2", f"{base}-10"):
-        Journal(tmp_path, run_id).close()
+        _run_with_entry(tmp_path, run_id)
     assert run_ids(tmp_path) == [base, f"{base}-2", f"{base}-10"]
     assert last_run_id(tmp_path) == f"{base}-10"
 

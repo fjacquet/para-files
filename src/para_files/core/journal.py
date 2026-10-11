@@ -11,7 +11,7 @@ import re
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Literal, Self
+from typing import Any, Literal, Self, TextIO
 
 from para_files.core.tree import Tree
 
@@ -53,26 +53,40 @@ def _fsync_directory(directory: Path) -> None:
 
 
 class Journal:
-    """Append-only journal of one run; each line is on disk before append() returns."""
+    """Append-only journal of one run; each line is on disk before append() returns.
+
+    The file is created on the first append, so a run with no operations leaves no journal.
+    """
 
     def __init__(self, state_dir: Path, run_id: str) -> None:
-        directory = journal_dir(state_dir)
-        directory.mkdir(parents=True, exist_ok=True)
         self.run_id = run_id
-        self.path = directory / f"{run_id}.jsonl"
-        self._handle = self.path.open("x", encoding="utf-8")
-        _fsync_directory(directory)
+        self._directory = journal_dir(state_dir)
+        self.path = self._directory / f"{run_id}.jsonl"
+        if self.path.exists():
+            msg = f"journal already exists: {self.path}"
+            raise FileExistsError(msg)
+        self._handle: TextIO | None = None
+
+    def _create(self) -> TextIO:
+        self._directory.mkdir(parents=True, exist_ok=True)
+        handle = self.path.open("x", encoding="utf-8")
+        _fsync_directory(self._directory)
+        return handle
 
     def append(self, entry: dict[str, Any]) -> None:
         """Write one operation, flush and fsync."""
+        if self._handle is None:
+            self._handle = self._create()
         line = json.dumps({**entry, "run_id": self.run_id}, ensure_ascii=False)
         self._handle.write(line + "\n")
         self._handle.flush()
         os.fsync(self._handle.fileno())
 
     def close(self) -> None:
-        """Close the file."""
-        self._handle.close()
+        """Close the file, if one was created."""
+        if self._handle is not None:
+            self._handle.close()
+            self._handle = None
 
     def __enter__(self) -> Self:
         return self
