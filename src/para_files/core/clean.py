@@ -16,6 +16,7 @@ from pathlib import Path
 from para_files.core.apply import TRASH, free_path, make_dirs
 from para_files.core.evidence import extract, sha256_of
 from para_files.core.journal import Journal
+from para_files.core.secrets import secret_reason
 
 
 JUNK_NAMES = frozenset({".ds_store", "thumbs.db", "desktop.ini"})
@@ -51,12 +52,17 @@ def _walk(base: Path) -> Iterator[tuple[Path, list[str], list[str]]]:
         yield Path(dirpath), dirnames, sorted(filenames)
 
 
-def _empty_after_junk(base: Path) -> list[Path]:
-    """Folders strictly below base left empty once junk is gone, deepest first."""
+def _empty_after_junk(base: Path, keep: frozenset[Path]) -> list[Path]:
+    """Folders strictly below base left empty once junk is gone, deepest first.
+
+    Folders in keep (resolved) are never listed; their parents then stay too.
+    """
     empty: set[Path] = set()
     for dirpath, dirnames, filenames in os.walk(base, topdown=False):
         here = Path(dirpath)
         if here == base or any(part.startswith(".") for part in here.relative_to(base).parts):
+            continue
+        if here.resolve() in keep:
             continue
         dirs_left = [name for name in dirnames if here / name not in empty]
         files_left = [name for name in filenames if not is_junk(name)]
@@ -85,8 +91,33 @@ def _duplicates(files: Sequence[Path], root: Path) -> list[tuple[Path, Path]]:
     return pairs
 
 
-def plan_clean(paths: Sequence[Path], *, root: Path, duplicates: bool) -> CleanPlan:
-    """Look for junk, empty folders and (with duplicates) identical files under paths."""
+def _check_base(base: Path, root: Path) -> None:
+    """Raise ValueError unless base is inside root and has no dot-folder below root."""
+    resolved_root = root.resolve()
+    resolved = base.resolve()
+    if not resolved.is_relative_to(resolved_root):
+        msg = f"{base} is outside the PARA root ({root})"
+        raise ValueError(msg)
+    if any(part.startswith(".") for part in resolved.relative_to(resolved_root).parts):
+        msg = f"{base} is inside a dot-folder; clean never works there"
+        raise ValueError(msg)
+
+
+def plan_clean(
+    paths: Sequence[Path],
+    *,
+    root: Path,
+    duplicates: bool,
+    keep: frozenset[Path] = frozenset(),
+) -> CleanPlan:
+    """Look for junk, empty folders and (with duplicates) identical files under paths.
+
+    Raises ValueError for a path outside root or inside a dot-folder. Folders in keep are
+    never planned for removal.
+    """
+    for base in paths:
+        _check_base(base, root)
+    kept = frozenset(path.resolve() for path in keep)
     plan = CleanPlan()
     files: list[Path] = []
     for base in paths:
@@ -96,20 +127,52 @@ def plan_clean(paths: Sequence[Path], *, root: Path, duplicates: bool) -> CleanP
                 if path.is_symlink() or not path.is_file():
                     continue
                 if is_junk(name):
-                    plan.junk.append(path)
+                    if secret_reason(name) is None:
+                        plan.junk.append(path)
                 elif not name.startswith("."):
                     files.append(path)
-        plan.empty_dirs += _empty_after_junk(base)
+        plan.empty_dirs += _empty_after_junk(base, kept)
     if duplicates:
         plan.duplicates = _duplicates(files, root)
     return plan
 
 
+def _inside(path: Path, base: Path) -> bool:
+    return path.resolve().is_relative_to(base)
+
+
+def _duplicate_problem(copy: Path, kept: Path, base: Path) -> str | None:
+    """Why a planned duplicate must not be trashed now, or None when it still is one."""
+    if not _inside(copy, base) or not _inside(kept, base):
+        return "outside the PARA root"
+    if copy.is_symlink() or not copy.is_file():
+        return "source missing"
+    if not kept.is_file():
+        return "original missing"
+    if sha256_of(copy) != sha256_of(kept):
+        return "no longer identical"
+    return None
+
+
 def apply_clean(plan: CleanPlan, *, root: Path, journal: Journal) -> CleanReport:
-    """Trash junk and duplicate copies, then remove the folders left empty."""
+    """Trash junk and duplicate copies, then remove the folders left empty.
+
+    Every source and folder is checked against the PARA root first; anything outside is
+    skipped. Duplicates are re-verified (original still there, still identical) before moving.
+    """
     report = CleanReport()
     base = root.resolve()
-    for src in [*plan.junk, *(copy for copy, _ in plan.duplicates)]:
+    sources: list[Path] = list(plan.junk)
+    for copy, kept in plan.duplicates:
+        problem = _duplicate_problem(copy, kept, base)
+        if problem is not None:
+            report.skipped.append((copy, problem))
+        else:
+            sources.append(copy)
+    for src in sources:
+        if not _inside(src, base):
+            report.skipped.append((src, "outside the PARA root"))
+            continue
         if src.is_symlink() or not src.is_file():
             report.skipped.append((src, "source missing"))
             continue
@@ -133,6 +196,12 @@ def apply_clean(plan: CleanPlan, *, root: Path, journal: Journal) -> CleanReport
         shutil.move(src, dst)
         report.trashed.append((src, dst))
     for directory in plan.empty_dirs:
+        if not _inside(directory, base):
+            report.skipped.append((directory, "outside the PARA root"))
+            continue
+        if directory.is_symlink():
+            report.skipped.append((directory, "now a symlink"))
+            continue
         if directory.is_dir() and not any(directory.iterdir()):
             journal.append({"op": "rmdir", "dst": str(directory)})
             directory.rmdir()

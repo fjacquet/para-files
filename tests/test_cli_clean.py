@@ -34,3 +34,28 @@ def test_outside_root_is_refused(tmp_path, monkeypatch):
     result = runner.invoke(app, ["clean", str(outside)])
     assert result.exit_code == 2
     assert "only works inside the PARA root" in result.output
+
+
+def test_dot_folder_is_refused(tmp_path, monkeypatch):
+    root = setup_cli(tmp_path, monkeypatch)
+    git = root / ".git"
+    git.mkdir()
+    (git / "config").write_text("x")
+    result = runner.invoke(app, ["clean", str(git)])
+    assert result.exit_code == 2
+    assert "dot-folders" in result.output
+    assert (git / "config").exists()
+
+
+def test_bucket_and_leaf_folders_survive_apply(tmp_path, monkeypatch):
+    root = setup_cli(tmp_path, monkeypatch)
+    leaf = root / "4_Archives" / "10y_travail"
+    leaf.mkdir(parents=True)
+    scratch = root / "3_Resources" / "scratch"
+    scratch.mkdir(parents=True)
+    applied = runner.invoke(app, ["clean", "--apply"])
+    assert applied.exit_code == 0, applied.output
+    assert leaf.is_dir()
+    assert (root / "3_Resources").is_dir()
+    assert (root / "1_Projets").is_dir()
+    assert not scratch.exists()
