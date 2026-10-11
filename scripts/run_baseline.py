@@ -21,26 +21,42 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from para_inventory import make_canon, nfc, retentions_by_stem, scan_folders
+from para_inventory import make_canon, nfc, read_jsonl, retentions_by_stem, scan_folders
 
 from para_files.core.tree import Tree, config_dir, load_tree_config
 
 
 Classify = Callable[[Path], tuple[str, float, str]]
+INBOX = "0_Inbox"
+DEFAULT_DOCUMENTS = Path(__file__).resolve().parent.parent / "config" / "documents.json"
 
 
 def leaf_for_category(category: str, tree: Tree, canon: Callable[[str], str]) -> str | None:
-    """Most specific leaf whose path contains the old pipeline's category path."""
+    """Most specific leaf whose path (NFC) contains the old pipeline's category path.
+
+    A category that lands in the inbox, or has fewer than two segments, decides nothing.
+    """
     parts = [nfc(part).strip() for part in category.split("/") if part.strip()]
     if len(parts) < 2:
         return None
-    path = "/".join([canon("/".join(parts[:2])), *parts[2:]])
+    path = nfc("/".join([canon("/".join(parts[:2])), *parts[2:]]))
+    if path == INBOX or path.startswith(INBOX + "/"):
+        return None
     best: str | None = None
     for leaf_id, leaf in tree.leaves.items():
-        inside = path == leaf.path or path.startswith(leaf.path + "/")
-        if inside and (best is None or len(leaf.path) > len(tree.leaves[best].path)):
+        leaf_path = nfc(leaf.path)
+        inside = path == leaf_path or path.startswith(leaf_path + "/")
+        if inside and (best is None or len(leaf_path) > len(nfc(tree.leaves[best].path))):
             best = leaf_id
     return best
+
+
+def band_for(leaf: str | None, tree: Tree) -> str:
+    """Green for a decided record, library or media leaf; yellow for knowledge, which is a
+    suggestion only (spec 4.1); red when nothing decided the file."""
+    if leaf is None:
+        return "red"
+    return "yellow" if tree.leaves[leaf].kind == "knowledge" else "green"
 
 
 def old_pipeline_classifier() -> Classify:
@@ -98,7 +114,7 @@ def run_baseline(
                 "path": row["path"],
                 "leaf": leaf,
                 "confidence": confidence if leaf else 0.0,
-                "band": "green" if leaf else "red",
+                "band": band_for(leaf, tree),
                 "signal": signal,
                 "raw": category,
                 "secs": round(time.monotonic() - start, 3),
@@ -113,7 +129,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the old pipeline over the golden corpus.")
     parser.add_argument("--para-root", type=Path, required=True)
     parser.add_argument("--config-dir", type=Path, default=None)
-    parser.add_argument("--documents", type=Path, default=Path("config/documents.json"))
+    parser.add_argument("--documents", type=Path, default=DEFAULT_DOCUMENTS)
     parser.add_argument("--out", type=Path, default=None)
     args = parser.parse_args(argv)
     para_root = args.para_root.expanduser().resolve()
@@ -121,7 +137,7 @@ def main(argv: list[str] | None = None) -> int:
     out = (args.out or cfg_dir / "pred_baseline.jsonl").expanduser().resolve()
     if out.is_relative_to(para_root):
         parser.error("--out must be outside the PARA root")
-    golden = [json.loads(line) for line in (cfg_dir / "golden.jsonl").read_text().splitlines()]
+    golden = read_jsonl(cfg_dir / "golden.jsonl")
     tree = load_tree_config(cfg_dir).tree
     taxonomy = retentions_by_stem(json.loads(args.documents.read_text(encoding="utf-8")))
     canon = make_canon(scan_folders(para_root), taxonomy)  # same canonical map as the seeder

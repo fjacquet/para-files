@@ -8,6 +8,7 @@ different prefixes; only a prefix the taxonomy does not define for a stem is rem
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import unicodedata
@@ -42,6 +43,13 @@ LIBRARY = frozenset(
     }
 )
 COUNT_CAP = 5000
+
+
+def read_jsonl(path: Path) -> list[dict[str, Any]]:
+    """Rows of a UTF-8 JSONL file; blank or whitespace-only lines are skipped."""
+    return [
+        json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
+    ]
 
 
 def nfc(text: str) -> str:

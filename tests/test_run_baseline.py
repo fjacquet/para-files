@@ -89,7 +89,9 @@ def test_run_baseline_maps_errors_to_red_and_never_exposes_para_paths(
     assert by_name["b.pdf"]["signal"] == "error"
     assert by_name["c.pdf"]["leaf"] is None
     assert by_name["c.pdf"]["band"] == "red"
-    assert all(not path.is_relative_to(para) for path in seen)
+    # The link sits in the work folder; its target is in PARA, so check the link's folder.
+    assert seen
+    assert all(not path.parent.resolve().is_relative_to(para.resolve()) for path in seen)
     assert snapshot(para) == before
 
 
@@ -166,11 +168,14 @@ def test_link_failure_becomes_red_row(load_script, tmp_path):
     (workdir / "0").write_text("not a folder")  # the link folder of row 0 cannot be created
     golden = [{"path": "4_Archives/5y_factures/a.pdf", "leaf": "invoices", "kind": "record"}]
 
+    calls: list[Path] = []
+
     def classify(path: Path) -> tuple[str, float, str]:
-        msg = "classify must not run when the link cannot be made"
-        raise AssertionError(msg)
+        calls.append(path)
+        return "4_Archives/factures/2024", 0.95, "rules_engine"
 
     preds = baseline.run_baseline(para, golden, TREE, canon, classify, workdir)
+    assert calls == []  # classify must not run when the link cannot be made
     assert preds[0]["band"] == "red"
     assert preds[0]["signal"] == "error"
     assert preds[0]["leaf"] is None
@@ -219,3 +224,62 @@ def test_old_pipeline_disables_generic_pdf_rename(load_script, monkeypatch):
     (pipeline,) = built
     sentinel = object()
     assert pipeline._maybe_rename_generic_pdf(sentinel) is sentinel
+
+
+KNOWLEDGE_TREE = Tree.model_validate(
+    {
+        "leaves": {
+            "notes": {"kind": "knowledge", "path": "3_Resources/notes", "describe": "Notes"},
+            "etudes": {"kind": "library", "path": "3_Resources/e\u0301tudes", "describe": "Study"},
+        }
+    }
+)
+
+
+def test_knowledge_leaf_is_yellow_never_green(load_script, tmp_path: Path):
+    baseline = load_script("run_baseline")
+    para = tmp_path / "PARA"
+    source = para / "3_Resources/notes/a.md"
+    source.parent.mkdir(parents=True)
+    source.write_text("x")
+    golden = [{"path": "3_Resources/notes/a.md", "leaf": "notes", "kind": "knowledge"}]
+
+    def classify(path: Path) -> tuple[str, float, str]:
+        return "3_Resources/notes/x", 0.9, "taxonomy"
+
+    preds = baseline.run_baseline(
+        para, golden, KNOWLEDGE_TREE, lambda rel: rel, classify, tmp_path / "work"
+    )
+    assert preds[0]["leaf"] == "notes"
+    assert preds[0]["band"] == "yellow"
+
+
+def test_leaf_for_category_guards_inbox_explicitly(load_script):
+    baseline = load_script("run_baseline")
+
+    def to_inbox(rel: str) -> str:
+        return "0_Inbox/Stuff" if rel == "4_Archives/moved" else rel
+
+    assert baseline.leaf_for_category("4_Archives/moved/2024", KNOWLEDGE_TREE, to_inbox) is None
+
+
+def test_leaf_for_category_normalises_both_sides_to_nfc(load_script):
+    baseline = load_script("run_baseline")
+    nfc_category = "3_Resources/\u00e9tudes/2024"  # composed accent; the leaf path is decomposed
+    assert baseline.leaf_for_category(nfc_category, KNOWLEDGE_TREE, lambda r: r) == "etudes"
+
+
+def test_read_golden_skips_blank_lines_and_reads_utf8(load_script, tmp_path: Path):
+    shared = load_script("para_inventory")
+    rows_file = tmp_path / "golden.jsonl"
+    rows_file.write_text(
+        '{"path": "3_Resources/\u00e9tudes/a.pdf"}\n\n   \n{"path": "b.pdf"}\n', encoding="utf-8"
+    )
+    rows = shared.read_jsonl(rows_file)
+    assert [row["path"] for row in rows] == ["3_Resources/\u00e9tudes/a.pdf", "b.pdf"]
+
+
+def test_default_documents_path_is_repo_relative(load_script):
+    baseline = load_script("run_baseline")
+    assert baseline.DEFAULT_DOCUMENTS.is_file()
+    assert baseline.DEFAULT_DOCUMENTS.parent.name == "config"
