@@ -31,6 +31,11 @@ Classify = Callable[[Path], tuple[str, float, str]]
 INBOX = "0_Inbox"
 CATEGORY_SEGMENTS = 2  # bucket and folder
 DEFAULT_DOCUMENTS = Path(__file__).resolve().parent.parent / "config" / "documents.json"
+OLD_PIPELINE_ENV = {
+    "PARA_FILES_MLX_SEMANTIC_ENABLED": "false",
+    "PARA_FILES_LLM_ENABLED": "false",
+    "PARA_FILES_OCR_RENAME__ENABLED": "false",
+}
 
 
 def leaf_for_category(category: str, tree: Tree, canon: Callable[[str], str]) -> str | None:
@@ -65,23 +70,21 @@ def band_for(leaf: str | None, tree: Tree) -> str:
 def old_pipeline_classifier() -> Iterator[Classify]:
     """The old pipeline restricted to signals 1-3: book detector, rules engine, taxonomy.
 
-    Geocoding stays off while the block runs; the original reverse_geocode is restored on exit.
+    Geocoding stays off while the block runs; the original reverse_geocode and the PARA_FILES_*
+    values the block overrode are restored on exit, however the block ends.
     """
-    os.environ.update(
-        PARA_FILES_MLX_SEMANTIC_ENABLED="false",
-        PARA_FILES_LLM_ENABLED="false",
-        PARA_FILES_OCR_RENAME__ENABLED="false",
-    )
     from para_files.classifiers import rules_engine
     from para_files.classifiers.extension_router import ExtensionRouterClassifier
     from para_files.config import load_config
     from para_files.pipeline import ClassificationPipeline
 
+    saved_env = {name: os.environ.get(name) for name in OLD_PIPELINE_ENV}
     # Geocoding off: the rules engine calls this name, so GPS placeholders stay unresolved
     # and no Nominatim lookup can run during the measurement.
     original_geocode = rules_engine.reverse_geocode
-    rules_engine.reverse_geocode = lambda _latitude, _longitude: None
     try:
+        os.environ.update(OLD_PIPELINE_ENV)
+        rules_engine.reverse_geocode = lambda _latitude, _longitude: None
         pipeline = ClassificationPipeline(load_config())
         # never rename during a measurement
         pipeline._maybe_rename_generic_pdf = lambda path: path  # noqa: SLF001 - pins the old pipeline
@@ -99,6 +102,11 @@ def old_pipeline_classifier() -> Iterator[Classify]:
         yield classify
     finally:
         rules_engine.reverse_geocode = original_geocode
+        for name, value in saved_env.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
 
 
 def run_baseline(

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+import os
 from pathlib import Path
 
 import pytest
@@ -285,6 +287,34 @@ def test_default_documents_path_is_repo_relative(load_script):
     baseline = load_script("run_baseline")
     assert baseline.DEFAULT_DOCUMENTS.is_file()
     assert baseline.DEFAULT_DOCUMENTS.parent.name == "config"
+
+
+@pytest.mark.parametrize("raises", [False, True], ids=["clean-exit", "exception"])
+def test_pipeline_env_is_restored_when_the_classifier_closes(load_script, monkeypatch, raises):
+    baseline = load_script("run_baseline")
+    monkeypatch.setenv("PARA_FILES_LLM_ENABLED", "true")  # set by the caller: must survive
+    monkeypatch.delenv("PARA_FILES_MLX_SEMANTIC_ENABLED", raising=False)  # absent: must stay so
+    monkeypatch.delenv("PARA_FILES_OCR_RENAME__ENABLED", raising=False)
+
+    class FakePipeline:
+        def __init__(self, config: object) -> None:
+            self._classifiers: list[object] = []
+
+        def _ensure_initialized(self) -> None:
+            return None
+
+    monkeypatch.setattr("para_files.config.load_config", lambda: None)
+    monkeypatch.setattr("para_files.pipeline.ClassificationPipeline", FakePipeline)
+    if raises:
+        with contextlib.suppress(RuntimeError), baseline.old_pipeline_classifier():
+            msg = "boom"
+            raise RuntimeError(msg)
+    else:
+        with baseline.old_pipeline_classifier():
+            assert os.environ["PARA_FILES_LLM_ENABLED"] == "false"  # switched off inside
+    assert os.environ["PARA_FILES_LLM_ENABLED"] == "true"
+    assert "PARA_FILES_MLX_SEMANTIC_ENABLED" not in os.environ
+    assert "PARA_FILES_OCR_RENAME__ENABLED" not in os.environ
 
 
 def test_reverse_geocode_is_restored_when_the_classifier_closes(load_script, monkeypatch):
