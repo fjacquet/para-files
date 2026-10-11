@@ -17,6 +17,7 @@ Start with the two commands that show the state of things: `para-files tree --va
 | `no usable PARA root in the settings` (from `init`) | The variable is unset or invalid | Set `PARA_FILES_PARA_ROOT` in the environment or in `~/.config/para-files/.env`, or pass the root to `init` |
 | `<setting>: Input should be less than or equal to 16` (or similar) | A setting is outside its allowed range | See the ranges in [configuration](configuration.md#settings) |
 | `sort` uses a root you did not expect | An environment variable overrides `.env` | `env | grep PARA_FILES` shows what is set |
+| `--review asks questions and needs a terminal` | stdin is not a terminal | run it in a terminal window |
 
 ## Config files
 

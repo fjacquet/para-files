@@ -131,4 +131,7 @@ def setup_cli(base: Path, monkeypatch: Any) -> Path:
     monkeypatch.setenv("PARA_FILES_CACHE_PATH", str(base / "cache" / "cache.sqlite"))
     monkeypatch.setenv("PARA_FILES_STATE_DIR", str(base / "state"))
     monkeypatch.setenv("PARA_FILES_FALLBACK_ENABLED", "false")
+    from para_files.cli import review as review_cli
+
+    monkeypatch.setattr(review_cli, "stdin_is_tty", lambda: True)
     return root

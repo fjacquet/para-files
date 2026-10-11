@@ -182,3 +182,15 @@ def test_json_apply_with_nothing_to_move_omits_applied(tmp_path, monkeypatch):
     result = runner.invoke(app, ["sort", "--apply", "--json"])
     assert result.exit_code == 0, result.output
     assert "applied" not in json.loads(result.output)
+
+
+def test_review_refuses_without_a_terminal(tmp_path, monkeypatch):
+    from para_files.cli import review as review_cli
+
+    root = setup_cli(tmp_path, monkeypatch)
+    monkeypatch.setattr(review_cli, "stdin_is_tty", lambda: False)
+    note = put(root, "0_Inbox/a_notes.md", "# a")
+    result = runner.invoke(app, ["sort", "--apply", "--review"], input="\n")
+    assert result.exit_code != 0
+    assert "needs a terminal" in result.output
+    assert note.exists()

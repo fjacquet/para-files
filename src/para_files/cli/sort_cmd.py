@@ -9,6 +9,7 @@ from typing import Annotated
 
 import typer
 
+from para_files.cli import review as review_cli
 from para_files.cli.app import app
 from para_files.cli.common import context_or_exit, fail, settings_or_exit
 from para_files.cli.output import decision_dict, print_plan, print_report, report_dict, summary
@@ -71,6 +72,11 @@ def sort_command(
         fail("--review needs --apply: the files you confirm are moved")
     if review and as_json:
         fail("--review is interactive; drop --json")
+    if review and not review_cli.stdin_is_tty():
+        fail(
+            "--review asks questions and needs a terminal: run it in a terminal window, "
+            "not through a pipe or an assistant's shell"
+        )
     settings = settings_or_exit(**({"max_workers": workers} if workers else {}))
     ctx = context_or_exit(settings)
     roots = [path.expanduser() for path in paths] if paths else [settings.para_root / INBOX]

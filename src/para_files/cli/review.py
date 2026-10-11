@@ -6,6 +6,7 @@ Every answer becomes an owner-decided operation: the journal records it as a lab
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
@@ -19,6 +20,11 @@ from para_files.core.tree import TreeConfig
 
 Ask = Callable[[str], str]
 PROMPT = "  [Enter] accept, s skip, q stop, ? list leaves, or type a leaf id: "
+
+
+def stdin_is_tty() -> bool:
+    """True when a person can answer the questions: stdin is a terminal."""
+    return sys.stdin.isatty()
 
 
 def _ask(prompt: str) -> str:

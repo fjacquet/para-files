@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Logs are quiet by default (warnings only, on stderr); `--verbose` shows debug lines.
 
+### Fixed
+
+- `sort --apply --review` refuses to start without a terminal instead of moving the green files and stopping at the first question.
+
 ## [2.0] - 2026-10-11
 
 Stages 3 and 4 of the redesign: a new six-command CLI on the new core, and the old pipeline removed.
