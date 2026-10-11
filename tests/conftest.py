@@ -58,6 +58,7 @@ def _sanitized_reference_tree(
 
     for name in [k for k in os.environ if k.startswith("PARA_FILES_")]:
         monkeypatch.delenv(name)  # inherited shell values (e.g. sourced ~/.env) never leak in
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)  # a real key never reaches a test
     home = tmp_path_factory.mktemp("home")  # outside tmp_path so tests listing it stay exact
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("PARA_FILES_CONFIG_DIR", str(home / ".config" / "para-files"))

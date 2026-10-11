@@ -228,3 +228,42 @@ class TestReferenceErrorsNameTheirFile:
         (tmp_path / "tree.yaml").mkdir()  # reading a directory raises an OSError
         with pytest.raises(TreeError, match=r"tree\.yaml: cannot read"):
             load_tree_config(tmp_path)
+
+
+class TestNoEmptyItems:
+    @pytest.mark.parametrize(
+        ("file_name", "leaves", "rules", "issuers"),
+        [
+            ("tree.yaml", {"career": _leaf(keywords=[""])}, None, None),
+            (
+                "rules.yaml",
+                {"career": _leaf()},
+                [{"name": "r", "leaf": "career", "globs": [""]}],
+                None,
+            ),
+            (
+                "rules.yaml",
+                {"career": _leaf()},
+                [{"name": "r", "leaf": "", "globs": ["*x*"]}],
+                None,
+            ),
+            (
+                "issuers.yaml",
+                {"career": _leaf()},
+                None,
+                {"acme": {"patterns": [""], "leaves": ["career"]}},
+            ),
+            (
+                "issuers.yaml",
+                {"career": _leaf()},
+                None,
+                {"acme": {"patterns": ["Acme"], "leaves": [""]}},
+            ),
+        ],
+    )
+    def test_empty_string_item_is_a_tree_error_naming_the_file(
+        self, tmp_path, file_name, leaves, rules, issuers
+    ):
+        _write(tmp_path, leaves, rules=rules, issuers=issuers)
+        with pytest.raises(TreeError, match=re.escape(str(tmp_path / file_name))):
+            load_tree_config(tmp_path)

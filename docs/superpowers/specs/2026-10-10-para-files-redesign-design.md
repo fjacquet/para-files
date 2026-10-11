@@ -221,6 +221,7 @@ Package data (via `importlib.resources`):
 
 - `default_rules.yaml` — generic extension rules (images, video, audio, archives, ISOs, code), appended after user rules.
 - `thema_l1l2.json` — Thema level-1/level-2 codes with short names, plus the subject-keyword map now hardcoded in `thema_lookup.py` (~10KB, replaces the 3.6MB `thema.json`).
+Both package files are deferred to Stage 4: the owner's rules.yaml already carries the extension rules, and the Thema slimming is part of the purge.
 
 #### Loading and validation
 
@@ -416,7 +417,7 @@ Nothing is ever hard-deleted or overwritten.
 {"run_id": "20261010-213000", "op": "move", "src": "...", "dst": "...", "sha256": "...", "size": 1234, "leaf": "telecom_invoices", "proposed_leaf": "telecom_invoices", "decided_by": "owner", "signal": "issuers", "confidence": 0.9}
 ```
 
-`op` ∈ `move`, `trash`, `rmdir`. `decided_by` ∈ `auto` (green, applied without review), `owner` (yellow, confirmed or corrected in `sort --review`); `proposed_leaf` differs from `leaf` when the owner corrected it. Owner-decided entries are the labeled data of §4.5.
+`op` ∈ `mkdir`, `move`, `trash`, `rmdir` (`mkdir` lets `undo` remove the folders a run created). `decided_by` ∈ `auto` (green, applied without review), `owner` (yellow, confirmed or corrected in `sort --review`); `proposed_leaf` differs from `leaf` when the owner corrected it. Owner-decided entries are the labeled data of §4.5.
 
 #### Undo
 

@@ -300,10 +300,8 @@ class TestLookupIsbn:
     @patch("isbnlib.to_isbn13")
     @patch("isbnlib.meta")
     @patch("isbnlib.desc")
-    @patch("isbnlib.cover")
-    def test_lookup_success_with_enrichment(  # noqa: PLR0913
+    def test_lookup_success_with_enrichment(
         self,
-        mock_cover: MagicMock,
         mock_desc: MagicMock,
         mock_meta: MagicMock,
         mock_to_isbn13: MagicMock,
@@ -324,7 +322,6 @@ class TestLookupIsbn:
             "Language": "en",
         }
         mock_desc.return_value = "A comprehensive guide to Python programming."
-        mock_cover.return_value = {"thumbnail": "https://example.com/cover.jpg"}
 
         result = lookup_isbn("9780596517748")
 
@@ -334,7 +331,34 @@ class TestLookupIsbn:
         assert result.publishers == ["O'Reilly Media"]
         assert result.publish_date == "2013"
         assert result.description is not None
-        assert result.cover_url == "https://example.com/cover.jpg"
+        assert result.cover_url is None
+
+    @patch("isbnlib.canonical")
+    @patch("isbnlib.is_isbn10")
+    @patch("isbnlib.is_isbn13")
+    @patch("isbnlib.to_isbn13")
+    @patch("isbnlib.meta")
+    @patch("isbnlib.desc")
+    @patch("isbnlib.cover")
+    def test_lookup_never_fetches_a_cover(  # noqa: PLR0913
+        self,
+        mock_cover: MagicMock,
+        mock_desc: MagicMock,
+        mock_meta: MagicMock,
+        mock_to_isbn13: MagicMock,
+        mock_is_isbn13: MagicMock,
+        mock_is_isbn10: MagicMock,
+        mock_canonical: MagicMock,
+    ):
+        """The unused cover network call is gone (spec §4.2)."""
+        mock_canonical.return_value = "9780596517748"
+        mock_is_isbn10.return_value = False
+        mock_is_isbn13.return_value = True
+        mock_to_isbn13.return_value = "9780596517748"
+        mock_meta.return_value = {"Title": "Python Cookbook", "Authors": ["A"]}
+        mock_desc.return_value = ""
+        assert lookup_isbn("9780596517748") is not None
+        mock_cover.assert_not_called()
 
     @patch("isbnlib.canonical")
     @patch("isbnlib.is_isbn10")

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (Stage 2)
+
+- **New core (`para_files.core`)**, alongside the old pipeline (the CLI still uses the old one until Stage 3):
+  - one `extract()` per file, with the secrets guard first (names, folders below the PARA root, archive entries, content);
+  - four signals on leaf ids: case-insensitive rules, books by ISBN (lookups cached; the unused cover lookup is gone), issuers (patterns of 3 characters or fewer match whole words only) and an OpenRouter fallback through litellm (Gemini 3.8 Flash, then Sonnet 5.5, zero data retention on every request);
+  - bands with kind caps, and a calibration cap: issuers and the fallback stay yellow until a kind has 100 owner-confirmed decisions;
+  - an SQLite cache of verdicts keyed by content hash and config fingerprint;
+  - sequential apply: contained, never overwriting, `.trash` for identical files, emptied folders removed, every step journaled (`mkdir`, `move`, `trash`, `rmdir`) with `proposed_leaf` and `decided_by`;
+  - `undo` of a run, checked step by step.
+- **Core settings**: env > `<config dir>/.env` > defaults. A `PARA_FILES_PARA_ROOT` that points at a bucket (such as `…/0_Inbox`) is refused with a message naming the variable.
+
 ## [1.8] - 2026-10-11
 
 ### Changed
