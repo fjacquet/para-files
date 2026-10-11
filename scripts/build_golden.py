@@ -17,7 +17,7 @@ import os
 import random
 from collections import Counter
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 from para_inventory import nfc
 
@@ -28,19 +28,46 @@ from para_files.core.tree import TreeConfig, config_dir, load_tree_config
 WALK_CAP = 2000
 
 
-def leaf_files(root: Path, excluded: set[str], rng: random.Random) -> list[Path]:
-    """Candidate files under root, skipping hidden, secret-named, symlinked and special files
-    and other leaves' folders.
+class Walk(NamedTuple):
+    """One leaf's walk: candidate files, whether it stopped at WALK_CAP, unreadable folders."""
 
-    The walk stops after the folder in which WALK_CAP candidates are reached.
+    files: list[Path]
+    stopped_early: bool
+    unreadable: list[str]
+
+
+def _regular_file(path: Path) -> bool:
+    """A regular file that is not a symlink; one that cannot be stat'ed does not count."""
+    try:
+        return path.is_file() and not path.is_symlink()
+    except OSError:
+        return False
+
+
+def leaf_files(root: Path, excluded: set[str], rng: random.Random) -> Walk:
+    """Candidate files under root, skipping hidden, secret-named (files and folders), symlinked
+    and special files, and other leaves' folders.
+
+    The walk stops after the folder in which WALK_CAP candidates are reached; stopped_early is
+    set only when folders were left unvisited. Folders that cannot be read are listed.
     """
     found: list[Path] = []
+    unreadable: list[str] = []
     if not root.is_dir():
-        return found
-    for dirpath, dirnames, filenames in os.walk(root):
+        return Walk(found, False, unreadable)
+
+    def note_unreadable(error: OSError) -> None:
+        unreadable.append(os.path.relpath(str(error.filename), root))
+
+    walker = os.walk(root, onerror=note_unreadable)
+    for dirpath, dirnames, filenames in walker:
         here = Path(dirpath)
         dirnames[:] = sorted(
-            d for d in dirnames if not d.startswith(".") and nfc(str(here / d)) not in excluded
+            d
+            for d in dirnames
+            if not d.startswith(".")
+            and secret_reason(d) is None
+            and nfc(str(here / d)) not in excluded
         )
         rng.shuffle(dirnames)
         found += [
@@ -48,35 +75,38 @@ def leaf_files(root: Path, excluded: set[str], rng: random.Random) -> list[Path]
             for name in sorted(filenames)
             if not name.startswith((".", "~$"))
             and secret_reason(name) is None
-            and (here / name).is_file()
-            and not (here / name).is_symlink()
+            and _regular_file(here / name)
         ]
         if len(found) >= WALK_CAP:
-            break
-    return found
+            return Walk(found, next(walker, None) is not None, unreadable)
+    return Walk(found, False, unreadable)
 
 
 def build_golden(
     para_root: Path, config: TreeConfig, *, per_leaf: int, knowledge_per_leaf: int, seed: int
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """Up to per_leaf files per leaf (knowledge_per_leaf for knowledge leaves), plus notes."""
-    rng = random.Random(seed)  # noqa: S311 - sampling, not security
     leaf_dirs = {leaf_id: para_root / leaf.path for leaf_id, leaf in config.tree.leaves.items()}
     rows: list[dict[str, Any]] = []
     notes: list[str] = []
     for leaf_id, leaf in config.tree.leaves.items():
+        if leaf_dirs[leaf_id].is_symlink():
+            notes.append(f"leaf {leaf_id}: root is a symlink; skipped")
+            continue
+        rng = random.Random(f"{seed}:{leaf_id}")  # noqa: S311 - sampling, not security
         excluded = {nfc(str(path)) for other, path in leaf_dirs.items() if other != leaf_id}
-        files = leaf_files(leaf_dirs[leaf_id], excluded, rng)
-        if len(files) >= WALK_CAP:
+        walk = leaf_files(leaf_dirs[leaf_id], excluded, rng)
+        notes += [f"leaf {leaf_id}: unreadable folder skipped: {name}" for name in walk.unreadable]
+        if walk.stopped_early:
             notes.append(
                 f"leaf {leaf_id}: walk stopped at {WALK_CAP} files; "
                 f"the sample covers part of {leaf.path}"
             )
-        if not files:
+        if not walk.files:
             notes.append(f"leaf {leaf_id}: no files under {leaf.path}")
             continue
         wanted = knowledge_per_leaf if leaf.kind == "knowledge" else per_leaf
-        for path in sorted(rng.sample(files, min(wanted, len(files)))):
+        for path in sorted(rng.sample(walk.files, min(wanted, len(walk.files)))):
             rows.append(
                 {"path": nfc(str(path.relative_to(para_root))), "leaf": leaf_id, "kind": leaf.kind}
             )
@@ -97,7 +127,7 @@ def main(argv: list[str] | None = None) -> int:
     para_root = args.para_root.expanduser().resolve()
     if not para_root.is_dir():
         parser.error(f"--para-root is not a directory: {para_root}")
-    cfg_dir = args.config_dir or config_dir()
+    cfg_dir = args.config_dir.expanduser().resolve() if args.config_dir else config_dir()
     out = (args.out or cfg_dir / "golden.jsonl").expanduser().resolve()
     if out.is_relative_to(para_root):
         parser.error("--out must be outside the PARA root")
@@ -111,6 +141,7 @@ def main(argv: list[str] | None = None) -> int:
         seed=args.seed,
     )
     if not rows:
+        print(*notes, sep="\n")
         parser.error("no files sampled; nothing written")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), "utf-8")

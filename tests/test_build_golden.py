@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import random
 from pathlib import Path
 
@@ -98,8 +99,9 @@ def test_walk_stops_at_cap(load_script, tmp_path, monkeypatch):
         for index in range(3):
             _touch(tmp_path, f"big/{folder}/{index}.pdf")
     monkeypatch.setattr(golden, "WALK_CAP", 2)
-    files = golden.leaf_files(tmp_path / "big", set(), random.Random(1))  # noqa: S311 - sampling
-    assert len(files) == 3  # the walk stops after the first folder that reaches the cap
+    walk = golden.leaf_files(tmp_path / "big", set(), random.Random(1))  # noqa: S311 - sampling
+    assert len(walk.files) == 3  # the walk stops after the first folder that reaches the cap
+    assert walk.stopped_early
 
 
 def test_main_writes_jsonl_and_leaves_para_untouched(load_script, para, config, tmp_path, snapshot):
@@ -122,8 +124,8 @@ def test_symlinked_file_pointing_outside_the_leaf_is_not_sampled(load_script, tm
     outside = tmp_path / "outside.pdf"
     outside.write_text("x")
     (root / "link.pdf").symlink_to(outside)
-    files = golden.leaf_files(root, set(), random.Random(1))  # noqa: S311 - sampling
-    assert [path.name for path in files] == ["cv0.pdf"]
+    walk = golden.leaf_files(root, set(), random.Random(1))  # noqa: S311 - sampling
+    assert [path.name for path in walk.files] == ["cv0.pdf"]
 
 
 def test_main_rejects_missing_para_root_and_writes_nothing(load_script, config, tmp_path):
@@ -162,6 +164,150 @@ def test_main_refuses_to_write_when_nothing_is_sampled(load_script, config, tmp_
 
 def test_capped_walk_is_reported_in_notes(load_script, para, config, monkeypatch):
     golden = load_script("build_golden")
+    _touch(para, "4_Archives/5y_factures/2025/late.pdf")  # a folder the capped walk never reaches
     monkeypatch.setattr(golden, "WALK_CAP", 5)
     _rows, notes = _build(golden, para, config)
     assert any("walk stopped at 5 files" in note for note in notes)
+
+
+def _leaves_config(tmp_path: Path, leaves: dict[str, dict[str, str]]):
+    directory = tmp_path / "cfg-custom"
+    directory.mkdir()
+    (directory / "tree.yaml").write_text(yaml.safe_dump({"leaves": leaves}))
+    return load_tree_config(directory)
+
+
+def test_secret_and_hidden_names_are_filtered_in_the_walk(load_script, tmp_path):
+    golden = load_script("build_golden")
+    root = tmp_path / "leaf"
+    for rel in ["cv.pdf", ".hidden.pdf", "s3-credentials.json", "~$draft.docx", "sub/ok.pdf"]:
+        _touch(root, rel)
+    _touch(root, "credentials/inside.pdf")
+    walk = golden.leaf_files(root, set(), random.Random(1))  # noqa: S311 - sampling
+    assert sorted(path.name for path in walk.files) == ["cv.pdf", "ok.pdf"]
+
+
+def test_broken_links_and_fifos_are_not_sampled(load_script, tmp_path):
+    golden = load_script("build_golden")
+    root = tmp_path / "leaf"
+    _touch(root, "cv.pdf")
+    (root / "gone.pdf").symlink_to(tmp_path / "missing.pdf")
+    os.mkfifo(root / "pipe.pdf")
+    walk = golden.leaf_files(root, set(), random.Random(1))  # noqa: S311 - sampling
+    assert [path.name for path in walk.files] == ["cv.pdf"]
+
+
+def test_walk_that_reaches_the_cap_in_its_last_folder_is_not_truncated(load_script, tmp_path):
+    golden = load_script("build_golden")
+    _touch(tmp_path, "only/a.pdf")
+    _touch(tmp_path, "only/b.pdf")
+    golden.WALK_CAP = 2  # each load_script call is a fresh module
+    walk = golden.leaf_files(tmp_path, set(), random.Random(1))  # noqa: S311 - sampling
+    assert len(walk.files) == 2
+    assert not walk.stopped_early
+
+
+def test_unreadable_folder_is_noted_and_skipped(load_script, tmp_path):
+    if os.geteuid() == 0:
+        pytest.skip("root can read a chmod 000 folder")
+    golden = load_script("build_golden")
+    root = tmp_path / "leaf"
+    _touch(root, "ok/a.pdf")
+    _touch(root, "locked/b.pdf")
+    locked = root / "locked"
+    locked.chmod(0)
+    try:
+        walk = golden.leaf_files(root, set(), random.Random(1))  # noqa: S311 - sampling
+    finally:
+        locked.chmod(0o755)
+    assert [path.name for path in walk.files] == ["a.pdf"]
+    assert walk.unreadable == ["locked"]
+
+
+def test_file_that_cannot_be_stat_ed_is_skipped(load_script, tmp_path):
+    if os.geteuid() == 0:
+        pytest.skip("root can stat files in a folder without search permission")
+    golden = load_script("build_golden")
+    root = tmp_path / "leaf"
+    _touch(root, "ok/a.pdf")
+    _touch(root, "noexec/b.pdf")
+    (root / "noexec").chmod(0o444)  # listable but not searchable: stat() of its files fails
+    try:
+        walk = golden.leaf_files(root, set(), random.Random(1))  # noqa: S311 - sampling
+    finally:
+        (root / "noexec").chmod(0o755)
+    assert [path.name for path in walk.files] == ["a.pdf"]
+
+
+def test_symlinked_leaf_root_is_skipped_with_a_note(load_script, tmp_path):
+    golden = load_script("build_golden")
+    para = tmp_path / "PARA"
+    _touch(para, "2_Areas/other/x.pdf")
+    outside = tmp_path / "outside"
+    _touch(outside, "y.pdf")
+    (para / "2_Areas" / "linked").symlink_to(outside, target_is_directory=True)
+    config = _leaves_config(
+        tmp_path,
+        {
+            "linked": {"kind": "knowledge", "path": "2_Areas/linked", "describe": "Linked"},
+            "other": {"kind": "knowledge", "path": "2_Areas/other", "describe": "Other"},
+        },
+    )
+    rows, notes = _build(golden, para, config)
+    assert {row["leaf"] for row in rows} == {"other"}
+    assert "leaf linked: root is a symlink; skipped" in notes
+
+
+def test_files_under_secret_named_folders_are_not_sampled_in_the_leaf(load_script, para, config):
+    golden = load_script("build_golden")
+    _touch(para, "2_Areas/carriere/secrets/key.pdf")
+    rows, _notes = _build(golden, para, config)
+    assert not any("secrets" in row["path"] for row in rows)
+
+
+def test_capped_walk_note_is_absent_for_a_leaf_that_is_not_truncated(load_script, para, config):
+    golden = load_script("build_golden")
+    golden.WALK_CAP = 8  # career holds exactly 8 files in one folder
+    _rows, notes = _build(golden, para, config)
+    assert not any(note.startswith("leaf career: walk stopped") for note in notes)
+
+
+def test_no_files_note_is_printed_before_the_refusal(load_script, config, tmp_path, capsys):
+    golden = load_script("build_golden")
+    empty = tmp_path / "EMPTY"
+    empty.mkdir()
+    argv = ["--para-root", str(empty), "--config-dir", str(tmp_path / "cfg")]
+    with pytest.raises(SystemExit):
+        golden.main([*argv, "--out", str(tmp_path / "golden.jsonl")])
+    assert "leaf career: no files under 2_Areas/carriere" in capsys.readouterr().out
+
+
+def test_config_dir_with_tilde_is_expanded(load_script, para, tmp_path):
+    cfg = Path(os.environ["HOME"]) / "cfg"
+    cfg.mkdir()
+    leaves = {"career": {"kind": "knowledge", "path": "2_Areas/carriere", "describe": "C"}}
+    (cfg / "tree.yaml").write_text(yaml.safe_dump({"leaves": leaves}))
+    golden = load_script("build_golden")
+    assert golden.main(["--para-root", str(para), "--config-dir", "~/cfg"]) == 0
+    assert (cfg / "golden.jsonl").exists()
+
+
+def test_a_leaf_sample_does_not_depend_on_other_leaves(load_script, para, config):
+    """Leaves are sampled in sorted order; career comes before invoices, so career's new files
+    must not reshuffle the invoices sample."""
+    golden = load_script("build_golden")
+    before, _ = _build(golden, para, config)
+    for index in range(8):
+        _touch(para, f"2_Areas/carriere/more{index}.pdf")
+    after, _ = _build(golden, para, config)
+    invoices = [row for row in before if row["leaf"] == "invoices"]
+    assert invoices
+    assert invoices == [row for row in after if row["leaf"] == "invoices"]
+
+
+def test_out_inside_para_root_is_refused(load_script, para, config, tmp_path):
+    golden = load_script("build_golden")
+    argv = ["--para-root", str(para), "--config-dir", str(tmp_path / "cfg")]
+    with pytest.raises(SystemExit):
+        golden.main([*argv, "--out", str(para / "golden.jsonl")])
+    assert not (para / "golden.jsonl").exists()
