@@ -311,3 +311,19 @@ def test_out_inside_para_root_is_refused(load_script, para, config, tmp_path):
     with pytest.raises(SystemExit):
         golden.main([*argv, "--out", str(para / "golden.jsonl")])
     assert not (para / "golden.jsonl").exists()
+
+
+def test_leaf_under_a_bucket_symlinked_outside_para_is_not_sampled(load_script, tmp_path):
+    golden = load_script("build_golden")
+    para = tmp_path / "PARA"
+    para.mkdir()
+    outside = tmp_path / "outside"
+    _touch(outside, "carriere/cv0.pdf")
+    (para / "2_Areas").symlink_to(outside, target_is_directory=True)
+    config = _leaves_config(
+        tmp_path,
+        {"career": {"kind": "knowledge", "path": "2_Areas/carriere", "describe": "Career"}},
+    )
+    rows, notes = _build(golden, para, config)
+    assert rows == []
+    assert "leaf career: resolves outside the PARA root; skipped" in notes

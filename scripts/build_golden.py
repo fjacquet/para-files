@@ -89,9 +89,13 @@ def build_golden(
     leaf_dirs = {leaf_id: para_root / leaf.path for leaf_id, leaf in config.tree.leaves.items()}
     rows: list[dict[str, Any]] = []
     notes: list[str] = []
+    root = para_root.resolve()
     for leaf_id, leaf in config.tree.leaves.items():
         if leaf_dirs[leaf_id].is_symlink():
             notes.append(f"leaf {leaf_id}: root is a symlink; skipped")
+            continue
+        if not leaf_dirs[leaf_id].resolve().is_relative_to(root):
+            notes.append(f"leaf {leaf_id}: resolves outside the PARA root; skipped")
             continue
         rng = random.Random(f"{seed}:{leaf_id}")  # noqa: S311 - sampling, not security
         excluded = {nfc(str(path)) for other, path in leaf_dirs.items() if other != leaf_id}
