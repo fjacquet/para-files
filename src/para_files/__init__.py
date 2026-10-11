@@ -1,24 +1,12 @@
-"""PARA Files - Intelligent file classification using MLX-powered semantic routing.
+"""PARA Files - sorts personal files into a PARA folder tree.
 
-This package implements the PARA method (Projects, Areas, Resources, Archives)
-with a deterministic embedding-based classification pipeline for personal files
-and work emails on macOS.
+It reads a YAML tree of destination folders, files each document by rules, issuers and
+content, asks a model only when those leave doubt, and can undo every run.
 """
 
 from __future__ import annotations
 
-from para_files.config import Config
-from para_files.pipeline import ClassificationPipeline
-from para_files.types import ClassificationResult, ClassificationSource, Confidence
-
 
 __version__ = "1.9"
 __author__ = "Your Name"
-__all__ = [
-    "ClassificationPipeline",
-    "ClassificationResult",
-    "ClassificationSource",
-    "Confidence",
-    "Config",
-    "__version__",
-]
+__all__ = ["__version__"]

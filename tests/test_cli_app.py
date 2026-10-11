@@ -40,3 +40,17 @@ def test_entry_point_targets_the_new_app():
     pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
     scripts = tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"]["scripts"]
     assert scripts == {"para-files": "para_files.cli.app:app"}
+
+
+def test_importing_the_cli_loads_neither_the_old_pipeline_nor_litellm():
+    import subprocess
+    import sys
+
+    code = (
+        "import para_files.cli, sys; "
+        "print('para_files.pipeline' in sys.modules, 'litellm' in sys.modules)"
+    )
+    out = subprocess.run(  # noqa: S603 - runs this interpreter on a fixed snippet
+        [sys.executable, "-c", code], capture_output=True, text=True, check=True
+    )
+    assert out.stdout.split() == ["False", "False"]

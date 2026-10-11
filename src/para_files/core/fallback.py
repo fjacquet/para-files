@@ -15,7 +15,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import litellm
 from loguru import logger
 
 from para_files.circuit_breaker import OllamaCircuitBreaker
@@ -41,6 +40,13 @@ SYSTEM = (
 )
 Complete = Callable[..., Any]
 Ranked = list[tuple[str, float]]
+
+
+def litellm_complete(**kwargs: Any) -> Any:  # noqa: ANN401 - litellm's keyword arguments and reply
+    """litellm.completion, imported on first use: importing litellm takes seconds."""
+    import litellm
+
+    return litellm.completion(**kwargs)
 
 
 class FallbackError(RuntimeError):
@@ -169,7 +175,7 @@ class OpenRouterFallback:
         key: str,
         models: Sequence[str],
         *,
-        complete: Complete = litellm.completion,
+        complete: Complete = litellm_complete,
         breaker: OllamaCircuitBreaker | None = None,
     ) -> None:
         self._key = key
@@ -221,7 +227,7 @@ class OpenRouterFallback:
 
 
 def make_fallback(
-    settings: CoreSettings, *, complete: Complete = litellm.completion
+    settings: CoreSettings, *, complete: Complete = litellm_complete
 ) -> OpenRouterFallback | None:
     """The configured fallback, or None when it is off or no key is set."""
     if not settings.fallback_enabled or settings.openrouter_api_key is None:
