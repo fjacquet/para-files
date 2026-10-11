@@ -25,25 +25,18 @@ def _home(*parts: str) -> Path:
     return Path.home().joinpath(*parts)
 
 
-_MODEL_CONFIG = SettingsConfigDict(
-    env_prefix="PARA_FILES_",
-    env_file_encoding="utf-8",
-    extra="ignore",
-    populate_by_name=True,
-)
-
-
-def _state_dir_field() -> Any:  # noqa: ANN401 - a pydantic Field, shared by two settings classes
-    return Field(default_factory=lambda: _home(".local", "state", "para-files"))
-
-
 class PathSettings(BaseSettings):
     """The two paths ``init`` needs before the PARA root has an inbox: no root check."""
 
-    model_config = _MODEL_CONFIG
+    model_config = SettingsConfigDict(
+        env_prefix="PARA_FILES_",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        populate_by_name=True,
+    )
 
     para_root: Path | None = None
-    state_dir: Path = _state_dir_field()
+    state_dir: Path = Field(default_factory=lambda: _home(".local", "state", "para-files"))
 
     @field_validator("para_root", "state_dir")
     @classmethod
@@ -51,12 +44,10 @@ class PathSettings(BaseSettings):
         return None if value is None else value.expanduser()
 
 
-class CoreSettings(BaseSettings):
+class CoreSettings(PathSettings):
     """Effective settings for sort, explain, undo and clean."""
 
-    model_config = _MODEL_CONFIG
-
-    para_root: Path
+    para_root: Path  # required here, optional for ``init``
     preview_chars: int = Field(default=2000, ge=100, le=10_000)
     max_workers: int = Field(default=4, ge=1, le=16)
     fallback_enabled: bool = True
@@ -73,11 +64,10 @@ class CoreSettings(BaseSettings):
     fallback_green: float = Field(default=0.9, ge=0.0, le=1.0)
     fallback_red: float = Field(default=0.3, ge=0.0, le=1.0)
     cache_path: Path = Field(default_factory=lambda: _home(".cache", "para-files", "cache.sqlite"))
-    state_dir: Path = _state_dir_field()
 
-    @field_validator("para_root", "cache_path", "state_dir")
+    @field_validator("cache_path")
     @classmethod
-    def _expand(cls, value: Path) -> Path:
+    def _expand_cache(cls, value: Path) -> Path:
         return value.expanduser()
 
     @field_validator("para_root")
