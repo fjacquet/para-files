@@ -148,10 +148,10 @@ Read-only inventory of the PARA root (counts only):
 
 | # | Criterion | How verified |
 |---|---|---|
-| S1 | Green precision ≥ 98% on owner-confirmed decisions, per kind, once a kind has ≥ 100 of them | `scripts/eval.py` on the journal |
-| S2 | Share of confirmed inbox files the tool proposed correctly, reported per release (no threshold) | `scripts/eval.py` on the journal |
+| S1 | Green precision ≥ 98% on owner-confirmed decisions, per kind, once a kind has ≥ 100 of them | `para-files tree` (confirmation statistics from the journal) |
+| S2 | Share of confirmed inbox files the tool proposed correctly, reported per release (no threshold) | `para-files tree` (confirmation statistics from the journal) |
 | S3 | Records: green coverage ≥ 80% of the inbox's recurring records (issuer families) on a real `0_Inbox` run | `sort --json` summary |
-| S3b | Knowledge: top-3 suggestion hit rate measured on confirmed decisions and reported (no threshold) | `scripts/eval.py` on the journal |
+| S3b | Knowledge: top-3 suggestion hit rate measured on confirmed decisions and reported (no threshold) | `para-files tree` (confirmation statistics from the journal) |
 | S4 | A preview run leaves the file tree byte-identical (names, inodes, mtimes) | integration test on a temp tree |
 | S5 | `undo` after an apply restores a byte-identical tree | integration test on a temp tree |
 | S6 | No personal identifiers in tracked files | manual review before Stage 1 merge |
@@ -219,9 +219,7 @@ All personal config lives under `~/.config/para-files/`. The repo ships only gen
 
 Package data (via `importlib.resources`):
 
-- `default_rules.yaml` — generic extension rules (images, video, audio, archives, ISOs, code), appended after user rules.
-- `thema_l1l2.json` — Thema level-1/level-2 codes with short names, plus the subject-keyword map now hardcoded in `thema_lookup.py` (~10KB, replaces the 3.6MB `thema.json`).
-Both package files are deferred to Stage 4: the owner's rules.yaml already carries the extension rules, and the Thema slimming is part of the purge.
+- `thema_l1l2.json` — the 234 Thema level-1/level-2 folder names (≈10 KB, replaces the 3.6 MB `thema.json`); the subject-keyword map stays in `core/thema.py`. No `default_rules.yaml`: rules name personal `leaf_id`s, so the owner's `rules.yaml` carries the extension rules (decision 2026-10-11).
 
 #### Loading and validation
 
@@ -552,6 +550,8 @@ Exit: S3 measured on a real inbox; S1 and S2 reported from confirmed decisions (
 
 Exit: S6, S7 pass; source ≈ half of 18.8k lines.
 
+Status: done 2026-10-11 (see decisions log).
+
 ---
 
 ## 6. Process Changes
@@ -607,3 +607,6 @@ Exit: S6, S7 pass; source ≈ half of 18.8k lines.
 | Special top-level folders (2026-10-11) | Folders outside the five buckets are out of scope |
 | Prefixes outside `4_Archives` (2026-10-11) | Records move to the vault; media drop the prefix |
 | Empty folders (2026-10-11) | Handled later |
+| Stage 4 purge (2026-10-11) | Old pipeline, local AI, Stage 1 scripts, `config/thema.json` and `config/documents.json` deleted; every module reachable from the CLI; source 6517 lines |
+| Package data (2026-10-11) | Only `thema_l1l2.json`; `default_rules.yaml` dropped (rules name personal leaf ids) |
+| Dependencies (2026-10-11) | semantic-router, einops, geopy, faker, bandit, httpx removed; cryptography kept as pypdf's AES backend (§5 Stage 4 "re-check cryptography") |
