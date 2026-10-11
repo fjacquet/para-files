@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`--conflict overwrite`** and `ConflictStrategy.OVERWRITE` — the tool no longer replaces existing files. Use `rename` or `rename_with_date`.
 
+### Documentation
+
+- **Mission re-grounded** — records file themselves, everything else is suggested. `4_Archives` is defined as the records retention vault ([ADR-012](docs/adr/ADR-012-records-and-para.md), amending ADR-001). The redesign spec gains content kinds, band caps by kind, a secrets guard, per-kind success criteria and the preliminary bake-off results. VISION.md mission and principles updated.
+
 ### Fixed
 
 - **LLM classifier returning 0_Inbox at 100% confidence** — PDFs with opaque filenames were
