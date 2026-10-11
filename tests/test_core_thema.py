@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from importlib.resources import files
 
-from para_files.core.thema import _folders, lookup_thema_code, thema_to_para_path
+import pytest
+
+from para_files.core.thema import SUBJECT_TO_THEMA, _folders, lookup_thema_code, thema_to_para_path
 
 
 def test_the_table_is_a_package_resource():
@@ -49,3 +51,22 @@ def test_medieval_history_files_under_history():
 def test_a_blank_subject_gives_none():
     assert lookup_thema_code([""]) is None
     assert lookup_thema_code(["  "]) is None
+
+
+@pytest.mark.parametrize("subject", ["Tax laws", "Ergonomics", "Trust law", "Startups"])
+def test_a_keyword_inside_another_word_does_not_match(subject):
+    assert lookup_thema_code([subject]) not in {"UTC", "UMX", "A"}
+
+
+def test_unrelated_subjects_do_not_combine_into_a_language():
+    assert lookup_thema_code(["Fiction", "Algorithms"]) != "UMX"
+
+
+def test_keywords_with_symbols_match_whole():
+    if "c++" in SUBJECT_TO_THEMA:
+        assert lookup_thema_code(["C++"]) == SUBJECT_TO_THEMA["c++"]
+
+
+def test_a_keyword_inside_a_phrase_still_matches():
+    # "programming" comes before "python" in the map, so the first whole-word key wins.
+    assert lookup_thema_code(["Python programming"]) == SUBJECT_TO_THEMA["programming"]

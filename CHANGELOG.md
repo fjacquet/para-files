@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Book subjects match Thema keywords as whole words: "Tax laws" no longer files a book under cloud computing ("aws"), nor "Fiction" + "Algorithms" a novel under programming languages ("go").
 - `sort --json` output is valid JSON again: the PDF and MOBI readers import `pymupdf` instead of the deprecated `fitz`, which printed a warning to stdout.
 - Spec §4.4: a file is moved or renamed only when its target path differs (books are renamed in place); an undone green move is not yet counted as a miss (decisions log).
 - Books whose subject is "medieval history" go to the history folder (Thema `NH`) instead of the library root (the old map used a code that does not exist); a blank subject no longer files a book under computing.

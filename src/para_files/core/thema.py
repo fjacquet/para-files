@@ -8,6 +8,7 @@ ancestors are its first one and two characters.
 from __future__ import annotations
 
 import json
+import re
 from functools import cache
 from importlib.resources import files
 
@@ -329,15 +330,21 @@ def _folders() -> dict[str, str]:
 
 
 @cache
+def _whole(phrase: str) -> re.Pattern[str]:
+    """`phrase` as a whole word or phrase: no letter, digit or underscore right before or after."""
+    return re.compile(rf"(?<!\w){re.escape(phrase)}(?!\w)")
+
+
+@cache
 def lookup_subject(subject: str) -> str | None:
-    """Thema code for one subject: exact keyword first, then the first partial match."""
+    """Thema code for one subject: exact keyword first, then the first whole-word match."""
     wanted = subject.lower().strip()
     if not wanted:
         return None
     if wanted in SUBJECT_TO_THEMA:
         return SUBJECT_TO_THEMA[wanted]
     for key, code in SUBJECT_TO_THEMA.items():
-        if key in wanted or wanted in key:
+        if _whole(key).search(wanted) or _whole(wanted).search(key):
             return code
     return None
 
