@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from importlib.metadata import version
+from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from para_files import __version__
@@ -293,6 +295,17 @@ class TestCleanCommand:
         assert result.exit_code == 0
 
 
+FIXTURE_TREE = Path(__file__).parent / "fixtures" / "test_reference_tree.yaml"
+
+
+@pytest.fixture
+def fixture_reference_tree(monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Point the CLI at the sanitized fixture tree instead of the owner's real one."""
+    monkeypatch.setenv("PARA_FILES_REFERENCE_TREE_PATH", str(FIXTURE_TREE))
+    return FIXTURE_TREE
+
+
+@pytest.mark.usefixtures("fixture_reference_tree")
 class TestInitCommand:
     """Tests for the init command."""
 
@@ -494,6 +507,7 @@ class TestHelperFunctions:
         assert result is True
 
 
+@pytest.mark.usefixtures("fixture_reference_tree")
 class TestTreeCommand:
     """Tests for the tree command."""
 
@@ -518,6 +532,7 @@ class TestTreeCommand:
         assert result.exit_code == 0
 
 
+@pytest.mark.usefixtures("fixture_reference_tree")
 class TestRoutesCommand:
     """Tests for the routes command."""
 
@@ -532,6 +547,7 @@ class TestRoutesCommand:
         assert result.exit_code == 0
 
 
+@pytest.mark.usefixtures("fixture_reference_tree")
 class TestIssuersCommand:
     """Tests for the issuers command."""
 
@@ -608,6 +624,7 @@ class TestCleanAdvanced:
         assert ds_store.exists()
 
 
+@pytest.mark.usefixtures("fixture_reference_tree")
 class TestInitAdvanced:
     """Advanced tests for the init command."""
 

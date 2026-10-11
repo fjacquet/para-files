@@ -16,7 +16,7 @@ import typer
 from loguru import logger
 from pydantic import ValidationError
 
-from para_files.config import DEFAULT_REFERENCE_TREE, load_config
+from para_files.config import default_reference_tree, load_config
 from para_files.logging import setup_logging as _setup_logging
 from para_files.types import SignalResult
 from para_files.utils.validation import (
@@ -137,7 +137,7 @@ def get_reference_tree_path(
     try:
         cfg = load_config()
     except ValidationError:
-        return DEFAULT_REFERENCE_TREE
+        return default_reference_tree()
     else:
         return cfg.reference_tree_path
 

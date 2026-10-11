@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed (Stage 1)
+
+- **Personal reference tree moved out of the repo** — the default is now `~/.config/para-files/personal_file_tree.yaml`; `config/personal_file_tree.yaml` is untracked and still used as a fallback when the personal copy is missing. CLI tests use the sanitized fixture tree. Two remaining personal identifiers were removed from tracked files.
+
 ### Fixed (Stage 0 safety)
 
 - **OCR rename is off by default** — `ocr_rename.enabled` now defaults to `false`. Before, `scan`, `move --dry-run`, `inbox`, `rescan` and `learn` could rename generic PDFs on disk while classifying. Enable with `PARA_FILES_OCR_RENAME__ENABLED=true`.

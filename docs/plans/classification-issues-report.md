@@ -132,7 +132,7 @@ Key reclassifications:
 | Corsica Ferries | `*Corsica*Ferries*` | voyages/Corsica-Ferries/{YYYY} |
 | American Airlines | `*American*Airlines*` | voyages/American-Airlines/{YYYY} |
 | Tryba | `*Tryba*` | immobilier/Tryba/{YYYY} |
-| Bleu Marine | `*Bleu*Marine*`, `*CRG*DU*AU*` | immobilier/Bleu-Marine/{YYYY} |
+| `<property>` | `*<property>*`, `*CRG*DU*AU*` | immobilier/`<property>`/{YYYY} |
 | Editions Diamond | `*Diamond*`, `*Linux*Magazine*` | loisirs/magazines/{YYYY} |
 | Ninja Kitchen | `*Ninja*`, `*SharkNinja*` | Materiels/Maison/Cuisine/{YYYY} |
 

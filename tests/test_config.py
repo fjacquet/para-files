@@ -14,10 +14,12 @@ from para_files.config import (
     DEFAULT_MLX_MODEL,
     DEFAULT_REFERENCE_TREE,
     DEFAULT_SCORE_THRESHOLD,
+    LEGACY_REFERENCE_TREE,
     Config,
     LLMConfig,
     MLXConfig,
     _load_yaml_config,
+    default_reference_tree,
     load_config,
 )
 
@@ -118,11 +120,12 @@ class TestOCRRenameConfig:
 class TestConfig:
     """Tests for Config."""
 
-    def test_minimal_config(self, tmp_path: Path):
+    def test_minimal_config(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         """Test config with only required field."""
-        config = Config(para_root=tmp_path)
+        monkeypatch.delenv("PARA_FILES_REFERENCE_TREE_PATH", raising=False)
+        config = Config(_env_file=None, para_root=tmp_path)
         assert config.para_root == tmp_path
-        assert config.reference_tree_path == Path("config/personal_file_tree.yaml")
+        assert config.reference_tree_path == default_reference_tree()
         assert config.validated_db_path is None
 
     def test_full_config(self, tmp_path: Path):
@@ -203,8 +206,21 @@ class TestYAMLConfig:
     """Tests for YAML configuration loading from reference tree."""
 
     def test_default_reference_tree_path(self):
-        """Test default reference tree path."""
-        assert Path("config/personal_file_tree.yaml") == DEFAULT_REFERENCE_TREE
+        """The personal reference tree lives in ~/.config/para-files/."""
+        expected = Path.home() / ".config" / "para-files" / "personal_file_tree.yaml"
+        assert expected == DEFAULT_REFERENCE_TREE
+
+    def test_default_reference_tree_prefers_personal_copy(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        """Use the personal copy when it exists, else the legacy in-repo path."""
+        import para_files.config as config_module
+
+        personal = tmp_path / "personal_file_tree.yaml"
+        monkeypatch.setattr(config_module, "DEFAULT_REFERENCE_TREE", personal)
+        assert config_module.default_reference_tree() == LEGACY_REFERENCE_TREE
+        personal.write_text("routing_rules: {}\n")
+        assert config_module.default_reference_tree() == personal
 
     def test_load_yaml_config_from_file(self, tmp_path: Path):
         """Test loading config from a YAML file."""

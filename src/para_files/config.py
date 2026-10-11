@@ -27,7 +27,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 # Default reference tree location
-DEFAULT_REFERENCE_TREE = Path("config/personal_file_tree.yaml")
+LEGACY_REFERENCE_TREE = Path("config/personal_file_tree.yaml")
+DEFAULT_REFERENCE_TREE = Path.home() / ".config" / "para-files" / "personal_file_tree.yaml"
+
+
+def default_reference_tree() -> Path:
+    """Return the personal reference tree if it exists, else the legacy in-repo path."""
+    return DEFAULT_REFERENCE_TREE if DEFAULT_REFERENCE_TREE.exists() else LEGACY_REFERENCE_TREE
+
 
 # Default configuration values (centralized to avoid duplication)
 DEFAULT_MLX_MODEL = "nomic-text-v1.5"
@@ -267,7 +274,7 @@ class Config(BaseSettings):
 
     # Reference tree configuration
     reference_tree_path: Path = Field(
-        default=DEFAULT_REFERENCE_TREE,
+        default_factory=default_reference_tree,
         description="Path to the PARA reference tree YAML file",
     )
 

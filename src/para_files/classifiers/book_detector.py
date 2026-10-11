@@ -190,7 +190,6 @@ def is_financial_document(content: str, filename: str) -> bool:
         "décompte",
         "decompte",
         "avis-",
-        "0264",  # UBS account number prefix
     ]
     if any(pattern in filename_lower for pattern in financial_filename_patterns):
         return True

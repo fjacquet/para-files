@@ -76,7 +76,7 @@ pre-commit run --all-files         # Run manually
 | `src/para_files/utils/filename_sanitizer.py` | Centralized filename sanitization |
 | `src/para_files/taxonomies/models.py` | Thema/document taxonomy models and path builders |
 | `tests/` | Test suite |
-| `config/personal_file_tree.yaml` | PARA reference tree (example) |
+| `~/.config/para-files/personal_file_tree.yaml` | Legacy reference tree (personal, not tracked; `config/` copy is the fallback) |
 | `config/thema.json` | Thema v1.6 book classification (9,187 codes) |
 | `config/documents.json` | Document type taxonomy for classification |
 
