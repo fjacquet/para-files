@@ -431,3 +431,26 @@ def test_malformed_choices_keep_the_reply_cost(bakeoff, tmp_path: Path):
     assert pred["cost"] == pytest.approx(0.002)
     assert pred["leaf"] is None
     assert "malformed" in pred["error"]
+
+
+def test_key_order_is_env_then_cwd_dotenv_then_config_dotenv(bakeoff, tmp_path: Path, monkeypatch):
+    fake_openrouter = FakePost(*(_chat('{"choices": []}') for _ in range(3)))
+    monkeypatch.setattr(httpx, "post", fake_openrouter)
+    cfg, para = _config_dir(tmp_path), _para_with_invoice(tmp_path)
+    _golden_and_baseline(cfg)
+    work = tmp_path / "work"
+    work.mkdir()
+    monkeypatch.chdir(work)
+    (work / ".env").write_text("PARA_FILES_LLM_API_KEY=sk-or-TEST-CWD-KEY\n", encoding="utf-8")
+    (cfg / ".env").write_text("PARA_FILES_LLM_API_KEY=sk-or-TEST-CONFIG-KEY\n", encoding="utf-8")
+    argv = ["--candidate", "gemini", "--para-root", str(para), "--config-dir", str(cfg)]
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.setenv("PARA_FILES_LLM_API_KEY", FAKE_KEY)
+    assert bakeoff.main(argv) == 0
+    assert fake_openrouter.calls[-1]["headers"]["Authorization"] == f"Bearer {FAKE_KEY}"
+    monkeypatch.delenv("PARA_FILES_LLM_API_KEY")
+    assert bakeoff.main(argv) == 0
+    assert fake_openrouter.calls[-1]["headers"]["Authorization"] == "Bearer sk-or-TEST-CWD-KEY"
+    (work / ".env").unlink()
+    assert bakeoff.main(argv) == 0
+    assert fake_openrouter.calls[-1]["headers"]["Authorization"] == "Bearer sk-or-TEST-CONFIG-KEY"

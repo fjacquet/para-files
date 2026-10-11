@@ -412,6 +412,7 @@ def main(argv: list[str] | None = None) -> int:
     para_root = args.para_root.expanduser().resolve()
     key = (
         os.environ.get("OPENROUTER_API_KEY")
+        or os.environ.get("PARA_FILES_LLM_API_KEY")
         or dotenv_values(".env").get("PARA_FILES_LLM_API_KEY")
         or dotenv_values(cfg_dir / ".env").get("PARA_FILES_LLM_API_KEY")
         or ""
