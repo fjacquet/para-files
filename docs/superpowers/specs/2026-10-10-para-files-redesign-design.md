@@ -451,7 +451,7 @@ No command writes YAML. Corrections are made by editing `rules.yaml` / `issuers.
 
 | Command | Behavior | Absorbs |
 |---|---|---|
-| `sort [PATH…] [--apply] [--review] [--json] [-w N]` | Classify and plan; default PATH is `0_Inbox`. A file moves only if green (or yellow and confirmed under `--review`) **and** its current directory differs from the target. Covers inbox drain, book curation and PARA re-org. | scan, classify, move, inbox, rescan, bookstore |
+| `sort [PATH…] [--apply] [--review] [--json] [-w N]` | Classify and plan; default PATH is `0_Inbox`. A file is moved or renamed only if green (or yellow and confirmed under `--review`) **and** its target path (folder and name) differs from its current one; a book already in the right folder is renamed in place. Covers inbox drain, book curation and PARA re-org. | scan, classify, move, inbox, rescan, bookstore |
 | `explain FILE` | Evidence, every signal's verdict, why the winner won, which config entry to edit. No side effects. | `classify -v`, test-route, learn (read side) |
 | `undo [RUN_ID]` | Reverse a run from its journal | `move --rollback` |
 | `clean [PATH] [--duplicates] [--apply]` | Junk files, empty directories, identical duplicates → `.trash`. Preview by default. | clean, dedupe |
@@ -598,6 +598,8 @@ Exit: S6, S7 pass; source ≈ half of 18.8k lines.
 | `4_Archives` (2026-10-11) | Retention vault; legacy twins merged via reviewed, journaled migration |
 | Content kinds (2026-10-11) | `record`, `library`, `media`, `knowledge`; `knowledge` never green |
 | Secrets (2026-10-11) | Secret-flagged files are never sent off-machine and never moved |
+| In-place rename (2026-10-11) | `sort` renames a file in place when only its name differs from the target (books get their canonical name); §4.4 wording follows the code (M-6) |
+| Undo as a miss (2026-10-11) | An undone green auto-move is not yet counted as a miss; deferred until issuers or the model can go green (≥ 100 confirmations per kind), then counted in the `tree` statistics (M-7) |
 | Repo visibility (2026-10-11) | Stays public; history not rewritten |
 | Working order (2026-10-11) | Inbox first; the existing tree is reorganized in batches on demand, quick wins first |
 | Doubtful files (2026-10-11) | Go back to `0_Inbox` (placeholder folders, split-stem legacy content, misfiled items) |
