@@ -179,7 +179,13 @@ def _inside(path: Path, base: Path) -> bool:
     return path.resolve().is_relative_to(base)
 
 
-def _duplicate_problem(copy: Path, kept: Path, base: Path) -> str | None:
+def _hash_once(path: Path, hashes: dict[Path, str]) -> str:
+    if path not in hashes:
+        hashes[path] = sha256_of(path)
+    return hashes[path]
+
+
+def _duplicate_problem(copy: Path, kept: Path, base: Path, hashes: dict[Path, str]) -> str | None:
     """Why a planned duplicate must not be trashed now, or None when it still is one."""
     if not _inside(copy, base) or not _inside(kept, base):
         return "outside the PARA root"
@@ -187,7 +193,7 @@ def _duplicate_problem(copy: Path, kept: Path, base: Path) -> str | None:
         return "source missing"
     if not kept.is_file():
         return "original missing"
-    if sha256_of(copy) != sha256_of(kept):
+    if _hash_once(copy, hashes) != _hash_once(kept, hashes):
         return "no longer identical"
     return None
 
@@ -200,9 +206,10 @@ def apply_clean(plan: CleanPlan, *, root: Path, journal: Journal) -> CleanReport
     """
     report = CleanReport()
     base = root.resolve()
+    hashes: dict[Path, str] = {}
     sources: list[Path] = list(plan.junk)
     for copy, kept in plan.duplicates:
-        problem = _duplicate_problem(copy, kept, base)
+        problem = _duplicate_problem(copy, kept, base, hashes)
         if problem is not None:
             report.skipped.append((copy, problem))
         else:
@@ -215,7 +222,7 @@ def apply_clean(plan: CleanPlan, *, root: Path, journal: Journal) -> CleanReport
             report.skipped.append((src, "source missing"))
             continue
         entry = {
-            "sha256": sha256_of(src),
+            "sha256": _hash_once(src, hashes),
             "leaf": None,
             "proposed_leaf": None,
             "decided_by": "auto",
