@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Canonical tree loader** — `para_files.core.tree` loads `tree.yaml`, `rules.yaml` and `issuers.yaml` from `~/.config/para-files/` strictly (unknown keys, unknown leaves, duplicate issuer patterns and retention/path mismatches are errors) and reports review warnings. Sanitized examples in `examples/`.
 - **Secrets guard** — `para_files.core.secrets.secret_reason()` flags credential, key, recovery-phrase and similar files by name or content; Stage 1 tools never sample or send such files.
+- **Config migration seeder** — `scripts/migrate_config.py` drafts `tree.yaml`, `rules.yaml` and `issuers.yaml` from the current PARA tree, the legacy routing rules and `config/documents.json`. It folds legacy twins, name variants, stray retention prefixes and synonym folders (retention prefixes defined by the taxonomy never merge), marks doubtful folders for a later return to `0_Inbox`, proposes a kind and retention per leaf, keeps the legacy pattern-and-extension semantics, and lists recurring inbox families as issuer candidates in `review.md`. Read-only on the PARA root.
 
 ### Changed (Stage 1)
 
