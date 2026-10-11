@@ -7,6 +7,6 @@ content, asks a model only when those leave doubt, and can undo every run.
 from __future__ import annotations
 
 
-__version__ = "1.9"
+__version__ = "2.0"
 __author__ = "Your Name"
 __all__ = ["__version__"]
