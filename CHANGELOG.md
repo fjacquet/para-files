@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Config migration seeder** — `scripts/migrate_config.py` drafts `tree.yaml`, `rules.yaml` and `issuers.yaml` from the current PARA tree, the legacy routing rules and `config/documents.json`. It folds legacy twins, name variants, stray retention prefixes and synonym folders (retention prefixes defined by the taxonomy never merge), marks doubtful folders for a later return to `0_Inbox`, proposes a kind and retention per leaf, keeps the legacy pattern-and-extension semantics, and lists recurring inbox families as issuer candidates in `review.md`. Read-only on the PARA root.
 - **Golden corpus builder** — `scripts/build_golden.py` samples up to 10 files per leaf (5 per knowledge leaf) from the approved tree into `~/.config/para-files/golden.jsonl`, never crossing into nested leaves and never sampling secret-looking or hidden files.
 - **Evaluation script** — `scripts/eval.py` scores a predictions file against the golden corpus. It reports, overall, per kind and per signal: accuracy, green precision and coverage, yellow/red share, top-3 hit rate, best coverage at ≥ 98% precision, latency and cost per 1000 files.
+- **Baseline runner** — `scripts/run_baseline.py` runs the old pipeline (semantic and LLM off, no OCR rename) over the golden corpus through symlinks and maps its categories onto the new leaves, so `eval.py` can score it.
 
 ### Changed (Stage 1)
 
