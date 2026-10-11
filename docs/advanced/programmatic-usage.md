@@ -64,7 +64,7 @@ from para_files.config import load_config
 # Explicit values
 config = load_config(
     para_root=Path("~/Documents/PARA"),
-    reference_tree_path=Path("config/personal_file_tree.yaml"),
+    reference_tree_path=Path("~/.config/para-files/personal_file_tree.yaml").expanduser(),
     mlx_score_threshold=0.80,
 )
 

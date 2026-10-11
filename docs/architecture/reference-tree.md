@@ -37,7 +37,7 @@ issuers:
 ```yaml
 config:
   para_root: "~/Documents/PARA"
-  reference_tree_path: "config/personal_file_tree.yaml"
+  reference_tree_path: "~/.config/para-files/personal_file_tree.yaml"
   content_preview_chars: 2000
   
   mlx:

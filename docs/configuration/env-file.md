@@ -46,7 +46,7 @@ PARA_FILES_PARA_ROOT=~/Documents/PARA
 PARA_FILES_MLX_SCORE_THRESHOLD=0.75
 
 # Optional: reference tree location
-PARA_FILES_REFERENCE_TREE_PATH=config/personal_file_tree.yaml
+PARA_FILES_REFERENCE_TREE_PATH=~/.config/para-files/personal_file_tree.yaml
 ```
 
 ### Full Setup (With LLM)
@@ -54,7 +54,7 @@ PARA_FILES_REFERENCE_TREE_PATH=config/personal_file_tree.yaml
 ```bash
 # Core
 PARA_FILES_PARA_ROOT=~/Documents/PARA
-PARA_FILES_REFERENCE_TREE_PATH=config/personal_file_tree.yaml
+PARA_FILES_REFERENCE_TREE_PATH=~/.config/para-files/personal_file_tree.yaml
 
 # MLX Embedding Model
 PARA_FILES_MLX_MODEL_NAME=mlx-community/nomic-embed-text-v1.5

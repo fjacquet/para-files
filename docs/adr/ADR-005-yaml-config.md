@@ -1,5 +1,7 @@
 # ADR-005: YAML Reference Tree for Routing Configuration
 
+> Amended: default location is now the config directory (`~/.config/para-files/`, or `$PARA_FILES_CONFIG_DIR`); `config/personal_file_tree.yaml` is the legacy fallback.
+
 **Date**: 2024-01-01
 **Status**: Accepted
 **Deciders**: Frédéric Jacquet
