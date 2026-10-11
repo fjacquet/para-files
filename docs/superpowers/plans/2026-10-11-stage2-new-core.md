@@ -39,7 +39,7 @@
 ## Review Focus
 
 1. A file deleted or edited between preview and apply → that operation is skipped with a reason, the run continues (Task 10).
-2. Two inbox files with identical content → the second goes to `.trash`, nothing is overwritten (Task 10).
+2. Two inbox files with identical content and the same target name → the second goes to `.trash`, nothing is overwritten (Task 10). Identical content under different names is left to `clean --duplicates` (Stage 3).
 3. `PARA_FILES_PARA_ROOT` pointing at `…/0_Inbox` (the known bad `.env`) → a clear error naming the variable (Task 1).
 4. macOS NFD filenames and accents in rules, issuers and keywords → match like their NFC form (Tasks 3, 4).
 5. Ctrl+C in the middle of an apply → every finished move is journaled and `undo` restores it (Task 11).
