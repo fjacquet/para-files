@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **No golden corpus; labels come from the owner's confirmations** — current placement in PARA is not trusted as ground truth, so the golden corpus and the authoritative bake-off are dropped. Signal 4 is Gemini 3.8 Flash (Sonnet 5.5 as fallback) by owner preference. The inbox is sorted progressively: each file the owner confirms or corrects becomes a label in the journal, and issuers and signal 4 stay yellow until a kind has 100 confirmed decisions. Stage 1 now ends with the approved tree and an inbox preview. `build_golden.py`, `run_baseline.py` and `bakeoff.py` stay in the repo, unused.
+
 ## [1.7] - 2026-10-11
 
 ### Added (Stage 1)

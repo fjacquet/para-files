@@ -3330,7 +3330,7 @@ Claude-Session: https://claude.ai/code/session_01TnHHvHPS4t1tVuqpTZiEJx"
 
 ### Task 10: Real-data run, owner checkpoints, results
 
-This task runs the tools on the owner's PARA volume. The controller (not a subagent) runs it, and it stops at **CHECKPOINT A** and **CHECKPOINT C** for the owner. Nothing in it moves a file. Set `PARA` to the PARA root in the shell first. Its value is personal: never write it into a tracked file.
+This task runs the tools on the owner's PARA volume. The controller (not a subagent) runs it, and it stops at **CHECKPOINT A** for the owner. Nothing in it moves a file. Set `PARA` to the PARA root in the shell first. Its value is personal: never write it into a tracked file.
 
 **Files:**
 - Modify: `docs/superpowers/specs/2026-10-10-para-files-redesign-design.md` (§4.5 results, §8 decisions)
@@ -3362,61 +3362,9 @@ c = load_tree_config(); print(len(c.tree.leaves), 'leaves'); print(*validation_w
 
 Expected: loads without error and prints 20–30 leaves. The owner accepts the remaining warnings or fixes them. Do not continue without the owner's explicit approval of the tree.
 
-- [ ] **Step 3: Golden corpus, then CHECKPOINT C**
+> **Amended 2026-10-11 (owner):** current placement in PARA is not trusted as ground truth, so there is no golden corpus. The former Steps 3–7 (golden corpus and Checkpoint C, baseline, bake-off, winner and drop rules, results) are dropped. Signal 4 is Gemini 3.8 Flash by owner preference; labels come from the owner's confirmations during progressive sorting (spec §4.5). `build_golden.py`, `run_baseline.py` and `bakeoff.py` stay in the repo, unused.
 
-```bash
-uv run python scripts/build_golden.py --para-root "$PARA"
-```
-
-The owner deletes lines for ambiguous files from `~/.config/para-files/golden.jsonl`, then confirms.
-
-- [ ] **Step 4: Baseline**
-
-```bash
-uv run python scripts/run_baseline.py --para-root "$PARA"
-uv run python scripts/eval.py --pred ~/.config/para-files/pred_baseline.jsonl
-```
-
-Keep the printed table; Step 7 records it.
-
-- [ ] **Step 5: Bake-off**
-
-The cloud candidates send each in-scope file's name and first 2000 characters to OpenRouter. ZDR is enforced per request and secret-looking files stay local. The owner consented to this for the bake-off.
-
-```bash
-uv run python scripts/bakeoff.py --candidate gemini --para-root "$PARA"
-uv run python scripts/bakeoff.py --candidate sonnet --para-root "$PARA"
-uv run python scripts/bakeoff.py --candidate jev --para-root "$PARA"
-for c in gemini sonnet jev; do uv run python scripts/eval.py --pred ~/.config/para-files/pred_$c.jsonl --only-predicted; done
-```
-
-- [ ] **Step 6: Apply the spec's winner and drop rules**
-
-Spec §4.5 defines both rules:
-- **Scope (a), winner:** the highest `max_coverage_at_98` on record/library/media files. Ties follow the owner's preference: Gemini 3.8 Flash, then Sonnet 5.5, then Jev 1.13.
-- **Scope (b), winner:** the highest `top3_hit` on knowledge files.
-- **Drop rule:** if no candidate adds ≥ 5 points of green coverage on (a) over the baseline, and none beats the baseline on (b), signal 4 is removed.
-
-Write the decision down with its numbers.
-
-- [ ] **Step 7: Record the results (no personal data) and commit**
-
-1. In the spec, add a subsection `#### Stage 1 results (<date>)` at the end of §4.5. It holds:
-   - the per-kind tables from `eval.py` for the baseline and each candidate: n, accuracy, green precision and coverage, top-3 hit, `max_coverage_at_98`, p50 latency, cost per 1000;
-   - the leaf count;
-   - the signal-4 decision.
-
-   Add a matching row to §8 Decisions Log. No file names, paths or leaf descriptions.
-2. In `CHANGELOG.md`, under `### Added (Stage 1)`, add one line with the green precision and coverage per kind and the signal-4 decision.
-3. Commit:
-
-```bash
-git add docs/superpowers/specs/2026-10-10-para-files-redesign-design.md CHANGELOG.md
-git commit -m "docs(spec): record Stage 1 baseline, bake-off and signal-4 decision" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01TnHHvHPS4t1tVuqpTZiEJx"
-```
-
-- [ ] **Step 8: Inbox preview (old pipeline, nothing moves)**
+- [ ] **Step 3: Inbox preview (old pipeline, nothing moves)**
 
 ```bash
 PARA_FILES_LLM_ENABLED=false PARA_FILES_MLX_SEMANTIC_ENABLED=false \
@@ -3427,6 +3375,4 @@ PARA_FILES_LLM_ENABLED=false PARA_FILES_MLX_SEMANTIC_ENABLED=false \
 
 Stage 1 exit (spec §5) is met when all of these are true:
 - the tree is owner-approved;
-- the eval baseline is recorded;
-- the signal-4 decision is recorded;
 - the owner has reviewed the inbox preview.

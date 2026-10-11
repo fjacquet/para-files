@@ -140,7 +140,7 @@ Read-only inventory of the PARA root (counts only):
 ### Non-Goals
 
 - VISION Horizons 2–5 (completeness tracker, tax-prep, document graph, household, watch daemon).
-- New signals (xattr `kMDItemWhereFroms`, Spotlight, QR-bill, IBAN, `.eml`). Candidates for later, measured against the golden corpus.
+- New signals (xattr `kMDItemWhereFroms`, Spotlight, QR-bill, IBAN, `.eml`). Candidates for later, measured against confirmed decisions.
 - Packaging for other users (Homebrew formula, community templates, onboarding docs).
 - In-app learning or config editing.
 
@@ -148,10 +148,10 @@ Read-only inventory of the PARA root (counts only):
 
 | # | Criterion | How verified |
 |---|---|---|
-| S1 | Green precision ≥ 98% on the golden corpus, for every kind | `scripts/eval.py` |
-| S2 | Green coverage on the golden corpus ≥ the old pipeline's correct-routing rate on the same corpus | `scripts/eval.py`, old vs new |
+| S1 | Green precision ≥ 98% on owner-confirmed decisions, per kind, once a kind has ≥ 100 of them | `scripts/eval.py` on the journal |
+| S2 | Share of confirmed inbox files the tool proposed correctly, reported per release (no threshold) | `scripts/eval.py` on the journal |
 | S3 | Records: green coverage ≥ 80% of the inbox's recurring records (issuer families) on a real `0_Inbox` run | `sort --json` summary |
-| S3b | Knowledge: top-3 suggestion hit rate measured and reported (no threshold until the Stage 1 baseline) | `scripts/eval.py` |
+| S3b | Knowledge: top-3 suggestion hit rate measured on confirmed decisions and reported (no threshold) | `scripts/eval.py` on the journal |
 | S4 | A preview run leaves the file tree byte-identical (names, inodes, mtimes) | integration test on a temp tree |
 | S5 | `undo` after an apply restores a byte-identical tree | integration test on a temp tree |
 | S6 | No personal identifiers in tracked files | manual review before Stage 1 merge |
@@ -215,7 +215,6 @@ All personal config lives under `~/.config/para-files/`. The repo ships only gen
 | `tree.yaml` | leaves | free-form destinations in 327 rules |
 | `rules.yaml` | `{name, leaf, globs[]}` — filename globs → leaf | `routing_rules`, `ExtensionRouterClassifier` hardcoded map |
 | `issuers.yaml` | `{issuer: {patterns[], leaves[]}}` | `documents.json` issuers, YAML `issuers`/`known_vendors`, `book_detector` blacklists |
-| `golden.jsonl` | golden corpus (see 4.5) | — |
 | `.env` | settings (para root, fallback model, thresholds, workers) | — |
 
 Package data (via `importlib.resources`):
@@ -333,11 +332,11 @@ flowchart TD
 | 1 | Rules | user globs, then package default extension rules | 1.0 (owner-asserted) |
 | 2 | Books | ISBN + coherent lookup (title/author match); ebook publisher/subject heuristics move here | 1.0 with ISBN; otherwise book-score, capped at yellow (the preliminary bake-off showed records pulled into `livres` without ISBN) |
 | 3 | Issuers | issuer pattern in `name` or `text_preview`; leaf chosen among the issuer's `leaves` by keyword agreement | high when issuer and keyword agree; medium otherwise |
-| 4 | Fuzzy fallback | bake-off winner, choosing only among leaf ids | calibrated probability from the model |
+| 4 | Fuzzy fallback | Gemini 3.8 Flash (Sonnet 5.5 as fallback model), choosing only among leaf ids | model confidence, calibrated on confirmed decisions |
 
 First signal returning a decision wins. Signals 1–3 are deterministic and local except the ISBN lookup (cached).
 
-Keyword-only matches (keywords present, no issuer) no longer decide on their own: they are left to signal 4, which receives each leaf's `describe` and `keywords` as choice criteria. The eval baseline (signals 1–3 only) measures what this costs.
+Keyword-only matches (keywords present, no issuer) no longer decide on their own: they are left to signal 4, which receives each leaf's `describe` and `keywords` as choice criteria.
 
 Signal 4 interface:
 
@@ -346,10 +345,7 @@ class Fallback(Protocol):
     def decide(self, evidence: Evidence, leaves: Sequence[Leaf]) -> tuple[str, float] | None: ...
 ```
 
-Implementations are written only for the bake-off winner. Candidates:
-
-- **LLM via litellm** (Gemini 3.8 Flash or Claude Sonnet 5.5 on OpenRouter, with `reasoning: {"effort": "low"}`): JSON-schema output with an enum of leaf ids; self-reported confidence.
-- **Jev via OpenRouter Decisions API** (`POST /api/alpha/decisions`, model pinned to `typesafe/jev-1.13`): one `choice` question whose criteria are the leaves' `describe`; returns a probability per leaf. Several questions about the same file can share one request; files are parallelized as separate requests.
+One implementation, chosen by owner preference without an authoritative bake-off (2026-10-11): **LLM via litellm**, Gemini 3.8 Flash on OpenRouter (Claude Sonnet 5.5 as the configured fallback model), with `reasoning: {"effort": "low"}`; JSON-schema output with an enum of leaf ids; self-reported confidence. Jev 1.13 is not implemented.
 
 Every cloud request carries `provider: {"zdr": true}`, so it fails rather than reach a provider that retains data.
 
@@ -365,7 +361,7 @@ Every cloud request carries `provider: {"zdr": true}`, so it fails rather than r
 
 #### Bands
 
-Per-signal thresholds in settings, defaults set from the Stage 1 eval:
+Per-signal thresholds in settings. Until a kind has ≥ 100 owner-confirmed decisions, only rules (signal 1) and books with an ISBN (signal 2) can be green; issuers and signal 4 are capped at yellow. Thresholds are then set from the confirmed decisions (`scripts/eval.py`, precision-vs-coverage curve) so green precision stays ≥ 98%.
 
 - **green** → moved on `--apply`
 - **yellow** → listed for review; moved only after confirmation (`sort --review`)
@@ -417,10 +413,10 @@ Nothing is ever hard-deleted or overwritten.
 `~/.local/state/para-files/journal/<run-id>.jsonl`, `run-id = YYYYMMDD-HHMMSS`.
 
 ```json
-{"run_id": "20261010-213000", "op": "move", "src": "...", "dst": "...", "sha256": "...", "size": 1234, "leaf": "telecom_invoices", "signal": "issuers", "confidence": 0.9}
+{"run_id": "20261010-213000", "op": "move", "src": "...", "dst": "...", "sha256": "...", "size": 1234, "leaf": "telecom_invoices", "proposed_leaf": "telecom_invoices", "decided_by": "owner", "signal": "issuers", "confidence": 0.9}
 ```
 
-`op` ∈ `move`, `trash`, `rmdir`.
+`op` ∈ `move`, `trash`, `rmdir`. `decided_by` ∈ `auto` (green, applied without review), `owner` (yellow, confirmed or corrected in `sort --review`); `proposed_leaf` differs from `leaf` when the owner corrected it. Owner-decided entries are the labeled data of §4.5.
 
 #### Undo
 
@@ -467,19 +463,23 @@ One parallel executor, one band-grouped printer, one JSON shape shared by all co
 
 ### 4.5 Measurement
 
-#### Golden corpus
+#### Confirmed decisions (replaces the golden corpus, 2026-10-11)
 
-- Built from files already filed in PARA, labeled through the Stage 1 destination → leaf mapping. Ambiguous folders excluded.
-- Up to ~10 files per leaf (~250 total). Files stay in place; the corpus stores paths, expected leaf ids and kinds.
-- Weighted like the real inbox: records from recurring issuer families (payslips, card and utility invoices, bank, insurance, tax) come first; `knowledge` files are labeled too but scored only as suggestions.
-- Stored at `~/.config/para-files/golden.jsonl` (personal paths stay out of the repo).
+The owner does not trust current placement in PARA as ground truth, so files already filed are not labels. Labels come only from decisions the owner made:
+
+- Every file the owner confirms or corrects in `sort --review` is journaled with `proposed_leaf`, `leaf` and `decided_by: owner` (§4.3). The inbox is sorted progressively; each run adds labels.
+- Reorganization batches (§5) go through the same review and add labels too.
+- Green-applied files (`decided_by: auto`) are not labels; an `undo` of one counts as a miss for its signal.
+- Labels stay in the journal under `~/.local/state/para-files/` (personal paths stay out of the repo).
 - The repo holds a small sanitized fixture set for CI regression of signals 1–3.
+
+The Stage 1 `scripts/build_golden.py` stays in the repo, unused.
 
 #### `scripts/eval.py` (developer tool)
 
-Reports per signal, per kind and overall: accuracy, green precision, green coverage, yellow/red share, precision-vs-coverage curve per signal (used to set band thresholds), top-3 suggestion hit rate for `knowledge`, latency p50/p95, cost per 1000 files.
+Reads predictions against labels (Stage 1: a JSONL file; from Stage 3: the journal's owner-decided entries). Reports per signal, per kind and overall: accuracy, green precision, green coverage, yellow/red share, precision-vs-coverage curve per signal (used to set band thresholds), top-3 suggestion hit rate for `knowledge`, latency p50/p95, cost per 1000 files.
 
-#### Bake-off (fills signal 4)
+#### Bake-off (Stage 1, not run)
 
 | Item | Value |
 |---|---|
@@ -494,7 +494,7 @@ Reports per signal, per kind and overall: accuracy, green precision, green cover
 Runs:
 
 1. **Preliminary (done 2026-10-11):** labels were current first-level folders with synonyms merged (`livres`/`books`, `formation`/`formations`, `docs`/`documentation`). Results in §2: the current tree, not the model, limits precision.
-2. **Authoritative (Stage 1):** on canonical leaves and the golden corpus.
+2. **Authoritative:** dropped 2026-10-11 with the golden corpus. Signal 4 is Gemini 3.8 Flash by owner preference; its thresholds come from confirmed decisions. `scripts/bakeoff.py` stays in the repo, unused, for a later comparison on confirmed decisions.
 
 Reference prices at time of writing (OpenRouter, USD per million tokens, input/output): Gemini 3.8 Flash 0.375/1.875, Claude Sonnet 5.5 2/10, Jev 1.13 0.042/0. Measured in the preliminary run with a 103-label list, per 1000 files: Gemini $4.22, Sonnet $13.88, Jev $0.22 (Haiku $0.69). Cost does not decide.
 
@@ -516,20 +516,22 @@ One small PR, one test per fix.
 
 Exit: tests for each fix pass; existing suite green.
 
-### Stage 1 — Canonical tree, golden corpus, bake-off
+### Stage 1 — Canonical tree
 
 1. `scripts/migrate_config.py` → draft mapping (with `kind` and `retention`) → owner review → `tree.yaml`, `rules.yaml`, `issuers.yaml` in `~/.config/para-files/`. `issuers.yaml` is seeded from the inbox's recurring families and the existing `documents.json` issuers.
 2. Remove personal config and identifiers from tracked files; add sanitized `examples/`.
-3. `golden.jsonl` + `scripts/eval.py` (per-kind metrics); baseline the old pipeline.
-4. Authoritative bake-off → choose signal 4 (or drop it).
+3. `scripts/eval.py` (per-kind metrics), later fed by confirmed decisions.
+4. Inbox preview with the old pipeline (nothing moves).
 
-Exit: owner-approved tree; eval baseline recorded; signal 4 decision recorded.
+The golden corpus and the authoritative bake-off were dropped on 2026-10-11 (§4.5).
+
+Exit: owner-approved tree; owner has reviewed the inbox preview.
 
 ### Stage 2 — New core (alongside the old pipeline)
 
-Evidence extractor with the secrets guard; signals 1–4 on leaf ids; bands with kind caps; SQLite cache; strict config loader with the precedence fix **and** the `.env` correction; plan/apply executor; journal; `undo`.
+Evidence extractor with the secrets guard; signals 1–4 on leaf ids; bands with kind caps and the pre-calibration cap (§4.2 Bands); SQLite cache; strict config loader with the precedence fix **and** the `.env` correction; plan/apply executor; journal with `proposed_leaf` and `decided_by`; `undo`.
 
-Exit: S1, S2, S4, S5, S8 pass.
+Exit: S4, S5, S8 pass.
 
 ### Batch reorganization (on demand, from Stage 2)
 
@@ -539,7 +541,7 @@ Exit: S1, S2, S4, S5, S8 pass.
 
 Six commands; old commands and modules deleted; the first real `sort` run is `0_Inbox`; the existing tree is reorganized in batches on demand (see Batch reorganization).
 
-Exit: S3 measured on a real inbox.
+Exit: S3 measured on a real inbox; S1 and S2 reported from confirmed decisions (S1 enforced per kind once it has ≥ 100).
 
 ### Stage 4 — Purge
 
@@ -565,11 +567,11 @@ Exit: S6, S7 pass; source ≈ half of 18.8k lines.
 
 | Risk | Mitigation |
 |---|---|
-| Jev Decisions API is alpha (`/api/alpha/`) | Pin `typesafe/jev-1.13`; `Fallback` protocol isolates it; bake-off includes non-Jev candidates |
-| Golden labels inherit inconsistent historical placement | Owner reviews the mapping; ambiguous folders excluded |
+| Signal 4 chosen without a bake-off | Capped at yellow until calibrated; every move it proposes is confirmed by the owner first; `Fallback` protocol allows a swap |
+| Few confirmed decisions per kind for a long time | Green stays limited to rules and ISBN books until a kind has ≥ 100; the owner sees everything else |
 | Re-org moves many files on a synced volume | Preview first; apply batch by batch; journal + `undo`; `.trash` on the same volume |
 | Precedence fix flips `para_root` | Ships together with the `.env` correction (Stage 2) |
-| Cloud fallback sends document text off the machine | `provider: {"zdr": true}` on every request; secrets guard; drop rule may remove signal 4 entirely |
+| Cloud fallback sends document text off the machine | `provider: {"zdr": true}` on every request; secrets guard; the owner can turn signal 4 off |
 | No local model: offline or OpenRouter outage silences signal 4 | Signals 1–3 run locally and still decide records, books and media; undecided files stay in place as yellow/red |
 | Reorganization moves thousands of archived files | Batches on demand, one complete folder at a time, quick wins first; preview; journal + `undo`; doubtful files go back to `0_Inbox` |
 | Personal identifiers remain in public git history | Owner decided (2026-10-11): the repo stays public and history is not rewritten; new content is checked for identifiers before each push |
@@ -587,7 +589,9 @@ Exit: S6, S7 pass; source ≈ half of 18.8k lines.
 | Moves | Preview default, sequential apply, containment, no-clobber, `.trash`, JSONL journal, `undo` |
 | CLI | `sort`, `explain`, `undo`, `clean`, `tree`, `init` |
 | Learning | Removed; corrections by editing YAML guided by `explain` |
-| Bake-off | Preliminary run done 2026-10-11 (tree, not model, is the bottleneck); authoritative run in Stage 1 with Gemini 3.8 Flash, Sonnet 5.5 and Jev 1.13 (owner preference in that order); Mistral, nomic, gemma4 and Haiku 5.5 dropped; GPT-6 Luna excluded (owner does not trust it) |
+| Bake-off | Preliminary run done 2026-10-11 (tree, not model, is the bottleneck); authoritative run dropped 2026-10-11 with the golden corpus; signal 4 = Gemini 3.8 Flash, Sonnet 5.5 as fallback (owner preference); Mistral, nomic, gemma4 and Haiku 5.5 dropped; GPT-6 Luna excluded (owner does not trust it) |
+| Ground truth (2026-10-11) | No golden corpus: current placement is not trusted. Labels are the owner's confirmations and corrections during progressive `sort --review` of the inbox and of reorganization batches; issuers and signal 4 stay yellow until a kind has ≥ 100 of them |
+| Stage 1 tree (2026-10-11) | 89 leaves approved (projects kept; unprefixed `4_Archives` folders kept as permanent records; record-like `3_Resources` folders and small knowledge folders left out) |
 | Local AI (2026-10-11) | Dropped: gemma4 17% exact, 78 min for 206 files, 50 server disconnects; Ollama removed in Stage 4 |
 | Mission (2026-10-11) | Records file themselves; everything else is suggested |
 | `4_Archives` (2026-10-11) | Retention vault; legacy twins merged via reviewed, journaled migration |
