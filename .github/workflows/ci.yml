@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    runs-on: macos-14 # Apple Silicon required for MLX
+    runs-on: macos-14 # macOS: OCR uses the Vision framework
     steps:
       - uses: actions/checkout@v7
 
