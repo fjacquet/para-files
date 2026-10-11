@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Literal, Self, get_args
+from typing import Annotated, Literal, Self, get_args
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
@@ -33,6 +33,7 @@ SHORT_LITERALS = 3
 SUBKEY_PLACEHOLDERS = frozenset({"{year}", "{month}", "{issuer}", "{thema}"})
 LEAF_ID = re.compile(r"[a-z][a-z0-9_]*")
 GLOB_SYNTAX = re.compile(r"[*?\[\]]")
+NonEmpty = Annotated[str, Field(min_length=1)]
 
 
 class TreeError(ValueError):
@@ -54,7 +55,7 @@ class Leaf(BaseModel):
     describe: str = Field(min_length=1)
     retention: Retention | None = None
     subkey: str | None = None
-    keywords: tuple[str, ...] = ()
+    keywords: tuple[NonEmpty, ...] = ()
 
     @field_validator("path")
     @classmethod
@@ -126,8 +127,8 @@ class Rule(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     name: str = Field(min_length=1)
-    leaf: str
-    globs: tuple[str, ...] = Field(min_length=1)
+    leaf: NonEmpty
+    globs: tuple[NonEmpty, ...] = Field(min_length=1)
 
 
 class RulesFile(BaseModel):
@@ -143,8 +144,8 @@ class Issuer(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    patterns: tuple[str, ...] = Field(min_length=1)
-    leaves: tuple[str, ...] = Field(min_length=1)
+    patterns: tuple[NonEmpty, ...] = Field(min_length=1)
+    leaves: tuple[NonEmpty, ...] = Field(min_length=1)
 
 
 class IssuersFile(BaseModel):
