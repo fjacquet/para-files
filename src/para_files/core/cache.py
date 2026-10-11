@@ -71,12 +71,14 @@ class Cache:
             self._db.close()
 
 
-def config_fingerprint(directory: Path, model: str) -> str:
-    """Hash of tree.yaml, rules.yaml, issuers.yaml (missing = empty) and the fallback model."""
+def config_fingerprint(directory: Path, *parts: str) -> str:
+    """Hash of tree.yaml, rules.yaml, issuers.yaml (missing = empty) and the given parts
+    (models, prompt version, preview size): change any of them and the model is asked again."""
     digest = hashlib.sha256()
     for name in CONFIG_FILES:
         path = directory / name
         digest.update(name.encode() + b"\0")
         digest.update((path.read_bytes() if path.exists() else b"") + b"\0")
-    digest.update(model.encode())
+    for part in parts:
+        digest.update(part.encode() + b"\0")
     return digest.hexdigest()

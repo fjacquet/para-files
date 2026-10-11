@@ -11,7 +11,7 @@ from para_files.core.apply import ApplyReport, Op, apply_ops
 from para_files.core.cache import Cache, config_fingerprint
 from para_files.core.clean import kept_folders
 from para_files.core.decide import Context, Decision, classify
-from para_files.core.fallback import make_fallback
+from para_files.core.fallback import PROMPT_VERSION, make_fallback
 from para_files.core.journal import Journal, confirmed_counts, new_run_id
 from para_files.core.settings import CoreSettings, config_dir_path
 from para_files.core.tree import load_tree_config
@@ -44,7 +44,13 @@ def build_context(settings: CoreSettings, config_directory: Path | None = None) 
         config=config,
         settings=settings,
         cache=Cache(settings.cache_path),
-        fingerprint=config_fingerprint(directory, settings.fallback_model),
+        fingerprint=config_fingerprint(
+            directory,
+            settings.fallback_model,
+            settings.fallback_backup_model,
+            PROMPT_VERSION,
+            str(settings.preview_chars),
+        ),
         confirmed=confirmed_counts(settings.state_dir, config.tree),
         fallback=make_fallback(settings),
     )

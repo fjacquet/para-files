@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Logs are quiet by default (warnings only, on stderr); `--verbose` shows debug lines.
+- The model's prompt carries the file type, page count, title/author/subject, ISBNs, EXIF date, the whole preview (including OCR text), each folder's path, and the rule and issuer matches as hints; it also answers a short 'about'. Cached verdicts are keyed by prompt version, both models and preview size.
 
 ### Fixed
 

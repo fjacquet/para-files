@@ -53,3 +53,13 @@ def test_fingerprint_follows_files_and_model(tmp_path):
     assert config_fingerprint(tmp_path, "model-b") != base
     (tmp_path / "rules.yaml").write_text("rules: []\n")
     assert config_fingerprint(tmp_path, "model-a") != base
+
+
+def test_fingerprint_depends_on_every_part(tmp_path):
+    from para_files.core.cache import config_fingerprint
+
+    base = config_fingerprint(tmp_path, "m1", "m2", "2", "2000")
+    assert base == config_fingerprint(tmp_path, "m1", "m2", "2", "2000")
+    assert base != config_fingerprint(tmp_path, "m1", "m2", "3", "2000")
+    assert base != config_fingerprint(tmp_path, "m1", "m3", "2", "2000")
+    assert base != config_fingerprint(tmp_path, "m1", "m2", "2", "4000")

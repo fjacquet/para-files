@@ -3,18 +3,24 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 
 from loguru import logger
 
+from para_files.core import fallback
 from para_files.core.breaker import CircuitBreaker
 from para_files.core.evidence import Evidence
 from para_files.core.fallback import (
     FallbackChoice,
+    Hint,
     OpenRouterFallback,
+    evidence_text,
     leaf_menu,
     make_fallback,
+    messages,
+    parse_reply,
 )
 from para_files.core.tree import Tree
 from tests.core_helpers import make_config, make_settings
@@ -23,9 +29,12 @@ from tests.core_helpers import make_config, make_settings
 KEY = "sk-test-key"
 
 
-def reply(choices):
-    content = json.dumps({"choices": choices})
+def reply_content(content):
     return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])
+
+
+def reply(choices):
+    return reply_content(json.dumps({"choices": choices}))
 
 
 class FakeComplete:
@@ -42,7 +51,7 @@ class FakeComplete:
         return outcome
 
 
-def ev(name="scan.pdf", preview="Monthly statement", secret=None, listing=()):
+def ev(name="scan.pdf", preview="Monthly statement", secret=None, listing=(), **extra):
     return Evidence(
         path=Path("/private/somewhere") / name,
         name=name,
@@ -53,6 +62,7 @@ def ev(name="scan.pdf", preview="Monthly statement", secret=None, listing=()):
         secret=secret,
         text_preview=preview,
         archive_listing=listing,
+        **extra,
     )
 
 
@@ -207,7 +217,7 @@ def test_menu_drops_secret_leaves_and_parts():
             }
         }
     )
-    assert leaf_menu(tree) == {"areas_it": "IT (contains: scripts)"}
+    assert leaf_menu(tree) == {"areas_it": "IT (contains: scripts) (2_Areas/IT)"}
 
 
 def test_make_fallback(tmp_path):
@@ -221,9 +231,12 @@ def test_leaf_keywords_are_listed_in_the_menu():
     complete = FakeComplete(reply([{"leaf": "archives_10y_travail", "confidence": 0.9}]))
     OpenRouterFallback(KEY, ["m1"], complete=complete).decide(ev(), make_config().tree)
     user = complete.calls[0]["messages"][1]["content"]
-    line = "- archives_10y_travail: Payslips and employment records [keywords: salaire, payslip]"
+    line = (
+        "- archives_10y_travail: Payslips and employment records [keywords: salaire, payslip] "
+        "(4_Archives/10y_travail)"
+    )
     assert line in user
-    assert "- resources_it: IT notes\n" in user
+    assert "- resources_it: IT notes (3_Resources/IT)\n" in user
 
 
 def test_secret_named_keyword_is_never_listed():
@@ -246,8 +259,8 @@ def test_secret_named_keyword_is_never_listed():
         }
     )
     assert leaf_menu(tree) == {
-        "resources_docs": "Vendor documentation [keywords: manual]",
-        "areas_notes": "Notes",
+        "resources_docs": "Vendor documentation [keywords: manual] (3_Resources/docs)",
+        "areas_notes": "Notes (2_Areas/notes)",
     }
     complete = FakeComplete(reply([{"leaf": "resources_docs", "confidence": 0.7}]))
     OpenRouterFallback(KEY, ["m1"], complete=complete).decide(ev(), tree)
@@ -266,7 +279,7 @@ def test_logged_errors_never_carry_the_key():
         fallback.decide(ev(), make_config().tree)
     finally:
         logger.remove(sink_id)
-    assert any("fallback m1 failed" in text for text in messages_seen)
+    assert any("model m1 failed" in text for text in messages_seen)
     assert all(KEY not in text for text in messages_seen)
 
 
@@ -280,3 +293,80 @@ def test_litellm_debug_info_is_suppressed(monkeypatch):
     monkeypatch.setitem(sys.modules, "litellm", fake)
     assert fallback.litellm_complete(model="m") == "reply"
     assert fake.suppress_debug_info is True
+
+
+def test_prompt_has_type_metadata_isbn_date_and_the_whole_preview():
+    text = evidence_text(
+        ev(
+            doc_meta={"title": "Storage Guide", "author": "A. Writer", "page_count": "12"},
+            isbns=("9780000000001",),
+            exif_date=datetime(2025, 3, 4),
+            preview="A" * 3000,
+        )
+    )
+    assert "Type: .pdf, 12 pages" in text
+    assert "Title: Storage Guide" in text
+    assert "Author: A. Writer" in text
+    assert "ISBN found: 9780000000001" in text
+    assert "Date taken: 2025-03-04" in text
+    assert "A" * 3000 in text
+    assert "may come from OCR" in text
+
+
+def test_secret_metadata_and_hints_are_left_out(monkeypatch):
+    monkeypatch.setattr(
+        fallback, "secret_reason", lambda name, text="": "name" if "SECRET" in name else None
+    )
+    menu = leaf_menu(make_config().tree)
+    hints = [
+        Hint("rule 'invoices' (glob '*inv*')", "archives_5y_factures"),
+        Hint("rule 'gone'", "no_such_leaf"),
+        Hint("SECRET rule", "archives_5y_factures"),
+    ]
+    user = messages(menu, ev(doc_meta={"title": "SECRET plan"}), hints)[1]["content"]
+    assert "rule 'invoices' (glob '*inv*') -> archives_5y_factures" in user
+    assert "no_such_leaf" not in user
+    assert "SECRET" not in user
+
+
+def test_menu_shows_each_leaf_path():
+    menu = leaf_menu(make_config().tree)
+    assert menu["archives_5y_factures"].endswith("(4_Archives/5y_factures)")
+
+
+def test_parse_reply_reads_about_and_choices():
+    menu = leaf_menu(make_config().tree)
+    content = (
+        '{"about": "  Card   statement  ", '
+        '"choices": [{"leaf": "archives_10y_banques", "confidence": 0.8}]}'
+    )
+    assert parse_reply(content, menu) == ([("archives_10y_banques", 0.8)], "Card statement")
+
+
+def test_decide_sends_hints_and_returns_about():
+    seen = {}
+
+    def complete(**kwargs):
+        seen.update(kwargs)
+        return reply_content(
+            json.dumps(
+                {
+                    "about": "AcmeCard statement",
+                    "choices": [
+                        {"leaf": "archives_10y_banques", "confidence": 0.7},
+                        {"leaf": "archives_5y_factures", "confidence": 0.2},
+                    ],
+                }
+            )
+        )
+
+    model = OpenRouterFallback("key", ["m1"], complete=complete)
+    hint = Hint("issuer 'acmecard' (pattern 'AcmeCard')", "archives_10y_banques")
+    choice = model.decide(ev(preview="AcmeCard"), make_config().tree, [hint])
+    assert choice is not None
+    assert (choice.leaf_id, choice.about) == ("archives_10y_banques", "AcmeCard statement")
+    assert choice.ranked == (("archives_10y_banques", 0.7), ("archives_5y_factures", 0.2))
+    assert "issuer 'acmecard'" in seen["messages"][1]["content"]
+    assert seen["extra_body"]["provider"] == {"zdr": True, "data_collection": "deny"}
+    schema = seen["response_format"]["json_schema"]["schema"]
+    assert schema["required"] == ["about", "choices"]
