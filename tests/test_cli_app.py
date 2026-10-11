@@ -31,6 +31,11 @@ def test_missing_para_root_is_a_readable_error():
     assert "PARA_FILES_PARA_ROOT" in result.output
 
 
+def test_exactly_the_six_commands():
+    names = sorted(command.name for command in app.registered_commands)
+    assert names == ["clean", "explain", "init", "sort", "tree", "undo"]
+
+
 def test_entry_point_targets_the_new_app():
     pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
     scripts = tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"]["scripts"]

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed (Stage 3)
+
+- **New CLI** on the Stage 2 core, six commands: `sort` (preview by default; `--apply` moves green files; `--apply --review` confirms or corrects yellow ones, each answer journaled as a label), `explain`, `undo`, `clean` (junk, empty folders, `--duplicates`; journaled), `tree` (leaves, settings, calibration progress, `--validate`), `init`. Entry point `para_files.cli.app:app`.
+
+### Removed (Stage 3)
+
+- The old commands (`classify`, `move`, `scan`, `inbox`, `rescan`, `bookstore`, `learn`, `migrate`, `routes`, `issuers`, `add-issuer`, `add-utterance`, `test-route`, `config`, `dedupe`), the `main.py` shim, their tests and docs. The old pipeline modules stay until the Stage 4 purge.
+- The `update-formula` release job and the Homebrew formula: the job failed on every release.
+
 ## [1.9] - 2026-10-11
 
 ### Added (Stage 2)

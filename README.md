@@ -47,12 +47,11 @@ uv run para-files move *.pdf --dry-run
 ## Essential Commands
 
 ```bash
-uv run para-files classify file.pdf         # Determine category
-uv run para-files move *.pdf --dry-run      # Preview move
-uv run para-files move *.pdf                # Move files
-uv run para-files learn wrong_file.pdf      # Learn from mistakes
-uv run para-files add-issuer "Bank" -c cat  # Register company
-uv run para-files add-utterance route "kw"  # Add keywords
+uv run para-files sort                      # Preview where the inbox files would go
+uv run para-files sort --apply              # Move the green ones
+uv run para-files sort --apply --review     # And confirm or correct the yellow ones
+uv run para-files explain file.pdf          # Why a file goes where it goes
+uv run para-files undo                      # Reverse the last run
 ```
 
 **→ [Full CLI Reference](docs/cli/overview.md)**
@@ -73,16 +72,12 @@ Quick links to common tasks:
 
 | Command | Description |
 |---------|-------------|
-| `classify` | Determine file category |
-| `move` | Move files to PARA folders |
-| `scan` | Preview classifications for directory |
-| `learn` | Interactive improvement |
-| `add-issuer` | Register company/bank |
-| `add-utterance` | Add matching keywords |
-| `tree`, `routes`, `issuers` | View configuration |
-| `config` | Show settings |
-| `init` | Create folder structure |
-| `clean` | Remove junk files |
+| `sort` | Classify files (default: the inbox), preview, move with `--apply` |
+| `explain` | Why one file goes where it goes, and what to edit |
+| `undo` | Reverse a run from its journal |
+| `clean` | Junk files, empty folders, duplicates to `.trash` |
+| `tree` | Leaves, settings, calibration progress, config warnings |
+| `init` | Create the inbox and the leaf folders |
 
 **→ [CLI Reference](docs/cli/overview.md)**
 

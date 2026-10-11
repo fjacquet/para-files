@@ -215,12 +215,12 @@ Priority: env vars > `.env` file > YAML `config:` section > defaults.
 
 ## CLI Module Pattern
 
-Commands live in `src/para_files/cli/`. Each `*_cmd.py` imports `app` from `cli/app.py` and registers via `@app.command()`. `main.py` imports all command modules to trigger registration, then re-exports symbols for backward compatibility with tests.
+Commands live in `src/para_files/cli/`. Each `*_cmd.py` imports `app` from `cli/app.py` and registers one command with `@app.command()`; `cli/__init__.py` imports every command module. The entry point is `para_files.cli.app:app`. Shared helpers: `cli/common.py` (settings and context with readable errors), `cli/output.py` (plan printing, JSON), `cli/review.py` (the `--review` loop). Commands call `para_files.core`; they never import the old pipeline.
 
-To add a new CLI command:
-1. Create `src/para_files/cli/yourcommand_cmd.py` with `@app.command()` (Typer, not Click)
-2. Import the module in `main.py`
-3. Add tests in `tests/test_yourcommand_cmd.py`
+To add a command:
+1. Create `src/para_files/cli/yourcommand_cmd.py` with `@app.command("yourcommand")` (Typer)
+2. Import the module in `src/para_files/cli/__init__.py`
+3. Add tests in `tests/test_cli_yourcommand.py` (use `tests.core_helpers.setup_cli`)
 
 ## Performance Notes
 
