@@ -35,8 +35,7 @@ Every setting is `PARA_FILES_` plus the upper-case field name, except the API ke
 | `PARA_FILES_FALLBACK_MODEL` | `google/gemini-3.8-flash` | First OpenRouter model asked |
 | `PARA_FILES_FALLBACK_BACKUP_MODEL` | `anthropic/claude-sonnet-5.5` | Asked when the first model fails |
 | `OPENROUTER_API_KEY` | none | OpenRouter key. Also accepted as `PARA_FILES_OPENROUTER_API_KEY` or `PARA_FILES_LLM_API_KEY`. Without a key the model is never asked |
-| `PARA_FILES_CALIBRATION_MIN` | `100` (1 or more) | Confirmed decisions per kind before issuer and model matches can be green |
-| `PARA_FILES_ISSUERS_GREEN` | `0.9` (0 to 1) | Confidence an issuer match needs to be green, once calibrated |
+| `PARA_FILES_CALIBRATION_MIN` | `100` (1 or more) | Confirmed decisions per kind before model matches can be green |
 | `PARA_FILES_FALLBACK_GREEN` | `0.9` (0 to 1) | Confidence a model choice needs to be green, once calibrated |
 | `PARA_FILES_FALLBACK_RED` | `0.3` (0 to 1) | A model choice below this confidence is red |
 | `PARA_FILES_CACHE_PATH` | `~/.cache/para-files/cache.sqlite` | ISBN lookups and signal verdicts |

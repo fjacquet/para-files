@@ -15,22 +15,56 @@ flowchart TD
     F[File in 0_Inbox or a given folder] --> E[Extract evidence once]
     E --> SG{Secret?}
     SG -- yes --> RED1[RED: never sent, never moved]
-    SG -- no --> R{"1 Rules, filename glob"}
-    R -- match --> V[Verdict: leaf, signal, confidence]
-    R -- no --> B{"2 Books, ISBN or heuristic"}
-    B -- match --> V
-    B -- no --> I{"3 Issuers, pattern in name or preview"}
-    I -- match --> V
-    I -- no --> M{"4 Model fallback, if key and enabled"}
+    SG -- no --> B{"1 Verified ISBN book"}
+    B -- yes --> V[Verdict: leaf, signal, confidence]
+    B -- no --> R{"2 Pinned rule, pin true or pin exif with EXIF date"}
+    R -- match --> V
+    R -- no --> M{"3 Model, if key and enabled; hints in the prompt"}
     M -- choice --> V
-    M -- none --> RED2[RED: no leaf]
+    M -- off or silent --> H{"4 First hint: rule, heuristic book or issuer"}
+    H -- hint --> V
+    H -- none --> RED2[RED: no leaf]
     V --> BAND[Band, then kind caps]
     BAND --> PLAN[Plan: leaf path plus filled subkey]
     PLAN --> APPLY[apply: journaled operations]
     APPLY --> UNDO[undo: replay the journal backwards]
 ```
 
-The first signal with a verdict wins. A signal that raises is logged and the next one runs.
+The model is asked for every non-secret file that no verified ISBN or pinned rule decides. Unpinned rules, heuristic books and issuer matches are not verdicts; they are hints given to the model, and with no model answer the first hint is shown as a yellow suggestion. Only model verdicts are cached. `choose()` returns the winning verdict together with each step that was tried, which `explain` prints.
+
+## Signals
+
+| Step | Signal | Decides when | Confidence | Band |
+|---|---|---|---|---|
+| 1 | Books | A PDF, EPUB or MOBI has an ISBN whose lookup title matches the filename | 1.0 | green |
+| 2 | Pinned rules | A `rules.yaml` glob matches and the rule is `pin: true`, or `pin: exif` on a file with an EXIF date | 1.0 | green |
+| 3 | Model | OpenRouter ranks up to three leaves; the first is the choice | the model's probability | see bands |
+| 4 | Hint | Model off or silent: the first of the rule hint (unpinned), the book heuristic, or the issuer match | 1.0, 0.7, 0.95 or 0.8 | yellow |
+
+Book lookups go to public metadata services and the ISBN is checked against the filename, so an ISBN printed in an unrelated document does not file it. Without a verified ISBN, a book is only a heuristic hint (0.7): EPUB and MOBI files always count as books; a PDF needs at least 50 pages and a book-like structure. The Thema subject code of a book becomes its library subfolder.
+
+Issuer patterns of three characters or fewer match whole words only. Among an issuer's leaves, the one whose keywords appear most wins; a tie goes to the first leaf listed. An issuer match is a hint (0.95 with a leaf keyword, else 0.8); its name fills `{issuer}` only when the chosen leaf is one of that issuer's leaves.
+
+The model sees the file name, metadata, a preview of the text (`preview_chars`), archive entries, the hints as suggestions it may override, and the menu of leaves with their descriptions and keywords. It never sees the path, and secret-named leaves are never offered.
+
+## Bands and caps
+
+| Verdict | Band before caps |
+|---|---|
+| Pinned rule | green |
+| Book with a verified ISBN | green |
+| Model with confidence below `fallback_red` | red |
+| Model, confidence at or above `fallback_green` (default 0.9), and kind calibrated | green |
+| Model otherwise | yellow |
+| Hint (model off or silent) | yellow, always |
+| No leaf | red |
+
+Caps, applied after the band:
+
+- **knowledge** leaves are never green (yellow at most);
+- **library** leaves are green only with a verified ISBN or a fitting issuer match; pinned library rules stay yellow.
+
+**Calibration.** The model stays yellow until the kind (record, library, media, knowledge) has `PARA_FILES_CALIBRATION_MIN` (default 100) decisions you confirmed. Confirmed decisions are the owner-decided moves and confirmations in journals not undone, counted per kind. `sort --apply --review` is what produces them, and `para-files tree` shows the progress per kind together with how often the tool's proposal was right. Hints never become green, whatever the calibration.
 
 ## Modules
 
@@ -40,7 +74,7 @@ The first signal with a verdict wins. A signal that raises is logged and the nex
 | `core/tree.py` | Strict loading and validation of `tree.yaml`, `rules.yaml`, `issuers.yaml` |
 | `core/evidence.py` | Reads each file once: hash, name, text preview, ISBNs, EXIF date, archive listing |
 | `core/secrets.py` | Secret guard: name and content patterns |
-| `core/rules.py`, `core/books.py`, `core/issuers.py`, `core/fallback.py` | The four signals |
+| `core/rules.py`, `core/books.py`, `core/issuers.py`, `core/fallback.py` | The rule, book, issuer and model signals |
 | `core/decide.py` | Cascade, bands, caps, target folder, calibration |
 | `core/sort.py` | Entry points: find files, classify in parallel, apply |
 | `core/apply.py` | Sequential moves: never overwrites, journals each operation |
@@ -59,44 +93,6 @@ Secrets are checked before any signal runs. A file is secret when:
 - its first 100,000 characters of text contain a credential line (a labelled value such as `password: ...`), a private key block, a cloud access key, a recovery phrase or a vault key.
 
 A secret file carries only filesystem facts. It is never sent to the model, never moved and never trashed. The plan lists secrets under their own heading. Name matching deliberately over-flags, so a false positive stays local; there is no override.
-
-## Signals
-
-| # | Signal | Decides when | Confidence |
-|---|---|---|---|
-| 1 | Rules | A filename glob matches (first rule in file order) | 1.0 |
-| 2 | Books | A PDF, EPUB or MOBI has an ISBN whose lookup title matches the filename (`1.0`), or looks like a book (`0.7`) | 1.0 or 0.7 |
-| 3 | Issuers | An issuer pattern appears in the filename or text preview | 0.95 if a leaf keyword agrees, else 0.8 |
-| 4 | Model | OpenRouter ranks up to three leaves; the first is the choice | the model's probability |
-
-Book lookups go to public metadata services and the ISBN is checked against the filename, so an ISBN printed in an unrelated document does not file it. EPUB and MOBI files always count as books for the heuristic; a PDF needs at least 50 pages and a book-like structure. The Thema subject code of a book becomes its library subfolder.
-
-Issuer patterns of three characters or fewer match whole words only. Among an issuer's leaves, the one whose keywords appear most wins; a tie goes to the first leaf listed.
-
-The model sees the file name, a preview of the text (`preview_chars`), archive entries and the menu of leaves with their descriptions and keywords. It never sees the path, and secret-named leaves are never offered.
-
-## Bands and caps
-
-Each verdict gets a band from its signal, then the kind of the chosen leaf caps it.
-
-| Verdict | Band before caps |
-|---|---|
-| Rules | green |
-| Book with a verified ISBN | green |
-| Book by heuristic | yellow |
-| Model with confidence below `fallback_red` | red |
-| Issuer or model, confidence at or above its green threshold (default 0.9), and kind calibrated | green |
-| Issuer or model otherwise | yellow |
-| No leaf | red |
-
-Issuer matches alone score 0.8, below the default threshold, so they stay yellow until you lower `PARA_FILES_ISSUERS_GREEN` to 0.8 or below.
-
-Caps, applied after the band:
-
-- **knowledge** leaves are never green (yellow at most);
-- **library** leaves are green only with a verified ISBN or an issuer match; rules and heuristic books stay yellow.
-
-**Calibration.** Issuer and model matches stay yellow until the kind (record, library, media, knowledge) has `PARA_FILES_CALIBRATION_MIN` (default 100) decisions you confirmed. Confirmed decisions are the owner-decided moves and confirmations in journals not undone, counted per kind. `sort --apply --review` is what produces them, and `para-files tree` shows the progress per kind together with how often the tool's proposal was right.
 
 ## Plan and apply
 
@@ -159,7 +155,7 @@ A run is marked undone (`<run id>.undone`) only when nothing was left alone. A r
 `PARA_FILES_CACHE_PATH` is a SQLite file with two tables:
 
 - **ISBN lookups:** only successful lookups are stored, so a network failure is retried next time.
-- **Verdicts:** keyed by the file's content hash and a configuration fingerprint. The fingerprint hashes `tree.yaml`, `rules.yaml`, `issuers.yaml` (missing counts as empty) and the primary model id. Editing any of them, or changing the model, starts verdicts afresh. The filename is part of the key, since rules and issuers read it.
+- **Model verdicts:** keyed by the file's content hash and a configuration fingerprint. The fingerprint hashes `tree.yaml`, `rules.yaml`, `issuers.yaml` (missing counts as empty) and the primary model id. Editing any of them, or changing the model, starts verdicts afresh. The filename is part of the key, since rules and issuers read it.
 
 So a `sort` preview followed by `sort --apply` reuses the preview's verdicts and does not ask the model again for the same content.
 

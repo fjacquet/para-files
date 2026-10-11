@@ -73,7 +73,6 @@ class CoreSettings(PathSettings):
         ),
     )
     calibration_min: int = Field(default=100, ge=1)
-    issuers_green: float = Field(default=0.9, ge=0.0, le=1.0)
     fallback_green: float = Field(default=0.9, ge=0.0, le=1.0)
     fallback_red: float = Field(default=0.3, ge=0.0, le=1.0)
     cache_path: Path = Field(default_factory=lambda: _home(".cache", "para-files", "cache.sqlite"))
