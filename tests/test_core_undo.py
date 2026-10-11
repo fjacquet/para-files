@@ -143,3 +143,44 @@ def test_interrupted_apply_is_fully_undoable(tmp_path, monkeypatch):
     monkeypatch.setattr(apply_mod.shutil, "move", real_move)
     undo_run(state, "r1")
     assert tree_state(root) == before
+
+
+def test_dangling_symlink_at_source_is_left_alone(tmp_path):
+    root, state = setup(tmp_path)
+    src = root / "0_Inbox" / "loose.txt"
+    apply_all(root, state, [op_for(src)])
+    src.symlink_to(root / "nowhere.txt")
+    report = undo_run(state, "r1")
+    moved = root / "4_Archives" / "10y_travail" / "2025" / "loose.txt"
+    assert report.skipped == [(str(moved), "source path taken")]
+    assert src.is_symlink()
+    assert moved.read_text() == "loose"
+
+
+def test_missing_destination_is_skipped(tmp_path):
+    root, state = setup(tmp_path)
+    src = root / "0_Inbox" / "loose.txt"
+    apply_all(root, state, [op_for(src)])
+    moved = root / "4_Archives" / "10y_travail" / "2025" / "loose.txt"
+    moved.unlink()
+    report = undo_run(state, "r1")
+    assert report.skipped == [(str(moved), "missing")]
+    assert not src.exists()
+
+
+def test_folder_not_empty_is_kept(tmp_path):
+    root, state = setup(tmp_path)
+    src = root / "0_Inbox" / "loose.txt"
+    apply_all(
+        root,
+        state,
+        [op_for(src, leaf="archives_5y_factures", decided_by="owner")],
+    )
+    folder = root / "4_Archives" / "5y_factures"
+    newcomer = folder / "new.txt"
+    newcomer.write_text("added after the run")
+    report = undo_run(state, "r1")
+    assert (str(folder), "folder not empty") in report.skipped
+    assert folder.is_dir()
+    assert newcomer.read_text() == "added after the run"
+    assert src.exists()

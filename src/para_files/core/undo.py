@@ -31,7 +31,7 @@ def _blocked(dst: Path, src: Path, sha256: str) -> str | None:
         return "missing"
     if sha256_of(dst) != sha256:
         return "changed since the run"
-    if src.exists():
+    if src.exists() or src.is_symlink():
         return "source path taken"
     return None
 
