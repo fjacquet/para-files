@@ -101,9 +101,7 @@ def test_short_pdf_is_not_a_book(tmp_path, monkeypatch):
 
 def test_thema_segments(tmp_path, monkeypatch):
     monkeypatch.setattr(books, "lookup_thema_code", lambda _subjects: "UB")
-    monkeypatch.setattr(
-        books, "thema_to_para_path", lambda _code: "3_Resources/livres/U_Informatique/UB_Prog"
-    )
+    monkeypatch.setattr(books, "thema_folders", lambda _code: "U_Informatique/UB_Prog")
     info = dataclasses.replace(INFO, subjects=["Programming"])
     match = match_book(
         ev("Python Cookbook.pdf", isbns=[ISBN]),

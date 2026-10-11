@@ -13,8 +13,6 @@ from functools import cache
 from importlib.resources import files
 
 
-LIBRARY = "3_Resources/livres"
-
 COMPUTING_SUBJECT_MAP: dict[str, str] = {
     # General computing
     "computer science": "UY",
@@ -359,11 +357,11 @@ def lookup_thema_code(subjects: list[str]) -> str | None:
     return best
 
 
-def thema_to_para_path(code: str) -> str:
-    """Library path for a Thema code.
+def thema_folders(code: str) -> str | None:
+    """Level-1 and level-2 folders below the library, or None for a code not in the table.
 
-    E.g. 'UB' -> '3_Resources/livres/U_Informatique_et_technologies_de/UB_Themes_generaux'.
+    E.g. 'UB' -> 'U_Informatique_et_technologies_de/UB_Themes_generaux'.
     """
     table = _folders()
     names = [table[prefix] for prefix in dict.fromkeys((code[:1], code[:2])) if prefix in table]
-    return "/".join([LIBRARY, *names])
+    return "/".join(names) if code[:1] in table else None

@@ -72,7 +72,7 @@ pre-commit run --all-files         # Run manually
 | `src/para_files/core/apply.py`, `journal.py`, `undo.py` | Moves, run journal, undo |
 | `src/para_files/core/sort.py`, `clean.py`, `secrets.py`, `cache.py` | Sort entry points, clean, secrets guard, SQLite cache |
 | `src/para_files/utils/filename_sanitizer.py` | Centralized filename sanitization |
-| `src/para_files/core/thema.py` | Thema code lookup and PARA path builder (`thema_to_para_path`) |
+| `src/para_files/core/thema.py` | Thema code lookup and library folders (`thema_folders`) |
 | `src/para_files/data/thema_l1l2.json` | Thema folder names (L1/L2), read as package data |
 | `examples/` | Sanitized example `tree.yaml`, `rules.yaml`, `issuers.yaml` |
 | `tests/core_helpers.py` | Generic example tree and settings for the tests |
@@ -101,13 +101,13 @@ sanitize_path_component("Arts : généralités")  # → "Arts - généralités"
 Books use **hybrid naming**: `{CodeValue}_{ShortName}`
 
 ```python
-from para_files.core.thema import thema_to_para_path
+from para_files.core.thema import thema_folders
 
-thema_to_para_path("UB")
-# → "3_Resources/livres/U_Informatique_et_technologies_de/UB_Themes_generaux"
+thema_folders("UB")
+# → "U_Informatique_et_technologies_de/UB_Themes_generaux"
 ```
 
-**Path format:** `3_Resources/livres/{L1_Code_ShortName}/{L2_Code_ShortName}`
+**Path format:** `3_Resources/livres/{L1_Code_ShortName}/{L2_Code_ShortName}` (the `3_Resources/livres/` part comes from the library leaf in `tree.yaml`)
 
 - Max 2 hierarchy levels after `livres/`
 - Accents removed (é→e, ç→c)
