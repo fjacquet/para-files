@@ -460,7 +460,7 @@ No command writes YAML. Corrections are made by editing `rules.yaml` / `issuers.
 
 Deleted: `migrate`, `learn`, `add-issuer`, `add-utterance`, the `main.py` re-export shim. Entry point: `para_files.cli.app:app`.
 
-One parallel executor, one band-grouped printer, one JSON shape shared by all commands.
+One parallel executor and one band-grouped printer; `sort --json` gives the machine-readable plan (other commands print text).
 
 ### 4.5 Measurement
 
