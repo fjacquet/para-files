@@ -7,9 +7,10 @@ Secret files are never trashed. Dot-folders and symlinks are never followed.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 from collections import defaultdict
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -17,12 +18,13 @@ from para_files.core.apply import TRASH, free_path, make_dirs
 from para_files.core.evidence import extract, sha256_of
 from para_files.core.journal import Journal
 from para_files.core.secrets import secret_reason
-from para_files.core.settings import BUCKET_NAME
+from para_files.core.settings import BUCKET_NAME, INBOX
 from para_files.core.tree import TreeConfig
 
 
 JUNK_NAMES = frozenset({".ds_store", "thumbs.db", "desktop.ini"})
 JUNK_PREFIXES = ("~$", "._")
+COPY_SUFFIX = re.compile(r"(\s\(\d+\)|\s-\s[Cc]opy|\s[Cc]opy|_\d+)$")
 
 
 @dataclass
@@ -82,6 +84,20 @@ def _empty_after_junk(base: Path, keep: frozenset[Path]) -> list[Path]:
     return sorted(empty, key=lambda path: len(path.parts), reverse=True)
 
 
+def _keep_order(root: Path) -> Callable[[Path], tuple[bool, bool, str]]:
+    """Sort key: the copy to keep sorts first (filed before inbox, plain before copy-named)."""
+    inbox = root / INBOX
+
+    def key(path: Path) -> tuple[bool, bool, str]:
+        return (
+            path.is_relative_to(inbox),
+            COPY_SUFFIX.search(path.stem) is not None,
+            str(path),
+        )
+
+    return key
+
+
 def _duplicates(files: Sequence[Path], root: Path) -> list[tuple[Path, Path]]:
     """(copy, kept) for every file whose content another file already has; secrets left out."""
     by_size: dict[int, list[Path]] = defaultdict(list)
@@ -97,7 +113,7 @@ def _duplicates(files: Sequence[Path], root: Path) -> list[tuple[Path, Path]]:
         for path in group:
             by_hash[sha256_of(path)].append(path)
         for same in by_hash.values():
-            kept, *copies = sorted(same, key=str)
+            kept, *copies = sorted(same, key=_keep_order(root))
             pairs += [(copy, kept) for copy in copies if extract(copy, root=root).secret is None]
     return pairs
 

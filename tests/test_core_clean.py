@@ -152,3 +152,19 @@ def test_folder_holding_only_secret_junk_is_not_empty(tmp_path):
     assert secret.exists()
     assert root / "2_Areas/vault" not in plan.empty_dirs
     assert secret not in plan.junk
+
+
+def test_inbox_copy_is_trashed_and_the_filed_one_kept(tmp_path):
+    root = make_para_root(tmp_path)
+    inbox = put(root, "0_Inbox/invoice.pdf", "same")
+    filed = put(root, "2_Areas/x/invoice.pdf", "same")
+    plan = plan_clean([root], root=root, duplicates=True)
+    assert plan.duplicates == [(inbox, filed)]
+
+
+def test_copy_suffix_is_trashed_and_the_plain_name_kept(tmp_path):
+    root = make_para_root(tmp_path)
+    plain = put(root, "2_Areas/x/a.pdf", "same")
+    copy = put(root, "2_Areas/x/a (2).pdf", "same")
+    plan = plan_clean([root], root=root, duplicates=True)
+    assert plan.duplicates == [(copy, plain)]
