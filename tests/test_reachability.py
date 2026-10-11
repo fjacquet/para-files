@@ -44,8 +44,7 @@ def _imports(name: str) -> set[str]:
 
 def test_every_module_is_reachable_from_the_cli():
     seen: set[str] = set()
-    # data is read via importlib.resources, a string, so the static scan cannot see it
-    todo = ["para_files.cli.app", "para_files.cli", "para_files.data"]
+    todo = ["para_files.cli.app", "para_files.cli"]
     while todo:
         name = todo.pop()
         if name not in seen:

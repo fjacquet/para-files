@@ -8,7 +8,7 @@ from para_files.core.thema import _folders, lookup_thema_code, thema_to_para_pat
 
 
 def test_the_table_is_a_package_resource():
-    assert files("para_files.data").joinpath("thema_l1l2.json").is_file()
+    assert files("para_files").joinpath("data/thema_l1l2.json").is_file()
 
 
 def test_the_table_holds_only_level_one_and_two_codes():
