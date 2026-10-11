@@ -11,7 +11,7 @@ Classifies every file under the paths (default: `0_Inbox`) and prints the plan g
 | `--apply` | Move the green files |
 | `--apply --review` | Also go through the yellow files one by one |
 | `--json` | Print the plan (and the run, with `--apply`) as JSON |
-| `-w N` | Parallel classifiers (1–16) |
+| `-w N`, `--workers N` | Parallel classifiers (1–16) |
 
 ## Review
 

@@ -1,6 +1,6 @@
 # CLI overview
 
-`para-files` has six commands. Every command that changes files previews by default and acts only with `--apply`. Every applied run is journaled and can be reversed with `undo`.
+`para-files` has six commands. Every command that moves or trashes files previews by default and acts only with `--apply`; `undo` reverses a run directly, checking each step first. Every applied run is journaled and can be reversed with `undo`.
 
 | Command | What it does |
 |---|---|
