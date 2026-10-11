@@ -1,5 +1,5 @@
 title: para-files
-description: Intelligent file classification using MLX-powered semantic routing with PARA method
+description: "File documents into a PARA tree: rules, issuers, ISBN books and an optional cloud model, with preview, journal and undo."
 remote_theme: just-the-docs/just-the-docs
 color_scheme: dark
 
@@ -19,6 +19,13 @@ back_to_top: true
 back_to_top_text: "Back to top"
 
 footer_content: "Copyright &copy; 2025 Frédéric Jacquet. Distributed under the <a href=\"https://github.com/fjacquet/para-files/blob/main/LICENSE\">MIT license.</a>"
+
+# Keep the archive out of the navigation; its pages stay reachable by link.
+defaults:
+  - scope:
+      path: "archive"
+    values:
+      nav_exclude: true
 
 # Mermaid support
 mermaid:

@@ -5,11 +5,14 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Checked with mypy](https://img.shields.io/badge/mypy-checked-blue.svg)](http://mypy-lang.org/)
-[![Platform: macOS](https://img.shields.io/badge/platform-macOS%20(Apple%20Silicon)-lightgrey.svg)](https://www.apple.com/macos/)
 
-**macOS-only (Apple Silicon)** intelligent file classification system using MLX-powered semantic routing.
+para-files files documents into a [PARA](https://fortelabs.com/blog/para/) tree (Projects, Areas, Resources, Archives):
 
-Implements the **PARA method** (Projects, Areas, Resources, Archives) with a deterministic **6-signal classification pipeline**.
+- **Records** (payslips, statements, invoices) go to the retention folder your rules or issuers name.
+- **Books** (PDF, EPUB, MOBI) go to the library, placed by ISBN and its Thema subject.
+- **Everything else** is suggested. Green files move on `sort --apply`, yellow files wait for your confirmation, red files stay where they are.
+
+Nothing moves until you ask. Every run is journaled, and `undo` reverses it step by step.
 
 ## Quick Start
 
@@ -19,30 +22,26 @@ git clone https://github.com/fjacquet/para-files.git
 cd para-files
 uv sync --all-extras
 
-# 2. Configure
-export PARA_FILES_PARA_ROOT=~/Documents/PARA
+# 2. Point it at your PARA root (the folder that holds 0_Inbox)
+mkdir -p ~/.config/para-files
+echo 'PARA_FILES_PARA_ROOT=~/PARA' > ~/.config/para-files/.env
 
-# 3. Classify files
-uv run para-files classify document.pdf
-uv run para-files move *.pdf --dry-run
+# 3. Describe your folders in ~/.config/para-files/tree.yaml (plus rules.yaml and issuers.yaml), then check them
+uv run para-files tree --validate
+
+# 4. Create the missing folders, preview, then move
+uv run para-files init --apply
+uv run para-files sort
+uv run para-files sort --apply
 ```
 
-**→ [Complete Getting Started Guide](docs/getting-started/installation.md)**
+**→ [Getting started](docs/getting-started.md)** walks through a minimal configuration.
 
 ## System Requirements
 
-- **macOS** with Apple Silicon (M1/M2/M3/M4)
-- **Python 3.12+**
-- **[uv](https://docs.astral.sh/uv/)** package manager
-
-## Key Features
-
-- **6-Signal Pipeline** - Cascading classification for high accuracy
-- **MLX Embeddings** - Fast semantic matching on Apple Neural Engine
-- **PARA Method** - Organize into Projects, Areas, Resources, Archives
-- **No Setup** - Works out of the box with reasonable defaults
-- **Extensible** - Add custom routes, issuers, and utterances via YAML
-- **Interactive Learning** - Improve accuracy by correcting classifications
+- **Python 3.12+** and the **[uv](https://docs.astral.sh/uv/)** package manager
+- **macOS (Apple Silicon)** only for the OCR features; everything else is cross-platform
+- **No local model server.** The cloud model is optional: set `OPENROUTER_API_KEY` to allow it. Requests ask OpenRouter for zero data retention, and secret-looking files are never sent
 
 ## Essential Commands
 
@@ -58,15 +57,11 @@ uv run para-files undo                      # Reverse the last run
 
 ## Documentation
 
-Quick links to common tasks:
-
-- **Getting Started** - [Installation](docs/getting-started/installation.md) • [Quick Setup](docs/getting-started/quick-setup.md) • [First File](docs/getting-started/first-file.md)
-- **How-To Guides** - [Set Up PARA](docs/tasks/set-up-para-folder.md) • [Classify](docs/tasks/classify-single-file.md) • [Move](docs/tasks/move-files.md) • [Issuers](docs/tasks/manage-issuers.md) • [Learn](docs/tasks/learn-from-files.md)
-- **Configuration** - [Overview](docs/configuration/overview.md) • [Env Variables](docs/configuration/env-file.md) • [YAML Config](docs/configuration/yaml-config.md)
-- **Understanding** - [Architecture](docs/architecture/overview.md) • [Signals](docs/architecture/overview.md) • [Semantic Matching](docs/architecture/signal-4-semantic.md)
-- **Troubleshooting** - [Inbox Issues](docs/troubleshooting/files-going-to-inbox.md) • [Low Confidence](docs/troubleshooting/confidence-too-low.md) • [Slow Model](docs/troubleshooting/model-download-slow.md)
-
-**→ [Complete Documentation Index](docs/index.md)**
+- **[Getting started](docs/getting-started.md)**: install, configure, sort, undo
+- **[Configuration](docs/configuration.md)**: settings, `tree.yaml`, `rules.yaml`, `issuers.yaml`, validation
+- **[Architecture](docs/architecture.md)**: the cascade, bands, secrets guard, journal, cache
+- **[Troubleshooting](docs/troubleshooting.md)**: red files, nothing green, undo, the model, secrets
+- **[Documentation index](docs/index.md)**: every page
 
 ## All CLI Commands
 

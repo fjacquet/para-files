@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**para-files** is an intelligent file classification system using Ollama-powered semantic routing (via litellm). It implements the PARA method (Projects, Areas, Resources, Archives) with a deterministic 6-signal classification pipeline. OCR features require macOS (Apple Silicon).
+**para-files** files documents into a PARA tree (Projects, Areas, Resources, Archives). Records are filed by retention, books by ISBN, and everything else is decided by rules and issuers or suggested by an optional cloud model (via litellm and OpenRouter, zero data retention). Nothing moves without `--apply`; every run is journaled and `undo` reverses it. OCR features require macOS (Apple Silicon).
 
 For detailed project information, see the full documentation at [docs/index.md](docs/index.md).
 
@@ -63,22 +63,24 @@ pre-commit run --all-files         # Run manually
 
 | File | Purpose |
 |------|---------|
-| `src/para_files/cli/app.py` | CLI entry point (Typer app; commands in `cli/*_cmd.py`) |
-| `src/para_files/cli/` | All CLI commands (scan, move, classify, bookstore, learn, routes, etc.) |
-| `src/para_files/config.py` | Configuration management |
-| `src/para_files/pipeline.py` | 6-signal classification orchestrator |
-| `src/para_files/types.py` | Domain type definitions |
-| `src/para_files/mover.py` | File move orchestration |
-| `src/para_files/learner.py` | Feedback-based learning |
-| `src/para_files/reference_tree.py` | YAML reference tree loader |
-| `src/para_files/classifiers/` | Classification signal implementations |
-| `src/para_files/encoders/ollama_encoder.py` | Ollama embedding encoder via litellm |
+| `src/para_files/cli/app.py` | CLI entry point (Typer app; one `*_cmd.py` per command: sort, explain, undo, clean, tree, init) |
+| `src/para_files/core/settings.py` | `CoreSettings`: every `PARA_FILES_` setting and the PARA root check |
+| `src/para_files/core/tree.py` | Strict loader and validator for `tree.yaml`, `rules.yaml`, `issuers.yaml` |
+| `src/para_files/core/evidence.py` | Reads each file once: hash, name, preview, ISBNs, EXIF date, archive listing |
+| `src/para_files/core/decide.py` | Cascade, bands, caps, target folder, calibration |
+| `src/para_files/core/rules.py`, `books.py`, `issuers.py`, `fallback.py` | The four signals |
+| `src/para_files/core/apply.py`, `journal.py`, `undo.py` | Moves, run journal, undo |
+| `src/para_files/core/sort.py`, `clean.py`, `secrets.py`, `cache.py` | Sort entry points, clean, secrets guard, SQLite cache |
+| `src/para_files/config.py` | Config directory (`PARA_FILES_CONFIG_DIR` or `~/.config/para-files`) |
 | `src/para_files/utils/filename_sanitizer.py` | Centralized filename sanitization |
 | `src/para_files/taxonomies/models.py` | Thema/document taxonomy models and path builders |
+| `examples/` | Sanitized example `tree.yaml`, `rules.yaml`, `issuers.yaml` |
+| `tests/core_helpers.py` | Generic example tree and settings for the tests |
 | `tests/` | Test suite |
-| `~/.config/para-files/personal_file_tree.yaml` | Legacy reference tree (personal, not tracked; `config/` copy is the fallback) |
 | `config/thema.json` | Thema v1.6 book classification (9,187 codes) |
-| `config/documents.json` | Document type taxonomy for classification |
+| `config/documents.json` | Document type taxonomy |
+
+The old pipeline modules (`pipeline.py`, `mover.py`, `learner.py`, `reference_tree.py`, `types.py`, `classifiers/` except `book_detector.py`, `encoders/`, `learning/`) remain only until the Stage 4 purge and are not used by the CLI. The core still imports `classifiers/book_detector.py`, `circuit_breaker.py` and `config.py`.
 
 ## Filename Sanitization
 
@@ -115,44 +117,46 @@ taxonomy.build_para_path("UB")
 
 ## Architecture
 
-### Classification Pipeline (v2.2)
+### Classification Cascade (core)
 
-Files are classified using a cascade — first match wins. Actual init order in `pipeline.py`:
+Each file goes through the signals in order; the first verdict wins. Secret files are checked first and never reach a signal.
 
-1. **Book Detector** (96%, 100% with ISBN) - PDF book detection via ISBN/metadata/Thema
-2. **Rules Engine** (95%) - Glob patterns on filename/path from `personal_file_tree.yaml`
-3. **Taxonomy Classifier** (90%) - Issuers + keywords from `config/documents.json`
-4. **Semantic Classifier** (85%) - Ollama embedding similarity (via litellm)
-5. **Extension Router** (97%) - Deterministic routing by file extension (catch-all)
-6. **LLM Fallback** (60%) - Optional Ollama LLM via litellm
+1. **Secrets guard** - name, folder, archive entry or content match: red, never sent or moved
+2. **Rules** (confidence 1.0) - filename globs from `rules.yaml`
+3. **Books** (1.0 with a verified ISBN, 0.7 heuristic) - ISBN lookup, Thema subject for the library folder
+4. **Issuers** (0.95 with a leaf keyword, 0.8 alone) - patterns from `issuers.yaml`
+5. **Model fallback** - OpenRouter ranks up to three leaves through litellm; primary then backup model
 
-If nothing matches, files go to `0_Inbox`.
+No verdict means red (stays in place). Bands: rules are green; books are green with an ISBN; issuers and the model are yellow until a kind has `PARA_FILES_CALIBRATION_MIN` confirmed decisions, then green at 0.9 or more. Caps: knowledge is never green; library is green only with an ISBN or an issuer, so library rules stay yellow. `sort --apply` moves green files, `--review` confirms yellow ones; `apply` is sequential, never overwrites, and journals each operation before it happens. `undo` replays the journal backwards.
+
+See [docs/architecture.md](docs/architecture.md) for the diagrams.
 
 ## Key Technologies
 
-- **litellm** - Unified LLM/embedding API (calls Ollama, OpenAI, etc.)
-- **Ollama** - Local LLM and embedding server (nomic-embed-text, ministral-3:8b)
-- **Pydantic** - Configuration and data validation
+- **litellm** - Unified LLM API; the fallback calls OpenRouter with `zdr` and data collection denied
+- **OpenRouter** - Model gateway for the optional fallback (`OPENROUTER_API_KEY`)
+- **Pydantic** - Settings and tree/rules/issuers validation (pydantic-settings for `.env`)
 - **Typer** - CLI framework (built on Click)
+- **SQLite** - Cache of ISBN lookups and verdicts
 - **YAML** - Configuration format
 - **Pytest** - Testing framework
 
 ## Platform Constraint
 
 OCR features require **macOS** (Apple Silicon) because Vision Framework is macOS-only.
-The core classification pipeline (embeddings, LLM, rules, taxonomy) is cross-platform
-and only requires a running Ollama server.
+There is no local model server: the core runs without any model on the machine. The cloud fallback is optional and needs an OpenRouter key.
 
 ## Documentation
 
 All user-facing documentation is in the `docs/` directory:
 
-- **[Getting Started](docs/getting-started/)** - Installation and quick start
-- **[CLI Reference](docs/cli/)** - Complete command reference
-- **[Configuration](docs/configuration/)** - All configuration options
-- **[Tasks](docs/tasks/)** - How-to guides for common workflows
-- **[Architecture](docs/architecture/)** - Technical deep dives
-- **[Troubleshooting](docs/troubleshooting/)** - Common issues and solutions
+- **[Index](docs/index.md)** - Map of the documentation
+- **[Getting Started](docs/getting-started.md)** - Install, configure, sort, undo
+- **[CLI Reference](docs/cli/overview.md)** - The six commands
+- **[Configuration](docs/configuration.md)** - Settings, `tree.yaml`, `rules.yaml`, `issuers.yaml`, validation
+- **[Architecture](docs/architecture.md)** - Cascade, bands, journal, cache
+- **[Troubleshooting](docs/troubleshooting.md)** - Common failure modes
+- **[Archive](docs/archive/README.md)** - Pre-2026-10 pages, for reference only; they do not describe the current tool
 
 **Important**: Keep documentation in sync with code changes. Update `docs/` when making changes, especially for:
 
@@ -169,8 +173,8 @@ All user-facing documentation is in the `docs/` directory:
 |-------------|--------|
 | New feature/command | `CHANGELOG.md` (Unreleased), relevant doc page |
 | Bug fix | `CHANGELOG.md` (Unreleased) |
-| Architecture change | `docs/architecture/`, `CHANGELOG.md` |
-| Config change | `docs/configuration/`, `CHANGELOG.md` |
+| Architecture change | `docs/architecture.md`, `CHANGELOG.md` |
+| Config change | `docs/configuration.md`, `CHANGELOG.md` |
 | Breaking change | `CHANGELOG.md` with migration notes |
 
 Before committing:
@@ -203,15 +207,14 @@ ASCII boxes are fragile across renderers. Mermaid renders consistently.
 
 ## Configuration via Environment Variables
 
-All config uses `pydantic-settings` with `.env` file support:
+Settings use `pydantic-settings` (`CoreSettings` in `core/settings.py`):
 
 | Prefix | Config class | Examples |
 |--------|-------------|----------|
-| `PARA_FILES_MLX_` | `MLXConfig` | `MODEL_NAME`, `SCORE_THRESHOLD`, `SEMANTIC_ENABLED` |
-| `PARA_FILES_LLM_` | `LLMConfig` | `ENABLED`, `MODEL`, `CONFIDENCE_THRESHOLD`, `API_BASE` |
-| `PARA_FILES_LOG_` | `LoggingConfig` | `LEVEL`, `ROTATION`, `RETENTION` |
+| `PARA_FILES_` | `CoreSettings` | `PARA_FILES_PARA_ROOT` (required), `PARA_FILES_FALLBACK_MODEL`, `PARA_FILES_CALIBRATION_MIN`, `PARA_FILES_MAX_WORKERS` |
+| none | `CoreSettings` | `OPENROUTER_API_KEY` (also accepted as `PARA_FILES_OPENROUTER_API_KEY`, `PARA_FILES_LLM_API_KEY`) |
 
-Priority: env vars > `.env` file > YAML `config:` section > defaults.
+Priority: init arguments > environment variables > `~/.config/para-files/.env` (or `$PARA_FILES_CONFIG_DIR/.env`) > defaults. There is no YAML settings source. The full table is in [docs/configuration.md](docs/configuration.md#settings).
 
 ## CLI Module Pattern
 
@@ -224,10 +227,10 @@ To add a command:
 
 ## Performance Notes
 
-- Pipeline initializes lazily on first classification (thread-safe via `threading.Lock`)
-- Reference tree loaded once at startup
-- Embeddings calculated per-request (not cached)
-- Ollama server must be running for semantic/LLM signals
+- Classification runs in a thread pool (`PARA_FILES_MAX_WORKERS`, default 4; `sort --workers` overrides it)
+- SQLite cache (`PARA_FILES_CACHE_PATH`): ISBN lookups and verdicts keyed by content hash and config fingerprint, so `sort` then `sort --apply` asks the model once per file
+- `apply` runs sequentially; each operation is journaled and fsynced before it happens
+- Config is loaded once per run (`build_context`); a model is asked only when a key is set and the fallback is enabled
 
 <!-- rtk-instructions v2 -->
 # RTK (Rust Token Killer) - Token-Optimized Commands
