@@ -1,6 +1,6 @@
 [project]
 name = "para-files"
-version = "2.0"
+version = "2.1"
 description = "File documents into a PARA tree: rules, issuers, ISBN books and an optional cloud model, with preview, journal and undo"
 readme = "README.md"
 license = { text = "MIT" }
