@@ -93,3 +93,16 @@ def test_verbose_option_is_accepted():
 
     result = CliRunner().invoke(app, ["-v", "--version"])
     assert result.exit_code == 0, result.output
+
+
+def test_logging_quiets_pdf_and_spreadsheet_libraries(restore_logger):
+    import logging
+    import warnings
+
+    with warnings.catch_warnings(record=True) as caught:
+        configure_logging(verbose=False)
+        warnings.warn_explicit(
+            "Print area cannot be set", UserWarning, "workbook.py", 118, "openpyxl.reader.workbook"
+        )
+    assert caught == []
+    assert logging.getLogger("pypdf").level == logging.ERROR

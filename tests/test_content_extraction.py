@@ -5,6 +5,7 @@ All tests use tmp_path fixture with real file creation — no mocking of file fo
 
 from __future__ import annotations
 
+import re
 import zipfile
 from pathlib import Path
 
@@ -12,6 +13,7 @@ import openpyxl
 from odf.opendocument import OpenDocumentSpreadsheet
 from odf.table import Table, TableCell, TableRow
 from odf.text import P
+from openpyxl.chart import BarChart, Reference
 
 from para_files.utils.file_utils import (
     _read_archive_manifest,
@@ -110,6 +112,39 @@ class TestExcelXlsx:
         max_chars = 500
         result = _read_excel_file(path, max_chars=max_chars)
         assert len(result) <= max_chars
+
+    def test_excel_chartsheet_is_skipped(self, tmp_path: Path) -> None:
+        """A chart sheet has no cells: the worksheets are still read."""
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws["A1"] = "Total Revenue"
+        ws["A2"] = 3
+        chart = BarChart()
+        chart.add_data(Reference(ws, min_col=1, min_row=2, max_row=2))
+        wb.create_chartsheet("Chart").add_chart(chart)
+        path = tmp_path / "with_chart.xlsx"
+        wb.save(str(path))
+        assert "Total Revenue" in _read_excel_file(path, max_chars=2000)
+
+    def test_excel_malformed_styles_read_from_xml(self, tmp_path: Path) -> None:
+        """openpyxl rejects an empty <fill/>; sheet names and text come from the XML instead."""
+        good = _make_xlsx(tmp_path, sheet_name="Budget_2024", cell_value="Total Revenue")
+        path = tmp_path / "bad_fill.xlsx"
+        with zipfile.ZipFile(good) as src, zipfile.ZipFile(path, "w") as dst:
+            for item in src.infolist():
+                data = src.read(item.filename)
+                if item.filename == "xl/styles.xml":
+                    data = re.sub(rb"<fill>.*?</fill>", b"<fill/>", data, count=1)
+                dst.writestr(item, data)
+            dst.writestr(
+                "xl/sharedStrings.xml",
+                '<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+                "<si><t>Shared Label</t></si></sst>",
+            )
+        result = _read_excel_file(path, max_chars=2000)
+        assert "Budget_2024" in result
+        assert "Total Revenue" in result
+        assert "Shared Label" in result
 
 
 # ---------------------------------------------------------------------------

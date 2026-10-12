@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 import sys
+import warnings
 from typing import Annotated
 
 import typer
@@ -31,6 +33,10 @@ def configure_logging(verbose: bool) -> None:  # noqa: FBT001 - plain switch
     """WARNING and above on stderr (DEBUG with --verbose); never stdout, so --json stays clean."""
     logger.remove()
     logger.add(sys.stderr, level="DEBUG" if verbose else "WARNING", format=LOG_FORMAT)
+    # Library chatter about files that still read fine ("Ignoring wrong pointing object",
+    # "Print area cannot be set").
+    logging.getLogger("pypdf").setLevel(logging.ERROR)
+    warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 
 
 @app.callback()
