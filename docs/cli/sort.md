@@ -9,7 +9,7 @@ Classifies every file under the paths (default: `0_Inbox`) and prints the plan g
 | Option | Effect |
 |---|---|
 | `--apply` | Move the green files |
-| `--apply --review` | Also go through the yellow files one by one |
+| `--apply --review` | Also confirm the yellow files, folder by folder |
 | `--json` | Print the plan (and the run, with `--apply`) as JSON |
 | `-w N`, `--workers N` | Parallel classifiers (1–16) |
 
