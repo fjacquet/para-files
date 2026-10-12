@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1] - 2026-10-12
+
+Model first (ADR-014): the model reads every non-secret file, only verified ISBN books and pinned rules decide alone, and `--review` goes folder by folder.
+
+### Breaking (migrating from 2.0)
+
+- Unpinned rules no longer move files with `--apply`; they are hints for the model. Add `pin: true` (or `pin: exif` for camera photos) to the rules you trust; `tree --validate` warns about risky pins.
+- `PARA_FILES_ISSUERS_GREEN` is removed; drop it from `.env`.
+- The verdict cache key changed, so the first preview after upgrading asks the model again (about $5 per 1000 files).
+
 ### Added
 
 - The model sees up to 10 of your past decisions for similar file names (names only), so your corrections teach it.
