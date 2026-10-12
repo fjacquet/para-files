@@ -8,9 +8,13 @@ from __future__ import annotations
 import json
 import os
 import re
+from collections.abc import Iterator
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal, Self, TextIO
+
+from loguru import logger
 
 from para_files.core.tree import Tree
 
@@ -145,6 +149,56 @@ def last_run_id(state_dir: Path) -> str | None:
     return live[-1] if live else None
 
 
+@dataclass(frozen=True)
+class Example:
+    """One owner decision: the file name, the leaf it went to, and what the tool proposed."""
+
+    name: str
+    leaf_id: str
+    proposed: str | None
+
+
+def _owner_decisions(state_dir: Path, tree: Tree) -> Iterator[dict[str, Any]]:
+    """Owner-decided moves and confirmations, in order, of every run not undone.
+
+    A run that cannot be parsed is skipped with a warning, so a damaged journal never stops a
+    sort. undo still reads runs strictly through read_run.
+    """
+    for run_id in run_ids(state_dir):
+        if is_undone(state_dir, run_id):
+            continue
+        try:
+            entries = read_run(state_dir, run_id)
+        except (ValueError, OSError) as exc:
+            logger.warning("skipping unreadable journal {}: {}", run_id, exc)
+            continue
+        for entry in entries:
+            if (
+                isinstance(entry, dict)
+                and entry.get("op") in {"move", "confirm"}
+                and entry.get("decided_by") == "owner"
+                and tree.leaves.get(str(entry.get("leaf")))
+            ):
+                yield entry
+
+
+def owner_examples(state_dir: Path, tree: Tree) -> list[Example]:
+    """Owner-decided moves and confirmations of runs not undone; newest first, one per file."""
+    found: dict[str, Example] = {}
+    for entry in _owner_decisions(state_dir, tree):
+        if not entry.get("src"):
+            continue
+        key = str(entry.get("sha256") or entry.get("src"))
+        proposed = entry.get("proposed_leaf")
+        found.pop(key, None)
+        found[key] = Example(
+            Path(str(entry.get("src"))).name,
+            str(entry["leaf"]),
+            str(proposed) if proposed else None,
+        )
+    return list(reversed(found.values()))
+
+
 def confirmation_stats(state_dir: Path, tree: Tree) -> dict[str, tuple[int, int]]:
     """Per leaf kind: (owner-decided moves, how many the tool had proposed right).
 
@@ -153,24 +207,16 @@ def confirmation_stats(state_dir: Path, tree: Tree) -> dict[str, tuple[int, int]
     """
     stats: dict[str, list[int]] = {}
     seen: set[tuple[str, str]] = set()
-    for run_id in run_ids(state_dir):
-        if is_undone(state_dir, run_id):
-            continue
-        for entry in read_run(state_dir, run_id):
-            leaf = tree.leaves.get(str(entry.get("leaf")))
-            if (
-                entry.get("op") in {"move", "confirm"}
-                and entry.get("decided_by") == "owner"
-                and leaf
-            ):
-                if entry.get("sha256"):
-                    key = (str(entry["sha256"]), str(entry["leaf"]))
-                    if key in seen:
-                        continue
-                    seen.add(key)
-                counts = stats.setdefault(leaf.kind, [0, 0])
-                counts[0] += 1
-                counts[1] += entry.get("proposed_leaf") == entry.get("leaf")
+    for entry in _owner_decisions(state_dir, tree):
+        if entry.get("sha256"):
+            key = (str(entry["sha256"]), str(entry["leaf"]))
+            if key in seen:
+                continue
+            seen.add(key)
+        kind = tree.leaves[str(entry["leaf"])].kind
+        counts = stats.setdefault(kind, [0, 0])
+        counts[0] += 1
+        counts[1] += entry.get("proposed_leaf") == entry.get("leaf")
     return {kind: (confirmed, right) for kind, (confirmed, right) in stats.items()}
 
 

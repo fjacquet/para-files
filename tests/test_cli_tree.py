@@ -98,3 +98,10 @@ def test_a_move_then_a_later_confirm_of_the_same_file_counts_once(tmp_path):
     with Journal(tmp_path, "20261011-100002") as journal:
         journal.append(_owner_entry("confirm"))
     assert confirmation_stats(tmp_path, make_config().tree) == {"knowledge": (1, 0)}
+
+
+def test_tree_shows_pinned_rules(tmp_path, monkeypatch):
+    setup_cli(tmp_path, monkeypatch)
+    result = runner.invoke(app, ["tree"])
+    assert result.exit_code == 0, result.output
+    assert "pinned 1" in result.output

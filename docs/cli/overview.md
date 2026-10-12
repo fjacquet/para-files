@@ -22,6 +22,10 @@ flowchart LR
     J --> U[undo]
 ```
 
+## Global options
+
+- `--verbose/-v` shows debug logs on stderr. By default only warnings are shown, so stdout (including `--json`) stays clean.
+
 ## Settings
 
 Settings come from the environment, then `~/.config/para-files/.env`, then defaults. The one you must set is `PARA_FILES_PARA_ROOT`: the folder that holds `0_Inbox` … `4_Archives`. The tree itself lives in `~/.config/para-files/tree.yaml`, `rules.yaml` and `issuers.yaml`.
@@ -30,9 +34,9 @@ Settings come from the environment, then `~/.config/para-files/.env`, then defau
 |---|---|---|
 | `PARA_FILES_PARA_ROOT` | (required) | The PARA root |
 | `PARA_FILES_MAX_WORKERS` | `4` | Parallel classifiers |
-| `PARA_FILES_FALLBACK_ENABLED` | `true` | Ask the model when rules, books and issuers find nothing |
+| `PARA_FILES_FALLBACK_ENABLED` | `true` | Ask the model for every file that no verified ISBN or pinned rule decides |
 | `OPENROUTER_API_KEY` | (none) | Key for the model; without it the model is never asked |
-| `PARA_FILES_CALIBRATION_MIN` | `100` | Confirmed decisions per kind before issuers and the model may go green |
+| `PARA_FILES_CALIBRATION_MIN` | `100` | Confirmed decisions per kind before model matches may go green |
 
 ## Bands
 
@@ -40,4 +44,4 @@ Settings come from the environment, then `~/.config/para-files/.env`, then defau
 - **yellow**: moved only after you confirm it in `sort --apply --review`.
 - **red**: stays where it is.
 
-Rules and books with an ISBN can be green from the start. Issuers and the model stay yellow until that kind of document (record, library, media, knowledge) has 100 decisions you confirmed. Knowledge files are never green; library files are green only with an ISBN or an issuer match.
+Pinned rules and books with a verified ISBN are green from the start. Model verdicts stay yellow until that kind of document (record, library, media, knowledge) has 100 decisions you confirmed, and then are green only at confidence 0.9 or more. Hints (unpinned rules, heuristic books, issuer matches) are always yellow. Knowledge files are never green; library files are green only with an ISBN or an issuer match.

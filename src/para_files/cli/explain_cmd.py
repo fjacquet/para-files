@@ -1,4 +1,4 @@
-"""`para-files explain FILE`: the evidence, every signal's verdict, and what to edit."""
+"""`para-files explain FILE`: the evidence, the cascade steps, the decision and what to edit."""
 
 from __future__ import annotations
 
@@ -9,17 +9,17 @@ import typer
 
 from para_files.cli.app import app
 from para_files.cli.common import context_or_exit, relative, settings_or_exit
-from para_files.core.decide import NO_VERDICT, Verdict, decision_for, signal_verdicts
+from para_files.core.decide import Step, choose, decision_for
 from para_files.core.evidence import Evidence, extract
 
 
 PREVIEW_SHOWN = 160
 EDIT_HINTS = {
-    "rules": "edit or reorder this rule in rules.yaml",
-    "books": "ISBN lookup decided; add a rule in rules.yaml to override it",
-    "issuers": "edit the issuer in issuers.yaml, or the leaf keywords in tree.yaml",
-    "fallback": "the model chose; add a rule or an issuer to make this deterministic",
-    "none": "add a rule (rules.yaml) or an issuer (issuers.yaml) for files like this",
+    "rules": "edit or unpin this rule in rules.yaml",
+    "books": "a verified ISBN decides before any rule; the Thema subject picks the library folder",
+    "fallback": "the model chose; pin a rule, or improve the leaf's describe/keywords in tree.yaml",
+    "hint": "a rule or issuer suggested this; pin the rule if it is always right, or fix it",
+    "none": "add a rule (rules.yaml) or an issuer (issuers.yaml), or describe the leaf better",
 }
 
 
@@ -35,10 +35,11 @@ def _evidence_lines(evidence: Evidence) -> list[str]:
     return lines
 
 
-def _verdict_line(name: str, verdict: Verdict | None, note: str | None) -> str:
-    if verdict is not None:
-        return f"  {name:<9} {verdict.leaf_id} ({verdict.confidence:.2f}): {verdict.summary}"
-    return f"  {name:<9} {note or 'no match'}"
+def _step_line(step: Step) -> str:
+    if step.verdict is not None:
+        verdict = step.verdict
+        return f"  {step.name:<12} {verdict.leaf_id} ({verdict.confidence:.2f}): {verdict.summary}"
+    return f"  {step.name:<12} {step.note or 'no match'}"
 
 
 @app.command("explain")
@@ -58,12 +59,13 @@ def explain_command(
         return
     for line in _evidence_lines(evidence):
         typer.echo(line)
-    typer.echo("signals (first match wins):")
-    rows = signal_verdicts(evidence, ctx, ask_fallback=ask_model)
-    for name, verdict, note in rows:
-        typer.echo(_verdict_line(name, verdict, note))
-    winner = next((verdict for _, verdict, _ in rows if verdict is not None), NO_VERDICT)
-    decision = decision_for(evidence, winner, ctx)
+    typer.echo("steps:")
+    verdict, steps = choose(evidence, ctx, ask_model=ask_model)
+    for step in steps:
+        typer.echo(_step_line(step))
+    if verdict.about:
+        typer.echo(f"  about: {verdict.about}")
+    decision = decision_for(evidence, verdict, ctx)
     target = decision.target_dir or "stays in place"
     typer.echo(f"decision: {decision.band}, {decision.leaf_id or 'no leaf'} -> {target}")
-    typer.echo(f"to change it: {EDIT_HINTS.get(winner.signal, EDIT_HINTS['none'])}")
+    typer.echo(f"to change it: {EDIT_HINTS.get(verdict.signal, EDIT_HINTS['none'])}")

@@ -1,4 +1,4 @@
-# Example rules: filename globs (case-insensitive) -> leaf. First match wins.
+# Example rules: filename globs (case-insensitive) -> leaf. Pinned rules decide alone; the rest are hints for the model.
 rules:
   - name: phone_invoices
     leaf: telecom_invoices
@@ -6,9 +6,11 @@ rules:
   - name: payslips
     leaf: payslips
     globs: ["*payslip*.pdf", "*salaire*.pdf"]
+    pin: true
   - name: ebooks
     leaf: books
     globs: ["*.epub", "*.mobi"]
   - name: photos
     leaf: photos
     globs: ["*.jpg", "*.jpeg", "*.heic"]
+    pin: exif

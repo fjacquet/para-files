@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The model sees up to 10 of your past decisions for similar file names (names only), so your corrections teach it.
+- `pin: true` / `pin: exif` on rules (`rules.yaml`); `tree` shows pinned counts.
+
+### Changed
+
+- ADR-014 (amends ADR-013) records model first; the spec, README, CLAUDE.md and the guides describe the new cascade, bands and hints.
+- `--review` goes folder by folder: accept, skip or retarget a whole group, or go through it one by one; `2`/`3` pick the model's alternatives.
+- The plan groups yellow files by proposed folder and says how many were decided by hints only; JSON adds `ranked`, `about` and `summary.by_signal`.
+- **Model first.** Every non-secret file is read by the model unless a verified ISBN or a pinned rule decides. Unpinned rules and issuers are hints in the prompt; with no key (or the model off) the first hint is shown as a yellow suggestion and never moves alone. **Breaking:** unpinned rules no longer move files with `--apply`; pin the rules you trust. `PARA_FILES_ISSUERS_GREEN` is gone.
+- Logs are quiet by default (warnings only, on stderr); `--verbose` shows debug lines.
+- The model's prompt carries the file type, page count, title/author/subject, ISBNs, EXIF date, the whole preview (including OCR text), each folder's path, and the rule and issuer matches as hints; it also answers a short 'about'. Cached verdicts are keyed by prompt version, both models and preview size.
+
+### Fixed
+
+- `sort --apply --review` refuses to start without a terminal instead of moving the green files and stopping at the first question.
+- A file sent to another folder in `--review` keeps its year (and issuer, when it fits) subfolder instead of landing in the folder root.
+- A model answer saved while the book lookup was offline (or the photo had no date) no longer overrides a verified ISBN or a pinned rule on the next run; `explain` now shows the saved model answer that `sort` would use.
+- The model's one-line description is stripped of control characters, so a crafted document cannot send escape sequences to your terminal.
+- Ctrl-C or end of input right after `?` in `--review` keeps the answers you already confirmed instead of aborting the whole sort.
+
 ## [2.0] - 2026-10-11
 
 Stages 3 and 4 of the redesign: a new six-command CLI on the new core, and the old pipeline removed.

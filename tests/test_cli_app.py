@@ -54,3 +54,42 @@ def test_importing_the_cli_loads_neither_the_old_pipeline_nor_litellm():
         [sys.executable, "-c", code], capture_output=True, text=True, check=True
     )
     assert out.stdout.split() == ["False", "False"]
+
+
+import sys  # noqa: E402
+
+import pytest  # noqa: E402
+from loguru import logger  # noqa: E402
+
+from para_files.cli.app import configure_logging  # noqa: E402
+
+
+@pytest.fixture
+def restore_logger():
+    yield
+    logger.remove()
+    logger.add(sys.__stderr__)
+
+
+def test_logging_is_quiet_by_default(capsys, restore_logger):
+    configure_logging(verbose=False)
+    logger.debug("debug line")
+    logger.warning("warning line")
+    err = capsys.readouterr().err
+    assert "debug line" not in err
+    assert "warning line" in err
+
+
+def test_verbose_shows_debug(capsys, restore_logger):
+    configure_logging(verbose=True)
+    logger.debug("debug line")
+    assert "debug line" in capsys.readouterr().err
+
+
+def test_verbose_option_is_accepted():
+    from typer.testing import CliRunner
+
+    from para_files.cli import app
+
+    result = CliRunner().invoke(app, ["-v", "--version"])
+    assert result.exit_code == 0, result.output

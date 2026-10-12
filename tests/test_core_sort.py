@@ -15,7 +15,7 @@ class RecordingFallback:
     def __init__(self):
         self.names = []
 
-    def decide(self, evidence, tree):
+    def decide(self, evidence, tree, hints=()):
         self.names.append(evidence.name)
         return FallbackChoice("archives_5y_factures", 0.6, "m1", (("archives_5y_factures", 0.6),))
 

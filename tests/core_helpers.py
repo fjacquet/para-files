@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import yaml
@@ -62,8 +63,14 @@ RULES: list[dict[str, Any]] = [
         "name": "payslips",
         "leaf": "archives_10y_travail",
         "globs": ["*payslip*", "*compte de salaire*"],
+        "pin": True,
     },
-    {"name": "photos", "leaf": "archives_photos", "globs": ["*.jpg", "*.heic"]},
+    {
+        "name": "photos",
+        "leaf": "archives_photos",
+        "globs": ["*.jpg", "*.heic"],
+        "pin": "exif",
+    },
     {"name": "whitepapers", "leaf": "resources_docs", "globs": ["*_whitepaper*"]},
     {"name": "it_notes", "leaf": "resources_it", "globs": ["*.md"]},
 ]
@@ -131,4 +138,12 @@ def setup_cli(base: Path, monkeypatch: Any) -> Path:
     monkeypatch.setenv("PARA_FILES_CACHE_PATH", str(base / "cache" / "cache.sqlite"))
     monkeypatch.setenv("PARA_FILES_STATE_DIR", str(base / "state"))
     monkeypatch.setenv("PARA_FILES_FALLBACK_ENABLED", "false")
+    from para_files.cli import review as review_cli
+
+    monkeypatch.setattr(review_cli, "stdin_is_tty", lambda: True)
     return root
+
+
+def reply_content(content: str | None) -> Any:
+    """A litellm-shaped reply carrying this message content."""
+    return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])

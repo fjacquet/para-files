@@ -34,6 +34,7 @@ SHORT_LITERALS = 3
 SUBKEY_PLACEHOLDERS = frozenset({"{year}", "{month}", "{issuer}", "{thema}"})
 LEAF_ID = re.compile(r"[a-z][a-z0-9_]*")
 GLOB_SYNTAX = re.compile(r"[*?\[\]]")
+EXTENSION_ONLY = re.compile(r"\*\.[^*?/]+")
 NonEmpty = Annotated[str, Field(min_length=1)]
 
 
@@ -118,13 +119,15 @@ class Tree(BaseModel):
 
 
 class Rule(BaseModel):
-    """Filename globs that send a file to one leaf."""
+    """A filename rule. `pin: true` decides alone; `pin: exif` decides only for files with an
+    EXIF date (camera photos); unpinned rules are hints for the model."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     name: str = Field(min_length=1)
     leaf: NonEmpty
     globs: tuple[NonEmpty, ...] = Field(min_length=1)
+    pin: bool | Literal["exif"] = False
 
 
 class RulesFile(BaseModel):
@@ -276,4 +279,20 @@ def validation_warnings(config: TreeConfig) -> list[str]:
             warnings.append(
                 f"leaf {leaf_id!r}: retention prefix outside 4_Archives records: {leaf.path!r}"
             )
+    for rule in config.rules.rules:
+        target = config.tree.leaves.get(rule.leaf)
+        if not rule.pin or target is None:
+            continue
+        if target.kind == "knowledge":
+            warnings.append(
+                f"rule {rule.name!r}: pinned on knowledge leaf {rule.leaf!r}; knowledge is "
+                "never green, so the pin only skips the model"
+            )
+        if rule.pin is True and target.kind != "media":
+            warnings += [
+                f"rule {rule.name!r}: pinned glob {glob!r} matches by extension only; "
+                "narrow it, or unpin the rule"
+                for glob in rule.globs
+                if EXTENSION_ONLY.fullmatch(glob)
+            ]
     return warnings

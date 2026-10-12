@@ -295,16 +295,18 @@ Classification is pure: no renames, no file writes, no geocoding.
 ```mermaid
 flowchart TD
     F[File path] --> E[extract: Evidence]
-    E --> R{1. Rules}
-    R -- match --> D[Decision]
-    R -- no --> B{2. Books}
-    B -- match --> D
-    B -- no --> I{3. Issuers}
-    I -- match --> D
-    I -- no --> Z{4. Fuzzy fallback}
-    Z -- leaf + probability --> D
-    Z -- none --> D0[Decision: red, no leaf]
-    D --> BAND{Band by confidence}
+    E --> SG{0. Secrets guard}
+    SG -- secret --> DS[Decision: red, never sent or moved]
+    SG -- no --> B{1. Verified ISBN book}
+    B -- yes --> D[Decision]
+    B -- no --> R{2. Pinned rule}
+    R -- pin: true or pin: exif with EXIF date --> D
+    R -- no --> M{3. Model, with hints and past decisions}
+    M -- leaf + probability --> D
+    M -- off or silent --> H{4. First hint}
+    H -- hint --> D
+    H -- none --> D0[Decision: red, no leaf]
+    D --> BAND{Band}
     BAND -- green --> P[Plan: move]
     BAND -- yellow --> Q[Plan: review]
     BAND -- red --> S[Plan: stay in place]
@@ -328,25 +330,27 @@ flowchart TD
 
 | # | Signal | Decides from | Confidence |
 |---|---|---|---|
-| 1 | Rules | user globs, then package default extension rules | 1.0 (owner-asserted) |
-| 2 | Books | ISBN + coherent lookup (title/author match); ebook publisher/subject heuristics move here | 1.0 with ISBN; otherwise book-score, capped at yellow (the preliminary bake-off showed records pulled into `livres` without ISBN) |
-| 3 | Issuers | issuer pattern in `name` or `text_preview`; leaf chosen among the issuer's `leaves` by keyword agreement | high when issuer and keyword agree; medium otherwise |
-| 4 | Fuzzy fallback | Gemini 3.8 Flash (Sonnet 5.5 as fallback model), choosing only among leaf ids | model confidence, calibrated on confirmed decisions |
+| 1 | Books | ISBN + coherent lookup (title/author match); ebook publisher/subject heuristics are hints | 1.0 with ISBN (decides); otherwise book-score, a hint, always yellow (the preliminary bake-off showed records pulled into `livres` without ISBN) |
+| 2 | Pinned rules | user globs with `pin: true`, or `pin: exif` on a file with an EXIF date (model first: unpinned globs are hints) | 1.0 (owner-asserted) |
+| 3 | Model | Gemini 3.8 Flash (Sonnet 5.5 as fallback model), choosing only among leaf ids, given the hints and up to 10 of the owner's past decisions | model confidence, green only when calibrated (see Bands) |
+| hint | Issuers | issuer pattern in `name` or `text_preview`; leaf chosen among the issuer's `leaves` by keyword agreement | hint: 0.95 when issuer and keyword agree, else 0.8 |
 
-First signal returning a decision wins. Signals 1–3 are deterministic and local except the ISBN lookup (cached).
+The cascade stops at the first step that decides: a verified ISBN book, a pinned rule, or the model. Unpinned rules, heuristic books and issuer matches are hints given to the model; when the model is off or silent, the first hint is shown as a yellow suggestion and never moves a file alone. Only model verdicts are cached. The deterministic steps are local except the ISBN lookup (cached).
 
-Keyword-only matches (keywords present, no issuer) no longer decide on their own: they are left to signal 4, which receives each leaf's `describe` and `keywords` as choice criteria.
+Keyword-only matches (keywords present, no issuer) no longer decide on their own: they are left to the model, which receives each leaf's `describe` and `keywords` as choice criteria.
 
-Signal 4 interface:
+Model interface:
 
 ```python
 class Fallback(Protocol):
-    def decide(self, evidence: Evidence, leaves: Sequence[Leaf]) -> tuple[str, float] | None: ...
+    def decide(
+        self, evidence: Evidence, tree: Tree, hints: Sequence[Hint] = ()
+    ) -> FallbackChoice | None: ...
 ```
 
 One implementation, chosen by owner preference without an authoritative bake-off (2026-10-11): **LLM via litellm**, Gemini 3.8 Flash on OpenRouter (Claude Sonnet 5.5 as the configured fallback model), with `reasoning: {"effort": "low"}`; JSON-schema output with an enum of leaf ids; self-reported confidence. Jev 1.13 is not implemented.
 
-Every cloud request carries `provider: {"zdr": true}`, so it fails rather than reach a provider that retains data.
+Every cloud request carries `provider: {"zdr": true, "data_collection": "deny"}`, so it fails rather than reach a provider that retains data.
 
 #### Decision
 
@@ -360,13 +364,17 @@ Every cloud request carries `provider: {"zdr": true}`, so it fails rather than r
 
 #### Bands
 
-Per-signal thresholds in settings. Until a kind has ≥ 100 owner-confirmed decisions, only rules (signal 1) and books with an ISBN (signal 2) can be green; issuers and signal 4 are capped at yellow. Thresholds are then set from the confirmed decisions (`scripts/eval.py`, precision-vs-coverage curve) so green precision stays ≥ 98%.
+- pinned rule → green; ISBN book → green;
+- model → green only if its kind has `PARA_FILES_CALIBRATION_MIN` (100) owner-confirmed decisions and confidence is at least `PARA_FILES_FALLBACK_GREEN` (0.9); below `PARA_FILES_FALLBACK_RED` (0.3) → red; otherwise yellow;
+- hint → always yellow; no leaf → red.
+
+Knowledge is never green; library is green only with an ISBN or a fitting issuer. Thresholds live in settings.
 
 - **green** → moved on `--apply`
 - **yellow** → listed for review; moved only after confirmation (`sort --review`)
 - **red** → the file stays where it is
 
-The kind caps of §4.1 apply after the thresholds, so a `knowledge` decision is at most yellow.
+The kind caps of §4.1 apply after the bands, so a `knowledge` decision is at most yellow.
 
 There is no `6_unclassified` bucket and no extension catch-all. A re-org never pulls a curated file out of its folder.
 
@@ -376,7 +384,7 @@ There is no `6_unclassified` bucket and no extension catch-all. A re-org never p
 - `KeyboardInterrupt` propagates: the run aborts and the current file is untouched.
 - SQLite cache at `~/.cache/para-files/cache.sqlite`:
   - ISBN lookups keyed by ISBN.
-  - Decisions keyed by `(sha256, config_fingerprint)`, where the fingerprint hashes `tree.yaml`, `rules.yaml`, `issuers.yaml` and the fallback model id. A preview followed by `--apply` pays for model calls once.
+  - Decisions keyed by `(sha256, config_fingerprint)`, where the fingerprint hashes `tree.yaml`, `rules.yaml`, `issuers.yaml`, the primary and backup model ids, the prompt version and the preview size (owner examples are deliberately not part of it). A preview followed by `--apply` pays for model calls once.
 - The unused `isbnlib.cover()` network call is removed.
 
 #### Removed from the pipeline
@@ -435,7 +443,7 @@ Nothing is ever hard-deleted or overwritten.
 
 Before any signal runs, `extract` checks the filename and the text preview against secret patterns (private-key headers, cloud access keys, credential/password/token/recovery-phrase markers with a value). A match makes the decision red with reason `secret`:
 
-- the file is never passed to signal 4 or to any other network call, and its preview is not cached;
+- the file is never passed to the model or to any other network call, and its preview is not cached;
 - it is never moved, renamed or trashed by `sort` or `clean`;
 - `sort` lists it under a "secrets" heading so the owner can move it to a password manager; `explain` shows which pattern matched.
 
@@ -470,7 +478,7 @@ The owner does not trust current placement in PARA as ground truth, so files alr
 - Reorganization batches (§5) go through the same review and add labels too.
 - Green-applied files (`decided_by: auto`) are not labels; an `undo` of one counts as a miss for its signal.
 - Labels stay in the journal under `~/.local/state/para-files/` (personal paths stay out of the repo).
-- The repo holds a small sanitized fixture set for CI regression of signals 1–3.
+- The repo holds a small sanitized fixture set for CI regression of the ISBN and pinned-rule steps.
 
 The Stage 1 `scripts/build_golden.py` stays in the repo, unused.
 
@@ -484,11 +492,11 @@ Reads predictions against labels (Stage 1: a JSONL file; from Stage 3: the journ
 |---|---|
 | Candidates | In the owner's order of preference: Gemini 3.8 Flash, Claude Sonnet 5.5 (both OpenRouter, enum-constrained, reasoning effort low), Jev 1.13 (Decisions API); plus the **no-fallback baseline** (signals 1–3 only). Mistral, nomic-embed-text, gemma4 (local AI) and Haiku 5.5 dropped after the preliminary run. |
 | Input | identical: evidence text (name, 2000-char preview, archive listing) + leaf list with `describe` |
-| Privacy | `provider: {"zdr": true}` on every cloud request; secrets-guarded files never sent |
+| Privacy | `provider: {"zdr": true, "data_collection": "deny"}` on every cloud request; secrets-guarded files never sent |
 | Code | throwaway, read-only on files |
-| Scope | (a) `record`, `library` and `media` files left undecided by signals 1–3; (b) `knowledge` files as suggestions |
+| Scope | (a) `record`, `library` and `media` files left undecided by the ISBN and pinned-rule steps; (b) `knowledge` files as suggestions |
 | Winner | (a) highest green coverage at ≥ 98% precision; (b) highest top-3 hit rate. Ties → owner preference: Gemini 3.8 Flash > Sonnet 5.5 > Jev 1.13 |
-| Drop rule | if no candidate adds ≥ 5 points of green coverage on (a) over the baseline and none beats the baseline's suggestions on (b), signal 4 is removed |
+| Drop rule | if no candidate adds ≥ 5 points of green coverage on (a) over the baseline and none beats the baseline's suggestions on (b), the model is dropped |
 
 Runs:
 
@@ -568,12 +576,12 @@ Status: done 2026-10-11 (see decisions log).
 
 | Risk | Mitigation |
 |---|---|
-| Signal 4 chosen without a bake-off | Capped at yellow until calibrated; every move it proposes is confirmed by the owner first; `Fallback` protocol allows a swap |
-| Few confirmed decisions per kind for a long time | Green stays limited to rules and ISBN books until a kind has ≥ 100; the owner sees everything else |
+| Model chosen without a bake-off | Capped at yellow until calibrated; every move it proposes is confirmed by the owner first; `Fallback` protocol allows a swap |
+| Few confirmed decisions per kind for a long time | Green stays limited to pinned rules and ISBN books until a kind has ≥ 100; the owner sees everything else |
 | Re-org moves many files on a synced volume | Preview first; apply batch by batch; journal + `undo`; `.trash` on the same volume |
 | Precedence fix flips `para_root` | Ships together with the `.env` correction (Stage 2) |
-| Cloud fallback sends document text off the machine | `provider: {"zdr": true}` on every request; secrets guard; the owner can turn signal 4 off |
-| No local model: offline or OpenRouter outage silences signal 4 | Signals 1–3 run locally and still decide records, books and media; undecided files stay in place as yellow/red |
+| Cloud fallback sends document text off the machine | `provider: {"zdr": true, "data_collection": "deny"}` on every request; secrets guard; the owner can turn the model off |
+| No local model: offline or OpenRouter outage silences the model | The ISBN and pinned-rule steps run locally and still decide books and pinned records; hints become yellow suggestions and undecided files stay in place as yellow/red |
 | Reorganization moves thousands of archived files | Batches on demand, one complete folder at a time, quick wins first; preview; journal + `undo`; doubtful files go back to `0_Inbox` |
 | Personal identifiers remain in public git history | Owner decided (2026-10-11): the repo stays public and history is not rewritten; new content is checked for identifiers before each push |
 
@@ -591,13 +599,14 @@ Status: done 2026-10-11 (see decisions log).
 | CLI | `sort`, `explain`, `undo`, `clean`, `tree`, `init` |
 | Learning | Removed; corrections by editing YAML guided by `explain` |
 | Bake-off | Preliminary run done 2026-10-11 (tree, not model, is the bottleneck); authoritative run dropped 2026-10-11 with the golden corpus; signal 4 = Gemini 3.8 Flash, Sonnet 5.5 as fallback (owner preference); Mistral, nomic, gemma4 and Haiku 5.5 dropped; GPT-6 Luna excluded (owner does not trust it) |
-| Ground truth (2026-10-11) | No golden corpus: current placement is not trusted. Labels are the owner's confirmations and corrections during progressive `sort --review` of the inbox and of reorganization batches; issuers and signal 4 stay yellow until a kind has ≥ 100 of them |
+| Ground truth (2026-10-11) | No golden corpus: current placement is not trusted. Labels are the owner's confirmations and corrections during progressive `sort --review` of the inbox and of reorganization batches; the model stays yellow until a kind has ≥ 100 of them, and issuer matches are always hints |
 | Stage 1 tree (2026-10-11) | 89 leaves approved (projects kept; unprefixed `4_Archives` folders kept as permanent records; record-like `3_Resources` folders and small knowledge folders left out) |
 | Local AI (2026-10-11) | Dropped: gemma4 17% exact, 78 min for 206 files, 50 server disconnects; Ollama removed in Stage 4 |
 | Mission (2026-10-11) | Records file themselves; everything else is suggested |
 | `4_Archives` (2026-10-11) | Retention vault; legacy twins merged via reviewed, journaled migration |
 | Content kinds (2026-10-11) | `record`, `library`, `media`, `knowledge`; `knowledge` never green |
 | Secrets (2026-10-11) | Secret-flagged files are never sent off-machine and never moved |
+| Model first (2026-10-11) | The model reads every non-secret file (text incl. OCR, metadata, type) with rule/issuer matches as hints; only verified ISBN books and pinned rules (pin: true / pin: exif) decide alone; hints never green; grouped review; past owner decisions as examples; owner accepted sending ~2000 chars per file to OpenRouter with ZDR (ADR-014) |
 | In-place rename (2026-10-11) | `sort` renames a file in place when only its name differs from the target (books get their canonical name); §4.4 wording follows the code (M-6) |
 | Undo as a miss (2026-10-11) | An undone green auto-move is not yet counted as a miss; deferred until issuers or the model can go green (≥ 100 confirmations per kind), then counted in the `tree` statistics (M-7) |
 | Repo visibility (2026-10-11) | Stays public; history not rewritten |

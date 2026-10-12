@@ -1,4 +1,4 @@
-"""Signal 4, fuzzy fallback: an OpenRouter model, called through litellm, chooses a leaf id.
+"""The model reads the file and ranks the leaves (spec §4.2, model first).
 
 Every request carries OpenRouter's provider.zdr=true and data_collection=deny (sent through
 litellm's extra_body), so it fails rather than reach a provider that keeps data. A secret file
@@ -7,9 +7,11 @@ is never sent; secret-named leaves are never listed. Same request as the Stage 1
 
 from __future__ import annotations
 
+import functools
 import json
 import math
 import re
+import unicodedata
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,6 +21,7 @@ from loguru import logger
 
 from para_files.core.breaker import CircuitBreaker
 from para_files.core.evidence import Evidence
+from para_files.core.journal import Example
 from para_files.core.secrets import secret_reason
 from para_files.core.settings import CoreSettings
 from para_files.core.tree import Tree
@@ -30,13 +33,25 @@ REASONING = {"effort": "low"}  # Gemini 3.8 Flash and Sonnet 5.5 refuse reasonin
 MAX_TOKENS = 4000
 TIMEOUT = 120.0
 RETRIES = 2
-PREVIEW_CHARS = 2000
 MAX_LISTED_ENTRIES = 50
 MAX_CHOICES = 3
+MAX_ISBNS = 3
+MAX_ABOUT = 80
+MAX_EXAMPLES = 10
+WORD = re.compile(r"[^\W\d_]{3,}")
+# Bump on any change to SYSTEM, messages() or response_format(): it is part of the cache key.
+PROMPT_VERSION = "3"
+META_FIELDS = (("title", "Title"), ("author", "Author"), ("subject", "Subject"))
 SYSTEM = (
-    "You file documents into a person's PARA folder tree. Rank the three most likely folder "
-    "ids from the list for this file, most likely first, each with the probability that it is "
-    "the right folder. Reply only with JSON."
+    "You file documents into a person's PARA folder tree. Read the content first: the file "
+    "name can be misleading. Hints come from the owner's filename rules and issuer patterns; "
+    "they are often right but can be wrong, so follow a hint only when the content agrees. "
+    "Past decisions show where the owner filed similar files; they are reliable. "
+    "Under 4_Archives, a prefix such as 10y_, 5y_, 2y_, ctr_ or ret_ means records kept for "
+    "that retention period; 3_Resources holds reference material, 2_Areas ongoing "
+    "responsibilities, 1_Projects active projects. Rank the three most likely folder ids from "
+    "the list, most likely first, each with the probability that it is the right folder, and "
+    "say in at most 12 words what the document is. Reply only with JSON."
 )
 Complete = Callable[..., Any]
 Ranked = list[tuple[str, float]]
@@ -46,6 +61,7 @@ def litellm_complete(**kwargs: Any) -> Any:  # noqa: ANN401 - litellm's keyword 
     """litellm.completion, imported on first use: importing litellm takes seconds."""
     import litellm
 
+    litellm.suppress_debug_info = True  # no "Give Feedback" banners on stdout
     return litellm.completion(**kwargs)
 
 
@@ -54,13 +70,22 @@ class FallbackError(RuntimeError):
 
 
 @dataclass(frozen=True)
+class Hint:
+    """What a non-deciding rule, book heuristic or issuer suggests; shown to the model."""
+
+    source: str
+    leaf_id: str
+
+
+@dataclass(frozen=True)
 class FallbackChoice:
-    """The model's first choice, which model answered, and its ranked list."""
+    """The model's first choice, which model answered, its ranked list and what the file is."""
 
     leaf_id: str
     confidence: float
     model: str
     ranked: tuple[tuple[str, float], ...]
+    about: str = ""
 
 
 def _without_secret_parts(describe: str) -> str:
@@ -82,34 +107,109 @@ def _keywords_part(keywords: Sequence[str]) -> str:
 
 
 def leaf_menu(tree: Tree) -> dict[str, str]:
-    """Leaf id -> describe and keywords, the only choices the model sees; no secret-named leaves."""
+    """Leaf id -> describe, keywords and path: the model's only choices; no secret leaves."""
     return {
-        leaf_id: _without_secret_parts(leaf.describe) + _keywords_part(leaf.keywords)
+        leaf_id: (
+            f"{_without_secret_parts(leaf.describe)}{_keywords_part(leaf.keywords)} ({leaf.path})"
+        )
         for leaf_id, leaf in tree.leaves.items()
         if not _is_secret_leaf(leaf_id, leaf.path, leaf.describe)
     }
 
 
-def evidence_text(evidence: Evidence) -> str:
-    """Filename, preview and archive entries; never the path."""
-    preview = evidence.text_preview[:PREVIEW_CHARS]
-    body = preview if preview.strip() else "(no text)"
-    text = f"Filename: {evidence.name}\n\nContent preview:\n{body}"
+def _type_line(evidence: Evidence) -> str:
+    pages = evidence.doc_meta.get("page_count", "")
+    kind = evidence.ext or "(none)"
+    return f"Type: {kind}, {pages} pages" if pages not in {"", "0"} else f"Type: {kind}"
+
+
+def _meta_lines(evidence: Evidence) -> list[str]:
+    lines = [_type_line(evidence)]
+    for key, label in META_FIELDS:
+        value = " ".join(evidence.doc_meta.get(key, "").split())
+        if value and secret_reason(value, value) is None:
+            lines.append(f"{label}: {value}")
+    if evidence.isbns:
+        lines.append(f"ISBN found: {', '.join(evidence.isbns[:MAX_ISBNS])}")
+    if evidence.exif_date is not None:
+        lines.append(f"Date taken: {evidence.exif_date.date().isoformat()}")
+    return lines
+
+
+def visible_hints(hints: Sequence[Hint], menu: dict[str, str]) -> list[Hint]:
+    """Hints whose leaf the model may choose and whose wording is not secret."""
+    return [hint for hint in hints if hint.leaf_id in menu and secret_reason(hint.source) is None]
+
+
+def evidence_text(evidence: Evidence, hints: Sequence[Hint] = ()) -> str:
+    """Name, type, metadata, hints, the whole preview and archive entries; never the path."""
+    lines = [f"Filename: {evidence.name}", *_meta_lines(evidence)]
+    if hints:
+        lines.append("Hints (from the owner's rules; may be wrong):")
+        lines += [f"- {hint.source} -> {hint.leaf_id}" for hint in hints]
+    body = evidence.text_preview if evidence.text_preview.strip() else "(no text)"
+    text = "\n".join(lines) + f"\n\nContent preview (may come from OCR):\n{body}"
     if evidence.archive_listing:
         entries = "\n".join(evidence.archive_listing[:MAX_LISTED_ENTRIES])
         text += f"\n\nArchive entries:\n{entries}"
     return text
 
 
-def messages(menu: dict[str, str], evidence: Evidence) -> list[dict[str, str]]:
-    """System prompt, then the leaf list and the file evidence."""
+@functools.cache
+def _words(name: str) -> frozenset[str]:
+    stem = unicodedata.normalize("NFC", Path(name).stem)
+    return frozenset(word.casefold() for word in WORD.findall(stem))
+
+
+def pick_examples(
+    examples: Sequence[Example], name: str, menu: dict[str, str], limit: int = MAX_EXAMPLES
+) -> list[Example]:
+    """Past owner decisions most like this file (shared name words, then recency); none secret.
+
+    A proposal that is not on the menu (a secret or unknown leaf) is dropped, never shown.
+    """
+    words = _words(name)
+    usable = [
+        (index, example)
+        for index, example in enumerate(examples)
+        if example.leaf_id in menu and secret_reason(example.name) is None
+    ]
+    usable.sort(key=lambda item: (-len(words & _words(item[1].name)), item[0]))
+    return [
+        Example(
+            example.name,
+            example.leaf_id,
+            example.proposed if example.proposed in menu else None,
+        )
+        for _, example in usable[:limit]
+    ]
+
+
+def _example_line(example: Example) -> str:
+    corrected = example.proposed is not None and example.proposed != example.leaf_id
+    note = f" (tool had proposed {example.proposed})" if corrected else ""
+    return f'- "{example.name}" -> {example.leaf_id}{note}'
+
+
+def messages(
+    menu: dict[str, str],
+    evidence: Evidence,
+    hints: Sequence[Hint] = (),
+    examples: Sequence[Example] = (),
+) -> list[dict[str, str]]:
+    """System prompt, the folder list (stable, so providers can cache it), the owner's past
+    decisions for similar files, then the file."""
     folders = "\n".join(f"- {leaf_id}: {describe}" for leaf_id, describe in menu.items())
-    user = f"Folders:\n{folders}\n\nFile:\n{evidence_text(evidence)}"
+    user = f"Folders:\n{folders}"
+    if examples:
+        shown = "\n".join(_example_line(example) for example in examples)
+        user += f"\n\nPast decisions by the owner for similar files:\n{shown}"
+    user += f"\n\nFile:\n{evidence_text(evidence, visible_hints(hints, menu))}"
     return [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}]
 
 
 def response_format(menu: dict[str, str]) -> dict[str, Any]:
-    """JSON schema: up to 3 choices, each an enum leaf id with a confidence."""
+    """JSON schema: a short 'about' and up to 3 choices, each an enum leaf id with a confidence."""
     choice = {
         "type": "object",
         "additionalProperties": False,
@@ -122,9 +222,10 @@ def response_format(menu: dict[str, str]) -> dict[str, Any]:
     schema = {
         "type": "object",
         "additionalProperties": False,
-        "required": ["choices"],
+        "required": ["about", "choices"],
         "properties": {
-            "choices": {"type": "array", "items": choice, "minItems": 1, "maxItems": MAX_CHOICES}
+            "about": {"type": "string"},
+            "choices": {"type": "array", "items": choice, "minItems": 1, "maxItems": MAX_CHOICES},
         },
     }
     return {
@@ -143,8 +244,8 @@ def _probability(value: object) -> float | None:
     return max(0.0, min(1.0, number)) if math.isfinite(number) else None
 
 
-def parse_choices(content: str | None, menu: dict[str, str]) -> Ranked:
-    """Ranked (leaf, probability); unknown, repeated or malformed choices dropped."""
+def parse_reply(content: str | None, menu: dict[str, str]) -> tuple[Ranked, str]:
+    """Ranked (leaf, probability) and the model's one-line 'about'; bad choices dropped."""
     match = re.search(r"\{.*\}", content or "", re.DOTALL)
     try:
         data = json.loads(match.group(0)) if match else {}
@@ -155,20 +256,22 @@ def parse_choices(content: str | None, menu: dict[str, str]) -> Ranked:
     if not isinstance(choices, list):
         msg = "reply has no choices list"
         raise FallbackError(msg)
-    ranked: Ranked = []
+    chosen: dict[str, float] = {}
     for item in choices:
         if not isinstance(item, dict):
             continue
         leaf, probability = item.get("leaf"), _probability(item.get("confidence"))
         if not isinstance(leaf, str) or leaf not in menu or probability is None:
             continue
-        if leaf not in {seen for seen, _ in ranked}:
-            ranked.append((leaf, probability))
-    return ranked[:MAX_CHOICES]
+        chosen.setdefault(leaf, probability)
+    about = data.get("about") if isinstance(data, dict) else None
+    collapsed = " ".join(about.split()) if isinstance(about, str) else ""
+    text = "".join(ch for ch in collapsed if ch.isprintable())[:MAX_ABOUT]
+    return list(chosen.items())[:MAX_CHOICES], text
 
 
 class OpenRouterFallback:
-    """Signal 4: primary model, then backup, through litellm; behind a circuit breaker."""
+    """The model signal: primary model, then backup, through litellm; behind a circuit breaker."""
 
     def __init__(
         self,
@@ -177,16 +280,20 @@ class OpenRouterFallback:
         *,
         complete: Complete = litellm_complete,
         breaker: CircuitBreaker | None = None,
+        examples: Sequence[Example] = (),
     ) -> None:
         self._key = key
         self._models = tuple(models)
         self._complete = complete
         self._breaker = breaker or CircuitBreaker()
+        self._examples = tuple(examples)
 
-    def _ask(self, model: str, menu: dict[str, str], evidence: Evidence) -> Ranked:
+    def _ask(
+        self, model: str, menu: dict[str, str], prompt: list[dict[str, str]]
+    ) -> tuple[Ranked, str]:
         response = self._complete(
             model=f"{OPENROUTER}{model}",
-            messages=messages(menu, evidence),
+            messages=prompt,
             api_key=self._key,
             temperature=0,
             max_tokens=MAX_TOKENS,
@@ -200,34 +307,41 @@ class OpenRouterFallback:
         except (AttributeError, IndexError, TypeError) as exc:
             msg = f"malformed reply: {type(exc).__name__}"
             raise FallbackError(msg) from exc
-        ranked = parse_choices(content, menu)
+        ranked, about = parse_reply(content, menu)
         if not ranked:
             msg = "reply has no usable choice"
             raise FallbackError(msg)
-        return ranked
+        return ranked, about
 
-    def decide(self, evidence: Evidence, tree: Tree) -> FallbackChoice | None:
+    def decide(
+        self, evidence: Evidence, tree: Tree, hints: Sequence[Hint] = ()
+    ) -> FallbackChoice | None:
         """First choice of the first model that answers; None for secrets or failures."""
         if evidence.secret is not None or self._breaker.is_open:
             return None
         menu = leaf_menu(tree)
         if not menu:
             return None
+        examples = pick_examples(self._examples, evidence.name, menu)
+        prompt = messages(menu, evidence, hints, examples)
         for model in self._models:
             try:
-                ranked = self._ask(model, menu, evidence)
+                ranked, about = self._ask(model, menu, prompt)
             except Exception as exc:  # noqa: BLE001 - any provider error moves on to the backup
-                logger.warning("fallback {} failed on {}: {}", model, evidence.name, exc)
+                logger.warning("model {} failed on {}: {}", model, evidence.name, exc)
                 continue
             self._breaker.record_success()
             leaf_id, confidence = ranked[0]
-            return FallbackChoice(leaf_id, confidence, model, tuple(ranked))
+            return FallbackChoice(leaf_id, confidence, model, tuple(ranked), about)
         self._breaker.record_failure()
         return None
 
 
 def make_fallback(
-    settings: CoreSettings, *, complete: Complete = litellm_complete
+    settings: CoreSettings,
+    *,
+    complete: Complete = litellm_complete,
+    examples: Sequence[Example] = (),
 ) -> OpenRouterFallback | None:
     """The configured fallback, or None when it is off or no key is set."""
     if not settings.fallback_enabled or settings.openrouter_api_key is None:
@@ -236,4 +350,5 @@ def make_fallback(
         settings.openrouter_api_key.get_secret_value(),
         (settings.fallback_model, settings.fallback_backup_model),
         complete=complete,
+        examples=examples,
     )

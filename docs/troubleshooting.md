@@ -17,6 +17,7 @@ Start with the two commands that show the state of things: `para-files tree --va
 | `no usable PARA root in the settings` (from `init`) | The variable is unset or invalid | Set `PARA_FILES_PARA_ROOT` in the environment or in `~/.config/para-files/.env`, or pass the root to `init` |
 | `<setting>: Input should be less than or equal to 16` (or similar) | A setting is outside its allowed range | See the ranges in [configuration](configuration.md#settings) |
 | `sort` uses a root you did not expect | An environment variable overrides `.env` | `env | grep PARA_FILES` shows what is set |
+| `--review asks questions and needs a terminal` | stdin is not a terminal | run it in a terminal window |
 
 ## Config files
 
@@ -33,11 +34,13 @@ Run `para-files tree --validate` after each change. Its warnings are not fatal, 
 
 ## Nothing goes green
 
-This is usually calibration, not a fault. Issuer and model matches stay **yellow** until the kind of the leaf (record, library, media or knowledge) has 100 decisions you confirmed (`PARA_FILES_CALIBRATION_MIN`). Other limits:
+Usually this is not a fault. Three things keep files yellow:
 
-- **Knowledge** leaves are never green.
-- **Library** leaves are green only with a verified ISBN or an issuer match. Rules and heuristic books stay yellow.
-- **Records and media** with a rule are green at once.
+- **Unpinned rules are hints.** A rule without `pin: true` (or `pin: exif` with an EXIF date) never moves a file alone; it is shown to the model, and without a model answer it is a yellow suggestion. Pin the rules you trust in `rules.yaml`.
+- **Calibration.** Model matches stay **yellow** until the kind of the leaf (record, library, media or knowledge) has 100 decisions you confirmed (`PARA_FILES_CALIBRATION_MIN`). Then a model match is green only at confidence 0.9 or more (`PARA_FILES_FALLBACK_GREEN`).
+- **Kind caps.** **Knowledge** leaves are never green. **Library** leaves are green only with a verified ISBN or an issuer match, so a pinned library rule stays yellow.
+
+Pinned rules on records and media are green at once.
 
 Check the counts:
 
@@ -55,14 +58,14 @@ Red means the tool has no leaf for it, or it must not be moved. Ask it why:
 uv run para-files explain ~/PARA/0_Inbox/some-file.pdf
 ```
 
-`explain` lists every signal's verdict and the decision, then the edit that would change it. Common causes:
+`explain` lists each step the cascade tried (`isbn book`, `pinned rule`, `hint`, `model`), then the decision and the edit that would change it. Common causes:
 
 | Output says | Meaning | Fix |
 |---|---|---|
 | `decision: red, no leaf` and no signal matched | No rule, issuer or ISBN applies | Add a rule in `rules.yaml` or an issuer in `issuers.yaml` for files like this |
 | `secret (...)` | The file looks secret; it is never sent or moved | Keep it local. If the name is a false positive (for example `Secretariat`), rename the file |
-| `fallback` with a low probability | The model was unsure (below `PARA_FILES_FALLBACK_RED`, 0.3) | Add a rule or issuer so the decision is deterministic |
-| `fallback  not asked (use --ask-model)` | `explain` does not call the model unless asked | Use `explain --ask-model`, which sends the name and preview to OpenRouter |
+| `model` with a low probability, `decision: red` | The model was unsure (below `PARA_FILES_FALLBACK_RED`, 0.3) | Add a pinned rule or an issuer so the decision is deterministic |
+| `model  off (no key, or PARA_FILES_FALLBACK_ENABLED=false)` or `model  not asked (use --ask-model)` | `explain` does not call the model unless asked, or the model is off | Use `explain --ask-model`, which sends the file name, type, metadata, text preview, hints and examples of past decisions to OpenRouter, with zero data retention and never for a secret file; for "off", set the key |
 
 A file can also be red because it cannot be read (the plan shows `cannot read`). Check its permissions.
 
@@ -73,6 +76,16 @@ A file can also be red because it cannot be read (the plan shows `cannot read`).
 - **Secret files** are never sent, whatever the setting.
 - **Circuit breaker:** after three files in a row for which both models failed, the model is skipped for the rest of that run. Look for `fallback ... failed` warnings in the output, check the network and the key, then run again.
 - **Privacy refusal:** every request demands zero data retention. A model that cannot meet that fails and is not used.
+
+## The model was not asked
+
+A file is decided by hints only when no verified ISBN or pinned rule decides it and the model gave no answer. The plan then ends with a footer:
+
+```text
+3 files decided by hints only (model off or did not answer)
+```
+
+Those files are yellow. The footer covers three cases: no `OPENROUTER_API_KEY` (or `PARA_FILES_FALLBACK_ENABLED=false`), the model failed on the file, or the circuit breaker is open for the rest of the run. Check `para-files tree`, whose `fallback` line says `(key not set)` when no key is found, then the warnings above.
 
 ## Secrets
 

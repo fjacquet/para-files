@@ -21,7 +21,7 @@ class FakeFallback:
     def __init__(self, leaf="archives_5y_factures", confidence=0.95):
         self.leaf, self.confidence, self.calls = leaf, confidence, []
 
-    def decide(self, evidence, tree):
+    def decide(self, evidence, tree, hints=()):
         self.calls.append(evidence.name)
         if self.leaf is None:
             return None
@@ -79,21 +79,21 @@ def test_library_by_rule_is_capped_at_yellow(tmp_path):
 def test_issuer_is_yellow_before_calibration(tmp_path):
     ctx = make_ctx(tmp_path)
     d = classify(inbox_file(ctx, "2026-01-23_acmecard_facture.txt", "AcmeCard"), ctx)
-    assert (d.leaf_id, d.signal, d.band) == ("archives_10y_banques", "issuers", "yellow")
+    assert (d.leaf_id, d.signal, d.band) == ("archives_10y_banques", "hint", "yellow")
     assert d.target_dir == "4_Archives/10y_banques/acmecard/2026"
     assert d.confidence == 0.95
 
 
-def test_issuer_with_keyword_is_green_after_calibration(tmp_path):
+def test_hint_stays_yellow_after_calibration(tmp_path):
     ctx = make_ctx(tmp_path, confirmed={"record": 100})
     d = classify(inbox_file(ctx, "2026-01-23_acmecard_facture.txt", "AcmeCard"), ctx)
-    assert d.band == "green"
+    assert d.band == "yellow"
 
 
 def test_issuer_without_keyword_stays_yellow_after_calibration(tmp_path):
     ctx = make_ctx(tmp_path, confirmed={"record": 100})
     d = classify(inbox_file(ctx, "abc_2025.txt", "hello"), ctx)
-    assert (d.signal, d.confidence, d.band) == ("issuers", 0.8, "yellow")
+    assert (d.signal, d.confidence, d.band) == ("hint", 0.8, "yellow")
 
 
 def test_fallback_bands(tmp_path):
@@ -202,10 +202,10 @@ def test_book_with_a_coherent_isbn_is_green(tmp_path, monkeypatch):
 def test_book_without_an_isbn_is_yellow(tmp_path, monkeypatch):
     ctx = _book_ctx(tmp_path, monkeypatch, ext=".epub")
     d = classify(inbox_file(ctx, "Python Cookbook.epub"), ctx)
-    assert (d.leaf_id, d.signal, d.band) == ("resources_livres", "books", "yellow")
+    assert (d.leaf_id, d.signal, d.band) == ("resources_livres", "hint", "yellow")
 
 
-def test_library_leaf_reached_through_an_issuer_is_green_after_calibration(tmp_path):
+def test_library_hint_through_an_issuer_stays_yellow(tmp_path):
     tree = Tree.model_validate(
         {
             "leaves": {
@@ -224,9 +224,9 @@ def test_library_leaf_reached_through_an_issuer_is_green_after_calibration(tmp_p
     ctx = make_ctx(tmp_path, confirmed={"library": 100})
     ctx.config = TreeConfig(tree=tree, rules=RulesFile(), issuers=issuers)
     d = classify(inbox_file(ctx, "AcmeCorp manual.txt", "hello"), ctx)
-    assert (d.leaf_id, d.signal, d.kind) == ("resources_vendor", "issuers", "library")
+    assert (d.leaf_id, d.signal, d.kind) == ("resources_vendor", "hint", "library")
     assert d.confidence == 0.95
-    assert d.band == "green"
+    assert d.band == "yellow"
 
 
 def test_thema_fills_the_library_subkey():
@@ -254,3 +254,197 @@ def test_year_only_name_on_a_year_month_leaf_goes_to_the_leaf_root():
     )
     verdict = Verdict("archives_photos", "rules", 1.0, "rule")
     assert target_dir(leaf, evidence, verdict) == "4_Archives/photos"
+
+
+class HintedFallback:
+    """Records the hints it was given; answers a fixed leaf with an 'about'."""
+
+    def __init__(self, leaf="archives_10y_banques", confidence=0.7):
+        self.leaf, self.confidence, self.hints = leaf, confidence, []
+
+    def decide(self, evidence, tree, hints=()):
+        self.hints.append(list(hints))
+        return FallbackChoice(
+            self.leaf,
+            self.confidence,
+            "m1",
+            ((self.leaf, self.confidence), ("archives_5y_factures", 0.2)),
+            "a card statement",
+        )
+
+
+def with_rules(ctx, *extra):
+    base = ctx.config
+    existing = [rule.model_dump() for rule in base.rules.rules]
+    rules = RulesFile.model_validate({"rules": [*extra, *existing]})
+    ctx.config = TreeConfig(tree=base.tree, rules=rules, issuers=base.issuers)
+    return ctx
+
+
+def test_pinned_rule_is_green_and_the_model_is_not_asked(tmp_path):
+    model = HintedFallback()
+    ctx = make_ctx(tmp_path, fallback=model)
+    d = classify(inbox_file(ctx, "Payslip_2025-12-22.txt"), ctx)
+    assert (d.leaf_id, d.signal, d.band) == ("archives_10y_travail", "rules", "green")
+    assert model.hints == []
+
+
+def test_unpinned_rule_and_issuer_are_hints_and_the_issuer_fills_the_subkey(tmp_path):
+    model = HintedFallback()
+    ctx = with_rules(
+        make_ctx(tmp_path, fallback=model),
+        {"name": "broad", "leaf": "resources_docs", "globs": ["*card*"]},
+    )
+    d = classify(inbox_file(ctx, "acmecard_2026.txt", "AcmeCard statement"), ctx)
+    assert (d.leaf_id, d.signal, d.band) == ("archives_10y_banques", "fallback", "yellow")
+    assert d.target_dir == "4_Archives/10y_banques/acmecard/2026"
+    assert d.about == "a card statement"
+    assert d.ranked == (("archives_10y_banques", 0.7), ("archives_5y_factures", 0.2))
+    sources = [hint.source for hint in model.hints[0]]
+    assert sources[0].startswith("rule 'broad'")
+    assert any(source.startswith("issuer 'acmecard'") for source in sources)
+
+
+def test_model_off_gives_a_yellow_hint_even_when_calibrated(tmp_path):
+    ctx = make_ctx(tmp_path, confirmed={"record": 1000, "library": 1000})
+    d = classify(inbox_file(ctx, "statement.txt", "AcmeCard statement"), ctx)
+    assert (d.leaf_id, d.signal, d.band) == ("archives_10y_banques", "hint", "yellow")
+    assert "(model off)" in d.evidence_summary
+
+
+def test_hint_verdicts_are_not_cached_but_model_verdicts_are(tmp_path):
+    model = HintedFallback()
+    ctx = make_ctx(tmp_path, fallback=model)
+    path = inbox_file(ctx, "statement.txt", "AcmeCard statement")
+    classify(path, ctx)
+    classify(path, ctx)
+    assert len(model.hints) == 1
+    ctx.fallback = None
+    other = inbox_file(ctx, "other.txt", "AcmeCard other")
+    classify(other, ctx)
+    assert ctx.cache.get_verdict(classify(other, ctx).sha256, "fp:other.txt") is None
+
+
+def test_isbn_beats_a_pinned_rule(tmp_path):
+    info = BookInfo(isbn_13="9780000000002", title="Payslip Handbook", authors=["A. Writer"])
+    ctx = make_ctx(tmp_path)
+    ctx.lookup = lambda _isbn: info
+    path = inbox_file(ctx, "Payslip Handbook.pdf")
+    evidence = Evidence(
+        path=path,
+        name=path.name,
+        ext=".pdf",
+        size=1,
+        mtime=0.0,
+        sha256="1" * 64,
+        isbns=("9780000000002",),
+    )
+    verdict, steps = decide.choose(evidence, ctx)
+    assert (verdict.signal, verdict.isbn) == ("books", "9780000000002")
+    assert steps[0].name == "isbn book"
+
+
+def test_photo_rule_pins_only_with_an_exif_date(tmp_path):
+    ctx = make_ctx(tmp_path)
+    base = {
+        "path": Path("/x/IMG_1.jpg"),
+        "name": "IMG_1.jpg",
+        "ext": ".jpg",
+        "size": 1,
+        "mtime": 0.0,
+        "sha256": "2" * 64,
+    }
+    with_date, _ = decide.choose(Evidence(**base, exif_date=datetime(2024, 5, 1)), ctx)
+    without, _ = decide.choose(Evidence(**base), ctx)
+    assert (with_date.signal, with_date.leaf_id) == ("rules", "archives_photos")
+    assert (without.signal, without.leaf_id) == ("hint", "archives_photos")
+
+
+def test_library_model_verdict_needs_an_issuer_to_be_green(tmp_path):
+    model = HintedFallback(leaf="resources_docs", confidence=0.95)
+    ctx = make_ctx(tmp_path, fallback=model, confirmed={"library": 1000})
+    d = classify(inbox_file(ctx, "guide.txt", "storage guide"), ctx)
+    assert (d.signal, d.band) == ("fallback", "yellow")
+
+
+def test_secret_is_never_sent(tmp_path):
+    model = HintedFallback()
+    ctx = make_ctx(tmp_path, fallback=model)
+    d = classify(inbox_file(ctx, "notes.txt", "vpn\npassword: hunter22\n"), ctx)
+    assert (d.signal, d.band) == ("secret", "red")
+    assert model.hints == []
+
+
+def test_model_off_never_serves_a_cached_model_verdict(tmp_path):
+    model = FakeFallback(confidence=0.95)
+    ctx = make_ctx(tmp_path, fallback=model, confirmed={"record": 100})
+    path = inbox_file(ctx, "random.txt", "same")
+    assert classify(path, ctx).signal == "fallback"
+    off = make_ctx(tmp_path, confirmed={"record": 100})
+    d = classify(path, off)
+    assert (d.signal, d.band) == ("none", "red")
+    assert model.calls == ["random.txt"]
+
+
+def test_calibrated_library_model_verdict_with_a_fitting_issuer_is_green(tmp_path):
+    tree = Tree.model_validate(
+        {
+            "leaves": {
+                "resources_vendor": {
+                    "kind": "library",
+                    "path": "3_Resources/docs",
+                    "describe": "Vendor documentation",
+                    "keywords": ["manual"],
+                }
+            }
+        }
+    )
+    issuers = IssuersFile.model_validate(
+        {"issuers": {"acmecorp": {"patterns": ["AcmeCorp"], "leaves": ["resources_vendor"]}}}
+    )
+    model = HintedFallback(leaf="resources_vendor", confidence=0.95)
+    ctx = make_ctx(tmp_path, fallback=model, confirmed={"library": 100})
+    ctx.config = TreeConfig(tree=tree, rules=RulesFile(), issuers=issuers)
+    d = classify(inbox_file(ctx, "AcmeCorp guide.txt", "AcmeCorp manual"), ctx)
+    assert (d.leaf_id, d.signal, d.band) == ("resources_vendor", "fallback", "green")
+
+
+def test_fill_subkey_needs_every_placeholder():
+    leaf = make_config().tree.leaves["archives_10y_banques"]
+    assert decide.fill_subkey(leaf, (("{year}", "2026"), ("{issuer}", "acmecard"))) == (
+        "4_Archives/10y_banques/acmecard/2026"
+    )
+    assert decide.fill_subkey(leaf, (("{year}", "2026"), ("{issuer}", None))) == (
+        "4_Archives/10y_banques"
+    )
+
+
+def test_cached_model_verdict_does_not_beat_a_verified_isbn(tmp_path):
+    fake = FakeFallback()
+    ctx = make_ctx(tmp_path, fallback=fake)
+    path = inbox_file(ctx, "Handbook.pdf")
+    evidence = Evidence(
+        path=path,
+        name=path.name,
+        ext=".pdf",
+        size=1,
+        mtime=0.0,
+        sha256="1" * 64,
+        isbns=("9780000000002",),
+    )
+    assert decide._verdict(evidence, ctx).signal == "fallback"
+    info = BookInfo(isbn_13="9780000000002", title="Payslip Handbook", authors=["A. Writer"])
+    ctx.lookup = lambda _isbn: info
+    assert decide._verdict(evidence, ctx).signal == "books"
+
+
+def test_choose_without_asking_returns_the_cached_model_verdict(tmp_path):
+    fake = FakeFallback()
+    ctx = make_ctx(tmp_path, fallback=fake)
+    path = inbox_file(ctx, "scan_0001.txt")
+    assert classify(path, ctx).signal == "fallback"
+    evidence = decide.extract(path, root=ctx.settings.para_root, preview_chars=100)
+    verdict, steps = decide.choose(evidence, ctx, ask_model=False)
+    assert verdict.signal == "fallback"
+    assert steps[-1].name == "model"
+    assert len(fake.calls) == 1
