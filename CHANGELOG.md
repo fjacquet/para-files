@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Spreadsheets with a chart sheet, or with a stylesheet openpyxl rejects, get a text preview again (the second are read from their XML with `defusedxml`); pypdf and openpyxl chatter no longer clutters stderr.
 - `sort --apply --review` refuses to start without a terminal instead of moving the green files and stopping at the first question.
 - A file sent to another folder in `--review` keeps its year (and issuer, when it fits) subfolder instead of landing in the folder root.
 - A model answer saved while the book lookup was offline (or the photo had no date) no longer overrides a verified ISBN or a pinned rule on the next run; `explain` now shows the saved model answer that `sort` would use.

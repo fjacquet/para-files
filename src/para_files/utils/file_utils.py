@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import re
 import subprocess
 import zipfile
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from defusedxml.ElementTree import iterparse
 from loguru import logger
 
 
@@ -585,10 +587,13 @@ def _extract_xlsx_content(file_path: Path, max_chars: int) -> list[str]:
     import openpyxl
 
     parts: list[str] = []
-    wb = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
-    for sheet_name in wb.sheetnames:
-        parts.append(f"Sheet: {sheet_name}")
-        ws = wb[sheet_name]
+    try:
+        wb = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
+    except TypeError as e:  # a stylesheet openpyxl rejects ("expected <class ...Fill'>")
+        logger.debug("openpyxl rejected {}, reading its XML: {}", file_path, e)
+        return _xlsx_xml_text(file_path, max_chars)
+    for ws in wb.worksheets:  # chart sheets have no cells
+        parts.append(f"Sheet: {ws.title}")
         cell_count = 0
         for row in ws.iter_rows(values_only=True):
             for cell in row:
@@ -602,6 +607,39 @@ def _extract_xlsx_content(file_path: Path, max_chars: int) -> list[str]:
             if sum(len(p) for p in parts) >= max_chars:
                 break
     wb.close()
+    return parts
+
+
+_XLSX_TEXT_PARTS = re.compile(r"xl/(sharedStrings|worksheets/[^/]+)\.xml")
+
+
+def _xlsx_xml_text(file_path: Path, max_chars: int) -> list[str]:
+    """Sheet names and text cells read straight from an xlsx's XML, without styles.
+
+    Args:
+        file_path: Path to xlsx/xlsm file.
+        max_chars: Maximum total characters to collect.
+
+    Returns:
+        List of text parts (sheet names, shared and inline strings).
+    """
+    parts: list[str] = []
+    total = 0
+    with zipfile.ZipFile(file_path) as archive:
+        with archive.open("xl/workbook.xml") as stream:
+            for _, element in iterparse(stream):
+                if element.tag.endswith("}sheet"):
+                    parts.append(f"Sheet: {element.get('name')}")
+        for name in archive.namelist():
+            if not _XLSX_TEXT_PARTS.fullmatch(name):
+                continue
+            with archive.open(name) as stream:
+                for _, element in iterparse(stream):
+                    if element.tag.endswith("}t") and element.text and element.text.strip():
+                        parts.append(element.text.strip())
+                        total += len(parts[-1])
+                        if total >= max_chars:
+                            return parts
     return parts
 
 
