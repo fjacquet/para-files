@@ -1,6 +1,6 @@
 [project]
 name = "para-files"
-version = "2.1"
+version = "2.2"
 description = "File documents into a PARA tree: rules, issuers, ISBN books and an optional cloud model, with preview, journal and undo"
 readme = "README.md"
 license = { text = "MIT" }
@@ -267,3 +267,10 @@ exclude_lines = [
 ]
 fail_under = 79
 show_missing = true
+
+[tool.uv]
+override-dependencies = [
+    "filelock>=4.2.1,<5",  # litellm caps filelock<4; 4.2.1 fixes GHSA-v4x8-3wr5-3wq8, GHSA-9vhv-jxww-xfm5,
+                           # GHSA-567q-5qvw-pf92. Dependents use FileLock, SoftFileLock, BaseFileLock, Timeout
+                           # only. Drop once litellm allows filelock>=4.2.1.
+]

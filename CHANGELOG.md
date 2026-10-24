@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2] - 2026-10-24
+
+### Security
+
+- **`make vuln` and the Security workflow now actually scan.** `uvx osv-scanner` never resolved
+  (osv-scanner is a Go binary, not on PyPI) and `|| true` hid the failure, so no CI run had ever
+  scanned `uv.lock`. `make vuln` now runs `osv-scanner scan source --recursive .` and fails on
+  findings; fjacquet/ci v1.6.0 installs a pinned, checksum-verified binary in CI.
+- Full `uv lock --upgrade` refresh closes 28 advisories: `pypdf` 6.20.0 → 6.21.2 (9),
+  `virtualenv` 21.14.6 → 21.14.13 (12), `brotli` 1.2.0 → 1.2.1 (GHSA-9v8h-qqgm-4m35), `certifi` →
+  2026.10.23 (GHSA-6q48-6c7w-9gw2).
+- `filelock` 3.32.7 → 4.2.4 for GHSA-v4x8-3wr5-3wq8 (High), GHSA-9vhv-jxww-xfm5 and
+  GHSA-567q-5qvw-pf92, through a uv `override-dependencies` because litellm caps `filelock<4`.
+
 ## [2.1] - 2026-10-12
 
 Model first (ADR-014): the model reads every non-secret file, only verified ISBN books and pinned rules decide alone, and `--review` goes folder by folder.
