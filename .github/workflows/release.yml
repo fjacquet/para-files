@@ -18,7 +18,7 @@ on:
 jobs:
   # ── 1. Test ────────────────────────────────────────────────────────────────
   test:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v7
 
@@ -57,7 +57,7 @@ jobs:
 
   # ── 2. Build wheel + sdist ─────────────────────────────────────────────────
   build:
-    runs-on: macos-14
+    runs-on: macos-15
     needs: test
     steps:
       - uses: actions/checkout@v7
